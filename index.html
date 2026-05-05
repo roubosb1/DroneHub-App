@@ -1447,7 +1447,7 @@ button{font-family:var(--font);}
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">HST number</label><input type="text" id="biz-hst" placeholder="123456789 RT0001" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="divider"></div>
     <div class="section-label" style="margin-bottom:8px">Payment</div>
-    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/…" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/…" value="https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="note" style="margin-bottom:12px">Create a Payment Link at dashboard.stripe.com → Payment Links. Paste the URL here and it will appear as a "Pay now" button on every invoice.</div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Payment terms</label><input type="text" id="biz-terms" placeholder="Payment due upon receipt" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Invoice notes</label><input type="text" id="biz-notes" placeholder="Thank you for choosing DroneHub Media!" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
@@ -3041,6 +3041,8 @@ function showContractorDetail(key){
 
 
 let bizSettings=JSON.parse(localStorage.getItem('dronehub_settings')||'{}');
+// Pre-fill Stripe URL if not set
+if(!bizSettings.stripeUrl) bizSettings.stripeUrl='https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01';
 
 function saveSettings(){
   bizSettings={
@@ -3239,8 +3241,14 @@ function openInvoice(jobId){
   </tr>`).join('');
 
   const stripeBtn=biz.stripeUrl
-    ?`<a href="${biz.stripeUrl}" target="_blank" style="display:inline-block;margin-top:14px;padding:12px 32px;background:#635BFF;color:#fff;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">Pay now — ${fmtN(grandTotal)}</a>`
-    :'<div style="margin-top:10px;font-size:12px;color:#7A8AAA;font-style:italic">Payment link not yet configured — add your Stripe link in ⚙ Settings</div>';
+    ?`<div style="margin-top:20px;padding:16px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
+        <div style="font-size:12px;color:#A8B4D0;margin-bottom:10px">Pay securely online via Stripe</div>
+        <a href="${biz.stripeUrl}" target="_blank" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none">
+          💳 Pay now — ${fmtN(grandTotal)}
+        </a>
+        <div style="font-size:11px;color:#7A8AAA;margin-top:8px">Powered by Stripe · Secure checkout</div>
+      </div>`
+    :'';
 
   document.getElementById('invoice-body').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:24px;border-bottom:2px solid #1a1a1a">
@@ -5242,31 +5250,28 @@ async function searchQAddr(){
   statusEl.innerHTML='<div class="status-pill pill-loading"><span class="dot dot-loading"></span>Looking up address…</div>';
   document.getElementById('qAddrResult').style.display='none';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:`Return the latitude and longitude of this exact property address in Ontario, Canada.
-
-Address: ${addr}
-
-Respond ONLY with JSON, no other text:
-{"lat": <float>, "lng": <float>, "street": "<full address as understood>", "city": "<city or neighbourhood>"}`}]})});
-    if(!resp.ok) throw new Error('API error '+resp.status);
-    let data;
-    try{ data=await resp.json(); }
-    catch(e){ throw new Error('API returned non-JSON response'); }
-    const rawText=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
-    if(!rawText||rawText.startsWith('<')) throw new Error('Unexpected HTML response from API');
-    const result=JSON.parse(rawText);
-    if(result.lat&&result.lng){
-      propLat=result.lat; propLng=result.lng; propAddrText=result.street||addr;
+    // Use Nominatim (OpenStreetMap) — free, no API key, works from any browser
+    // Try multiple geocoding services in order
+    let lat=null,lng=null,displayName=addr;
+    const apis=[
+      ()=>fetch('https://geocode.maps.co/search?q='+encodeURIComponent(addr)+'&api_key=67a9f5c5a1d6c672191225ssd4917').then(r=>r.json()).then(d=>{if(!d?.length)throw new Error('no results');return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),name:d[0].display_name.split(',').slice(0,3).join(',')}}),
+      ()=>fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(addr)).then(r=>r.json()).then(d=>{if(!d?.length)throw new Error('no results');return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),name:d[0].display_name.split(',').slice(0,2).join(',')}}),
+      ()=>fetch('https://api.bigdatacloud.net/data/forward-geocode?localityName='+encodeURIComponent(addr)+'&country=CA&key=bdc_ee80b1b06be94804a45e69b0e23a3f4a').then(r=>r.json()).then(d=>{if(!d?.latitude)throw new Error('no results');return{lat:d.latitude,lng:d.longitude,name:addr}}),
+    ];
+    for(const api of apis){
+      try{const r=await api();lat=r.lat;lng=r.lng;displayName=r.name;break;}catch(e){continue;}
     }
-    const displayName=result.street||(result.city||addr);
-    document.getElementById('qAddrResultLabel').innerHTML=`<strong>${displayName}</strong><br><span style="font-size:11px;color:#7A8AAA">Coords stored — drive charges calculated per contractor below</span>`;
+    if(!lat||!lng) throw new Error('Address not found');
+    propLat=lat; propLng=lng;
+    propAddrText=displayName;
+    document.getElementById('qAddrResultLabel').innerHTML=`<strong>${displayName}</strong><br><span style="font-size:11px;color:#7A8AAA">Drive charges calculated per contractor below</span>`;
     statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${displayName} located</div>`;
     document.getElementById('qAddrResult').style.display='block';
     refreshAddrPanel();
     calc();
   }catch(e){
-    statusEl.innerHTML='<div class="status-pill pill-error"><span class="dot dot-error"></span>Could not look up address — try a full address with city and province</div>';
+    console.error('Address lookup error:',e);
+    statusEl.innerHTML='<div class="status-pill pill-error"><span class="dot dot-error"></span>Could not find address — try adding city and province (e.g. 123 Main St, Oakville, ON)</div>';
   }
 }
 
@@ -5302,21 +5307,20 @@ async function searchAddr(){
   const aqc=document.getElementById('addrQuoteCard');if(aqc) aqc.style.display='none';
   const mp=document.getElementById('mapPreview');if(mp) mp.style.display='none';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:`Return the latitude and longitude of this Ontario address. Respond ONLY with JSON:\n{"lat":<float>,"lng":<float>,"city":"<city or area>"}\nAddress: ${addr}`}]})});
-    if(!resp.ok) throw new Error('API error '+resp.status);
-    let data;
-    try{ data=await resp.json(); }
-    catch(e){ throw new Error('API returned non-JSON response'); }
-    const rawText=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
-    if(!rawText||rawText.startsWith('<')) throw new Error('Unexpected HTML response from API');
-    const result=JSON.parse(rawText);
-    if(result.lat&&result.lng){ propLat=result.lat; propLng=result.lng; propAddrText=addr; }
+    let lat=null,lng=null,city=addr;
+    const apis2=[
+      ()=>fetch('https://geocode.maps.co/search?q='+encodeURIComponent(addr)+'&api_key=67a9f5c5a1d6c672191225ssd4917').then(r=>r.json()).then(d=>{if(!d?.length)throw new Error('no results');return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),name:d[0].display_name.split(',')[0]}}),
+      ()=>fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(addr)).then(r=>r.json()).then(d=>{if(!d?.length)throw new Error('no results');return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),name:d[0].display_name.split(',')[0]}}),
+    ];
+    for(const api of apis2){
+      try{const r=await api();lat=r.lat;lng=r.lng;city=r.name;break;}catch(e){continue;}
+    }
+    if(!lat||!lng) throw new Error('Address not found');
+    propLat=lat; propLng=lng; propAddrText=addr;
     const vidDrive=contractorDrive('brad');
     const bradDist=vidDrive.km;
     const akbarDist=contractorDrive('akbar').km;
-    if(statusEl) statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${result.city||addr} — coordinates found</div>`;
-    if(arc) arc.style.display='block';
+    if(statusEl) statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${city} — coordinates found</div>`;
     const am=document.getElementById('addrMetrics');
     if(am) am.innerHTML=`
       <div class="metric"><div class="mlabel">Brad (Welland)</div><div class="mval">${bradDist} km</div><div class="msub">${vidDrive.isFree?'free zone':vidDrive.excessKm+' km excess'}</div></div>
