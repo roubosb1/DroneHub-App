@@ -3182,16 +3182,26 @@ function sendInvoiceEmail(){
   const statusEl=document.getElementById('invoice-send-status');
 
   if(!clientEmail){
-    statusEl.textContent='⚠ No email on file for this client — add their email in the Clients tab first.';
-    statusEl.style.background='rgba(245,166,35,.1)';
-    statusEl.style.color='var(--amber)';
-    statusEl.style.borderBottomColor='rgba(245,166,35,.2)';
-    statusEl.style.display='block';
+    if(statusEl){
+      statusEl.textContent='⚠ No email on file for this client — add their email in the Clients tab first.';
+      statusEl.style.background='rgba(245,166,35,.1)';
+      statusEl.style.color='var(--amber)';
+      statusEl.style.borderBottomColor='rgba(245,166,35,.2)';
+      statusEl.style.display='block';
+    } else {
+      alert('No email on file for this client — add their email in the Clients tab first.');
+    }
     return;
   }
 
   if(btn){btn.textContent='Sending…';btn.disabled=true;}
-  statusEl.style.display='none';
+  if(statusEl) statusEl.style.display='none';
+
+  if(typeof emailjs==='undefined'){
+    alert('EmailJS not loaded — please refresh the page and try again.');
+    if(btn){btn.textContent='📧 Send to client';btn.disabled=false;}
+    return;
+  }
 
   emailjs.send('service_f0gwd3p','template_74pphga',{
     to_email:clientEmail,
@@ -3199,7 +3209,6 @@ function sendInvoiceEmail(){
     invite_link:stripeUrl||'',
     invite_code:invNum,
     company_name:bname,
-    // Extra params for invoice template
     invoice_number:invNum,
     invoice_total:displayTotal,
     job_name:jobName,
@@ -3207,19 +3216,26 @@ function sendInvoiceEmail(){
     payment_link:stripeUrl||'',
   },'Ch7hmj99uF1tLKhMj').then(()=>{
     if(btn){btn.textContent='✓ Sent!';setTimeout(()=>{btn.textContent='📧 Send to client';btn.disabled=false;},3000);}
-    statusEl.textContent='✓ Invoice emailed to '+clientEmail;
-    statusEl.style.background='rgba(34,217,122,.1)';
-    statusEl.style.color='#22D97A';
-    statusEl.style.borderBottomColor='rgba(34,217,122,.2)';
-    statusEl.style.display='block';
+    if(statusEl){
+      statusEl.textContent='✓ Invoice emailed to '+clientEmail;
+      statusEl.style.background='rgba(34,217,122,.1)';
+      statusEl.style.color='#22D97A';
+      statusEl.style.borderBottomColor='rgba(34,217,122,.2)';
+      statusEl.style.display='block';
+    }
   }).catch(err=>{
     const msg=err?.text||err?.message||JSON.stringify(err)||'error';
+    console.error('Invoice email error:',msg,err);
     if(btn){btn.textContent='📧 Send to client';btn.disabled=false;}
-    statusEl.textContent='Failed to send: '+msg;
-    statusEl.style.background='rgba(240,82,82,.1)';
-    statusEl.style.color='var(--red)';
-    statusEl.style.borderBottomColor='rgba(240,82,82,.2)';
-    statusEl.style.display='block';
+    if(statusEl){
+      statusEl.textContent='Failed: '+msg;
+      statusEl.style.background='rgba(240,82,82,.1)';
+      statusEl.style.color='var(--red)';
+      statusEl.style.borderBottomColor='rgba(240,82,82,.2)';
+      statusEl.style.display='block';
+    } else {
+      alert('Failed to send: '+msg);
+    }
   });
 }
 
