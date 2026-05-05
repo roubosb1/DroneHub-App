@@ -3174,6 +3174,8 @@ function loadSettings(){
 let invoiceNumberBase=parseInt(localStorage.getItem('dronehub_inv_num')||'999');
 let currentInvoiceData=null; // stores data for send button
 
+function fmtN(n){return '$'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
 function sendInvoiceEmail(){
   if(!currentInvoiceData){alert('No invoice loaded.');return;}
   const{clientEmail,clientName,invNum,grandTotal,jobName,jobDate,stripeUrl,bname}=currentInvoiceData;
