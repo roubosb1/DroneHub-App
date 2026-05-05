@@ -3215,7 +3215,7 @@ function sendInvoiceEmail(){
     invoice_total:displayTotal,
     job_name:jobName,
     job_date:jobDate,
-    payment_link:stripeUrl||'',
+    payment_link:'https://sparkly-halva-0d1aa9.netlify.app',
   },'Ch7hmj99uF1tLKhMj').then(()=>{
     if(btn){btn.textContent='✓ Sent!';setTimeout(()=>{btn.textContent='📧 Send to client';btn.disabled=false;},3000);}
     if(statusEl){
@@ -5873,7 +5873,7 @@ function cpShowTab(tab){
               <div style="font-size:15px;font-weight:700;color:${st==='overdue'?'var(--red)':st==='paid'?'var(--green)':'var(--amber)'}">${fmtN(st==='overdue'?owed:j.grand)}</div>
             </div>
           </div>
-          ${st!=='paid'&&biz.stripeUrl?`<a href="${biz.stripeUrl}" target="_blank" style="display:inline-block;margin-top:10px;padding:9px 22px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:13px;font-weight:700;text-decoration:none">💳 Pay now — ${fmtN(st==='overdue'?owed:j.grand)}</a>`:''}
+          ${st!=='paid'?`<button onclick="openStripeCheckout(${st==='overdue'?owed:j.grand},'${j.invNum||''}','${j.clientEmail||''}')" style="display:inline-block;margin-top:10px;padding:9px 22px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">💳 Pay now — ${fmtN(st==='overdue'?owed:j.grand)}</button>`:''}
         </div>`;
       }).join('')
       :'<div style="color:var(--muted);font-size:13px;padding:12px 0">No invoices yet.</div>'}
