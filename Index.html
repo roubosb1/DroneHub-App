@@ -3362,6 +3362,12 @@ function openInvoice(jobId){
   document.getElementById('invoice-overlay').style.display='block';
 }
 
+function openAndSendInvoice(jobId){
+  openInvoice(jobId);
+  // Wait for invoice to render then auto-trigger send
+  setTimeout(()=>sendInvoiceEmail(),300);
+}
+
 function closeInvoice(){
   document.getElementById('invoice-overlay').style.display='none';
 }
@@ -4472,6 +4478,7 @@ function renderJobs(){
       if(st==='confirmed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus(${j.id},'quoted')">← Quoted</button>`);
       if(st==='completed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus(${j.id},'confirmed')">← Confirmed</button>`);
       if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openInvoice(${j.id})">📄 Invoice</button>`);
+      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();openAndSendInvoice(${j.id})">📧 Send invoice</button>`);
       actionBtns.push(`<button class="job-action-btn" style="border-color:#C87D1E;background:rgba(245,166,35,.1);color:#F5A623" onclick="event.stopPropagation();openEditJob(${j.id})">✏ Edit</button>`);
       actionBtns.push(`<button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob(${j.id})">Delete</button>`);
       const ts=getTrackerStage(j.id);
