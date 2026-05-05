@@ -3404,19 +3404,17 @@ function openInvoice(jobId){
   </tr>`).join('');
 
   const stripeUrl=biz.stripeUrl||'https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01';
-  // grandTotal already includes HST — use it directly
-  const stripeAmountCents=Math.round(grandTotal*100);
-  const stripeUrlWithAmount=stripeUrl+(stripeUrl.includes('?')?'&':'?')+'prefilled_amount='+stripeAmountCents;
-  const stripeBtn=`<div style="margin-top:20px;padding:16px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
-      <div style="font-size:12px;color:#A8B4D0;margin-bottom:10px">Pay securely online via Stripe</div>
-      <a href="${stripeUrlWithAmount}" target="_blank" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none">
-        💳 Pay now — ${fmtN(grandTotal)}
-      </a>
-      <div style="font-size:11px;color:#7A8AAA;margin-top:8px">Powered by Stripe · Amount pre-filled · Secure checkout</div>
+  const stripeBtn=`<div style="margin-top:20px;padding:20px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
+      <div style="font-size:13px;color:#A8B4D0;margin-bottom:6px">Pay securely online via Stripe</div>
+      <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:14px">${fmtN(grandTotal)}</div>
+      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}')" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
+        💳 Pay now
+      </button>
+      <div style="font-size:11px;color:#7A8AAA;margin-top:10px">Powered by Stripe · Secure checkout</div>
     </div>`;
 
   // Store for Send Invoice button
-  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl:stripeUrlWithAmount,bname:biz.name||'DroneHub Media'};
+  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media'};
   const sendStatus=document.getElementById('invoice-send-status');
   if(sendStatus) sendStatus.style.display='none';
 
@@ -3481,6 +3479,34 @@ function openAndSendInvoice(jobId){
   openInvoice(jobId);
   // Wait for invoice to render then auto-trigger send
   setTimeout(()=>sendInvoiceEmail(),300);
+}
+
+async function openStripeCheckout(amount, invoiceNumber, clientEmail){
+  const btn=event?.target;
+  if(btn){btn.textContent='Loading…';btn.disabled=true;}
+  try{
+    const res=await fetch('/.netlify/functions/create-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        amount,
+        currency:'cad',
+        jobName:currentInvoiceData?.jobName||'DroneHub Media Invoice',
+        invoiceNumber,
+        clientEmail
+      })
+    });
+    const data=await res.json();
+    if(data.url){
+      window.location.href=data.url;
+    } else {
+      throw new Error(data.error||'No checkout URL returned');
+    }
+  }catch(e){
+    console.error('Checkout error:',e);
+    if(btn){btn.textContent='💳 Pay now';btn.disabled=false;}
+    alert('Could not create checkout session: '+e.message);
+  }
 }
 
 function closeInvoice(){
