@@ -1628,11 +1628,13 @@ button{font-family:var(--font);}
   <div style="background:#1C2333;max-width:700px;margin:30px auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,.6);border:1px solid #3A4890" onclick="event.stopPropagation()">
     <div class="invoice-toolbar" style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#1C2333;border-bottom:0.5px solid #e0ddd5">
       <span style="font-size:13px;font-weight:500;color:#C8D0E8">Invoice preview</span>
-      <div style="display:flex;gap:8px">
-        <button onclick="window.print()" style="padding:7px 18px;border-radius:16px;border:0.5px solid #5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF;font-size:13px;font-weight:500;cursor:pointer">🖨 Print / Save PDF</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="send-invoice-btn" onclick="sendInvoiceEmail()" style="padding:7px 18px;border-radius:16px;border:1px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:600;cursor:pointer">📧 Send to client</button>
+        <button onclick="window.print()" style="padding:7px 18px;border-radius:16px;border:0.5px solid #5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF;font-size:13px;font-weight:500;cursor:pointer">🖨 Print / PDF</button>
         <button onclick="closeInvoice()" style="padding:7px 16px;border-radius:16px;border:1px solid #2E3A55;background:#242D42;color:#A8B4D0;font-size:13px;cursor:pointer">Close</button>
       </div>
     </div>
+    <div id="invoice-send-status" style="display:none;padding:8px 20px;font-size:12px;background:rgba(34,217,122,.1);border-bottom:1px solid rgba(34,217,122,.2);color:#22D97A"></div>
     <div id="invoice-body" style="padding:48px 56px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#E8ECF8"></div>
   </div>
 </div>
@@ -3075,6 +3077,55 @@ function loadSettings(){
 
 // ─── INVOICE ─────────────────────────────────────────────────────────────────
 let invoiceNumberBase=parseInt(localStorage.getItem('dronehub_inv_num')||'999');
+let currentInvoiceData=null; // stores data for send button
+
+function sendInvoiceEmail(){
+  if(!currentInvoiceData){alert('No invoice loaded.');return;}
+  const{clientEmail,clientName,invNum,grandTotal,jobName,jobDate,stripeUrl,bname}=currentInvoiceData;
+  const btn=document.getElementById('send-invoice-btn');
+  const statusEl=document.getElementById('invoice-send-status');
+
+  if(!clientEmail){
+    statusEl.textContent='⚠ No email on file for this client — add their email in the Clients tab first.';
+    statusEl.style.background='rgba(245,166,35,.1)';
+    statusEl.style.color='var(--amber)';
+    statusEl.style.borderBottomColor='rgba(245,166,35,.2)';
+    statusEl.style.display='block';
+    return;
+  }
+
+  if(btn){btn.textContent='Sending…';btn.disabled=true;}
+  statusEl.style.display='none';
+
+  emailjs.send('service_f0gwd3p','template_74pphga',{
+    to_email:clientEmail,
+    to_name:clientName||clientEmail,
+    invite_link:stripeUrl||'',
+    invite_code:invNum,
+    company_name:bname,
+    // Extra params for invoice template
+    invoice_number:invNum,
+    invoice_total:'$'+grandTotal.toFixed(2),
+    job_name:jobName,
+    job_date:jobDate,
+    payment_link:stripeUrl||'',
+  },'Ch7hmj99uF1tLKhMj').then(()=>{
+    if(btn){btn.textContent='✓ Sent!';setTimeout(()=>{btn.textContent='📧 Send to client';btn.disabled=false;},3000);}
+    statusEl.textContent='✓ Invoice emailed to '+clientEmail;
+    statusEl.style.background='rgba(34,217,122,.1)';
+    statusEl.style.color='#22D97A';
+    statusEl.style.borderBottomColor='rgba(34,217,122,.2)';
+    statusEl.style.display='block';
+  }).catch(err=>{
+    const msg=err?.text||err?.message||JSON.stringify(err)||'error';
+    if(btn){btn.textContent='📧 Send to client';btn.disabled=false;}
+    statusEl.textContent='Failed to send: '+msg;
+    statusEl.style.background='rgba(240,82,82,.1)';
+    statusEl.style.color='var(--red)';
+    statusEl.style.borderBottomColor='rgba(240,82,82,.2)';
+    statusEl.style.display='block';
+  });
+}
 
 function nextInvoiceNum(){
   invoiceNumberBase++;
@@ -3240,15 +3291,19 @@ function openInvoice(jobId){
     <td style="padding:9px 0;border-bottom:0.5px solid #f0ede6;font-size:13px;text-align:right;font-weight:500">${fmtN(l.total)}</td>
   </tr>`).join('');
 
-  const stripeBtn=biz.stripeUrl
-    ?`<div style="margin-top:20px;padding:16px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
-        <div style="font-size:12px;color:#A8B4D0;margin-bottom:10px">Pay securely online via Stripe</div>
-        <a href="${biz.stripeUrl}" target="_blank" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none">
-          💳 Pay now — ${fmtN(grandTotal)}
-        </a>
-        <div style="font-size:11px;color:#7A8AAA;margin-top:8px">Powered by Stripe · Secure checkout</div>
-      </div>`
-    :'';
+  const stripeUrl=biz.stripeUrl||'https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01';
+  const stripeBtn=`<div style="margin-top:20px;padding:16px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
+      <div style="font-size:12px;color:#A8B4D0;margin-bottom:10px">Pay securely online via Stripe</div>
+      <a href="${stripeUrl}" target="_blank" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none">
+        💳 Pay now — ${fmtN(grandTotal)}
+      </a>
+      <div style="font-size:11px;color:#7A8AAA;margin-top:8px">Powered by Stripe · Secure checkout</div>
+    </div>`;
+
+  // Store for Send Invoice button
+  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media'};
+  const sendStatus=document.getElementById('invoice-send-status');
+  if(sendStatus) sendStatus.style.display='none';
 
   document.getElementById('invoice-body').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:24px;border-bottom:2px solid #1a1a1a">
@@ -5243,6 +5298,32 @@ function calc(){
 
 
 
+async function geocodeAddress(addr){
+  const q=encodeURIComponent(addr+' Canada');
+
+  // Photon by Komoot — completely open CORS, no API key, reliable
+  try{
+    const r=await fetch('https://photon.komoot.io/api/?q='+q+'&limit=1&lang=en');
+    const d=await r.json();
+    if(d?.features?.[0]){
+      const f=d.features[0];
+      const p=f.properties;
+      const name=[p.housenumber,p.street,p.city||p.name].filter(Boolean).join(' ');
+      return{lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],name:name||addr};
+    }
+  }catch(e){}
+
+  // Nominatim fallback
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q='+q,
+      {headers:{'Accept':'application/json'}});
+    const d=await r.json();
+    if(d?.[0]?.lat) return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),name:d[0].display_name.split(',').slice(0,3).join(',').trim()};
+  }catch(e){}
+
+  throw new Error('Address not found — please check the address and try again');
+}
+
 async function searchQAddr(){
   const addr=document.getElementById('qAddrInput').value.trim();
   if(!addr)return;
@@ -5251,25 +5332,9 @@ async function searchQAddr(){
   document.getElementById('qAddrResult').style.display='none';
   try{
     // Use Nominatim (OpenStreetMap) — free, no API key, works from any browser
-    const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q='+encodeURIComponent(addr);
-    const resp=await fetch(url,{headers:{'Accept-Language':'en','User-Agent':'DroneHubMedia/1.0'}});
-    if(!resp.ok) throw new Error('Lookup failed '+resp.status);
-    const results=await resp.json();
-    if(!results||!results.length) throw new Error('Address not found');
-    const result=results[0];
-    const lat=parseFloat(result.lat);
-    const lng=parseFloat(result.lon);
-    if(!lat||!lng) throw new Error('No coordinates returned');
-    propLat=lat; propLng=lng;
-    // Build a clean address string
-    const a=result.address||{};
-    const streetNum=a.house_number||'';
-    const streetName=a.road||a.pedestrian||'';
-    const city=a.city||a.town||a.village||a.county||'';
-    const province=a.state||'';
-    const street=[streetNum,streetName].filter(Boolean).join(' ')||result.display_name.split(',')[0];
-    propAddrText=street+', '+city+(province?', '+province:'');
-    const displayName=propAddrText||result.display_name;
+    const geo=await geocodeAddress(addr);
+    propLat=geo.lat; propLng=geo.lng; propAddrText=geo.name;
+    const displayName=geo.name;
     document.getElementById('qAddrResultLabel').innerHTML=`<strong>${displayName}</strong><br><span style="font-size:11px;color:#7A8AAA">Drive charges calculated per contractor below</span>`;
     statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${displayName} located</div>`;
     document.getElementById('qAddrResult').style.display='block';
@@ -5313,18 +5378,9 @@ async function searchAddr(){
   const aqc=document.getElementById('addrQuoteCard');if(aqc) aqc.style.display='none';
   const mp=document.getElementById('mapPreview');if(mp) mp.style.display='none';
   try{
-    const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q='+encodeURIComponent(addr);
-    const resp=await fetch(url,{headers:{'Accept-Language':'en','User-Agent':'DroneHubMedia/1.0'}});
-    if(!resp.ok) throw new Error('Lookup failed '+resp.status);
-    const results=await resp.json();
-    if(!results||!results.length) throw new Error('Address not found');
-    const result=results[0];
-    const lat=parseFloat(result.lat);
-    const lng=parseFloat(result.lon);
-    if(!lat||!lng) throw new Error('No coordinates');
-    propLat=lat; propLng=lng; propAddrText=addr;
-    const a=result.address||{};
-    const city=a.city||a.town||a.village||a.county||addr;
+    const geo2=await geocodeAddress(addr);
+    propLat=geo2.lat; propLng=geo2.lng; propAddrText=addr;
+    const city=geo2.name;
     const vidDrive=contractorDrive('brad');
     const bradDist=vidDrive.km;
     const akbarDist=contractorDrive('akbar').km;
