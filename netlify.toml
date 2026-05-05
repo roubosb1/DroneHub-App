@@ -1,2 +1,6 @@
-[[plugins]]
-package = "@netlify/plugin-functions-install-core"
+[build]
+  command = "cd netlify/functions && npm install"
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
