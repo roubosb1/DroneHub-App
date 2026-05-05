@@ -5250,31 +5250,34 @@ async function searchQAddr(){
   statusEl.innerHTML='<div class="status-pill pill-loading"><span class="dot dot-loading"></span>Looking up address…</div>';
   document.getElementById('qAddrResult').style.display='none';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:`Return the latitude and longitude of this exact property address in Ontario, Canada.
-
-Address: ${addr}
-
-Respond ONLY with JSON, no other text:
-{"lat": <float>, "lng": <float>, "street": "<full address as understood>", "city": "<city or neighbourhood>"}`}]})});
-    if(!resp.ok) throw new Error('API error '+resp.status);
-    let data;
-    try{ data=await resp.json(); }
-    catch(e){ throw new Error('API returned non-JSON response'); }
-    const rawText=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
-    if(!rawText||rawText.startsWith('<')) throw new Error('Unexpected HTML response from API');
-    const result=JSON.parse(rawText);
-    if(result.lat&&result.lng){
-      propLat=result.lat; propLng=result.lng; propAddrText=result.street||addr;
-    }
-    const displayName=result.street||(result.city||addr);
-    document.getElementById('qAddrResultLabel').innerHTML=`<strong>${displayName}</strong><br><span style="font-size:11px;color:#7A8AAA">Coords stored — drive charges calculated per contractor below</span>`;
+    // Use Nominatim (OpenStreetMap) — free, no API key, works from any browser
+    const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q='+encodeURIComponent(addr);
+    const resp=await fetch(url,{headers:{'Accept-Language':'en','User-Agent':'DroneHubMedia/1.0'}});
+    if(!resp.ok) throw new Error('Lookup failed '+resp.status);
+    const results=await resp.json();
+    if(!results||!results.length) throw new Error('Address not found');
+    const result=results[0];
+    const lat=parseFloat(result.lat);
+    const lng=parseFloat(result.lon);
+    if(!lat||!lng) throw new Error('No coordinates returned');
+    propLat=lat; propLng=lng;
+    // Build a clean address string
+    const a=result.address||{};
+    const streetNum=a.house_number||'';
+    const streetName=a.road||a.pedestrian||'';
+    const city=a.city||a.town||a.village||a.county||'';
+    const province=a.state||'';
+    const street=[streetNum,streetName].filter(Boolean).join(' ')||result.display_name.split(',')[0];
+    propAddrText=street+', '+city+(province?', '+province:'');
+    const displayName=propAddrText||result.display_name;
+    document.getElementById('qAddrResultLabel').innerHTML=`<strong>${displayName}</strong><br><span style="font-size:11px;color:#7A8AAA">Drive charges calculated per contractor below</span>`;
     statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${displayName} located</div>`;
     document.getElementById('qAddrResult').style.display='block';
     refreshAddrPanel();
     calc();
   }catch(e){
-    statusEl.innerHTML='<div class="status-pill pill-error"><span class="dot dot-error"></span>Could not look up address — try a full address with city and province</div>';
+    console.error('Address lookup error:',e);
+    statusEl.innerHTML='<div class="status-pill pill-error"><span class="dot dot-error"></span>Could not find address — try adding city and province (e.g. 123 Main St, Oakville, ON)</div>';
   }
 }
 
@@ -5310,21 +5313,22 @@ async function searchAddr(){
   const aqc=document.getElementById('addrQuoteCard');if(aqc) aqc.style.display='none';
   const mp=document.getElementById('mapPreview');if(mp) mp.style.display='none';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:`Return the latitude and longitude of this Ontario address. Respond ONLY with JSON:\n{"lat":<float>,"lng":<float>,"city":"<city or area>"}\nAddress: ${addr}`}]})});
-    if(!resp.ok) throw new Error('API error '+resp.status);
-    let data;
-    try{ data=await resp.json(); }
-    catch(e){ throw new Error('API returned non-JSON response'); }
-    const rawText=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
-    if(!rawText||rawText.startsWith('<')) throw new Error('Unexpected HTML response from API');
-    const result=JSON.parse(rawText);
-    if(result.lat&&result.lng){ propLat=result.lat; propLng=result.lng; propAddrText=addr; }
+    const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q='+encodeURIComponent(addr);
+    const resp=await fetch(url,{headers:{'Accept-Language':'en','User-Agent':'DroneHubMedia/1.0'}});
+    if(!resp.ok) throw new Error('Lookup failed '+resp.status);
+    const results=await resp.json();
+    if(!results||!results.length) throw new Error('Address not found');
+    const result=results[0];
+    const lat=parseFloat(result.lat);
+    const lng=parseFloat(result.lon);
+    if(!lat||!lng) throw new Error('No coordinates');
+    propLat=lat; propLng=lng; propAddrText=addr;
+    const a=result.address||{};
+    const city=a.city||a.town||a.village||a.county||addr;
     const vidDrive=contractorDrive('brad');
     const bradDist=vidDrive.km;
     const akbarDist=contractorDrive('akbar').km;
-    if(statusEl) statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${result.city||addr} — coordinates found</div>`;
-    if(arc) arc.style.display='block';
+    if(statusEl) statusEl.innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${city} — coordinates found</div>`;
     const am=document.getElementById('addrMetrics');
     if(am) am.innerHTML=`
       <div class="metric"><div class="mlabel">Brad (Welland)</div><div class="mval">${bradDist} km</div><div class="msub">${vidDrive.isFree?'free zone':vidDrive.excessKm+' km excess'}</div></div>
