@@ -2734,7 +2734,7 @@ async function fetchWeather(lat,lng,locationLabel){
       weatherData=data;
       renderWeatherDaily(data);
       return;
-    }catch(e){ continue; }
+    }catch(e){ console.warn('Weather endpoint failed:',url,e); continue; }
   }
 
   // All endpoints failed — try wttr.in as fallback (different service)
@@ -5514,13 +5514,21 @@ async function searchQAddr(){
 
 function applyQAddr(){
   const labelEl=document.getElementById('qAddrResultLabel');
-  const location=labelEl.querySelector('strong')?.textContent||document.getElementById('qAddrInput').value.trim();
+  const location=labelEl?.querySelector('strong')?.textContent||document.getElementById('qAddrInput').value.trim();
   document.getElementById('qAddrStatus').innerHTML=`<div class="status-pill pill-free"><span class="dot dot-free"></span>${location} — applied to quote</div>`;
   document.getElementById('qAddrResult').style.display='none';
   const al=document.getElementById('appliedLocation');
   const alt=document.getElementById('appliedLocationText');
   if(al&&alt){al.style.display='block';alt.textContent=`Property: ${propAddrText||location}`;}
-  if(propLat&&propLng) fetchWeather(propLat,propLng,propAddrText||location);
+  // Show weather card immediately and fetch
+  const wCard=document.getElementById('weather-card');
+  if(wCard) wCard.style.display='block';
+  if(propLat&&propLng){
+    fetchWeather(propLat,propLng,propAddrText||location);
+  } else {
+    const wDaily=document.getElementById('weather-daily');
+    if(wDaily) wDaily.innerHTML='<div style="font-size:12px;color:var(--amber);padding:8px">⚠ Apply an address first to load the forecast</div>';
+  }
   calc();
 }
 
