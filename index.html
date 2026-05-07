@@ -132,7 +132,7 @@ input::placeholder{color:var(--muted);}
 .tabs{display:flex;gap:2px;margin-bottom:20px;flex-wrap:wrap;background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:4px;position:sticky;top:64px;z-index:50;}
 .tab{padding:7px 13px;border-radius:9px;border:none;font-size:11px;font-family:var(--font);font-weight:700;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.02em;white-space:nowrap;}
 .tab:hover{color:var(--white);background:var(--navy-lift);}
-.tab.active{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dim) 100%);color:var(--white);box-shadow:0 2px 12px rgba(91,141,239,.35);}
+.tab.active{background:rgba(255,255,255,.08);color:var(--white);box-shadow:none;}
 .pane{display:none}.pane.active{display:block;min-height:calc(100vh - 130px)}
 .note{font-size:11px;color:var(--offwhite);line-height:1.6;margin-top:8px;opacity:.65}
 .search-input-wrap{display:flex;gap:8px;align-items:center}
@@ -461,7 +461,7 @@ button{font-family:var(--font);}
 <div class="wrap">
 
 <div class="tabs">
-  <button class="tab" onclick="showPane('tracker',event)" id="tab-tracker" style="background:linear-gradient(135deg,var(--purple),#6D28D9);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.35)">📋 Projects</button>
+  <button class="tab" onclick="showPane('tracker',event)" id="tab-tracker">📋 Projects</button>
   <button class="tab active" onclick="showPane('quote',event)">Quote builder</button>
   <button class="tab" onclick="showPane('jobs',event)">Jobs</button>
   <button class="tab" onclick="showPane('calendar',event)">Calendar</button>
@@ -3176,9 +3176,9 @@ let currentInvoiceData=null; // stores data for send button
 
 function fmtN(n){return '$'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-function sendInvoiceEmail(){
+async function sendInvoiceEmail(){
   if(!currentInvoiceData){alert('No invoice loaded.');return;}
-  const{clientEmail,clientName,invNum,grandTotal,jobName,jobDate,stripeUrl,bname}=currentInvoiceData;
+  const{clientEmail,clientName,invNum,grandTotal,jobName,jobDate,bname}=currentInvoiceData;
   const displayTotal=fmtN(grandTotal);
   const btn=document.getElementById('send-invoice-btn');
   const statusEl=document.getElementById('invoice-send-status');
@@ -3196,11 +3196,36 @@ function sendInvoiceEmail(){
     return;
   }
 
-  if(btn){btn.textContent='Sending…';btn.disabled=true;}
+  if(btn){btn.textContent='Creating payment link…';btn.disabled=true;}
   if(statusEl) statusEl.style.display='none';
 
+  // Step 1 — Create Stripe checkout session to get unique payment URL
+  let paymentLink='';
+  try{
+    const res=await fetch('/.netlify/functions/create-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        amount:grandTotal,
+        currency:'cad',
+        jobName:jobName,
+        invoiceNumber:invNum,
+        clientEmail:clientEmail
+      })
+    });
+    const data=await res.json();
+    if(data.url) paymentLink=data.url;
+    else throw new Error(data.error||'No URL returned');
+  }catch(e){
+    console.error('Stripe checkout error:',e);
+    paymentLink='https://sparkly-halva-0d1aa9.netlify.app';
+  }
+
+  // Step 2 — Send email with the unique Stripe checkout URL
+  if(btn) btn.textContent='Sending email…';
+
   if(typeof emailjs==='undefined'){
-    alert('EmailJS not loaded — please refresh the page and try again.');
+    alert('EmailJS not loaded — please refresh and try again.');
     if(btn){btn.textContent='📧 Send to client';btn.disabled=false;}
     return;
   }
@@ -3208,18 +3233,16 @@ function sendInvoiceEmail(){
   emailjs.send('service_f0gwd3p','template_74pphga',{
     to_email:clientEmail,
     to_name:clientName||clientEmail,
-    invite_link:stripeUrl||'',
-    invite_code:invNum,
     company_name:bname,
     invoice_number:invNum,
     invoice_total:displayTotal,
     job_name:jobName,
     job_date:jobDate,
-    payment_link:'https://sparkly-halva-0d1aa9.netlify.app',
+    payment_link:paymentLink,
   },'Ch7hmj99uF1tLKhMj').then(()=>{
     if(btn){btn.textContent='✓ Sent!';setTimeout(()=>{btn.textContent='📧 Send to client';btn.disabled=false;},3000);}
     if(statusEl){
-      statusEl.textContent='✓ Invoice emailed to '+clientEmail;
+      statusEl.textContent='✓ Invoice emailed to '+clientEmail+' with direct payment link';
       statusEl.style.background='rgba(34,217,122,.1)';
       statusEl.style.color='#22D97A';
       statusEl.style.borderBottomColor='rgba(34,217,122,.2)';
@@ -3227,19 +3250,18 @@ function sendInvoiceEmail(){
     }
   }).catch(err=>{
     const msg=err?.text||err?.message||JSON.stringify(err)||'error';
-    console.error('Invoice email error:',msg,err);
+    console.error('EmailJS error:',msg);
     if(btn){btn.textContent='📧 Send to client';btn.disabled=false;}
     if(statusEl){
-      statusEl.textContent='Failed: '+msg;
+      statusEl.textContent='Failed to send email: '+msg;
       statusEl.style.background='rgba(240,82,82,.1)';
       statusEl.style.color='var(--red)';
       statusEl.style.borderBottomColor='rgba(240,82,82,.2)';
       statusEl.style.display='block';
-    } else {
-      alert('Failed to send: '+msg);
     }
   });
 }
+
 
 function nextInvoiceNum(){
   invoiceNumberBase++;
