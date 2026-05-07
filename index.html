@@ -421,6 +421,7 @@ button{font-family:var(--font);}
         <button onclick="tpShowTab('calendar')" class="cp-tab" data-tptab="calendar">Calendar</button>
         <button onclick="tpShowTab('paystubs')" class="cp-tab" data-tptab="paystubs">Pay Stubs</button>
         <button onclick="tpShowTab('messages')" class="cp-tab" data-tptab="messages">💬 LouChat</button>
+        <button onclick="tpShowTab('profile')" class="cp-tab" data-tptab="profile">👤 Profile</button>
       </div>
     </div>
     <div style="max-width:860px;margin:0 auto;padding:24px 20px 60px" id="tp-content"></div>
@@ -1638,7 +1639,9 @@ button{font-family:var(--font);}
         </div>
         <div id="cal-linked-list" style="margin-bottom:16px"></div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px">
-          <input type="text" id="cal-gcal-name" placeholder="Creator name (e.g. Brad)" style="padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          <select id="cal-gcal-name" style="padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <option value="">— Select team member —</option>
+          </select>
           <div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:14px">
@@ -1776,8 +1779,47 @@ const RANDOM_VIDEO_RATE_CLIENT=200,RANDOM_VIDEO_RATE_CONTRACTOR=80;
 const RANDOM_PHOTO_RATE_CLIENT=200,RANDOM_PHOTO_RATE_CONTRACTOR=80;
 const RUSH_FEE=200;
 const RANDOM_SHOOT_PAY=45,RANDOM_EDIT_PAY=35; // $45/hr to shooter, $35/hr to editor
-const EDITOR_OPTIONS=['brad','akbar','steve','dronehub'];
-const EDITOR_NAMES={brad:'Brad Loiselle',akbar:'Akbar Omar',steve:'Steve Calaguiro',dronehub:'DroneHub'};
+// ── DYNAMIC EDITOR/TEAM LISTS ─────────────────────────────────────────────
+// These replace the old hardcoded EDITOR_OPTIONS and EDITOR_NAMES
+// They pull from team members + contractors automatically
+const EDITOR_OPTIONS_LEGACY=['brad','akbar','steve','dronehub'];
+const EDITOR_NAMES_LEGACY={brad:'Brad Loiselle',akbar:'Akbar Omar',steve:'Steve Calaguiro',dronehub:'DroneHub'};
+// Keep for backward compatibility with old stored data
+const EDITOR_OPTIONS=EDITOR_OPTIONS_LEGACY;
+const EDITOR_NAMES=EDITOR_NAMES_LEGACY;
+
+function getTeamEditors(){
+  // Returns [{key, name}] — all editors and contractors from team members
+  const seen=new Set();
+  const list=[];
+  // From admin team members — editors and contractors
+  getAdminTeamMembers().forEach(m=>{
+    if((m.role==='editor'||m.role==='contractor')&&m.name&&!seen.has(m.name)){
+      seen.add(m.name);
+      list.push({key:m.email||m.id,name:m.name,role:m.role});
+    }
+  });
+  // From CONTRACTORS
+  Object.entries(CONTRACTORS).forEach(([k,c])=>{
+    if(c.name&&!seen.has(c.name)){
+      seen.add(c.name);
+      list.push({key:k,name:c.name,role:c.role||'Contractor'});
+    }
+  });
+  return list;
+}
+
+function buildEditorOptions(selectedName){
+  const editors=getTeamEditors();
+  if(editors.length===0){
+    // Fall back to legacy if no team members yet
+    return EDITOR_OPTIONS_LEGACY.map(k=>
+      `<option value="${EDITOR_NAMES_LEGACY[k]}"${selectedName===EDITOR_NAMES_LEGACY[k]?' selected':''}>${EDITOR_NAMES_LEGACY[k]}</option>`
+    ).join('');
+  }
+  return '<option value="">— Unassigned —</option>'+
+    editors.map(e=>`<option value="${e.name}"${selectedName===e.name?' selected':''}>${e.name}${e.role?' ('+e.role+')':''}</option>`).join('');
+}
 
 // Editor assignments per service (set in cost model)
 const editors={video:'',photo:'',extvideo:'',extphoto:'',randomvideo:'',randomphoto:'',rush:'',custom:''};
@@ -1941,7 +1983,7 @@ function showPane(id,ev){
   if(id==='model'){renderEditorSelectors();}
   if(id==='jobs'){renderJobs();}
   if(id==='clients'){renderClients();}
-  if(id==='calendar'){renderCalendar();}
+  if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){renderFinance();}
@@ -2541,46 +2583,67 @@ async function saveNewContractor(){
   const first=document.getElementById('nc-first').value.trim();
   const last=document.getElementById('nc-last').value.trim();
   const addr=document.getElementById('nc-addr').value.trim();
+  const email=document.getElementById('nc-email').value.trim().toLowerCase();
   const err=document.getElementById('nc-error');
   if(!first||!last){err.textContent='First and last name are required.';return;}
   if(!addr){err.textContent='Home address is required for drive calculations.';return;}
-  err.textContent='Geocoding address…';
+  err.textContent='Looking up address…';
 
   let lat=0,lng=0;
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
-    const d=await r.json();
-    if(d&&d.length){lat=parseFloat(d[0].lat);lng=parseFloat(d[0].lon);}
-  }catch(e){}
+    const geo=await geocodeAddress(addr);
+    lat=geo.lat; lng=geo.lng;
+  }catch(e){ console.warn('Geocode failed:',e); }
 
   err.textContent=lat?'':('Address not geocoded — drive calc unavailable. Fix in ⚙ Settings.');
 
-  const key='c_'+Date.now();
+  const name=first+' '+last;
+  const role=document.getElementById('nc-role').value;
+  const rate=parseFloat(document.getElementById('nc-rate').value)||80;
+  const phone=document.getElementById('nc-phone')?.value.trim()||'';
+
+  // Use email as key if provided, otherwise generate one
+  const key=email?'c_'+email.replace(/[^a-z0-9]/g,'_'):'c_'+Date.now();
   CONTRACTORS[key]={
-    name:first+' '+last,
-    company:document.getElementById('nc-company').value.trim(),
-    hst:document.getElementById('nc-hst').value.trim(),
-    email:document.getElementById('nc-email').value.trim(),
-    phone:document.getElementById('nc-phone').value.trim(),
-    addr, lat, lng,
-    role:document.getElementById('nc-role').value,
-    rate:parseFloat(document.getElementById('nc-rate').value)||80,
+    name, email, phone, addr, lat, lng, role, rate,
     notes:'',
   };
   saveContractors();
   populateContractorDropdowns();
 
-  ['nc-first','nc-last','nc-company','nc-hst','nc-email','nc-phone','nc-addr'].forEach(id=>document.getElementById(id).value='');
+  // ── LINK TO TEAM MEMBER ACCOUNT ──────────────────────────────────────────
+  // Create/update admin team member record so they appear in Team tab
+  if(email){
+    const members=getAdminTeamMembers();
+    const existing=members.findIndex(m=>m.email===email);
+    const memberRole=role.toLowerCase().includes('editor')?'editor':'contractor';
+    const memberRecord={
+      id:existing>=0?members[existing].id:('tmadmin_'+Date.now()),
+      name,email,phone,
+      type:'contractor',
+      role:memberRole,
+      contractorKey:key, // link back to CONTRACTORS record
+      orgId:ensureDefaultOrg().id,
+      status:'active',
+      addedAt:new Date().toISOString().slice(0,10),
+    };
+    if(existing>=0) members[existing]=memberRecord;
+    else members.push(memberRecord);
+    saveAdminTeamMembers(members);
+    renderTeam();
+  }
+
+  ['nc-first','nc-last','nc-email','nc-phone','nc-addr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('nc-rate').value='80';
   document.getElementById('new-contractor-form').style.display='none';
   document.getElementById('btn-add-contractor').textContent='+ Add new contractor';
-  if(!lat) return; // keep error msg
-  err.textContent='';
+  if(!lat) return;
+  err.textContent='✓ '+name+' added';
 
-  const role=CONTRACTORS[key].role.toLowerCase();
-  if(role.includes('video')){const s=document.getElementById('sel-videographer');if(s&&s.querySelector(`option[value="${key}"]`))s.value=key;}
-  else if(role.includes('photo')){const s=document.getElementById('sel-photographer');if(s&&s.querySelector(`option[value="${key}"]`))s.value=key;}
-  else if(role.includes('floor')){const s=document.getElementById('sel-floorplan');if(s&&s.querySelector(`option[value="${key}"]`))s.value=key;}
+  const roleLower=role.toLowerCase();
+  if(roleLower.includes('video')){const s=document.getElementById('sel-videographer');if(s&&s.querySelector(`option[value="${key}"]`))s.value=key;}
+  else if(roleLower.includes('photo')){const s=document.getElementById('sel-photographer');if(s&&s.querySelector(`option[value="${key}"]`))s.value=key;}
+  else if(roleLower.includes('floor')){const s=document.getElementById('sel-floorplan');if(s&&s.querySelector(`option[value="${key}"]`))s.value=key;}
   onContractorChange();
 }
 
@@ -2882,16 +2945,40 @@ function showWeatherHourly(dayIndex,label,clickedEl){
 function getGcalLinks(){return JSON.parse(localStorage.getItem('dronehub_gcal_links')||'[]');}
 function saveGcalLinks(links){try{localStorage.setItem('dronehub_gcal_links',JSON.stringify(links));}catch(e){}fbSet('orgs',ORG_ID+':gcal_links',{data:JSON.stringify(links),updatedAt:Date.now()});}
 
+function populateCalNameDropdown(){
+  const sel=document.getElementById('cal-gcal-name');
+  if(!sel) return;
+  const current=sel.value;
+  const members=[...getAdminTeamMembers(),...getTeamMembers()];
+  const seen=new Set();
+  const opts=['<option value="">— Select team member —</option>'];
+  members.forEach(m=>{
+    if(m.name&&!seen.has(m.name)){
+      seen.add(m.name);
+      opts.push(`<option value="${m.name}"${m.name===current?' selected':''}>${m.name}${m.role?' ('+m.role+')':''}</option>`);
+    }
+  });
+  // Also add contractors
+  Object.values(CONTRACTORS).forEach(c=>{
+    if(c.name&&!seen.has(c.name)){
+      seen.add(c.name);
+      opts.push(`<option value="${c.name}"${c.name===current?' selected':''}>${c.name} (contractor)</option>`);
+    }
+  });
+  sel.innerHTML=opts.join('');
+}
+
 function calAddGcal(){
-  const name=document.getElementById('cal-gcal-name')?.value.trim();
+  const nameEl=document.getElementById('cal-gcal-name');
+  const name=nameEl?.value.trim();
   const url=document.getElementById('cal-gcal-url')?.value.trim();
-  if(!name||!url){alert('Please enter both a name and a calendar URL.');return;}
+  if(!name||!url){alert('Please select a team member and enter a calendar URL.');return;}
   const links=getGcalLinks();
   const existing=links.findIndex(l=>l.creatorName===name);
   const entry={id:'gcal_'+Date.now(),creatorName:name,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[]};
   if(existing>=0) links[existing]=entry; else links.push(entry);
   saveGcalLinks(links);
-  document.getElementById('cal-gcal-name').value='';
+  if(nameEl) nameEl.value='';
   document.getElementById('cal-gcal-url').value='';
   renderCalLinkedList();
   renderCalendar();
@@ -4546,6 +4633,7 @@ function saveJob(){
 
   // ── UPDATE CALENDAR ───────────────────────────────────────────────────────
   if(document.getElementById('pane-calendar')?.classList.contains('active')){
+    populateCalNameDropdown();
     renderCalendar();
   }
 
@@ -4707,8 +4795,7 @@ function openJobDetail(jobId){
 
   // Contractor options for dropdowns
   const contractorOpts=Object.values(CONTRACTORS).map(c=>`<option value="${c.name}" ${ts.videographer===c.name?'selected':''}>${c.name}</option>`).join('');
-  const editorOpts=Object.values(CONTRACTORS).map(c=>`<option value="${c.name}" ${ts.claimedBy===c.name?'selected':''}>${c.name}</option>`).join('')+
-    getAdminTeamMembers().filter(m=>m.role==='editor'||m.role==='videographer').map(m=>`<option value="${m.name}" ${ts.claimedBy===m.name?'selected':''}>${m.name}</option>`).join('');
+  const editorOpts=buildEditorOptions(ts.claimedBy||'');
 
   const existing=document.getElementById('job-detail-modal');
   if(existing) existing.remove();
@@ -7739,7 +7826,29 @@ function gateSignup(){
     const idx=adminMembers2.findIndex(m=>m.email.toLowerCase()===email);
     if(idx>=0){adminMembers2[idx].status='active';adminMembers2[idx].jobTitle=jobTitle;saveAdminTeamMembers(adminMembers2);}
 
+    // ── LINK TO CONTRACTORS ───────────────────────────────────────────────────
+    // If signing up as contractor, ensure they exist in CONTRACTORS
+    if(role==='contractor'){
+      const cKey='c_'+email.replace(/[^a-z0-9]/g,'_');
+      if(!CONTRACTORS[cKey]){
+        CONTRACTORS[cKey]={
+          name:first+' '+last,
+          email,phone:'',addr:'',lat:0,lng:0,
+          role:'Contractor (Videographer, Photographer, Other)',
+          rate:80,notes:'',
+        };
+        saveContractors();
+        populateContractorDropdowns();
+      } else {
+        // Update name if changed
+        CONTRACTORS[cKey].name=first+' '+last;
+        saveContractors();
+      }
+    }
+
     gateEnterApp({email,name:first+' '+last,role,type:'team',jobTitle,clientId:null});
+    // Refresh all dropdowns now that a new member signed up
+    setTimeout(()=>{populateContractorDropdowns();populateSalespersonDropdown();renderTeam();},500);
     return;
   }
 
@@ -8104,6 +8213,25 @@ function saveTeamMemberFromModal(editId){
   if(editId){const idx=members.findIndex(m=>m.id===editId);if(idx>=0)members[idx]=member;else members.push(member);}
   else members.push(member);
   saveAdminTeamMembers(members);
+
+  // ── LINK TO CONTRACTORS ───────────────────────────────────────────────────
+  // If role is contractor, create/update their CONTRACTORS record
+  if(role==='contractor'&&email){
+    const cKey='c_'+email.replace(/[^a-z0-9]/g,'_');
+    const existing=CONTRACTORS[cKey];
+    CONTRACTORS[cKey]={
+      name,email,phone,
+      addr:existing?.addr||'',
+      lat:existing?.lat||0,
+      lng:existing?.lng||0,
+      role:'Contractor (Videographer, Photographer, Other)',
+      rate:existing?.rate||80,
+      notes:'',
+      teamMemberId:member.id,
+    };
+    saveContractors();
+    populateContractorDropdowns();
+  }
   // Sync to portal team members
   if(isNew){
     const pm=getTeamMembers();
@@ -8645,7 +8773,7 @@ function openTrackerModal(jobId){
 
   const stageOpts=TRACKER_STAGES.map(s=>`<option value="${s.key}"${ts.stage===s.key?' selected':''}>${s.label}</option>`).join('');
   const editStatusOpts=EDIT_STATUS_OPTS.map(s=>`<option value="${s.key}"${ts.editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
-  const contractorOpts='<option value="">— Unassigned —</option>'+[...Object.values(CONTRACTORS).map(c=>`<option value="${c.name}"${ts.claimedBy===c.name?' selected':''}>${c.name}</option>`), ...getTeamMembers().map(m=>`<option value="${m.name}"${ts.claimedBy===m.name?' selected':''}>${m.name} (team)</option>`)].join('');
+  const contractorOpts=buildEditorOptions(ts.claimedBy||'');
 
   const inp=(id,label,val,type='text',placeholder='')=>'<div>'+
     `<label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">${label}</label>`+
@@ -9328,8 +9456,61 @@ function tpShowTab(tab){
     </div>`;
     setTimeout(()=>{const b=document.getElementById('tp-lc-msgs');if(b)b.scrollTop=b.scrollHeight;},80);
   }
+  else if(tab==='profile'){
+    const session=gateGetSession();
+    const cKey=session?.email?'c_'+session.email.replace(/[^a-z0-9]/g,'_'):'';
+    const contractor=cKey&&CONTRACTORS[cKey]?CONTRACTORS[cKey]:null;
+    html=`<div style="max-width:520px">
+      <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px">👤 My Profile</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Keep your home address up to date — it's used to calculate drive distances for job quotes.</div>
+      <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">🏠 Home address for drive calculations</div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Street address</label>
+          <input type="text" id="tp-profile-addr" value="${contractor?.addr||''}" placeholder="123 Main St, Oakville, ON"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-card);color:var(--white);font-family:var(--font)">
+        </div>
+        <button onclick="tpSaveAddress('${cKey}','${member?.id||''}')" style="padding:8px 20px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save address ✓</button>
+        <span id="tp-profile-status" style="font-size:11px;color:var(--muted);margin-left:10px"></span>
+        ${contractor?.addr?`<div style="font-size:11px;color:var(--muted);margin-top:10px">Current: ${contractor.addr}${contractor.lat?' (geocoded ✓)':' (⚠ not geocoded)'}</div>`:''}
+      </div>
+      <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Account</div>
+        <div style="font-size:13px;color:var(--offwhite);margin-bottom:4px"><strong style="color:var(--white)">${session?.name||''}</strong></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${session?.email||''}</div>
+        <div style="font-size:12px;color:var(--blue-bright)">${session?.role||''} · ${session?.jobTitle||''}</div>
+      </div>
+    </div>`;
+  }
+}
 
-  document.getElementById('tp-content').innerHTML=html;
+async function tpSaveAddress(cKey, memberId){
+  const addr=(document.getElementById('tp-profile-addr')?.value||'').trim();
+  const statusEl=document.getElementById('tp-profile-status');
+  if(!addr){if(statusEl)statusEl.textContent='Please enter an address.';return;}
+  if(statusEl) statusEl.textContent='Looking up address…';
+  try{
+    const geo=await geocodeAddress(addr);
+    if(cKey&&CONTRACTORS[cKey]){
+      CONTRACTORS[cKey].addr=addr;
+      CONTRACTORS[cKey].lat=geo.lat;
+      CONTRACTORS[cKey].lng=geo.lng;
+    } else if(cKey){
+      // Create new contractor record
+      const session=gateGetSession();
+      CONTRACTORS[cKey]={
+        name:session?.name||'',email:session?.email||'',
+        addr,lat:geo.lat,lng:geo.lng,
+        phone:'',role:'Contractor',rate:80,notes:'',
+      };
+    }
+    saveContractors();
+    populateContractorDropdowns();
+    if(statusEl){statusEl.textContent='✓ Address saved and geocoded!';statusEl.style.color='var(--green)';}
+    setTimeout(()=>tpShowTab('profile'),1000);
+  }catch(e){
+    if(statusEl){statusEl.textContent='Could not geocode address — try a more specific address.';statusEl.style.color='var(--amber)';}
+  }
 }
 
 function tpSendLcMessage(channelId, memberId, memberName){
