@@ -7582,6 +7582,30 @@ function gateInit(){
   });
   gateSaveUsers(users);
   document.getElementById('site-login-gate').style.display='flex';
+  // Read URL params — pre-fill invite code and lock role if passed via invite link
+  const _urlP=new URLSearchParams(window.location.search);
+  const _inviteCode=_urlP.get('invite');
+  const _inviteRole=_urlP.get('role');
+  const _inviteTab=_urlP.get('tab');
+  if(_inviteCode){
+    const codeEl=document.getElementById('gate-signup-code');
+    if(codeEl) codeEl.value=_inviteCode.toUpperCase();
+  }
+  if(_inviteRole){
+    const roleEl=document.getElementById('gate-signup-jobtitle');
+    if(roleEl){
+      // Set value and hide the dropdown — role is locked to what admin chose
+      const roleLabel=_inviteRole.charAt(0).toUpperCase()+_inviteRole.slice(1);
+      roleEl.value=roleLabel;
+      roleEl.style.display='none';
+      // Show locked role display instead
+      const lockedDiv=document.createElement('div');
+      lockedDiv.style.cssText='padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--green);font-weight:600';
+      lockedDiv.textContent='Role: '+roleLabel+' ✓';
+      roleEl.parentNode.insertBefore(lockedDiv,roleEl.nextSibling);
+    }
+  }
+  if(_inviteTab==='signup') gateShowTab('signup');
 }
 
 function gateShowTab(tab){
@@ -7890,11 +7914,11 @@ function copyTeamInviteCode(){
   }
 }
 
-function getInviteLink(){
+function getInviteLink(role){
   const org=ensureDefaultOrg();
   const code=org.inviteCode||'';
   const base=window.location.href.split('?')[0].split('#')[0];
-  return base+'?invite='+encodeURIComponent(code)+'&tab=signup';
+  return base+'?invite='+encodeURIComponent(code)+'&tab=signup'+(role?'&role='+encodeURIComponent(role):'');
 }
 
 function sendTeamInviteEmail(){
@@ -8003,6 +8027,15 @@ function openAddTeamMemberModal(editId){
       <div style="margin-bottom:14px"><label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Role & platform access</label>
         <div id="team-role-options">${roleOpts}</div>
       </div>
+      <div style="margin-bottom:14px;padding:12px 14px;background:var(--navy-lift);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--offwhite);margin-bottom:8px">💰 Hourly rate (editors)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px;color:var(--muted)">$</span>
+          <input type="number" id="new-member-hourly-rate" value="${existing?.hourlyRate||''}" placeholder="e.g. 25" min="0" step="0.50"
+            style="width:100px;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-card);color:var(--white)">
+          <span style="font-size:11px;color:var(--muted)">/hr — used to auto-calculate editor paystubs from hours logged in the tracker</span>
+        </div>
+      </div>
       <div style="margin-bottom:16px;padding:12px 14px;background:var(--navy-lift);border-radius:10px;border:1px solid var(--border)">
         <div style="font-size:11px;font-weight:700;color:var(--offwhite);margin-bottom:4px">📧 Invite email</div>
         <div style="font-size:11px;color:var(--muted);line-height:1.7">Clicking <strong style="color:var(--white)">Save & send invite</strong> will open your email client with a pre-written invite. They'll receive the org invite code and instructions to sign up on the Team Portal.<br><span style="font-size:10px">Financials are always hidden from non-admin roles.</span></div>
@@ -8033,6 +8066,7 @@ function saveTeamMemberFromModal(editId){
   const phone=document.getElementById('new-member-phone')?.value.trim()||'';
   const type=document.getElementById('new-member-type')?.value||'contractor';
   const role=document.querySelector('input[name="new-member-role"]:checked')?.value||'contractor';
+  const hourlyRate=parseFloat(document.getElementById('new-member-hourly-rate')?.value||0)||0;
   if(!name){alert('Please enter a name.');return;}
   if(!email||!email.includes('@')){alert('Please enter a valid email address.');return;}
   const members=getAdminTeamMembers();
@@ -8042,6 +8076,7 @@ function saveTeamMemberFromModal(editId){
   const member={
     id:editId||('tmadmin_'+Date.now()),
     name,email,phone,type,role,orgId:org.id,
+    hourlyRate:hourlyRate||0,
     status:prev?.status||'invited',
     invitedAt:prev?.invitedAt||new Date().toISOString().slice(0,10),
     addedAt:new Date().toISOString().slice(0,10),
@@ -8062,7 +8097,7 @@ function saveTeamMemberFromModal(editId){
   // Send invite via EmailJS
   if(isNew){
     const bname=bizSettings?.name||'DroneHub Media';
-    const link=getInviteLink();
+    const link=getInviteLink(role);
     const code=org.inviteCode||'';
     emailjs.send('service_f0gwd3p','template_5demfu7',{
       to_email:email,
@@ -8759,6 +8794,31 @@ function saveTrackerModal(jobId, modal){
     claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
     extraDraftCharge,
   });
+
+  // Auto-calculate editor paystub from hours logged
+  if(approxEditHours&&claimedBy&&job){
+    const hours=parseFloat(approxEditHours)||0;
+    if(hours>0){
+      // Find editor's hourly rate from admin team
+      const editorMember=getAdminTeamMembers().find(m=>m.name===claimedBy||m.email===claimedBy);
+      const hourlyRate=editorMember?.hourlyRate||0;
+      if(hourlyRate>0){
+        const editPay=Math.round(hours*hourlyRate*100)/100;
+        if(!job.payouts) job.payouts={};
+        if(!job.payouts[claimedBy]) job.payouts[claimedBy]={name:claimedBy,entries:[]};
+        // Update or add edit entry
+        const existingIdx=job.payouts[claimedBy].entries?.findIndex(e=>e.role==='Video editing');
+        const editEntry={role:'Video editing',editFee:editPay,hours,hourlyRate,shootFee:0,driveFee:0};
+        if(existingIdx>=0) job.payouts[claimedBy].entries[existingIdx]=editEntry;
+        else {
+          if(!job.payouts[claimedBy].entries) job.payouts[claimedBy].entries=[];
+          job.payouts[claimedBy].entries.push(editEntry);
+        }
+        saveJobsToStorage();
+        renderPayroll();
+      }
+    }
+  }
   if(modal) modal.remove();
   renderTracker();
 }
