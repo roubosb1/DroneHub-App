@@ -1803,7 +1803,7 @@ const CONTRACTOR_DEFAULTS={
   steve:{name:'Steve Calaguiro',addr:'5623 Woodland Blvd, Niagara Falls, ON',lat:43.0896,lng:-79.0849,email:'',phone:'',role:'Photographer / Floor plan',rate:40,notes:''},
 };
 let CONTRACTORS=JSON.parse(localStorage.getItem('dronehub_contractors')||JSON.stringify(CONTRACTOR_DEFAULTS));
-function saveContractors(){try{localStorage.setItem('dronehub_contractors',JSON.stringify(CONTRACTORS));}catch(e){}}
+function saveContractors(){try{localStorage.setItem('dronehub_contractors',JSON.stringify(CONTRACTORS));}catch(e){}fbSet('orgs',ORG_ID+':contractors',{data:JSON.stringify(CONTRACTORS),updatedAt:Date.now()});}
 
 // Property coords — set when address is looked up
 let propLat=null, propLng=null, propAddrText='';
@@ -2673,6 +2673,20 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);saveClientsToStorage();}},
     {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{localStorage.setItem('dronehub_admin_team',d);}},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
+    {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
+    {fb:ORG_ID+':lc_channels',ls:'dronehub_lc_channels',apply:d=>{localStorage.setItem('dronehub_lc_channels',d);}},
+    {fb:ORG_ID+':lc_msgs',    ls:'dronehub_lc_msgs',    apply:d=>{localStorage.setItem('dronehub_lc_msgs',d);}},
+    {fb:ORG_ID+':contractors',    ls:'dronehub_contractors',       apply:d=>{try{CONTRACTORS=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_contractors',d);}},
+    {fb:ORG_ID+':gate_users',     ls:'dronehub_gate_users',        apply:d=>{localStorage.setItem('dronehub_gate_users',d);}},
+    {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
+    {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
+    {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
+    {fb:ORG_ID+':gcal_links',     ls:'dronehub_gcal_links',        apply:d=>{localStorage.setItem('dronehub_gcal_links',d);}},
+    {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{localStorage.setItem('dronehub_orgs',d);}},
+    {fb:ORG_ID+':portal_accounts',ls:'dronehub_portal_accounts',   apply:d=>{localStorage.setItem('dronehub_portal_accounts',d);}},
+    {fb:ORG_ID+':portal_msgs',    ls:'dronehub_portal_msgs',       apply:d=>{localStorage.setItem('dronehub_portal_msgs',d);}},
+    {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{localStorage.setItem('dronehub_standalone_projects',d);}},
+    {fb:ORG_ID+':team_members',   ls:'dronehub_team_members',      apply:d=>{localStorage.setItem('dronehub_team_members',d);}},
   ];
   let restored=0;
   for(const k of keys){
@@ -2866,7 +2880,7 @@ function showWeatherHourly(dayIndex,label,clickedEl){
 }
 
 function getGcalLinks(){return JSON.parse(localStorage.getItem('dronehub_gcal_links')||'[]');}
-function saveGcalLinks(links){try{localStorage.setItem('dronehub_gcal_links',JSON.stringify(links));}catch(e){}}
+function saveGcalLinks(links){try{localStorage.setItem('dronehub_gcal_links',JSON.stringify(links));}catch(e){}fbSet('orgs',ORG_ID+':gcal_links',{data:JSON.stringify(links),updatedAt:Date.now()});}
 
 function calAddGcal(){
   const name=document.getElementById('cal-gcal-name')?.value.trim();
@@ -3266,6 +3280,7 @@ async function sendInvoiceEmail(){
 function nextInvoiceNum(){
   invoiceNumberBase++;
   try{localStorage.setItem('dronehub_inv_num',String(invoiceNumberBase));}catch(e){}
+  fbSet('orgs',ORG_ID+':inv_num',{data:String(invoiceNumberBase),updatedAt:Date.now()});
   return 'INV-'+String(invoiceNumberBase).padStart(5,'0');
 }
 
@@ -5663,7 +5678,7 @@ function revokeClientPortal(clientId){
 function getPortalAccounts(){return JSON.parse(localStorage.getItem('dronehub_portal_accounts')||'[]');}
 
 
-function savePortalAccounts(accounts){try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(accounts));}catch(e){}}
+function savePortalAccounts(accounts){try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(accounts));}catch(e){}fbSet('orgs',ORG_ID+':portal_accounts',{data:JSON.stringify(accounts),updatedAt:Date.now()});}
 
 // Simple hash (not cryptographic — replace with bcrypt on real backend)
 function simpleHash(str){
@@ -5682,6 +5697,7 @@ function savePortalMessage(clientId, from, text){
   if(!all[clientId]) all[clientId]=[];
   all[clientId].push({from, text, ts:new Date().toISOString()});
   try{localStorage.setItem('dronehub_portal_msgs',JSON.stringify(all));}catch(e){}
+  fbSet('orgs',ORG_ID+':portal_msgs',{data:JSON.stringify(all),updatedAt:Date.now()});
 }
 
 let cpActiveClientId=null;
@@ -6332,7 +6348,7 @@ function copyReminderText(){
 
 
 let expenses=JSON.parse(localStorage.getItem('dronehub_expenses')||'[]');
-function saveExpenses(){try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(e){}}
+function saveExpenses(){try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(e){}fbSet('orgs',ORG_ID+':expenses',{data:JSON.stringify(expenses),updatedAt:Date.now()});}
 
 let financeChartInst=null, expCatChartInst=null, financeView='bar';
 
@@ -6708,7 +6724,10 @@ const LC_TYPE_META={
 
 // Channels: [{id, name, type, topic, createdAt, pinned}]
 function getLcChannels(){return JSON.parse(localStorage.getItem('dronehub_lc_channels')||'[]');}
-function saveLcChannels(ch){try{localStorage.setItem('dronehub_lc_channels',JSON.stringify(ch));}catch(e){}}
+function saveLcChannels(ch){
+  try{localStorage.setItem('dronehub_lc_channels',JSON.stringify(ch));}catch(e){}
+  fbSet('orgs',ORG_ID+':lc_channels',{data:JSON.stringify(ch),updatedAt:Date.now()});
+}
 
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
 function getLcMessages(channelId){
@@ -6720,6 +6739,7 @@ function saveLcMessage(channelId, msg){
   if(!all[channelId]) all[channelId]=[];
   all[channelId].push(msg);
   try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
+  fbSet('orgs',ORG_ID+':lc_msgs',{data:JSON.stringify(all),updatedAt:Date.now()});
 }
 function deleteLcChannelMessages(channelId){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
@@ -8144,7 +8164,7 @@ function removeTeamMember(id){
 }
 
 function getStandaloneProjects(){return JSON.parse(localStorage.getItem('dronehub_standalone_projects')||'[]');}
-function saveStandaloneProjects(arr){try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(arr));}catch(e){}}
+function saveStandaloneProjects(arr){try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(arr));}catch(e){}fbSet('orgs',ORG_ID+':standalone_projects',{data:JSON.stringify(arr),updatedAt:Date.now()});}
 function clearAllStandaloneProjects(){
   if(!confirm('Delete ALL imported standalone projects? This cannot be undone.\n\nProjects linked to your quote builder will not be affected.')) return;
   localStorage.removeItem('dronehub_standalone_projects');
@@ -8438,11 +8458,11 @@ function getTrackerStage(jobId){
 function setTrackerStage(jobId,update){
   const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
   const existing=getTrackerStage(jobId);
-  // Auto-calculate extra draft charge: every draft past 2 = $30
   const draftCount=parseInt(update.draftCount||existing.draftCount||0);
   const extraDraftCharge=Math.max(0,draftCount-2)*30;
   stages[jobId]={...existing,...update,draftCount,extraDraftCharge,updatedAt:new Date().toISOString().slice(0,16).replace('T',' ')};
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
+  fbSet('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()});
 }
 
 // Generate project ID from job
@@ -8829,11 +8849,11 @@ function saveTrackerModal(jobId, modal){
 
 // Team members: [{id, name, email, passHash, orgId, role, createdAt}]
 function getTeamMembers(){return JSON.parse(localStorage.getItem('dronehub_team_members')||'[]');}
-function saveTeamMembers(m){try{localStorage.setItem('dronehub_team_members',JSON.stringify(m));}catch(e){}}
+function saveTeamMembers(m){try{localStorage.setItem('dronehub_team_members',JSON.stringify(m));}catch(e){}fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(m),updatedAt:Date.now()});}
 
 // Orgs: [{id, name, inviteCode, createdAt}]
 function getOrgs(){return JSON.parse(localStorage.getItem('dronehub_orgs')||'[]');}
-function saveOrgs(o){try{localStorage.setItem('dronehub_orgs',JSON.stringify(o));}catch(e){}}
+function saveOrgs(o){try{localStorage.setItem('dronehub_orgs',JSON.stringify(o));}catch(e){}fbSet('orgs',ORG_ID+':orgs_data',{data:JSON.stringify(o),updatedAt:Date.now()});}
 
 // Ensure default org exists
 function ensureDefaultOrg(){
@@ -9462,6 +9482,7 @@ function getExtraServices(){
 }
 function saveExtraServices(svcs){
   try{localStorage.setItem('dronehub_extra_services',JSON.stringify(svcs));}catch(e){}
+  fbSet('orgs',ORG_ID+':extra_services',{data:JSON.stringify(svcs),updatedAt:Date.now()});
 }
 
 // Which extra services are currently toggled ON in the quote builder
