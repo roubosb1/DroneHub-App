@@ -23,6 +23,32 @@ const db=firebase.firestore();
 
 const ORG_ID='dronehub_main';
 
+// ── PROFILE PHOTOS ────────────────────────────────────────────────────────────
+function saveProfilePhoto(email,dataUrl){
+  const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  photos[email.toLowerCase()]=dataUrl;
+  localStorage.setItem('dronehub_photos',JSON.stringify(photos));
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+}
+function getProfilePhoto(email){
+  if(!email) return null;
+  const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  return photos[email.toLowerCase()]||null;
+}
+function getLcAuthorEmail(name){
+  const m=getAdminTeamMembers().find(m=>m.name===name)||getTeamMembers().find(m=>m.name===name);
+  return m?.email||'';
+}
+function getAvatarHtml(name,email,size=36,fontSize=12){
+  const photo=getProfilePhoto(email||'');
+  if(photo) return `<img src="${photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0">`;
+  const initials=(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const colors=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9'];
+  const bg=colors[(name||'').charCodeAt(0)%colors.length];
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
+}
+
+
 async function fbSet(col,docId,data){
   try{await db.collection(col).doc(docId).set(data,{merge:true});}catch(e){console.warn('fbSet:',e);}
 }
@@ -37,6 +63,8 @@ async function fbDelete(col,docId){
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.6/dist/otpauth.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
 <style>
 /* ── TOKENS ─────────────────────────────────────────────────── */
@@ -2763,6 +2791,7 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':portal_msgs',    ls:'dronehub_portal_msgs',       apply:d=>{localStorage.setItem('dronehub_portal_msgs',d);}},
     {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{localStorage.setItem('dronehub_standalone_projects',d);}},
     {fb:ORG_ID+':team_members',   ls:'dronehub_team_members',      apply:d=>{localStorage.setItem('dronehub_team_members',d);}},
+    {fb:ORG_ID+':2fa',          ls:'dronehub_2fa',               apply:d=>{localStorage.setItem('dronehub_2fa',d);}},
   ];
   let restored=0;
   for(const k of keys){
@@ -7075,9 +7104,9 @@ function lcRenderMembersPanel(){
 
   listEl.innerHTML=ch.members.map(m=>{
     const initials=(m.name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
-    const avatarColor=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252'][m.name.charCodeAt(0)%5];
+    // avatar handled by getAvatarHtml
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-      <div style="width:28px;height:28px;border-radius:50%;background:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>
+      ${getAvatarHtml(m.name,m.email,28,10)}
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
         <div style="font-size:10px;color:var(--muted)">${m.role||m.type||'member'}</div>
@@ -7213,7 +7242,7 @@ function lcRenderMessages(){
 
     if(!collapsed){
       html+=`<div style="display:flex;gap:10px;padding:6px 0;margin-top:4px" onmouseover="this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-ts').style.opacity=0">
-        <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px">${initials}</div>
+        ${getAvatarHtml(m.author,_lcAuthorEmail,36,12)}
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
             <span style="font-size:13px;font-weight:700;color:var(--white)">${m.author}</span>${getUserJobTitle(m.author)?`<span style="font-size:10px;color:var(--muted);margin-left:5px">${getUserJobTitle(m.author)}</span>`:''}
@@ -7606,6 +7635,7 @@ function isProjectCompleted(ts){
 // ── PRESET EMAIL → JOB TITLE MAP ─────────────────────────────────────────
 const PRESET_JOB_TITLES={
   'admin@dronehubmedia.com':        {title:'Admin',           locked:true},
+  'alex@dronehubmedia.com':         {title:'Admin',           locked:true},
   'mackenzie@dronehubmedia.com':    {title:'Sales & Acquisitions', locked:true},
   'roubosb1@gmail.com':       {title:'Founder/Owner',   locked:true},
   'adrian@dronehubmedia.com': {title:'Project Manager', locked:true},
@@ -7653,6 +7683,7 @@ const ADMIN_ACCOUNTS=[
   {email:'admin@dronehubmedia.com',    name:'Admin'},
   {email:'roubosb1@gmail.com',         name:'Bailey Roubos'},
   {email:'mackenzie@dronehubmedia.com',name:'Mackenzie Woodhouse'},
+  {email:'alex@dronehubmedia.com',     name:'Alex Shewan'},
 ];
 
 const GATE_SESSION_KEY='dronehub_gate_session';
@@ -7765,20 +7796,28 @@ function gateLogin(){
   if(user.type==='admin'&&!user.passHash){
     user.passHash=simpleHash(pass);
     gateSaveUsers(users);
-    gateEnterApp({email:user.email,name:user.name,role:'admin',type:'admin'});
+    const adminSession={email:user.email,name:user.name,role:'admin',type:'admin'};
+    if(totp2faIsSetup(user.email)) gateShow2faVerify(adminSession);
+    else gateShow2faSetup(adminSession);
     return;
   }
 
   if(user.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
 
-  // Show the invite code in the signup hint so people can find it easily
-  const org2=ensureDefaultOrg();
-  const hint=document.getElementById('gate-login-error');
-  if(hint){
-    const signupNote=document.querySelector('#gate-login-form div:last-child');
+  const loginSession={email:user.email,name:user.name,role:user.role,type:user.type,jobTitle:user.jobTitle||PRESET_JOB_TITLES[user.email]?.title||'',clientId:user.clientId||null};
+
+  // Skip 2FA for client accounts
+  if(user.type==='client'){
+    gateEnterApp(loginSession);
+    return;
   }
 
-  gateEnterApp({email:user.email,name:user.name,role:user.role,type:user.type,jobTitle:user.jobTitle||PRESET_JOB_TITLES[user.email]?.title||'',clientId:user.clientId||null});
+  // 2FA check for all admin and team accounts
+  if(totp2faIsSetup(user.email)){
+    gateShow2faVerify(loginSession);
+  } else {
+    gateShow2faSetup(loginSession);
+  }
 }
 
 function gateSignup(){
@@ -7862,9 +7901,11 @@ function gateSignup(){
       }
     }
 
-    gateEnterApp({email,name:first+' '+last,role,type:'team',jobTitle,clientId:null});
+    const newSession={email,name:first+' '+last,role,type:'team',jobTitle,clientId:null};
     // Refresh all dropdowns now that a new member signed up
     setTimeout(()=>{populateContractorDropdowns();populateSalespersonDropdown();renderTeam();},500);
+    // New signups always go through 2FA setup
+    gateShow2faSetup(newSession);
     return;
   }
 
@@ -7936,7 +7977,8 @@ function gateShowAdminView(session){
   const userDisplay=document.getElementById('app-user-display');
   const displayName=session.email==='roubosb1@gmail.com'?'Bailey Roubos':(session.name||session.email);
   const title=session.jobTitle||PRESET_JOB_TITLES[session.email]?.title||'Admin';
-  if(userDisplay) userDisplay.innerHTML=`<span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span>`;
+  const avatarHtml=getAvatarHtml(displayName,session.email,28,10);
+  if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span></div></div>`;
 }
 
 function gateShowTeamView(session){
@@ -7978,7 +8020,146 @@ function gateShowTeamView(session){
   const userDisplay=document.getElementById('app-user-display');
   const roleLabels={admin:'Admin',editor:'Editor',videographer:'Videographer',sales:'Sales',contractor:'Contractor (Photographer/Videographer)'};
   const displayTitle=session.jobTitle||roleLabels[role]||role;
-  if(userDisplay) userDisplay.innerHTML=`<span style="color:var(--white);font-weight:700">${session.name}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${displayTitle}</span>`;
+  const avatarHtml2=getAvatarHtml(session.name,session.email,28,10);
+  if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml2}<div><span style="color:var(--white);font-weight:700">${session.name}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${displayTitle}</span></div></div>`;
+}
+
+// ── TWO-FACTOR AUTHENTICATION (TOTP) ─────────────────────────────────────────
+function totp2faGetSecret(email){
+  const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+  return data[email.toLowerCase()]||null;
+}
+function totp2faSaveSecret(email,secret){
+  const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+  data[email.toLowerCase()]={secret,verified:false,createdAt:new Date().toISOString()};
+  localStorage.setItem('dronehub_2fa',JSON.stringify(data));
+  fbSet('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
+}
+function totp2faMarkVerified(email){
+  const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+  if(data[email.toLowerCase()]) data[email.toLowerCase()].verified=true;
+  localStorage.setItem('dronehub_2fa',JSON.stringify(data));
+  fbSet('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
+}
+function totp2faIsSetup(email){
+  const d=totp2faGetSecret(email);
+  return d&&d.verified===true;
+}
+function totp2faVerifyCode(email,code){
+  const d=totp2faGetSecret(email);
+  if(!d?.secret) return false;
+  try{
+    const totp=new OTPAuth.TOTP({
+      issuer:'DroneHub Media',
+      label:email,
+      algorithm:'SHA1',
+      digits:6,
+      period:30,
+      secret:OTPAuth.Secret.fromBase32(d.secret),
+    });
+    const delta=totp.validate({token:code.replace(/\s/g,''),window:1});
+    return delta!==null;
+  }catch(e){console.error('TOTP error:',e);return false;}
+}
+function totp2faGenerateSecret(email){
+  const secret=OTPAuth.Secret.fromRandom(20);
+  const b32=secret.base32;
+  totp2faSaveSecret(email,b32);
+  return b32;
+}
+function totp2faGetUri(email,secret){
+  const totp=new OTPAuth.TOTP({
+    issuer:'DroneHub Media',
+    label:email,
+    algorithm:'SHA1',
+    digits:6,
+    period:30,
+    secret:OTPAuth.Secret.fromBase32(secret),
+  });
+  return totp.toString();
+}
+let _pending2faSession=null;
+
+function gateShow2faSetup(session){
+  _pending2faSession=session;
+  const email=session.email;
+  const secret=totp2faGenerateSecret(email);
+  const uri=totp2faGetUri(email,secret);
+  const gate=document.getElementById('site-login-gate');
+  gate.innerHTML=`
+  <div style="text-align:center;max-width:420px;width:100%;padding:20px">
+    <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:4px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:28px">Set up 2-Factor Auth</div>
+    <div style="background:var(--navy-card);border-radius:18px;border:1px solid var(--border-bright);padding:28px">
+      <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:8px">📱 Scan with Google Authenticator</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">Open <strong style="color:var(--offwhite)">Google Authenticator</strong> on your phone, tap <strong style="color:var(--offwhite)">+</strong> → <strong style="color:var(--offwhite)">Scan QR code</strong>, then scan below.</div>
+      <div id="totp-qr-container" style="background:#fff;padding:16px;border-radius:12px;display:inline-block;margin-bottom:16px"></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:16px">Can't scan? Enter this key manually:<br><span style="font-family:monospace;font-size:12px;color:var(--blue-bright);letter-spacing:.1em">${secret.match(/.{1,4}/g).join(' ')}</span></div>
+      <div style="font-size:13px;color:var(--offwhite);margin-bottom:10px">Enter the 6-digit code to confirm setup:</div>
+      <input id="totp-setup-code" type="text" inputmode="numeric" maxlength="7" placeholder="000 000"
+        style="width:100%;box-sizing:border-box;padding:14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:22px;font-weight:700;text-align:center;letter-spacing:.2em;font-family:monospace;margin-bottom:12px"
+        onkeydown="if(event.key==='Enter')gateVerify2faSetup()">
+      <div id="totp-setup-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none"></div>
+      <button onclick="gateVerify2faSetup()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--green),#16A34A);color:#fff;font-size:15px;font-weight:700;cursor:pointer">Confirm & activate →</button>
+    </div>
+  </div>`;
+  setTimeout(()=>{
+    const container=document.getElementById('totp-qr-container');
+    if(container&&typeof QRCode!=='undefined'){
+      QRCode.toCanvas(uri,{width:180,margin:0},(err,canvas)=>{
+        if(!err){container.innerHTML='';container.appendChild(canvas);}
+        else container.innerHTML=`<div style="font-size:10px;padding:8px;color:#000">Use manual key above</div>`;
+      });
+    }
+  },300);
+}
+
+function gateVerify2faSetup(){
+  const code=document.getElementById('totp-setup-code')?.value.replace(/\s/g,'');
+  const err=document.getElementById('totp-setup-error');
+  if(!code||code.length!==6){if(err){err.textContent='Enter the 6-digit code from Google Authenticator.';err.style.display='block';}return;}
+  if(totp2faVerifyCode(_pending2faSession.email,code)){
+    totp2faMarkVerified(_pending2faSession.email);
+    gateEnterApp(_pending2faSession);
+  } else {
+    if(err){err.textContent='Incorrect code — make sure your phone clock is correct and try again.';err.style.display='block';}
+    document.getElementById('totp-setup-code').value='';
+  }
+}
+
+function gateShow2faVerify(session){
+  _pending2faSession=session;
+  const gate=document.getElementById('site-login-gate');
+  gate.innerHTML=`
+  <div style="text-align:center;max-width:380px;width:100%;padding:20px">
+    <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:4px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:28px">Verification Required</div>
+    <div style="background:var(--navy-card);border-radius:18px;border:1px solid var(--border-bright);padding:28px">
+      <div style="font-size:36px;margin-bottom:12px">🔐</div>
+      <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:8px">Enter your authenticator code</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">Open <strong style="color:var(--offwhite)">Google Authenticator</strong> and enter the 6-digit code for <strong style="color:var(--blue-bright)">DroneHub Media</strong>.</div>
+      <input id="totp-verify-code" type="text" inputmode="numeric" maxlength="7" placeholder="000 000"
+        style="width:100%;box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:28px;font-weight:700;text-align:center;letter-spacing:.25em;font-family:monospace;margin-bottom:12px"
+        onkeydown="if(event.key==='Enter')gateSubmit2fa()">
+      <div id="totp-verify-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none"></div>
+      <button onclick="gateSubmit2fa()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#2B5FC7);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">Verify →</button>
+      <button onclick="location.reload()" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">← Back to sign in</button>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('totp-verify-code')?.focus(),100);
+}
+
+function gateSubmit2fa(){
+  const code=document.getElementById('totp-verify-code')?.value.replace(/\s/g,'');
+  const err=document.getElementById('totp-verify-error');
+  if(!code||code.length!==6){if(err){err.textContent='Enter the 6-digit code.';err.style.display='block';}return;}
+  if(totp2faVerifyCode(_pending2faSession.email,code)){
+    gateEnterApp(_pending2faSession);
+  } else {
+    if(err){err.textContent='Incorrect code. Codes refresh every 30 seconds — try again.';err.style.display='block';}
+    document.getElementById('totp-verify-code').value='';
+    document.getElementById('totp-verify-code').focus();
+  }
 }
 
 function gateLogout(){
@@ -8033,7 +8214,7 @@ function renderTeam(){
         <span style="font-size:10px;color:var(--muted)">${statusLabel}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <div style="width:44px;height:44px;border-radius:50%;background:${role.color}22;border:2px solid ${role.color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${role.color};flex-shrink:0">${initials}</div>
+        ${getAvatarHtml(m.name,m.email,44,14)}
         <div><div style="font-size:14px;font-weight:700;color:var(--white)">${m.name}</div><div style="font-size:11px;color:var(--muted)">${m.email}</div>${m.phone?`<div style="font-size:10px;color:var(--muted)">${m.phone}</div>`:''}</div>
       </div>
       <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;margin-bottom:8px">
@@ -9541,9 +9722,32 @@ function tpShowTab(tab){
     const session=gateGetSession();
     const cKey=session?.email?'c_'+session.email.replace(/[^a-z0-9]/g,'_'):'';
     const contractor=cKey&&CONTRACTORS[cKey]?CONTRACTORS[cKey]:null;
+    const currentPhoto=getProfilePhoto(session?.email||'');
     html=`<div style="max-width:520px">
       <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px">👤 My Profile</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Keep your home address up to date — it's used to calculate drive distances for job quotes.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Manage your profile information.</div>
+
+      <!-- Profile photo -->
+      <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px">📸 Profile photo</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div id="tp-photo-preview">
+            ${currentPhoto
+              ?`<img src="${currentPhoto}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--border-bright)">`
+              :`<div style="width:72px;height:72px;border-radius:50%;background:var(--navy-card);border:2px dashed var(--border-bright);display:flex;align-items:center;justify-content:center;font-size:24px">👤</div>`
+            }
+          </div>
+          <div>
+            <label for="tp-photo-input" style="display:inline-block;padding:8px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">
+              📷 ${currentPhoto?'Change photo':'Upload photo'}
+            </label>
+            <input type="file" id="tp-photo-input" accept="image/*" style="display:none" onchange="tpHandlePhotoUpload(this,'${session?.email||''}')">
+            ${currentPhoto?`<button onclick="tpRemovePhoto('${session?.email||''}')" style="margin-left:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Remove</button>`:''}
+            <div style="font-size:10px;color:var(--muted);margin-top:6px">JPG, PNG or GIF · Max 2MB<br>Shows on your team profile, LouChat messages and project assignments</div>
+          </div>
+        </div>
+        <div id="tp-photo-status" style="font-size:11px;margin-top:8px;display:none"></div>
+      </div>
       <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">🏠 Home address for drive calculations</div>
         <div style="margin-bottom:10px">
@@ -9563,6 +9767,37 @@ function tpShowTab(tab){
       </div>
     </div>`;
   }
+}
+
+function tpHandlePhotoUpload(input, email){
+  const file=input.files?.[0];
+  if(!file) return;
+  if(file.size>2*1024*1024){
+    const s=document.getElementById('tp-photo-status');
+    if(s){s.textContent='⚠ Photo must be under 2MB.';s.style.color='var(--amber)';s.style.display='block';}
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const dataUrl=e.target.result;
+    saveProfilePhoto(email,dataUrl);
+    // Update preview
+    const preview=document.getElementById('tp-photo-preview');
+    if(preview) preview.innerHTML=`<img src="${dataUrl}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    const s=document.getElementById('tp-photo-status');
+    if(s){s.textContent='✓ Photo saved!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>tpShowTab('profile'),1200);}
+    // Update header avatar if shown
+    renderAppHeader&&renderAppHeader();
+  };
+  reader.readAsDataURL(file);
+}
+
+function tpRemovePhoto(email){
+  const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  delete photos[email.toLowerCase()];
+  localStorage.setItem('dronehub_photos',JSON.stringify(photos));
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  tpShowTab('profile');
 }
 
 async function tpSaveAddress(cKey, memberId){
