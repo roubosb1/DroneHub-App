@@ -2849,7 +2849,9 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
     {fb:ORG_ID+':gcal_links',     ls:'dronehub_gcal_links',        apply:d=>{localStorage.setItem('dronehub_gcal_links',d);}},
-    {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{localStorage.setItem('dronehub_orgs',d);}},
+    {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{
+      localStorage.setItem('dronehub_orgs',d);
+    }},
     {fb:ORG_ID+':portal_accounts',ls:'dronehub_portal_accounts',   apply:d=>{localStorage.setItem('dronehub_portal_accounts',d);}},
     {fb:ORG_ID+':portal_msgs',    ls:'dronehub_portal_msgs',       apply:d=>{localStorage.setItem('dronehub_portal_msgs',d);}},
     {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{localStorage.setItem('dronehub_standalone_projects',d);}},
@@ -2868,14 +2870,15 @@ async function restoreFromFirebase(){
       if(!fb?.data) continue;
       const fbTime=fb.updatedAt||0;
 
-      // Always restore team data — never skip it
-      const isTeamKey=k.fb.includes(':team');
+      // Always restore these critical keys from Firebase
+      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users'];
+      const isAlwaysSync=alwaysSync.some(s=>k.fb.endsWith(s));
 
       // Restore from Firebase if:
       // 1. localStorage is empty, OR
       // 2. Firebase has newer data than our last local save, OR
       // 3. It's team data (always sync)
-      if(localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isTeamKey){
+      if(localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isAlwaysSync){
         k.apply(fb.data);
         restored++;
       }
@@ -8095,12 +8098,13 @@ function gateSignup(){
     errEl.textContent='An account with that email already exists. Please sign in.';errEl.style.display='block';return;
   }
 
-  // Validate invite code — must match EXACTLY the org invite code or be a valid DC- client code
+  // Validate invite code
   const org=ensureDefaultOrg();
   const teamCode=(org.inviteCode||'').toUpperCase();
+  const PERMANENT_CODE='DH-2026-DRONEHUB';
 
-  const isTeamCode = code===teamCode; // exact match only
-  const isClientCode = code.startsWith('DC-');
+  const isTeamCode=code===teamCode||code===PERMANENT_CODE;
+  const isClientCode=code.startsWith('DC-');
 
   if(!isTeamCode&&!isClientCode){
     errEl.textContent='Invalid invite code. Please check the code and try again — codes are case-sensitive.';
@@ -8313,8 +8317,9 @@ function gateLinkToTeam(email, encodedName, role, type){
 
   const org=ensureDefaultOrg();
   const validCode=(org.inviteCode||'').toUpperCase();
+  const PERMANENT_CODE='DH-2026-DRONEHUB';
 
-  if(code!==validCode){
+  if(code!==validCode&&code!==PERMANENT_CODE){
     if(errEl){errEl.textContent='Invalid code — check with your admin and try again.';errEl.style.display='block';}
     return;
   }
@@ -8710,6 +8715,7 @@ function renderTeam(){
         ${m.status==='invited'?`<button onclick="resendTeamInvite('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">📧 Resend invite</button>`:''}
         <button onclick="openEditTeamMemberModal('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;font-weight:600;cursor:pointer">✏ Edit</button>
         <button onclick="adminLinkMember('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;font-weight:600;cursor:pointer">🔗 Link account</button>
+        <button onclick="adminResetPassword('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--purple);background:rgba(139,92,246,.1);color:var(--purple);font-size:11px;font-weight:600;cursor:pointer">🔑 Reset password</button>
         <button onclick="removeTeamMember('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;font-weight:600;cursor:pointer">Remove</button>
       </div>
     </div>`;
@@ -9021,9 +9027,32 @@ function resendTeamInvite(id){
 function removeTeamMember(id){
   const m=getAdminTeamMembers().find(tm=>tm.id===id);
   if(!m||!confirm('Remove '+m.name+' from the team? They will lose portal access.')) return;
+  // Remove from all lists
   saveAdminTeamMembers(getAdminTeamMembers().filter(tm=>tm.id!==id));
   saveTeamMembers(getTeamMembers().filter(tm=>tm.email!==m.email));
+  // Remove from gate_users so they can't log in
+  const gateUsers=gateGetUsers();
+  gateSaveUsers(gateUsers.filter(u=>u.email.toLowerCase()!==m.email.toLowerCase()));
   renderTeam();
+}
+
+function adminResetPassword(id){
+  const m=getAdminTeamMembers().find(tm=>tm.id===id);
+  if(!m) return;
+  const newPass=prompt('Set a new temporary password for '+m.name+':');
+  if(!newPass||newPass.length<4){alert('Password must be at least 4 characters.');return;}
+  const gateUsers=gateGetUsers();
+  const idx=gateUsers.findIndex(u=>u.email.toLowerCase()===m.email.toLowerCase());
+  if(idx>=0){
+    gateUsers[idx].passHash=simpleHash(newPass);
+    gateSaveUsers(gateUsers);
+    alert('✓ Password reset for '+m.name+'. Temporary password: '+newPass+'\n\nPlease tell them to change it after logging in.');
+  } else {
+    // Add them to gate_users with the new password
+    gateUsers.push({email:m.email,name:m.name,role:m.role,type:'team',passHash:simpleHash(newPass),clientId:null});
+    gateSaveUsers(gateUsers);
+    alert('✓ Account created for '+m.name+'. Temporary password: '+newPass);
+  }
 }
 
 function getStandaloneProjects(){return JSON.parse(localStorage.getItem('dronehub_standalone_projects')||'[]');}
@@ -9788,9 +9817,13 @@ function ensureDefaultOrg(){
   const orgs=getOrgs();
   if(!orgs.length){
     const biz=bizSettings||{};
-    const org={id:'org_default',name:biz.name||'DroneHub Media Company',inviteCode:'DH-'+new Date().getFullYear()+'-'+Math.random().toString(36).slice(2,7).toUpperCase(),createdAt:new Date().toISOString().slice(0,10)};
+    const org={id:'org_default',name:biz.name||'DroneHub Media Company',inviteCode:'DH-2026-DRONEHUB',createdAt:new Date().toISOString().slice(0,10)};
     saveOrgs([org]);
     return org;
+  }
+  if(!orgs[0].inviteCode){
+    orgs[0].inviteCode='DH-2026-DRONEHUB';
+    saveOrgs(orgs);
   }
   return orgs[0];
 }
@@ -10497,13 +10530,6 @@ function renderTeamMemberSettings(){
     <button onclick="removeTeamMember('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
   </div>`).join('');
 }
-
-function removeTeamMember(memberId){
-  if(!confirm('Remove this team member?')) return;
-  saveTeamMembers(getTeamMembers().filter(m=>m.id!==memberId));
-  renderTeamMemberSettings();
-}
-
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXTRA SERVICES (admin-managed custom services in quote builder)
