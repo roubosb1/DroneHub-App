@@ -1393,7 +1393,7 @@ button{font-family:var(--font);}
             <span>👥</span> <span id="lc-members-count">Members</span>
           </button>
           <button onclick="lcResetAllMessages()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;cursor:pointer;font-weight:600" title="Fix corrupted messages">🔄 Fix channels</button>
-          <button onclick="lcDeleteChannel(lcActiveChannel)" style="padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Delete</button>
+          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteChannel(lcActiveChannel)" style="padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Delete</button>`:''}
         </div>
       </div>
 
@@ -7422,7 +7422,7 @@ function lcRenderMessages(){
           ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${lcActiveChannel}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
         </div>
         <div class="lc-msg-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;align-items:flex-start;flex-shrink:0">
-          <button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">🗑</button>
+          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">🗑</button>`:''}
         </div>
       </div>`;
     } else {
@@ -7433,7 +7433,7 @@ function lcRenderMessages(){
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
         </div>
         <div class="lc-msg-actions2" style="opacity:0;transition:opacity .15s;flex-shrink:0">
-          <button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">🗑</button>
+          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">🗑</button>`:''}
         </div>
       </div>`;
     }
@@ -7977,6 +7977,7 @@ function gateInit(){
     }
   }
   if(_inviteTab==='signup') gateShowTab('signup');
+  else gateShowTab('login');
 }
 
 function gateShowTab(tab){
@@ -8685,15 +8686,20 @@ function renderTeam(){
       ?`${isRecent?'🟢 Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
       :m.status==='invited'?'🟡 Invited — awaiting signup':'⚫ Inactive';
     const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('');
-    return `<div class="card" style="padding:16px;position:relative">
-      <div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:140px;text-align:right">
-        <span style="font-size:11px;color:${statusColor};font-weight:600;white-space:nowrap">${statusLabel}</span>
-        ${m.activatedAt?`<span style="font-size:9px;color:var(--muted);white-space:nowrap">Joined ${m.activatedAt}</span>`:''}
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        ${getAvatarHtml(m.name,m.email,44,14)}
-        <div><div style="font-size:14px;font-weight:700;color:var(--white)">${m.name}</div><div style="font-size:11px;color:var(--muted)">${m.email}</div>${m.phone?`<div style="font-size:10px;color:var(--muted)">${m.phone}</div>`:''}</div>
-        ${m.lastSeen?`<div style="font-size:10px;color:var(--muted);margin-top:2px">Last seen: ${m.lastSeen}</div>`:''}
+    return `<div class="card" style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
+          ${getAvatarHtml(m.name,m.email,44,14)}
+          <div style="min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--white)">${m.name}</div>
+            <div style="font-size:11px;color:var(--muted)">${m.email}</div>
+            ${m.phone?`<div style="font-size:10px;color:var(--muted)">${m.phone}</div>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+          <span style="font-size:11px;color:${statusColor};font-weight:600;white-space:nowrap">${statusLabel}</span>
+          ${m.activatedAt?`<span style="font-size:9px;color:var(--muted);white-space:nowrap">Joined ${m.activatedAt}</span>`:''}
+        </div>
       </div>
       <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;margin-bottom:8px">
         <span>${role.icon}</span><span style="font-size:11px;font-weight:700;color:${role.color}">${role.label}</span>
