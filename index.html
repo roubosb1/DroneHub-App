@@ -8219,7 +8219,7 @@ function gateEnterApp(session){
     const allMembers=getAdminTeamMembers();
     const mIdx=allMembers.findIndex(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(mIdx>=0){
-      allMembers[mIdx].lastSeen=new Date().toISOString();
+      allMembers[mIdx].lastSeen=new Date().toISOString().slice(0,19).replace('T',' ');
       allMembers[mIdx].status='active';
       saveAdminTeamMembers(allMembers);
     }
@@ -8653,7 +8653,8 @@ async function teamForceSync(){
 function getRelativeTime(ts){
   if(!ts) return null;
   const now=Date.now();
-  const then=new Date(ts).getTime();
+  // Handle both ISO format and "YYYY-MM-DD HH:MM:SS" format
+  const then=new Date(ts.includes('T')?ts:ts.replace(' ','T')).getTime();
   if(isNaN(then)) return null;
   const diff=Math.floor((now-then)/1000);
   if(diff<60) return 'Just now';
@@ -8685,9 +8686,9 @@ function renderTeam(){
       :m.status==='invited'?'🟡 Invited — awaiting signup':'⚫ Inactive';
     const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('');
     return `<div class="card" style="padding:16px;position:relative">
-      <div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
-        <span style="font-size:11px;color:${statusColor};font-weight:600">${statusLabel}</span>
-        ${m.activatedAt?`<span style="font-size:9px;color:var(--muted)">Joined ${m.activatedAt}</span>`:''}
+      <div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:140px;text-align:right">
+        <span style="font-size:11px;color:${statusColor};font-weight:600;white-space:nowrap">${statusLabel}</span>
+        ${m.activatedAt?`<span style="font-size:9px;color:var(--muted);white-space:nowrap">Joined ${m.activatedAt}</span>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
         ${getAvatarHtml(m.name,m.email,44,14)}
