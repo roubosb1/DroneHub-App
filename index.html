@@ -1392,6 +1392,7 @@ button{font-family:var(--font);}
           <button onclick="lcOpenMembersPanel()" id="lc-members-btn" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px">
             <span>👥</span> <span id="lc-members-count">Members</span>
           </button>
+          <button onclick="lcResetAllMessages()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;cursor:pointer;font-weight:600" title="Fix corrupted messages">🔄 Fix channels</button>
           <button onclick="lcDeleteChannel(lcActiveChannel)" style="padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Delete</button>
         </div>
       </div>
@@ -6917,6 +6918,32 @@ function getLcMessages(channelId){
   return (all[channelId]||[]).filter(m=>!m.channelId||m.channelId===channelId);
 }
 
+function lcResetAllMessages(){
+  if(!confirm('This will clear all corrupted messages and fix the channels. Your real messages will be reloaded from Firebase. Continue?')) return;
+  // Wipe local message cache completely
+  localStorage.removeItem('dronehub_lc_msgs');
+  // Reload each channel's messages from Firebase
+  const channels=getLcChannels();
+  let loaded=0;
+  channels.forEach(ch=>{
+    if(db){
+      fbGet('orgs',ORG_ID+':lc_msgs_'+ch.id).then(fb=>{
+        if(fb?.msgs){
+          try{
+            const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
+            all[ch.id]=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===ch.id);
+            localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));
+          }catch(e){}
+        }
+        loaded++;
+        if(loaded===channels.length) renderLouChat();
+      });
+    }
+  });
+  renderLouChat();
+  alert('✓ Channels fixed. Messages reloaded from Firebase.');
+}
+
 function lcCleanCorruptMessages(){
   // Fix any messages stored under the wrong channel key
   try{
@@ -6970,6 +6997,8 @@ let lcActiveChannel=null;
 
 // Ensure default channels exist on first load
 function lcEnsureDefaults(){
+  // Clear any corrupt message data on every load
+  lcCleanCorruptMessages();
   let channels=getLcChannels();
   if(channels.length){
     // Migrate: add members array if missing
