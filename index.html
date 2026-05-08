@@ -18,10 +18,36 @@ const firebaseConfig={
   messagingSenderId:"471802947620",
   appId:"1:471802947620:web:cd210ade51defc883b90b1"
 };
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
-
+let db=null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db=firebase.firestore();
+}catch(e){
+  console.warn('Firebase not available — running in local-only mode');
+}
 const ORG_ID='dronehub_main';
+
+// Firebase helpers — safe no-ops if Firebase not loaded
+async function fbSet(col,docId,data){
+  if(!db) return;
+  try{
+    await db.collection(col).doc(docId).set(data,{merge:true});
+    localStorage.setItem('dronehub_last_save',Date.now().toString());
+  }catch(e){console.warn('fbSet:',e);}
+}
+async function fbGet(col,docId){
+  if(!db) return null;
+  try{const d=await db.collection(col).doc(docId).get();return d.exists?d.data():null;}catch(e){return null;}
+}
+async function fbGetAll(col){
+  if(!db) return[];
+  try{const s=await db.collection(col).get();return s.docs.map(d=>({id:d.id,...d.data()}));}catch(e){return[];}
+}
+async function fbDelete(col,docId){
+  if(!db) return;
+  try{await db.collection(col).doc(docId).delete();}catch(e){}
+}
+
 
 // ── PROFILE PHOTOS ────────────────────────────────────────────────────────────
 function saveProfilePhoto(email,dataUrl){
@@ -48,23 +74,6 @@ function getAvatarHtml(name,email,size=36,fontSize=12){
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
 }
 
-
-async function fbSet(col,docId,data){
-  try{
-    await db.collection(col).doc(docId).set(data,{merge:true});
-    // Track when we last successfully saved to Firebase
-    localStorage.setItem('dronehub_last_save',Date.now().toString());
-  }catch(e){console.warn('fbSet:',e);}
-}
-async function fbGet(col,docId){
-  try{const d=await db.collection(col).doc(docId).get();return d.exists?d.data():null;}catch(e){return null;}
-}
-async function fbGetAll(col){
-  try{const s=await db.collection(col).get();return s.docs.map(d=>({id:d.id,...d.data()}));}catch(e){return[];}
-}
-async function fbDelete(col,docId){
-  try{await db.collection(col).doc(docId).delete();}catch(e){}
-}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.3/dist/otpauth.umd.min.js"></script>
@@ -1591,6 +1600,7 @@ button{font-family:var(--font);}
       <div style="font-size:12px;color:var(--muted);margin-top:2px">Manage contractors, employees and portal access. Financials are always admin-only.</div>
     </div>
     <button onclick="openAddTeamMemberModal()" style="padding:8px 20px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">+ Add team member</button>
+    <button onclick="teamForceSync()" style="padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer" title="Sync team from Firebase">🔄</button>
   </div>
 
   <!-- Invite banner -->
@@ -1622,7 +1632,8 @@ button{font-family:var(--font);}
   <div id="team-empty-state" style="display:none;text-align:center;padding:60px 20px;color:var(--muted)">
     <div style="font-size:40px;margin-bottom:12px">👥</div>
     <div style="font-size:14px;font-weight:600;color:var(--offwhite);margin-bottom:6px">No team members yet</div>
-    <div style="font-size:12px">Add a contractor or employee and send them an invite to join the platform.</div>
+    <div style="font-size:12px;margin-bottom:16px">Add a contractor or employee and send them an invite to join the platform.</div>
+    <button onclick="teamForceSync()" style="padding:8px 18px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">🔄 Sync from Firebase</button>
   </div>
 </div>
 
@@ -1870,6 +1881,7 @@ function buildEditorOptions(selectedName){
 const editors={video:'',photo:'',extvideo:'',extphoto:'',randomvideo:'',randomphoto:'',rush:'',custom:''};
 
 // Saved jobs stored in memory (persists during session)
+
 let savedJobs=JSON.parse(localStorage.getItem('dronehub_jobs')||'[]');
 
 function saveJobsToStorage(){
@@ -2782,7 +2794,12 @@ async function restoreFromFirebase(){
   const keys=[
     {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);localStorage.setItem('dronehub_jobs',d);}},
     {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);localStorage.setItem('dronehub_clients',d);}},
-    {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{localStorage.setItem('dronehub_admin_team',d);}},
+    {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{
+      // Merge with existing rather than overwrite to prevent data loss
+      const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+      const incoming=JSON.parse(d||'[]');
+      if(incoming.length>=existing.length){localStorage.setItem('dronehub_admin_team',d);}
+    }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
     {fb:ORG_ID+':lc_channels',ls:'dronehub_lc_channels',apply:d=>{localStorage.setItem('dronehub_lc_channels',d);}},
@@ -7819,7 +7836,7 @@ function gateLogin(){
     user.passHash=simpleHash(pass);
     gateSaveUsers(users);
     const adminSession={email:user.email,name:user.name,role:'admin',type:'admin'};
-    if(typeof OTPAuth==='undefined'){gateEnterApp(adminSession);return;}
+    if(typeof OTPAuth==='undefined'||totp2faIsDeviceTrusted(user.email)){gateEnterApp(adminSession);return;}
     if(totp2faIsSetup(user.email)) gateShow2faVerify(adminSession);
     else gateShow2faSetup(adminSession);
     return;
@@ -7844,6 +7861,12 @@ function gateLogin(){
 
   // 2FA check — skip if OTPAuth library not loaded yet
   if(typeof OTPAuth==='undefined'){
+    gateEnterApp(loginSession);
+    return;
+  }
+
+  // Skip 2FA if device was verified within last 30 days
+  if(totp2faIsDeviceTrusted(user.email)){
     gateEnterApp(loginSession);
     return;
   }
@@ -8209,6 +8232,17 @@ function totp2faMarkVerified(email){
   localStorage.setItem('dronehub_2fa',JSON.stringify(data));
   fbSet('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
 }
+function totp2faRememberDevice(email){
+  const key='dronehub_2fa_trusted_'+email.toLowerCase().replace(/[^a-z0-9]/g,'_');
+  const expiry=Date.now()+(30*24*60*60*1000); // 30 days
+  localStorage.setItem(key,expiry.toString());
+}
+function totp2faIsDeviceTrusted(email){
+  const key='dronehub_2fa_trusted_'+email.toLowerCase().replace(/[^a-z0-9]/g,'_');
+  const expiry=parseInt(localStorage.getItem(key)||'0');
+  return expiry>Date.now();
+}
+
 function totp2faIsSetup(email){
   const d=totp2faGetSecret(email);
   return d&&d.verified===true;
@@ -8294,6 +8328,7 @@ function gateVerify2faSetup(){
   if(!code||code.length!==6){if(err){err.textContent='Enter the 6-digit code from Google Authenticator.';err.style.display='block';}return;}
   if(totp2faVerifyCode(_pending2faSession.email,code)){
     totp2faMarkVerified(_pending2faSession.email);
+    totp2faRememberDevice(_pending2faSession.email); // trust this device for 30 days
     gateEnterApp(_pending2faSession);
   } else {
     if(err){err.textContent='Incorrect code — make sure your phone clock is correct and try again.';err.style.display='block';}
@@ -8328,6 +8363,7 @@ function gateSubmit2fa(){
   const err=document.getElementById('totp-verify-error');
   if(!code||code.length!==6){if(err){err.textContent='Enter the 6-digit code.';err.style.display='block';}return;}
   if(totp2faVerifyCode(_pending2faSession.email,code)){
+    totp2faRememberDevice(_pending2faSession.email); // trust this device for 30 days
     gateEnterApp(_pending2faSession);
   } else {
     if(err){err.textContent='Incorrect code. Codes refresh every 30 seconds — try again.';err.style.display='block';}
@@ -8364,6 +8400,48 @@ function getAdminTeamMembers(){return JSON.parse(localStorage.getItem('dronehub_
 function saveAdminTeamMembers(arr){
   try{localStorage.setItem('dronehub_admin_team',JSON.stringify(arr));}catch(e){}
   fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(arr),updatedAt:Date.now()});
+}
+
+async function teamForceSync(){
+  try{
+    // Force pull team data from Firebase regardless of timestamps
+    const fb=await fbGet('orgs',ORG_ID+':team');
+    if(fb?.data){
+      const incoming=JSON.parse(fb.data||'[]');
+      if(incoming.length>0){
+        localStorage.setItem('dronehub_admin_team',fb.data);
+        renderTeam();
+        alert('✓ Synced '+incoming.length+' team members from Firebase.');
+        return;
+      }
+    }
+    // Also check gate_users for any team members
+    const fbGate=await fbGet('orgs',ORG_ID+':gate_users');
+    if(fbGate?.data){
+      const gateUsers=JSON.parse(fbGate.data||'[]');
+      const teamUsers=gateUsers.filter(u=>u.type==='team'||u.role==='admin');
+      if(teamUsers.length>0){
+        const members=teamUsers.map(u=>({
+          id:'tmadmin_'+u.email.replace(/[^a-z0-9]/g,'_'),
+          name:u.name||u.email,
+          email:u.email,
+          phone:'',
+          type:u.type||'team',
+          role:u.role||'contractor',
+          orgId:'org_default',
+          status:u.passHash?'active':'invited',
+          addedAt:u.createdAt||new Date().toISOString().slice(0,10),
+        }));
+        localStorage.setItem('dronehub_admin_team',JSON.stringify(members));
+        renderTeam();
+        alert('✓ Rebuilt '+members.length+' team members from gate users.');
+        return;
+      }
+    }
+    alert('No team data found in Firebase. You may need to re-add your team members.');
+  }catch(e){
+    alert('Sync error: '+e.message);
+  }
 }
 
 function renderTeam(){
@@ -10419,8 +10497,31 @@ const _wr=document.querySelector('.wrap');
 if(_ah) _ah.style.display='none';
 if(_wr) _wr.style.display='none';
 gateInit();
+// Pre-populate demo data when running in Claude sandbox (no Firebase)
+if(!db){
+  if(!localStorage.getItem('dronehub_admin_team')){
+    localStorage.setItem('dronehub_admin_team',JSON.stringify([
+      {id:'tmadmin_1',name:'Bailey Roubos',email:'roubosb1@gmail.com',phone:'',type:'admin',role:'admin',orgId:'org_default',status:'active',jobTitle:'Founder/Owner',activatedAt:'2026-05-01',lastSeen:'2026-05-08 11:00'},
+      {id:'tmadmin_2',name:'Alex Shewan',email:'alex@dronehubmedia.com',phone:'',type:'admin',role:'admin',orgId:'org_default',status:'active',jobTitle:'Admin',activatedAt:'2026-05-08',lastSeen:'2026-05-08 10:30'},
+      {id:'tmadmin_3',name:'Mackenzie Woodhouse',email:'mackenzie@dronehubmedia.com',phone:'',type:'team',role:'sales',orgId:'org_default',status:'active',jobTitle:'Sales & Acquisitions',activatedAt:'2026-05-01',lastSeen:'2026-05-07 15:00'},
+      {id:'tmadmin_4',name:'Adrian Gentili',email:'adrian@dronehubmedia.com',phone:'',type:'team',role:'editor',orgId:'org_default',status:'invited',jobTitle:'Editor',activatedAt:''},
+    ]));
+  }
+  if(!localStorage.getItem('dronehub_gate_users')){
+    localStorage.setItem('dronehub_gate_users',JSON.stringify([
+      {email:'roubosb1@gmail.com',name:'Bailey Roubos',role:'admin',type:'admin',passHash:'',clientId:null},
+      {email:'alex@dronehubmedia.com',name:'Alex Shewan',role:'admin',type:'admin',passHash:'',clientId:null},
+      {email:'mackenzie@dronehubmedia.com',name:'Mackenzie Woodhouse',role:'sales',type:'team',passHash:'',clientId:null},
+    ]));
+  }
+  if(!localStorage.getItem('dronehub_orgs')){
+    localStorage.setItem('dronehub_orgs',JSON.stringify([
+      {id:'org_default',name:'DroneHub Media',inviteCode:'DH-2026-DEMO',createdAt:'2026-01-01'}
+    ]));
+  }
+}
 // Restore data from Firebase if localStorage was cleared
-setTimeout(()=>restoreFromFirebase(),1000);
+if(db) setTimeout(()=>restoreFromFirebase(),1000);
 
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA28gkUrGxyC-WfZN29pSpQV9IsDXzti90&libraries=geocoding&callback=initGoogleMaps" async defer></script>
