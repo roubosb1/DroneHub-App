@@ -2040,6 +2040,7 @@ function showPane(id,ev){
   if(id==='model'){renderEditorSelectors();}
   if(id==='jobs'){renderJobs();}
   if(id==='clients'){renderClients();}
+  if(id==='team'){renderTeam();if(db) setTimeout(teamForceSync,800);}
   if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();}
   if(id==='tracker'){renderTracker();}
@@ -7963,6 +7964,8 @@ function gateSignup(){
       });
     }
     saveAdminTeamMembers(adminMembers2);
+    // Force write to Firebase immediately so admin sees new member right away
+    fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(adminMembers2),updatedAt:Date.now()});
     renderTeam();
 
     // ── LINK TO CONTRACTORS ───────────────────────────────────────────────────
