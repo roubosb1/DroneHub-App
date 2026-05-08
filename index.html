@@ -943,7 +943,7 @@ button{font-family:var(--font);}
     <table id="tracker-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1400px">
       <thead>
         <tr style="background:#0D1117;position:sticky;top:0;z-index:5">
-          <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Project ID</th>
+          <th id="tracker-col-pid" style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Project ID</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:140px">Client / Realtor</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Company / Team</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:200px">Property Address / Project Name</th>
@@ -8752,6 +8752,10 @@ function renderTracker(){
   if(emptyState) emptyState.style.display='none';
 
   // Alternate row colors like the screenshot
+  // Update first column header
+  const pidHeader=document.getElementById('tracker-col-pid');
+  if(pidHeader) pidHeader.textContent=_trackerTab==='upcoming'?'Queue':'Project ID';
+
   tbody.innerHTML=jobs.map((j,idx)=>{
     const ts=getTrackerStage(j.id);
     const client=clients.find(c=>c.id===j.clientId);
@@ -8773,8 +8777,18 @@ function renderTracker(){
     const company=client?.company||'';
     const draftCharge=ts.extraDraftCharge>0?` <span style="color:#F5A623;font-size:9px">+$${ts.extraDraftCharge}</span>`:'';
 
+    // Queue number for Upcoming tab
+    const queueCell=_trackerTab==='upcoming'
+      ?`<td style="padding:8px 10px;white-space:nowrap">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+            <span style="font-size:9px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.06em">Up Next</span>
+            <span style="font-size:18px;font-weight:900;color:${isRush?'var(--red)':'var(--amber)'};line-height:1">${idx+1}</span>
+          </div>
+        </td>`
+      :`<td style="padding:8px 10px;color:#A8B4D0;font-family:monospace;font-size:11px;white-space:nowrap">${pid}</td>`;
+
     return `<tr onclick="openTrackerModal('${j.id}')" style="background:${rowBg};cursor:pointer;border-bottom:1px solid ${isRush?'rgba(240,82,82,.2)':'rgba(255,255,255,.04)'};transition:background .1s;${isRush?'border-left:3px solid var(--red);':''}" onmouseover="this.style.background='${isRush?'rgba(240,82,82,.12)':'rgba(91,141,239,.08)'}'" onmouseout="this.style.background='${rowBg}'">
-      <td style="padding:8px 10px;color:#A8B4D0;font-family:monospace;font-size:11px;white-space:nowrap">${pid}</td>
+      ${queueCell}
       <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">${clientName}${rushBadge}</td>
       <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${company}</td>
       <td style="padding:8px 10px;color:var(--offwhite);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.address||''}">${j.address||j.name||''}</td>
