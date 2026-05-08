@@ -6913,73 +6913,50 @@ function saveLcChannels(ch){
 
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
 function getLcMessages(channelId){
-  const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  // Only return messages that explicitly belong to this channel
-  return (all[channelId]||[]).filter(m=>!m.channelId||m.channelId===channelId);
+  // Each channel has its OWN localStorage key — completely isolated
+  try{return JSON.parse(localStorage.getItem('dronehub_lc_msgs_'+channelId)||'[]');}catch(e){return[];}
 }
 
 function lcResetAllMessages(){
-  if(!confirm('This will clear all corrupted messages and fix the channels. Your real messages will be reloaded from Firebase. Continue?')) return;
-  // Wipe local message cache completely
+  if(!confirm('This will fix all channels. Continue?')) return;
+  // Remove ALL old merged lc_msgs data
   localStorage.removeItem('dronehub_lc_msgs');
-  // Reload each channel's messages from Firebase
+  // Also remove any per-channel keys that might have corrupt data
   const channels=getLcChannels();
-  let loaded=0;
-  channels.forEach(ch=>{
-    if(db){
+  channels.forEach(ch=>localStorage.removeItem('dronehub_lc_msgs_'+ch.id));
+  // Reload each channel from Firebase
+  if(db){
+    channels.forEach(ch=>{
       fbGet('orgs',ORG_ID+':lc_msgs_'+ch.id).then(fb=>{
         if(fb?.msgs){
           try{
-            const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-            all[ch.id]=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===ch.id);
-            localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));
+            const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===ch.id);
+            localStorage.setItem('dronehub_lc_msgs_'+ch.id,JSON.stringify(msgs));
           }catch(e){}
         }
-        loaded++;
-        if(loaded===channels.length) renderLouChat();
       });
-    }
-  });
-  renderLouChat();
-  alert('✓ Channels fixed. Messages reloaded from Firebase.');
+    });
+  }
+  setTimeout(()=>{renderLouChat();if(lcActiveChannel)lcRenderMessages();},1000);
+  alert('✓ Channels reset. Each channel now has isolated storage.');
 }
 
 function lcCleanCorruptMessages(){
-  // Fix any messages stored under the wrong channel key
-  try{
-    const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-    let changed=false;
-    Object.keys(all).forEach(channelId=>{
-      const before=all[channelId].length;
-      all[channelId]=all[channelId].filter(m=>!m.channelId||m.channelId===channelId);
-      if(all[channelId].length!==before) changed=true;
-    });
-    if(changed){
-      localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));
-      console.log('LouChat: cleaned corrupt messages');
-    }
-  }catch(e){}
+  // Remove the old merged dronehub_lc_msgs key that caused all channels to bleed into each other
+  localStorage.removeItem('dronehub_lc_msgs');
 }
 
 function saveLcMessage(channelId, msg){
-  // Ensure msg has channelId stamped on it
   msg.channelId=channelId;
-  const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  if(!all[channelId]) all[channelId]=[];
-  all[channelId]=all[channelId].filter(m=>!m.channelId||m.channelId===channelId);
-  all[channelId].push(msg);
-  try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
-  // Save per-channel in Firebase
-  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{
-    channelId,
-    msgs:JSON.stringify(all[channelId]),
-    updatedAt:Date.now()
-  });
+  // Each channel has its OWN localStorage key — completely isolated
+  const key='dronehub_lc_msgs_'+channelId;
+  const msgs=JSON.parse(localStorage.getItem(key)||'[]');
+  msgs.push(msg);
+  try{localStorage.setItem(key,JSON.stringify(msgs));}catch(e){}
+  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgs),updatedAt:Date.now()});
 }
 function deleteLcChannelMessages(channelId){
-  const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  delete all[channelId];
-  try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
+  localStorage.removeItem('dronehub_lc_msgs_'+channelId);
 }
 
 // Unread counts
@@ -7112,14 +7089,13 @@ function lcOpenChannel(channelId){
   lcActiveChannel=channelId;
   markLcRead(channelId);
 
-  // Load this channel's messages from Firebase
+  // Load this channel's messages from Firebase into its own isolated key
   if(db){
     fbGet('orgs',ORG_ID+':lc_msgs_'+channelId).then(fb=>{
       if(fb?.msgs){
         try{
-          const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-          all[channelId]=JSON.parse(fb.msgs);
-          localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));
+          const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===channelId);
+          localStorage.setItem('dronehub_lc_msgs_'+channelId,JSON.stringify(msgs));
           lcRenderMessages();
         }catch(e){}
       }
