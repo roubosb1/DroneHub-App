@@ -1539,6 +1539,30 @@ button{font-family:var(--font);}
     <span id="settings-saved-msg" style="font-size:12px;color:#22D97A;margin-left:10px"></span>
   </div>
 
+  <!-- Change Password -->
+  <div class="card" style="margin-top:12px">
+    <div class="section-label" style="margin-bottom:12px">🔒 Change password</div>
+    <div style="max-width:400px">
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Current password</label>
+        <input type="password" id="change-pass-current" placeholder="Enter current password"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">New password</label>
+        <input type="password" id="change-pass-new" placeholder="Enter new password"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Confirm new password</label>
+        <input type="password" id="change-pass-confirm" placeholder="Confirm new password"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+      </div>
+      <div id="change-pass-msg" style="font-size:12px;margin-bottom:10px;display:none;padding:8px 12px;border-radius:8px"></div>
+      <button onclick="changePassword()" style="padding:9px 24px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Update password →</button>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:12px">
     <div class="section-label" style="margin-bottom:12px">Contractors — contact info &amp; details</div>
     <div id="contractor-cards-settings"></div>
@@ -2054,6 +2078,7 @@ function showPane(id,ev){
   if(id==='finance'){renderFinance();}
   if(id==='louchat'){
     lcCleanCorruptMessages();
+    lcRequestNotifications();
     lcEnsureDefaults();
     renderLouChat();
     // Auto-open welcome on first visit
@@ -3354,6 +3379,48 @@ function saveSettings(){
   const msg=document.getElementById('settings-saved-msg');
   msg.textContent='Saved!';
   setTimeout(()=>msg.textContent='',2500);
+}
+
+function changePassword(){
+  const current=document.getElementById('change-pass-current')?.value||'';
+  const newPass=document.getElementById('change-pass-new')?.value||'';
+  const confirm=document.getElementById('change-pass-confirm')?.value||'';
+  const msgEl=document.getElementById('change-pass-msg');
+
+  const show=(text,ok)=>{
+    if(!msgEl) return;
+    msgEl.textContent=text;
+    msgEl.style.display='block';
+    msgEl.style.background=ok?'rgba(34,217,122,.1)':'rgba(240,82,82,.1)';
+    msgEl.style.color=ok?'var(--green)':'var(--red)';
+    msgEl.style.border=ok?'1px solid rgba(34,217,122,.2)':'1px solid rgba(240,82,82,.2)';
+  };
+
+  if(!current||!newPass||!confirm){show('Please fill in all fields.',false);return;}
+  if(newPass!==confirm){show('New passwords do not match.',false);return;}
+  if(newPass.length<6){show('New password must be at least 6 characters.',false);return;}
+
+  const session=gateGetSession();
+  if(!session){show('Not logged in.',false);return;}
+
+  const users=gateGetUsers();
+  const user=users.find(u=>u.email.toLowerCase()===session.email.toLowerCase());
+  if(!user){show('Account not found.',false);return;}
+
+  // Allow change if: correct current password OR no password set yet
+  if(user.passHash&&user.passHash!==simpleHash(current)){
+    show('Current password is incorrect.',false);
+    return;
+  }
+
+  user.passHash=simpleHash(newPass);
+  gateSaveUsers(users);
+  show('✓ Password updated successfully!',true);
+
+  // Clear fields
+  document.getElementById('change-pass-current').value='';
+  document.getElementById('change-pass-new').value='';
+  document.getElementById('change-pass-confirm').value='';
 }
 
 function loadSettings(){
@@ -6948,12 +7015,15 @@ function lcCleanCorruptMessages(){
 
 function saveLcMessage(channelId, msg){
   msg.channelId=channelId;
-  // Each channel has its OWN localStorage key — completely isolated
   const key='dronehub_lc_msgs_'+channelId;
   const msgs=JSON.parse(localStorage.getItem(key)||'[]');
   msgs.push(msg);
   try{localStorage.setItem(key,JSON.stringify(msgs));}catch(e){}
   fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgs),updatedAt:Date.now()});
+  // Send browser notification
+  const channels=getLcChannels();
+  const ch=channels.find(c=>c.id===channelId);
+  if(ch&&msg.text) lcSendNotification(msg.author,msg.text,ch.name);
 }
 function deleteLcChannelMessages(channelId){
   localStorage.removeItem('dronehub_lc_msgs_'+channelId);
@@ -7340,7 +7410,7 @@ function lcRenderMessages(){
     const _lcAuthorEmail=m.authorEmail||getLcAuthorEmail(m.author)||'';
 
     if(!collapsed){
-      html+=`<div style="display:flex;gap:10px;padding:6px 0;margin-top:4px" onmouseover="this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-ts').style.opacity=0">
+      html+=`<div style="display:flex;gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
         ${getAvatarHtml(m.author,_lcAuthorEmail,36,12)}
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
@@ -7351,13 +7421,19 @@ function lcRenderMessages(){
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
           ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${lcActiveChannel}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
         </div>
+        <div class="lc-msg-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;align-items:flex-start;flex-shrink:0">
+          <button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">🗑</button>
+        </div>
       </div>`;
     } else {
-      html+=`<div style="padding:1px 0 1px 46px;display:flex;align-items:baseline;gap:8px" onmouseover="this.querySelector('.lc-ts2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0">
+      html+=`<div style="padding:1px 0 1px 46px;display:flex;align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
         <span class="lc-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right">${timeStr}</span>
         <div style="flex:1;min-width:0">
           ${m.text?`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${lcFormatText(m.text)}</div>`:''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
+        </div>
+        <div class="lc-msg-actions2" style="opacity:0;transition:opacity .15s;flex-shrink:0">
+          <button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer">🗑</button>
         </div>
       </div>`;
     }
@@ -7511,6 +7587,40 @@ function lcRenderAttachment(a){
     </div>
     <a href="${a.dataUrl}" download="${a.name}" style="padding:5px 10px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0">↓</a>
   </div>`;
+}
+
+// ── DELETE MESSAGE ────────────────────────────────────────────────────────────
+function lcDeleteMessage(channelId, msgId){
+  if(!confirm('Delete this message?')) return;
+  const key='dronehub_lc_msgs_'+channelId;
+  const msgs=JSON.parse(localStorage.getItem(key)||'[]');
+  const filtered=msgs.filter(m=>m.id!==msgId);
+  localStorage.setItem(key,JSON.stringify(filtered));
+  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(filtered),updatedAt:Date.now()});
+  lcRenderMessages();
+}
+
+// ── BROWSER NOTIFICATIONS ─────────────────────────────────────────────────────
+function lcRequestNotifications(){
+  if('Notification' in window&&Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+}
+
+function lcSendNotification(author, text, channelName){
+  const session=gateGetSession();
+  // Don't notify for your own messages
+  if(session?.name===author||session?.email===author) return;
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  // Don't notify if LouChat tab is currently active
+  const lcPane=document.getElementById('pane-louchat');
+  if(lcPane&&lcPane.classList.contains('active')&&document.hasFocus()) return;
+  new Notification('LouChat — #'+channelName, {
+    body:author+': '+text.slice(0,80),
+    icon:'https://sparkly-halva-0d1aa9.netlify.app/favicon.ico',
+    badge:'https://sparkly-halva-0d1aa9.netlify.app/favicon.ico',
+    tag:'louchat-'+Date.now(),
+  });
 }
 
 function lcSendMessage(){
@@ -8543,8 +8653,8 @@ async function teamForceSync(){
 function getRelativeTime(ts){
   if(!ts) return null;
   const now=Date.now();
-  const then=new Date(ts.replace(' ','T')).getTime();
-  if(isNaN(then)) return ts;
+  const then=new Date(ts).getTime();
+  if(isNaN(then)) return null;
   const diff=Math.floor((now-then)/1000);
   if(diff<60) return 'Just now';
   if(diff<3600) return Math.floor(diff/60)+' min ago';
@@ -8569,7 +8679,7 @@ function renderTeam(){
     const statusColor=m.status==='active'?'var(--green)':m.status==='invited'?'var(--amber)':'var(--muted)';
     const statusDot=m.status==='active'?'🟢':m.status==='invited'?'🟡':'⚫';
     const lastSeenRel=getRelativeTime(m.lastSeen);
-    const isRecent=m.lastSeen&&(Date.now()-new Date(m.lastSeen.replace(' ','T')).getTime())<15*60*1000;
+    const isRecent=m.lastSeen&&(Date.now()-new Date(m.lastSeen).getTime())<15*60*1000;
     const statusLabel=m.status==='active'
       ?`${isRecent?'🟢 Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
       :m.status==='invited'?'🟡 Invited — awaiting signup':'⚫ Inactive';
