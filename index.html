@@ -2052,6 +2052,7 @@ function showPane(id,ev){
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){renderFinance();}
   if(id==='louchat'){
+    lcCleanCorruptMessages();
     lcEnsureDefaults();
     renderLouChat();
     // Auto-open welcome on first visit
@@ -6912,17 +6913,36 @@ function saveLcChannels(ch){
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
 function getLcMessages(channelId){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
+  // Only return messages that explicitly belong to this channel
   return (all[channelId]||[]).filter(m=>!m.channelId||m.channelId===channelId);
 }
 
+function lcCleanCorruptMessages(){
+  // Fix any messages stored under the wrong channel key
+  try{
+    const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
+    let changed=false;
+    Object.keys(all).forEach(channelId=>{
+      const before=all[channelId].length;
+      all[channelId]=all[channelId].filter(m=>!m.channelId||m.channelId===channelId);
+      if(all[channelId].length!==before) changed=true;
+    });
+    if(changed){
+      localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));
+      console.log('LouChat: cleaned corrupt messages');
+    }
+  }catch(e){}
+}
+
 function saveLcMessage(channelId, msg){
+  // Ensure msg has channelId stamped on it
+  msg.channelId=channelId;
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
   if(!all[channelId]) all[channelId]=[];
-  // Remove any messages that don't belong to this channel
   all[channelId]=all[channelId].filter(m=>!m.channelId||m.channelId===channelId);
   all[channelId].push(msg);
   try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
-  // Save per-channel in Firebase so channels never bleed into each other
+  // Save per-channel in Firebase
   fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{
     channelId,
     msgs:JSON.stringify(all[channelId]),
