@@ -50,7 +50,11 @@ function getAvatarHtml(name,email,size=36,fontSize=12){
 
 
 async function fbSet(col,docId,data){
-  try{await db.collection(col).doc(docId).set(data,{merge:true});}catch(e){console.warn('fbSet:',e);}
+  try{
+    await db.collection(col).doc(docId).set(data,{merge:true});
+    // Track when we last successfully saved to Firebase
+    localStorage.setItem('dronehub_last_save',Date.now().toString());
+  }catch(e){console.warn('fbSet:',e);}
 }
 async function fbGet(col,docId){
   try{const d=await db.collection(col).doc(docId).get();return d.exists?d.data():null;}catch(e){return null;}
@@ -2772,9 +2776,12 @@ function calPopulateFilter(){
 // ── GOOGLE CALENDAR LINKS ──────────────────────────────────────────────────
 // ── FIREBASE RESTORE ON STARTUP ───────────────────────────────────────────
 async function restoreFromFirebase(){
+  // Use a local timestamp to track when we last saved
+  const lastLocalSave=parseInt(localStorage.getItem('dronehub_last_save')||'0');
+
   const keys=[
-    {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);saveJobsToStorage();}},
-    {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);saveClientsToStorage();}},
+    {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);localStorage.setItem('dronehub_jobs',d);}},
+    {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);localStorage.setItem('dronehub_clients',d);}},
     {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{localStorage.setItem('dronehub_admin_team',d);}},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
@@ -2791,19 +2798,30 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':portal_msgs',    ls:'dronehub_portal_msgs',       apply:d=>{localStorage.setItem('dronehub_portal_msgs',d);}},
     {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{localStorage.setItem('dronehub_standalone_projects',d);}},
     {fb:ORG_ID+':team_members',   ls:'dronehub_team_members',      apply:d=>{localStorage.setItem('dronehub_team_members',d);}},
-    {fb:ORG_ID+':2fa',          ls:'dronehub_2fa',               apply:d=>{localStorage.setItem('dronehub_2fa',d);}},
+    {fb:ORG_ID+':2fa',            ls:'dronehub_2fa',               apply:d=>{localStorage.setItem('dronehub_2fa',d);}},
+    {fb:ORG_ID+':photos',         ls:'dronehub_photos',            apply:d=>{localStorage.setItem('dronehub_photos',d);}},
   ];
+
   let restored=0;
   for(const k of keys){
     const local=localStorage.getItem(k.ls);
-    // If localStorage is empty or has empty array, try Firebase
-    if(!local||local==='[]'||local==='{}'){
+    const localEmpty=!local||local==='[]'||local==='{}';
+
+    try{
       const fb=await fbGet('orgs',k.fb);
-      if(fb?.data){
-        try{k.apply(fb.data);restored++;}catch(e){}
+      if(!fb?.data) continue;
+      const fbTime=fb.updatedAt||0;
+
+      // Restore from Firebase if:
+      // 1. localStorage is empty, OR
+      // 2. Firebase has newer data than our last local save
+      if(localEmpty||(fbTime>lastLocalSave&&fbTime>0)){
+        k.apply(fb.data);
+        restored++;
       }
-    }
+    }catch(e){}
   }
+
   if(restored>0){
     console.log('Restored '+restored+' collections from Firebase');
     renderJobs();renderClients();renderTeam();renderPayroll();renderTracker();
