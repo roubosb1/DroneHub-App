@@ -2804,13 +2804,13 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{
       const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
       const incoming=JSON.parse(d||'[]');
-      if(incoming.length>=existing.length){localStorage.setItem('dronehub_admin_team',d);}
+      if(incoming.length>=existing.length){localStorage.setItem('dronehub_admin_team',JSON.stringify(incoming));}
     }},
     // Also check team_members key as fallback
     {fb:ORG_ID+':team_members', ls:'dronehub_admin_team', apply:d=>{
       const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
       const incoming=JSON.parse(d||'[]');
-      if(incoming.length>existing.length){localStorage.setItem('dronehub_admin_team',d);}
+      if(incoming.length>existing.length){localStorage.setItem('dronehub_admin_team',JSON.stringify(incoming));}
     }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
@@ -2841,10 +2841,14 @@ async function restoreFromFirebase(){
       if(!fb?.data) continue;
       const fbTime=fb.updatedAt||0;
 
+      // Always restore team data — never skip it
+      const isTeamKey=k.fb.includes(':team');
+
       // Restore from Firebase if:
       // 1. localStorage is empty, OR
-      // 2. Firebase has newer data than our last local save
-      if(localEmpty||(fbTime>lastLocalSave&&fbTime>0)){
+      // 2. Firebase has newer data than our last local save, OR
+      // 3. It's team data (always sync)
+      if(localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isTeamKey){
         k.apply(fb.data);
         restored++;
       }
