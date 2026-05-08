@@ -2040,7 +2040,13 @@ function showPane(id,ev){
   if(id==='model'){renderEditorSelectors();}
   if(id==='jobs'){renderJobs();}
   if(id==='clients'){renderClients();}
-  if(id==='team'){renderTeam();if(db) setTimeout(teamForceSync,800);}
+  if(id==='team'){
+    renderTeam();
+    if(db) setTimeout(async()=>{
+      await teamForceSync();
+      renderTeam();
+    },500);
+  }
   if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();}
   if(id==='tracker'){renderTracker();}
@@ -2796,10 +2802,15 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);localStorage.setItem('dronehub_jobs',d);}},
     {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);localStorage.setItem('dronehub_clients',d);}},
     {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{
-      // Merge with existing rather than overwrite to prevent data loss
       const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
       const incoming=JSON.parse(d||'[]');
       if(incoming.length>=existing.length){localStorage.setItem('dronehub_admin_team',d);}
+    }},
+    // Also check team_members key as fallback
+    {fb:ORG_ID+':team_members', ls:'dronehub_admin_team', apply:d=>{
+      const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+      const incoming=JSON.parse(d||'[]');
+      if(incoming.length>existing.length){localStorage.setItem('dronehub_admin_team',d);}
     }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
@@ -8403,6 +8414,7 @@ function getAdminTeamMembers(){return JSON.parse(localStorage.getItem('dronehub_
 function saveAdminTeamMembers(arr){
   try{localStorage.setItem('dronehub_admin_team',JSON.stringify(arr));}catch(e){}
   fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(arr),updatedAt:Date.now()});
 }
 
 async function teamForceSync(){
