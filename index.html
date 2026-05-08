@@ -6912,7 +6912,9 @@ function saveLcChannels(ch){
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
 function getLcMessages(channelId){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  return all[channelId]||[];
+  const msgs=all[channelId]||[];
+  // Filter out any messages that have a channelId field pointing to a different channel
+  return msgs.filter(m=>!m.channelId||m.channelId===channelId);
 }
 function saveLcMessage(channelId, msg){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
@@ -7470,7 +7472,13 @@ function lcSendMessage(){
   const input=document.getElementById('lc-msg-input');
   const text=(input?.value||'').trim();
   if(!text&&!lcPendingAttachments.length) return;
-  if(!lcActiveChannel) return;
+  if(!lcActiveChannel){alert('Please select a channel first.');return;}
+
+  // Double-check the active channel exists
+  const channels=getLcChannels();
+  const ch=channels.find(c=>c.id===lcActiveChannel);
+  if(!ch){console.error('Channel not found:',lcActiveChannel);return;}
+
   const session=gateGetSession();
   const author=session?.name||bizSettings?.name||'DroneHub Admin';
   const authorEmail=session?.email||'';
@@ -7478,6 +7486,7 @@ function lcSendMessage(){
     id:Date.now(),
     author,
     authorEmail,
+    channelId:lcActiveChannel, // store which channel this belongs to
     text,
     ts:new Date().toISOString(),
     reactions:{},
