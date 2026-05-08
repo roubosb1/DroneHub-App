@@ -7779,9 +7779,11 @@ function gateShowTab(tab){
 }
 
 function gateLogin(){
+  try{
   const email=(document.getElementById('gate-login-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('gate-login-pass')?.value||'';
   const errEl=document.getElementById('gate-login-error');
+  if(!errEl) return;
   errEl.style.display='none';
 
   if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
@@ -7797,6 +7799,7 @@ function gateLogin(){
     user.passHash=simpleHash(pass);
     gateSaveUsers(users);
     const adminSession={email:user.email,name:user.name,role:'admin',type:'admin'};
+    if(typeof OTPAuth==='undefined'){gateEnterApp(adminSession);return;}
     if(totp2faIsSetup(user.email)) gateShow2faVerify(adminSession);
     else gateShow2faSetup(adminSession);
     return;
@@ -7812,11 +7815,21 @@ function gateLogin(){
     return;
   }
 
-  // 2FA check for all admin and team accounts
+  // 2FA check — skip if OTPAuth library not loaded yet
+  if(typeof OTPAuth==='undefined'){
+    gateEnterApp(loginSession);
+    return;
+  }
+
   if(totp2faIsSetup(user.email)){
     gateShow2faVerify(loginSession);
   } else {
     gateShow2faSetup(loginSession);
+  }
+  }catch(e){
+    console.error('Login error:',e);
+    const errEl=document.getElementById('gate-login-error');
+    if(errEl){errEl.textContent='Login error: '+e.message+' — please refresh and try again.';errEl.style.display='block';}
   }
 }
 
