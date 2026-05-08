@@ -78,6 +78,7 @@ function getAvatarHtml(name,email,size=36,fontSize=12){
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.3/dist/otpauth.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
 <style>
 /* ── TOKENS ─────────────────────────────────────────────────── */
@@ -1410,8 +1411,34 @@ button{font-family:var(--font);}
         📌 <span id="lc-pinned-text"></span>
       </div>
 
+      <!-- Embedded Daily.co Video Call Panel -->
+      <div id="lc-video-panel" style="display:none;border-bottom:1px solid var(--border);background:#000;position:relative;flex-shrink:0">
+        <div style="position:absolute;top:8px;right:8px;z-index:10;display:flex;gap:6px;align-items:center">
+          <span id="lc-video-status" style="font-size:11px;color:#22D97A;font-weight:600;background:rgba(0,0,0,.7);padding:3px 10px;border-radius:20px">🔴 Live</span>
+          <button onclick="lcEndMeeting()" style="padding:5px 16px;border-radius:20px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:700;cursor:pointer">End call</button>
+        </div>
+        <div id="lc-daily-frame" style="width:100%;height:420px"></div>
+      </div>
+
       <!-- Input area -->
       <div id="lc-input-area" style="display:none;padding:10px 16px 12px;border-top:1px solid var(--border);background:var(--navy-card)">
+
+        <!-- Meeting Notes Panel -->
+        <div id="lc-meeting-notes-panel" style="display:none;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:12px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:700;color:var(--white)">📝 Meeting Notes</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="lcSaveMeetingNotes()" style="padding:4px 12px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;cursor:pointer">💾 Save to chat</button>
+              <button onclick="lcToggleMeetingNotes()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>
+            </div>
+          </div>
+          <div style="margin-bottom:8px">
+            <input type="text" id="lc-meeting-title" placeholder="Meeting title (e.g. Weekly Team Sync)"
+              style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-card);color:var(--white);font-family:var(--font);margin-bottom:6px">
+            <textarea id="lc-meeting-notes" placeholder="Type meeting notes here...&#10;&#10;• Attendees:&#10;• Agenda:&#10;• Action items:&#10;• Decisions made:"
+              style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-card);color:var(--white);font-family:var(--font);resize:vertical;min-height:120px;line-height:1.6"></textarea>
+          </div>
+        </div>
 
         <!-- Attachment preview strip -->
         <div id="lc-attach-preview" style="display:none;padding:8px 0 8px;display:flex;gap:8px;flex-wrap:wrap"></div>
@@ -1433,8 +1460,14 @@ button{font-family:var(--font);}
             <button onclick="document.getElementById('lc-file-image').click()" title="Upload photo or video" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:7px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">🖼️</button>
             <!-- File/Document -->
             <button onclick="document.getElementById('lc-file-doc').click()" title="Upload file or document" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:7px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">📎</button>
-            <!-- Camera (phone camera — capture attribute) -->
+            <!-- Camera -->
             <button onclick="document.getElementById('lc-file-camera').click()" title="Take photo with camera" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:7px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">📷</button>
+            <!-- Daily.co Video Call -->
+            <button onclick="lcStartMeeting()" title="Start video call (embedded)" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:7px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">📹</button>
+            <!-- Google Meet -->
+            <button onclick="lcStartGoogleMeet()" title="Start Google Meet (opens new tab)" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:7px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">🟢</button>
+            <!-- Meeting Notes -->
+            <button onclick="lcToggleMeetingNotes()" title="Meeting notes" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:7px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='none'">📝</button>
           </div>
 
           <!-- Hidden file inputs -->
@@ -4802,6 +4835,34 @@ function saveJob(){
     renderCalendar();
   }
 
+  // ── SEND QUOTE EMAIL TO CLIENT ────────────────────────────────────────────
+  if(initialJobStatus==='quoted'&&job.clientId){
+    const client=clients.find(c=>c.id===job.clientId);
+    if(client?.email){
+      const{lines:quoteLines,grand:quoteGrand}=buildQuote(sqft,svc,qty);
+      const hst=parseFloat((quoteGrand*0.13).toFixed(2));
+      const total=quoteGrand+hst;
+      const svcList=Object.entries(svc).filter(([k,v])=>v&&['video','photo','tvideo','tphoto','reel','extphoto','extvideo','floorplan','custom'].includes(k))
+        .map(([k])=>({video:'Aerial Video',photo:'Aerial Photography',tvideo:'Twilight Video',tphoto:'Twilight Photography',reel:'Social Media Reel',extphoto:'Exterior Photography',extvideo:'Exterior Video',floorplan:'Floor Plan',custom:job.customDesc||'Custom Service'}[k]||k)).join(', ');
+      const biz=bizSettings||{};
+      if(typeof emailjs!=='undefined'){
+        emailjs.send('service_f0gwd3p','template_fjf8aas',{
+          to_email:client.email,
+          to_name:client.name||client.email,
+          company_name:biz.name||'DroneHub Media Company',
+          invoice_number:'QUOTE-'+job.id.toString().slice(-6),
+          invoice_total:'$'+total.toFixed(2)+' (incl. HST)',
+          job_name:job.name||job.address,
+          job_date:job.date,
+          payment_link:'',
+        },'Ch7hmj99uF1tLKhMj').then(()=>{
+          const el=document.getElementById('save-job-status');
+          if(el) el.textContent+=' · Quote emailed to '+client.email;
+        }).catch(e=>console.warn('Quote email failed:',e));
+      }
+    }
+  }
+
   document.getElementById('save-job-status').textContent=`✓ Saved "${name}" as ${initialJobStatus} — ${period.label} · Contractors notified in LouChat`;
   setTimeout(()=>document.getElementById('save-job-status').textContent='',5000);
   refreshPayrollPeriods();
@@ -7421,6 +7482,7 @@ function lcRenderMessages(){
             <span class="lc-ts" style="font-size:10px;color:var(--muted);opacity:0;transition:opacity .15s">${isToday?timeStr:dateStr+' '+timeStr}</span>
           </div>
           ${m.text?`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${lcFormatText(m.text)}</div>`:''}
+          ${m.isMeeting?`<a href="${m.meetUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:8px 16px;border-radius:10px;background:linear-gradient(135deg,#1a73e8,#1557b0);color:#fff;text-decoration:none;font-size:13px;font-weight:700">📹 Join Google Meet</a>`:''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
           ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${lcActiveChannel}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
         </div>
@@ -7592,7 +7654,161 @@ function lcRenderAttachment(a){
   </div>`;
 }
 
-// ── DELETE MESSAGE ────────────────────────────────────────────────────────────
+// ── DAILY.CO VIDEO CALLS ──────────────────────────────────────────────────────
+const DAILY_API_KEY='aefdd165794ee6eb1fec8174d06b5b806653776173c0dd394b62fa5f6da2bd4c';
+let _dailyFrame=null;
+
+function lcStartGoogleMeet(){
+  if(!lcActiveChannel) return;
+  const channels=getLcChannels();
+  const ch=channels.find(c=>c.id===lcActiveChannel);
+  if(!ch) return;
+  const session=gateGetSession();
+  const meetUrl='https://meet.google.com/new';
+
+  // Post meeting link to channel
+  const msg={
+    id:Date.now(),
+    author:session?.name||'DroneHub',
+    authorEmail:session?.email||'',
+    channelId:lcActiveChannel,
+    text:'🟢 **Google Meet started!**\nClick to join:',
+    ts:new Date().toISOString(),
+    reactions:{},
+    attachments:[],
+    isMeeting:true,
+    meetUrl,
+  };
+  saveLcMessage(lcActiveChannel,msg);
+  lcRenderMessages();
+  window.open(meetUrl,'_blank');
+}
+
+async function lcStartMeeting(){
+  if(!lcActiveChannel) return;
+  const channels=getLcChannels();
+  const ch=channels.find(c=>c.id===lcActiveChannel);
+  if(!ch) return;
+  const session=gateGetSession();
+
+  const statusEl=document.getElementById('lc-video-status');
+  if(statusEl) statusEl.textContent='Creating room…';
+
+  try{
+    // Create a Daily.co room via their API
+    const roomName='dronehub-'+ch.name.replace(/[^a-z0-9]/gi,'-').toLowerCase()+'-'+Date.now().toString(36);
+    const res=await fetch('https://api.daily.co/v1/rooms',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+DAILY_API_KEY,
+      },
+      body:JSON.stringify({
+        name:roomName,
+        properties:{
+          enable_chat:true,
+          enable_screenshare:true,
+          exp:Math.floor(Date.now()/1000)+(60*60*3), // expires in 3 hours
+        }
+      })
+    });
+    const room=await res.json();
+    if(!room.url) throw new Error(room.error||'Failed to create room');
+
+    // Show video panel
+    const panel=document.getElementById('lc-video-panel');
+    if(panel) panel.style.display='block';
+
+    // Embed Daily.co call
+    const frameEl=document.getElementById('lc-daily-frame');
+    if(frameEl){
+      frameEl.innerHTML='';
+      _dailyFrame=window.DailyIframe?DailyIframe.createFrame(frameEl,{
+        showLeaveButton:true,
+        showFullscreenButton:true,
+        iframeStyle:{width:'100%',height:'420px',border:'none'},
+      }):null;
+      if(_dailyFrame){
+        _dailyFrame.join({url:room.url,userName:session?.name||'Guest'});
+        _dailyFrame.on('left-meeting',()=>lcEndMeeting());
+      } else {
+        // Fallback: open in new tab if Daily.js didn't load
+        window.open(room.url,'_blank');
+      }
+    }
+
+    if(statusEl) statusEl.textContent='🔴 Live';
+
+    // Post meeting link to channel
+    const msg={
+      id:Date.now(),
+      author:session?.name||'DroneHub',
+      authorEmail:session?.email||'',
+      channelId:lcActiveChannel,
+      text:'📹 **Video call started!**\n\nClick to join the meeting:',
+      ts:new Date().toISOString(),
+      reactions:{},
+      attachments:[],
+      isMeeting:true,
+      meetUrl:room.url,
+    };
+    saveLcMessage(lcActiveChannel,msg);
+    lcRenderMessages();
+
+  }catch(e){
+    console.error('Daily.co error:',e);
+    if(statusEl) statusEl.textContent='';
+    alert('Could not start video call: '+e.message+'\n\nMake sure you are connected to the internet.');
+  }
+}
+
+function lcEndMeeting(){
+  if(_dailyFrame){
+    try{_dailyFrame.destroy();}catch(e){}
+    _dailyFrame=null;
+  }
+  const panel=document.getElementById('lc-video-panel');
+  if(panel) panel.style.display='none';
+  const frameEl=document.getElementById('lc-daily-frame');
+  if(frameEl) frameEl.innerHTML='';
+}
+
+function lcToggleMeetingNotes(){
+  const panel=document.getElementById('lc-meeting-notes-panel');
+  if(!panel) return;
+  const isOpen=panel.style.display==='none'||!panel.style.display;
+  panel.style.display=isOpen?'block':'none';
+  if(isOpen) document.getElementById('lc-meeting-title')?.focus();
+}
+
+function lcSaveMeetingNotes(){
+  const title=document.getElementById('lc-meeting-title')?.value.trim()||'Meeting Notes';
+  const notes=document.getElementById('lc-meeting-notes')?.value.trim();
+  if(!notes){alert('Please enter some notes first.');return;}
+  if(!lcActiveChannel) return;
+
+  const session=gateGetSession();
+  const now=new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  const msg={
+    id:Date.now(),
+    author:session?.name||'DroneHub',
+    authorEmail:session?.email||'',
+    channelId:lcActiveChannel,
+    text:'📝 **'+title+'**\n_'+now+'_\n\n'+notes,
+    ts:new Date().toISOString(),
+    reactions:{},
+    attachments:[],
+  };
+  saveLcMessage(lcActiveChannel,msg);
+  lcRenderMessages();
+
+  // Clear and close notes panel
+  if(document.getElementById('lc-meeting-title')) document.getElementById('lc-meeting-title').value='';
+  if(document.getElementById('lc-meeting-notes')) document.getElementById('lc-meeting-notes').value='';
+  document.getElementById('lc-meeting-notes-panel').style.display='none';
+}
+
 function lcDeleteMessage(channelId, msgId){
   if(!confirm('Delete this message?')) return;
   const key='dronehub_lc_msgs_'+channelId;
