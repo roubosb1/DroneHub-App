@@ -2815,7 +2815,7 @@ async function restoreFromFirebase(){
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
     {fb:ORG_ID+':lc_channels',ls:'dronehub_lc_channels',apply:d=>{localStorage.setItem('dronehub_lc_channels',d);}},
-    {fb:ORG_ID+':lc_msgs',    ls:'dronehub_lc_msgs',    apply:d=>{localStorage.setItem('dronehub_lc_msgs',d);}},
+    // NOTE: lc_msgs are loaded per-channel when opening each channel, not bulk restored
     {fb:ORG_ID+':contractors',    ls:'dronehub_contractors',       apply:d=>{try{CONTRACTORS=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_contractors',d);}},
     {fb:ORG_ID+':gate_users',     ls:'dronehub_gate_users',        apply:d=>{localStorage.setItem('dronehub_gate_users',d);}},
     {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
@@ -6912,16 +6912,22 @@ function saveLcChannels(ch){
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
 function getLcMessages(channelId){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  const msgs=all[channelId]||[];
-  // Filter out any messages that have a channelId field pointing to a different channel
-  return msgs.filter(m=>!m.channelId||m.channelId===channelId);
+  return (all[channelId]||[]).filter(m=>!m.channelId||m.channelId===channelId);
 }
+
 function saveLcMessage(channelId, msg){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
   if(!all[channelId]) all[channelId]=[];
+  // Remove any messages that don't belong to this channel
+  all[channelId]=all[channelId].filter(m=>!m.channelId||m.channelId===channelId);
   all[channelId].push(msg);
   try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
-  fbSet('orgs',ORG_ID+':lc_msgs',{data:JSON.stringify(all),updatedAt:Date.now()});
+  // Save per-channel in Firebase so channels never bleed into each other
+  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{
+    channelId,
+    msgs:JSON.stringify(all[channelId]),
+    updatedAt:Date.now()
+  });
 }
 function deleteLcChannelMessages(channelId){
   const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
@@ -7056,6 +7062,20 @@ function renderLouChat(){
 function lcOpenChannel(channelId){
   lcActiveChannel=channelId;
   markLcRead(channelId);
+
+  // Load this channel's messages from Firebase
+  if(db){
+    fbGet('orgs',ORG_ID+':lc_msgs_'+channelId).then(fb=>{
+      if(fb?.msgs){
+        try{
+          const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
+          all[channelId]=JSON.parse(fb.msgs);
+          localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));
+          lcRenderMessages();
+        }catch(e){}
+      }
+    });
+  }
   const channels=getLcChannels();
   const ch=channels.find(c=>c.id===channelId);
   if(!ch) return;
@@ -8056,7 +8076,7 @@ function gateEnterApp(session){
     const allMembers=getAdminTeamMembers();
     const mIdx=allMembers.findIndex(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(mIdx>=0){
-      allMembers[mIdx].lastSeen=new Date().toISOString().slice(0,16).replace('T',' ');
+      allMembers[mIdx].lastSeen=new Date().toISOString();
       allMembers[mIdx].status='active';
       saveAdminTeamMembers(allMembers);
     }
@@ -8487,7 +8507,20 @@ async function teamForceSync(){
   }
 }
 
-function renderTeam(){
+function getRelativeTime(ts){
+  if(!ts) return null;
+  const now=Date.now();
+  const then=new Date(ts.replace(' ','T')).getTime();
+  if(isNaN(then)) return ts;
+  const diff=Math.floor((now-then)/1000);
+  if(diff<60) return 'Just now';
+  if(diff<3600) return Math.floor(diff/60)+' min ago';
+  if(diff<86400) return Math.floor(diff/3600)+' hr ago';
+  if(diff<604800) return Math.floor(diff/86400)+' day'+(Math.floor(diff/86400)===1?'':'s')+' ago';
+  return new Date(then).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+}
+
+
   const members=getAdminTeamMembers();
   const grid=document.getElementById('team-members-grid');
   const empty=document.getElementById('team-empty-state');
@@ -8502,14 +8535,16 @@ function renderTeam(){
     const initials=(m.name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
     const statusColor=m.status==='active'?'var(--green)':m.status==='invited'?'var(--amber)':'var(--muted)';
     const statusDot=m.status==='active'?'🟢':m.status==='invited'?'🟡':'⚫';
+    const lastSeenRel=getRelativeTime(m.lastSeen);
+    const isRecent=m.lastSeen&&(Date.now()-new Date(m.lastSeen.replace(' ','T')).getTime())<15*60*1000;
     const statusLabel=m.status==='active'
-      ?`Active${m.activatedAt?' since '+m.activatedAt:''}`
-      :m.status==='invited'?'Invited — awaiting signup':'Inactive';
+      ?`${isRecent?'🟢 Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
+      :m.status==='invited'?'🟡 Invited — awaiting signup':'⚫ Inactive';
     const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('');
     return `<div class="card" style="padding:16px;position:relative">
-      <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:5px">
-        <span style="font-size:11px">${statusDot}</span>
-        <span style="font-size:10px;color:${statusColor};font-weight:600">${statusLabel}</span>
+      <div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+        <span style="font-size:11px;color:${statusColor};font-weight:600">${statusLabel}</span>
+        ${m.activatedAt?`<span style="font-size:9px;color:var(--muted)">Joined ${m.activatedAt}</span>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
         ${getAvatarHtml(m.name,m.email,44,14)}
