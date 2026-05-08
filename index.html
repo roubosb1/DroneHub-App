@@ -7872,7 +7872,15 @@ function gateLogin(){
 
   // Check admin hardcoded accounts (password stored in gate_users)
   const users=gateGetUsers();
-  const user=users.find(u=>u.email.toLowerCase()===email);
+  let user=users.find(u=>u.email.toLowerCase()===email);
+
+  // If not found but is a hardcoded admin — create the record on the fly
+  const HARDCODED=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
+  if(!user&&HARDCODED.includes(email)){
+    user={email,name:PRESET_JOB_TITLES[email]?['Bailey Roubos','Admin','Alex Shewan','Mackenzie Woodhouse'][HARDCODED.indexOf(email)]:(email.split('@')[0]),role:'admin',type:'admin',passHash:'',clientId:null};
+    users.push(user);
+    gateSaveUsers(users);
+  }
 
   if(!user){errEl.textContent='No account found for that email.';errEl.style.display='block';return;}
 
