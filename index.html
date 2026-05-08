@@ -8520,7 +8520,7 @@ function getRelativeTime(ts){
   return new Date(then).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
 }
 
-
+function renderTeam(){
   const members=getAdminTeamMembers();
   const grid=document.getElementById('team-members-grid');
   const empty=document.getElementById('team-empty-state');
