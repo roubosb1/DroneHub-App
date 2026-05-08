@@ -8407,43 +8407,58 @@ function saveAdminTeamMembers(arr){
 
 async function teamForceSync(){
   try{
-    // Force pull team data from Firebase regardless of timestamps
-    const fb=await fbGet('orgs',ORG_ID+':team');
-    if(fb?.data){
-      const incoming=JSON.parse(fb.data||'[]');
-      if(incoming.length>0){
-        localStorage.setItem('dronehub_admin_team',fb.data);
-        renderTeam();
-        alert('✓ Synced '+incoming.length+' team members from Firebase.');
-        return;
+    let members=[];
+
+    // Pull orgs first so invite code shows correctly
+    const fbOrgs=await fbGet('orgs',ORG_ID+':orgs_data');
+    if(fbOrgs?.data){
+      try{
+        const orgsData=JSON.parse(fbOrgs.data||'[]');
+        if(orgsData.length>0){
+          localStorage.setItem('dronehub_orgs',JSON.stringify(orgsData));
+        }
+      }catch(e){}
+    }
+
+    // Check all possible keys where team data might be stored
+    const keysToCheck=[ORG_ID+':team',ORG_ID+':admin_team',ORG_ID+':team_members'];
+    for(const key of keysToCheck){
+      const fb=await fbGet('orgs',key);
+      if(fb?.data){
+        try{
+          const parsed=JSON.parse(fb.data||'[]');
+          if(Array.isArray(parsed)&&parsed.length>members.length) members=parsed;
+        }catch(e){}
       }
     }
-    // Also check gate_users for any team members
+
+    // Also check gate_users and merge
     const fbGate=await fbGet('orgs',ORG_ID+':gate_users');
     if(fbGate?.data){
-      const gateUsers=JSON.parse(fbGate.data||'[]');
-      const teamUsers=gateUsers.filter(u=>u.type==='team'||u.role==='admin');
-      if(teamUsers.length>0){
-        const members=teamUsers.map(u=>({
-          id:'tmadmin_'+u.email.replace(/[^a-z0-9]/g,'_'),
-          name:u.name||u.email,
-          email:u.email,
-          phone:'',
-          type:u.type||'team',
-          role:u.role||'contractor',
-          orgId:'org_default',
-          status:u.passHash?'active':'invited',
-          addedAt:u.createdAt||new Date().toISOString().slice(0,10),
-        }));
-        localStorage.setItem('dronehub_admin_team',JSON.stringify(members));
-        renderTeam();
-        alert('✓ Rebuilt '+members.length+' team members from gate users.');
-        return;
-      }
+      try{
+        const gateUsers=JSON.parse(fbGate.data||'[]');
+        gateUsers.filter(u=>u.type==='team'||u.type==='admin').forEach(u=>{
+          if(!members.find(m=>m.email?.toLowerCase()===u.email?.toLowerCase())){
+            members.push({
+              id:'tmadmin_'+u.email.replace(/[^a-z0-9]/g,'_'),
+              name:u.name||u.email,email:u.email,phone:'',
+              type:u.type||'team',role:u.role||'contractor',
+              orgId:'org_default',
+              status:u.passHash?'active':'invited',
+              addedAt:u.createdAt||new Date().toISOString().slice(0,10),
+            });
+          }
+        });
+      }catch(e){}
     }
-    alert('No team data found in Firebase. You may need to re-add your team members.');
+
+    if(members.length>0){
+      localStorage.setItem('dronehub_admin_team',JSON.stringify(members));
+      fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(members),updatedAt:Date.now()});
+    }
+    renderTeam();
   }catch(e){
-    alert('Sync error: '+e.message);
+    console.error('Team sync error:',e);
   }
 }
 
