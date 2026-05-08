@@ -63,8 +63,8 @@ async function fbDelete(col,docId){
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.6/dist/otpauth.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.3/dist/otpauth.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
 <style>
 /* ── TOKENS ─────────────────────────────────────────────────── */
@@ -8075,8 +8075,14 @@ function totp2faVerifyCode(email,code){
   }catch(e){console.error('TOTP error:',e);return false;}
 }
 function totp2faGenerateSecret(email){
-  const secret=OTPAuth.Secret.fromRandom(20);
-  const b32=secret.base32;
+  const base32chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const array=new Uint8Array(20);
+  crypto.getRandomValues(array);
+  let b32='';
+  for(let i=0;i<array.length;i+=5){
+    const buf=((array[i]||0)<<32)|((array[i+1]||0)<<24)|((array[i+2]||0)<<16)|((array[i+3]||0)<<8)|(array[i+4]||0);
+    for(let j=7;j>=0;j--) b32+=base32chars[(buf>>>(j*5))&31];
+  }
   totp2faSaveSecret(email,b32);
   return b32;
 }
