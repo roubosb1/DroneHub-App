@@ -7239,6 +7239,7 @@ function lcRenderMessages(){
 
     const initials=m.author.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
     const avatarColor=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9'][m.author.charCodeAt(0)%6];
+    const _lcAuthorEmail=m.authorEmail||getLcAuthorEmail(m.author)||'';
 
     if(!collapsed){
       html+=`<div style="display:flex;gap:10px;padding:6px 0;margin-top:4px" onmouseover="this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-ts').style.opacity=0">
@@ -7419,11 +7420,13 @@ function lcSendMessage(){
   const text=(input?.value||'').trim();
   if(!text&&!lcPendingAttachments.length) return;
   if(!lcActiveChannel) return;
-  const biz=bizSettings||{};
-  const author=biz.name||'DroneHub Admin';
+  const session=gateGetSession();
+  const author=session?.name||bizSettings?.name||'DroneHub Admin';
+  const authorEmail=session?.email||'';
   const msg={
     id:Date.now(),
     author,
+    authorEmail,
     text,
     ts:new Date().toISOString(),
     reactions:{},
@@ -7433,7 +7436,6 @@ function lcSendMessage(){
   if(input){input.value='';input.style.height='auto';}
   lcPendingAttachments=[];
   lcRenderAttachPreview();
-  // Hide emoji picker if open
   const picker=document.getElementById('lc-emoji-picker');
   if(picker) picker.style.display='none';
   lcRenderMessages();
@@ -7807,6 +7809,13 @@ function gateLogin(){
 
   if(user.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
 
+  // Force admin type for hardcoded owner accounts regardless of stored role
+  const FORCE_ADMIN=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
+  if(FORCE_ADMIN.includes(user.email.toLowerCase())){
+    user.role='admin';
+    user.type='admin';
+  }
+
   const loginSession={email:user.email,name:user.name,role:user.role,type:user.type,jobTitle:user.jobTitle||PRESET_JOB_TITLES[user.email]?.title||'',clientId:user.clientId||null};
 
   // Skip 2FA for client accounts
@@ -8006,13 +8015,109 @@ function gateEnterApp(session){
   }
 
   if(session.type==='team'){
-    // Show team portal — filtered view
+    // Check if they're linked to the team roster
+    const adminMembers=getAdminTeamMembers();
+    const isLinked=adminMembers.find(m=>m.email.toLowerCase()===session.email.toLowerCase());
+    if(!isLinked){
+      // Show team link screen
+      gateShowLinkTeam(session);
+      return;
+    }
     gateShowTeamView(session);
     return;
   }
 
-  // Admin — show full app
+  // Admin — check if linked (for non-hardcoded admins)
+  const FORCE_ADMIN=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
+  if(!FORCE_ADMIN.includes(session.email.toLowerCase())&&session.type==='admin'){
+    const adminMembers2=getAdminTeamMembers();
+    const isLinked2=adminMembers2.find(m=>m.email.toLowerCase()===session.email.toLowerCase());
+    if(!isLinked2){
+      gateShowLinkTeam(session);
+      return;
+    }
+  }
+
   gateShowAdminView(session);
+}
+
+function gateShowLinkTeam(session){
+  const gate=document.getElementById('site-login-gate');
+  gate.style.display='flex';
+  document.querySelector('.app-header')?.style.setProperty('display','none');
+  document.querySelector('.wrap')?.style.setProperty('display','none');
+  gate.innerHTML=`
+  <div style="text-align:center;max-width:400px;width:100%;padding:20px">
+    <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:4px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:28px">Join Your Team</div>
+    <div style="background:var(--navy-card);border-radius:18px;border:1px solid var(--border-bright);padding:28px;text-align:left">
+      <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:8px">👋 Welcome, ${session.name||session.email}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+        Your account needs to be linked to the DroneHub team. Enter your team invite code below, or ask your admin to link you manually.
+      </div>
+      <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:6px">Team invite code</label>
+      <input id="link-team-code" type="text" placeholder="DH-XXXX-XXXX" maxlength="20"
+        style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:15px;font-weight:700;text-align:center;letter-spacing:.1em;font-family:monospace;margin-bottom:12px;text-transform:uppercase"
+        oninput="this.value=this.value.toUpperCase()"
+        onkeydown="if(event.key==='Enter')gateLinkToTeam('${session.email}','${session.name||''}','${session.role||'contractor'}','${session.type||'team'}')">
+      <div id="link-team-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none;padding:8px;background:rgba(240,82,82,.1);border-radius:8px"></div>
+      <button onclick="gateLinkToTeam('${session.email}','${encodeURIComponent(session.name||'')}','${session.role||'contractor'}','${session.type||'team'}')"
+        style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">
+        Link to team →
+      </button>
+      <button onclick="location.reload()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">
+        ← Sign in with a different account
+      </button>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('link-team-code')?.focus(),100);
+}
+
+function gateLinkToTeam(email, encodedName, role, type){
+  const code=(document.getElementById('link-team-code')?.value||'').trim().toUpperCase();
+  const errEl=document.getElementById('link-team-error');
+  const name=decodeURIComponent(encodedName);
+  if(!code){if(errEl){errEl.textContent='Please enter your invite code.';errEl.style.display='block';}return;}
+
+  const org=ensureDefaultOrg();
+  const validCode=(org.inviteCode||'').toUpperCase();
+
+  if(code!==validCode){
+    if(errEl){errEl.textContent='Invalid code — check with your admin and try again.';errEl.style.display='block';}
+    return;
+  }
+
+  // Add to admin team roster
+  const members=getAdminTeamMembers();
+  const existing=members.findIndex(m=>m.email.toLowerCase()===email.toLowerCase());
+  const now=new Date().toISOString().slice(0,10);
+  if(existing>=0){
+    members[existing].status='active';
+    members[existing].activatedAt=now;
+    members[existing].lastSeen=new Date().toISOString().slice(0,16).replace('T',' ');
+  } else {
+    members.push({
+      id:'tmadmin_'+Date.now(),
+      name,email,phone:'',
+      type,role,
+      orgId:org.id,
+      status:'active',
+      invitedAt:now,
+      activatedAt:now,
+      addedAt:now,
+      lastSeen:new Date().toISOString().slice(0,16).replace('T',' '),
+    });
+  }
+  saveAdminTeamMembers(members);
+
+  // Hide link screen and enter app
+  const gate=document.getElementById('site-login-gate');
+  if(gate) gate.style.display='none';
+  const session=gateGetSession();
+  if(session){
+    if(type==='admin'||role==='admin') gateShowAdminView(session);
+    else gateShowTeamView(session);
+  }
 }
 
 function gateShowAdminView(session){
@@ -8280,6 +8385,7 @@ function renderTeam(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px">
         ${m.status==='invited'?`<button onclick="resendTeamInvite('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">📧 Resend invite</button>`:''}
         <button onclick="openEditTeamMemberModal('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;font-weight:600;cursor:pointer">✏ Edit</button>
+        <button onclick="adminLinkMember('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;font-weight:600;cursor:pointer">🔗 Link account</button>
         <button onclick="removeTeamMember('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;font-weight:600;cursor:pointer">Remove</button>
       </div>
     </div>`;
@@ -8491,6 +8597,19 @@ function saveTeamMemberFromModal(editId){
       pm.push({id:'tm_'+Date.now(),name,email,passHash:'',orgId:org.id,role,createdAt:new Date().toISOString().slice(0,10)});
       saveTeamMembers(pm);
     }
+    // Pre-add to gate_users so they can log in once they sign up
+    const gateUsers=gateGetUsers();
+    if(!gateUsers.find(u=>u.email.toLowerCase()===email.toLowerCase())){
+      gateUsers.push({
+        email,name,role,type:'team',
+        jobTitle:PRESET_JOB_TITLES[email.toLowerCase()]?.title||'',
+        passHash:'', // will be set when they sign up
+        clientId:null,
+        status:'invited',
+        createdAt:new Date().toISOString().slice(0,10),
+      });
+      gateSaveUsers(gateUsers);
+    }
   }
   document.getElementById('add-team-modal')?.remove();
   populateSalespersonDropdown();
@@ -8518,6 +8637,46 @@ function saveTeamMemberFromModal(editId){
     });
   }
   renderTeam();
+}
+
+function adminLinkMember(id){
+  const members=getAdminTeamMembers();
+  const m=members.find(tm=>tm.id===id);
+  if(!m) return;
+
+  // Force link by marking them active and adding to gate_users
+  const now=new Date().toISOString().slice(0,10);
+  m.status='active';
+  m.activatedAt=now;
+  saveAdminTeamMembers(members);
+
+  // Make sure they're in gate_users
+  const gateUsers=gateGetUsers();
+  const existing=gateUsers.findIndex(u=>u.email.toLowerCase()===m.email.toLowerCase());
+  if(existing>=0){
+    gateUsers[existing].role=m.role;
+    gateUsers[existing].type=m.role==='admin'?'admin':'team';
+    gateUsers[existing].status='active';
+  } else {
+    gateUsers.push({
+      email:m.email,name:m.name,
+      role:m.role,type:m.role==='admin'?'admin':'team',
+      jobTitle:m.jobTitle||PRESET_JOB_TITLES[m.email.toLowerCase()]?.title||'',
+      passHash:'',clientId:null,status:'active',
+      createdAt:now,
+    });
+  }
+  gateSaveUsers(gateUsers);
+
+  // Also add to portal team members
+  const pm=getTeamMembers();
+  if(!pm.find(p=>p.email.toLowerCase()===m.email.toLowerCase())){
+    pm.push({id:'tm_'+Date.now(),name:m.name,email:m.email,passHash:'',orgId:ensureDefaultOrg().id,role:m.role,createdAt:now});
+    saveTeamMembers(pm);
+  }
+
+  renderTeam();
+  alert('✓ '+m.name+' has been linked to the team. They can now log in and will have access to the portal.');
 }
 
 function resendTeamInvite(id){
