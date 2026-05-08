@@ -316,7 +316,7 @@ button{font-family:var(--font);}
         <div style="font-size:10px;color:var(--muted);margin-top:4px">Get this from your DroneHub Media contact. Your invite code was included in your invite email.</div>
       </div>
       <div id="gate-signup-error" style="font-size:11px;color:var(--red);margin-bottom:12px;display:none;padding:8px 10px;background:rgba(240,82,82,.1);border-radius:8px;border:1px solid rgba(240,82,82,.3)"></div>
-      <button onclick="gateSignup()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--green),#16A34A);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Create account →</button>
+      <button onclick="gateSignup()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Create account →</button>
       <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--muted)">
         Already have an account? <span onclick="gateShowTab('login')" style="color:var(--blue-bright);cursor:pointer;font-weight:600">Sign in</span>
       </div>
@@ -7773,7 +7773,7 @@ function gateShowTab(tab){
     signupTab.style.background='transparent'; signupTab.style.color='var(--muted)';
   } else {
     loginForm.style.display='none'; signupForm.style.display='block';
-    signupTab.style.background='linear-gradient(135deg,var(--green),#16A34A)'; signupTab.style.color='#fff';
+    signupTab.style.background='linear-gradient(135deg,var(--blue),#3B6FD4)'; signupTab.style.color='#fff';
     loginTab.style.background='transparent'; loginTab.style.color='var(--muted)';
   }
 }
@@ -7889,10 +7889,31 @@ function gateSignup(){
       saveTeamMembers(pm);
     }
 
-    // Mark as active in admin team roster
+    // Mark as active in admin team roster — create record if doesn't exist
     const adminMembers2=getAdminTeamMembers();
     const idx=adminMembers2.findIndex(m=>m.email.toLowerCase()===email);
-    if(idx>=0){adminMembers2[idx].status='active';adminMembers2[idx].jobTitle=jobTitle;saveAdminTeamMembers(adminMembers2);}
+    const signupTime=new Date().toISOString().slice(0,10);
+    if(idx>=0){
+      adminMembers2[idx].status='active';
+      adminMembers2[idx].jobTitle=jobTitle;
+      adminMembers2[idx].name=first+' '+last;
+      adminMembers2[idx].activatedAt=signupTime;
+    } else {
+      // Not pre-added by admin — create fresh record
+      adminMembers2.push({
+        id:'tmadmin_'+Date.now(),
+        name:first+' '+last,
+        email,phone:'',
+        type:'team',role,jobTitle,
+        orgId:org.id,
+        status:'active',
+        invitedAt:signupTime,
+        activatedAt:signupTime,
+        addedAt:signupTime,
+      });
+    }
+    saveAdminTeamMembers(adminMembers2);
+    renderTeam();
 
     // ── LINK TO CONTRACTORS ───────────────────────────────────────────────────
     // If signing up as contractor, ensure they exist in CONTRACTORS
@@ -7952,6 +7973,17 @@ function gateEnterApp(session){
   if(!session.jobTitle) session.jobTitle=PRESET_JOB_TITLES[session.email?.toLowerCase()]?.title||'';
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
+
+  // Track last seen time on team member record
+  try{
+    const allMembers=getAdminTeamMembers();
+    const mIdx=allMembers.findIndex(m=>m.email.toLowerCase()===session.email.toLowerCase());
+    if(mIdx>=0){
+      allMembers[mIdx].lastSeen=new Date().toISOString().slice(0,16).replace('T',' ');
+      allMembers[mIdx].status='active';
+      saveAdminTeamMembers(allMembers);
+    }
+  }catch(e){}
 
   const userDisplay=document.getElementById('app-user-display');
   if(userDisplay) userDisplay.textContent=session.name||session.email;
@@ -8119,7 +8151,7 @@ function gateShow2faSetup(session){
         style="width:100%;box-sizing:border-box;padding:14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:22px;font-weight:700;text-align:center;letter-spacing:.2em;font-family:monospace;margin-bottom:12px"
         onkeydown="if(event.key==='Enter')gateVerify2faSetup()">
       <div id="totp-setup-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none"></div>
-      <button onclick="gateVerify2faSetup()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--green),#16A34A);color:#fff;font-size:15px;font-weight:700;cursor:pointer">Confirm & activate →</button>
+      <button onclick="gateVerify2faSetup()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:15px;font-weight:700;cursor:pointer">Confirm & activate →</button>
     </div>
   </div>`;
   setTimeout(()=>{
@@ -8225,16 +8257,20 @@ function renderTeam(){
     const access=TEAM_ACCESS[m.role]||TEAM_ACCESS.contractor;
     const initials=(m.name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
     const statusColor=m.status==='active'?'var(--green)':m.status==='invited'?'var(--amber)':'var(--muted)';
-    const statusLabel=m.status==='active'?'Active':m.status==='invited'?'Invited — pending signup':'Inactive';
+    const statusDot=m.status==='active'?'🟢':m.status==='invited'?'🟡':'⚫';
+    const statusLabel=m.status==='active'
+      ?`Active${m.activatedAt?' since '+m.activatedAt:''}`
+      :m.status==='invited'?'Invited — awaiting signup':'Inactive';
     const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('');
     return `<div class="card" style="padding:16px;position:relative">
       <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:5px">
-        <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block"></span>
-        <span style="font-size:10px;color:var(--muted)">${statusLabel}</span>
+        <span style="font-size:11px">${statusDot}</span>
+        <span style="font-size:10px;color:${statusColor};font-weight:600">${statusLabel}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
         ${getAvatarHtml(m.name,m.email,44,14)}
         <div><div style="font-size:14px;font-weight:700;color:var(--white)">${m.name}</div><div style="font-size:11px;color:var(--muted)">${m.email}</div>${m.phone?`<div style="font-size:10px;color:var(--muted)">${m.phone}</div>`:''}</div>
+        ${m.lastSeen?`<div style="font-size:10px;color:var(--muted);margin-top:2px">Last seen: ${m.lastSeen}</div>`:''}
       </div>
       <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;margin-bottom:8px">
         <span>${role.icon}</span><span style="font-size:11px;font-weight:700;color:${role.color}">${role.label}</span>
