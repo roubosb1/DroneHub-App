@@ -1357,8 +1357,8 @@ button{font-family:var(--font);}
         <div id="lc-channel-list"></div>
       </div>
 
-      <!-- Add channel -->
-      <div style="padding:10px 12px;border-top:1px solid var(--border)">
+      <!-- Add channel — admin only, hidden until renderLouChat() checks role -->
+      <div id="lc-add-section" style="display:none;padding:10px 12px;border-top:1px solid var(--border)">
         <div id="lc-add-form" style="display:none;margin-bottom:8px">
           <input type="text" id="lc-new-channel-name" placeholder="channel-name" onkeydown="if(event.key==='Enter')lcCreateChannel()" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:7px;font-size:12px;background:var(--navy-lift);color:var(--white);margin-bottom:6px">
           <div style="display:flex;gap:5px;align-items:center">
@@ -7276,6 +7276,12 @@ function renderLouChat(){
 
   document.getElementById('lc-channel-list').innerHTML=html;
 
+  // Show "New channel" button only for admins
+  const _s=gateGetSession();
+  const _isAdmin=_s?.type==='admin'||_s?.role==='admin';
+  const _addSec=document.getElementById('lc-add-section');
+  if(_addSec) _addSec.style.display=_isAdmin?'block':'none';
+
   if(lcActiveChannel && lcActiveChannel!=='__video_call__'){
     lcRenderMessages();
   }
@@ -8039,6 +8045,8 @@ function lcInitDragDrop(){
 }
 
 function lcCreateChannel(){
+  const s=gateGetSession();
+  if(s?.type!=='admin'&&s?.role!=='admin'){alert('Only admins can create channels.');return;}
   const name=document.getElementById('lc-new-channel-name')?.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-');
   const type=document.getElementById('lc-new-channel-type')?.value||'general';
   if(!name){alert('Please enter a channel name.');return;}
@@ -8075,11 +8083,13 @@ function lcDeleteChannel(channelId){
 }
 
 function lcToggleAddForm(){
+  const s=gateGetSession();
+  if(s?.type!=='admin'&&s?.role!=='admin') return;
   const form=document.getElementById('lc-add-form');
   const btn=document.getElementById('lc-add-btn');
   const open=form.style.display==='none';
   form.style.display=open?'block':'none';
-  btn.textContent=open?'✕ Cancel':'+ New channel';
+  btn.innerHTML=open?'<span style="font-size:16px">✕</span> Cancel':'<span style="font-size:16px">+</span> New channel';
   if(open) document.getElementById('lc-new-channel-name').focus();
 }
 
