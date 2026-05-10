@@ -3803,7 +3803,7 @@ function openInvoice(jobId){
     <td style="padding:9px 0;border-bottom:0.5px solid #f0ede6;font-size:13px;text-align:right;font-weight:500">${fmtN(l.total)}</td>
   </tr>`).join('');
 
-  const stripeUrl=biz.stripeUrl||'https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01';
+  const stripeUrl=biz.stripeUrl||'';
   const stripeBtn=`<div style="margin-top:20px;padding:20px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
       <div style="font-size:13px;color:#A8B4D0;margin-bottom:6px">Pay securely online via Stripe</div>
       <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:14px">${fmtN(grandTotal)}</div>
