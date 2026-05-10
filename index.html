@@ -4292,50 +4292,39 @@ function getClientLeaderboardData(){
     });
     const avgPayDays = payTimes.length ? payTimes.reduce((s,v)=>s+v,0)/payTimes.length : null;
 
-    // 6. Social media tags (manual field on client)
+    // 6. Social media tags (manual)
     const socialTags = parseInt(c.socialTags)||0;
 
-    // 7. Referrals (manual field)
+    // 7. Referrals (manual)
     const referrals = parseInt(c.referrals)||0;
 
-    // 8. Job count & repeat business
+    // 8. Job count
     const totalJobs = cJobs.length;
-    const repeatClient = totalJobs >= 3;
 
-    // 9. Payment rate (% of invoiced jobs that are paid)
+    // 9. Payment rate
     const paymentRate = invoicedJobs.length ? paidJobs.length/invoicedJobs.length : 0;
 
-    // ── SCORING (100 pts total) ──
-    // Revenue: 25pts — top spenders get full points
-    // Payment speed: 20pts — faster = better (0 days=20, 60+ days=0)
-    // Drafts: 20pts — fewer drafts = better (0=20, 5+=0)
-    // Shoot efficiency: 10pts — shorter shoot time = easier client
-    // Edit efficiency: 10pts — shorter edit time = easier client
-    // Social tags: 8pts
-    // Referrals: 7pts
+    // 10. Video & reel counts (from job.services)
+    const totalVideos = cJobs.filter(j=>j.services?.video||j.services?.tvideo||j.services?.extvideo||j.services?.randomvideo).length;
+    const totalReels  = cJobs.filter(j=>j.services?.reel).length;
 
+    // ── SCORING (100 pts total) ──
     const allRevenues = clients.map(cl=>savedJobs.filter(j=>j.clientId===cl.id&&(j.status==='confirmed'||j.status==='completed')).reduce((s,j)=>s+j.grand,0));
     const maxRevenue = Math.max(...allRevenues,1);
     const revenueScore = Math.round((totalRevenue/maxRevenue)*25);
-
     const payScore = avgPayDays===null ? 10 : Math.round(Math.max(0,(60-avgPayDays)/60)*20);
-
     const draftScore = Math.round(Math.max(0,(5-avgDrafts)/5)*20);
-
     const allShoot = clients.map(cl=>{ const t=savedJobs.filter(j=>j.clientId===cl.id).map(j=>parseFloat(j.duration)||0).filter(v=>v>0); return t.length?t.reduce((s,v)=>s+v,0)/t.length:0; });
     const maxShoot = Math.max(...allShoot,1);
     const shootScore = avgShootHours>0 ? Math.round((1-avgShootHours/maxShoot)*10) : 5;
-
     const allEdit = clients.map(cl=>{ const t=savedJobs.filter(j=>j.clientId===cl.id).map(j=>{const ts=getTrackerStage(j.id);return parseFloat(ts.approxEditHours)||0;}).filter(v=>v>0); return t.length?t.reduce((s,v)=>s+v,0)/t.length:0; });
     const maxEdit = Math.max(...allEdit,1);
     const editScore = avgEditHours>0 ? Math.round((1-avgEditHours/maxEdit)*10) : 5;
-
     const tagScore = Math.min(8,socialTags*2);
     const refScore = Math.min(7,referrals*2);
-
     const totalScore = revenueScore+payScore+draftScore+shootScore+editScore+tagScore+refScore;
 
-    return {c, totalRevenue, avgShootHours, avgEditHours, avgDrafts, avgPayDays, socialTags, referrals, totalJobs, paymentRate, totalScore, revenueScore, payScore, draftScore, shootScore, editScore, tagScore, refScore};
+    return {c, totalRevenue, avgShootHours, avgEditHours, avgDrafts, avgPayDays, socialTags, referrals, totalJobs, totalVideos, totalReels, paymentRate, totalScore, revenueScore, payScore, draftScore, shootScore, editScore, tagScore, refScore};
   }).filter(d=>d.totalJobs>0).sort((a,b)=>b.totalScore-a.totalScore);
 }
 
@@ -4348,21 +4337,22 @@ function renderClientLeaderboard(sortKey){
 
   // Sort by selected metric
   const sortFns={
-    score:   (a,b)=>b.totalScore-a.totalScore,
-    revenue: (a,b)=>b.totalRevenue-a.totalRevenue,
-    payspeed:(a,b)=>{
-      // Lower days = better; null (no data) goes to end
+    score:    (a,b)=>b.totalScore-a.totalScore,
+    revenue:  (a,b)=>b.totalRevenue-a.totalRevenue,
+    payspeed: (a,b)=>{
       if(a.avgPayDays===null&&b.avgPayDays===null) return 0;
       if(a.avgPayDays===null) return 1;
       if(b.avgPayDays===null) return -1;
       return a.avgPayDays-b.avgPayDays;
     },
-    drafts:  (a,b)=>a.avgDrafts-b.avgDrafts,   // fewer = better
-    shoot:   (a,b)=>a.avgShootHours-b.avgShootHours, // shorter = better
-    edit:    (a,b)=>a.avgEditHours-b.avgEditHours,   // shorter = better
-    tags:    (a,b)=>b.socialTags-a.socialTags,
+    drafts:   (a,b)=>a.avgDrafts-b.avgDrafts,
+    shoot:    (a,b)=>a.avgShootHours-b.avgShootHours,
+    edit:     (a,b)=>a.avgEditHours-b.avgEditHours,
+    tags:     (a,b)=>b.socialTags-a.socialTags,
     referrals:(a,b)=>b.referrals-a.referrals,
-    jobs:    (a,b)=>b.totalJobs-a.totalJobs,
+    jobs:     (a,b)=>b.totalJobs-a.totalJobs,
+    videos:   (a,b)=>b.totalVideos-a.totalVideos,
+    reels:    (a,b)=>b.totalReels-a.totalReels,
   };
   data = data.slice().sort(sortFns[_lbSort]||sortFns.score);
 
@@ -4372,10 +4362,10 @@ function renderClientLeaderboard(sortKey){
   }
 
   const tierLabel=(score)=>{
-    if(score>=80) return {label:'Platinum',color:'#B4D4FF',bg:'rgba(180,212,255,.12)',border:'rgba(180,212,255,.3)'};
-    if(score>=60) return {label:'Gold',color:'#F5C842',bg:'rgba(245,200,66,.1)',border:'rgba(245,200,66,.3)'};
-    if(score>=40) return {label:'Silver',color:'#C0C0C0',bg:'rgba(192,192,192,.1)',border:'rgba(192,192,192,.25)'};
-    if(score>=20) return {label:'Bronze',color:'#CD7F32',bg:'rgba(205,127,50,.1)',border:'rgba(205,127,50,.25)'};
+    if(score>=80) return {label:'Platinum',color:'#7AABFF',bg:'rgba(122,171,255,.13)',border:'rgba(122,171,255,.35)'};
+    if(score>=60) return {label:'Gold',    color:'#5B8DEF',bg:'rgba(91,141,239,.12)', border:'rgba(91,141,239,.32)'};
+    if(score>=40) return {label:'Silver',  color:'#3A6AC8',bg:'rgba(58,106,200,.10)', border:'rgba(58,106,200,.28)'};
+    if(score>=20) return {label:'Bronze',  color:'#2A4D8F',bg:'rgba(42,77,143,.10)',  border:'rgba(42,77,143,.28)'};
     return {label:'Standard',color:'var(--muted)',bg:'rgba(255,255,255,.03)',border:'var(--border)'};
   };
 
@@ -4389,7 +4379,7 @@ function renderClientLeaderboard(sortKey){
   // Podium top 3
   let podiumHtml='';
   if(data.length>=1){
-    const medals=['#F5C842','#C0C0C0','#CD7F32']; // gold, silver, bronze
+    const medals=['#7AABFF','#5B8DEF','#3A6AC8']; // 1st/2nd/3rd in DroneHub blue
     const podiumOrder = data.length>=3 ? [data[1],data[0],data[2]] : data.length===2 ? [data[0],data[1]] : [data[0]];
     const podiumHeights = data.length>=3 ? ['80px','100px','60px'] : ['100px','80px'];
     podiumHtml=`<div style="display:flex;justify-content:center;align-items:flex-end;gap:12px;margin-bottom:32px;padding:24px 0 0">
@@ -4416,7 +4406,7 @@ function renderClientLeaderboard(sortKey){
     const rank=i+1;
     return `<div style="display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;padding:16px;background:${tier.bg};border:1px solid ${tier.border};border-radius:12px;margin-bottom:8px;cursor:pointer;transition:opacity .15s" onclick="openClientDetail('${d.c.id}')" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
       <!-- Rank -->
-      <div style="width:28px;height:28px;border-radius:50%;background:${rank<=3?['#F5C842','#C0C0C0','#CD7F32'][rank-1]:'rgba(255,255,255,.06)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${rank<=3?'#1a1a1a':tier.color};flex-shrink:0">${rank}</div>
+      <div style="width:28px;height:28px;border-radius:50%;background:${rank<=3?['#7AABFF','#5B8DEF','#3A6AC8'][rank-1]:'rgba(255,255,255,.06)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${rank<=3?'#0D1117':tier.color};flex-shrink:0">${rank}</div>
       <!-- Details -->
       <div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -4429,14 +4419,16 @@ function renderClientLeaderboard(sortKey){
         </div>
         <!-- Metric bars -->
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;font-size:11px">
-          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Revenue</div><div style="color:var(--green);font-weight:700">${d.totalRevenue>0?'$'+d.totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0}):'—'}</div>${bar(d.revenueScore,25,'var(--green)')}</div>
-          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pay speed</div><div style="color:${d.avgPayDays===null?'var(--muted)':d.avgPayDays<=7?'var(--green)':d.avgPayDays<=30?'var(--amber)':'var(--red)'};font-weight:700">${d.avgPayDays===null?'No data':d.avgPayDays===0?'Same day':d.avgPayDays+' days avg'}</div>${bar(d.payScore,20,d.avgPayDays===null?'var(--muted)':d.avgPayDays<=7?'var(--green)':d.avgPayDays<=30?'var(--amber)':'var(--red)')}</div>
-          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Drafts/job</div><div style="color:${d.avgDrafts<=1?'var(--green)':d.avgDrafts<=3?'var(--amber)':'var(--red)'};font-weight:700">${d.totalJobs?fmt2(d.avgDrafts)+' avg':'—'}</div>${bar(d.draftScore,20,d.avgDrafts<=1?'var(--green)':d.avgDrafts<=3?'var(--amber)':'var(--red)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Revenue</div><div style="color:var(--blue-bright);font-weight:700">${d.totalRevenue>0?'$'+d.totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0}):'—'}</div>${bar(d.revenueScore,25,'var(--blue-bright)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pay speed</div><div style="color:${d.avgPayDays===null?'var(--muted)':d.avgPayDays<=7?'var(--blue-bright)':d.avgPayDays<=30?'var(--blue)':'var(--red)'};font-weight:700">${d.avgPayDays===null?'No data':d.avgPayDays===0?'Same day':d.avgPayDays+' days avg'}</div>${bar(d.payScore,20,'var(--blue)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Drafts/job</div><div style="color:${d.avgDrafts<=1?'var(--blue-bright)':d.avgDrafts<=3?'var(--blue)':'var(--red)'};font-weight:700">${d.totalJobs?fmt2(d.avgDrafts)+' avg':'—'}</div>${bar(d.draftScore,20,'var(--blue-dim)')}</div>
           <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Shoot time</div><div style="color:var(--offwhite);font-weight:700">${d.avgShootHours>0?fmt2(d.avgShootHours)+'h avg':'—'}</div>${bar(d.shootScore,10,'var(--blue-bright)')}</div>
           <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg> Edit time</div><div style="color:var(--offwhite);font-weight:700">${d.avgEditHours>0?fmt2(d.avgEditHours)+'h avg':'—'}</div>${bar(d.editScore,10,'var(--blue-bright)')}</div>
-          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Social tags</div><div style="color:var(--offwhite);font-weight:700">${d.socialTags||'0'}</div>${bar(d.tagScore,8,'#A78BFA')}</div>
-          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Referrals</div><div style="color:var(--offwhite);font-weight:700">${d.referrals||'0'}</div>${bar(d.refScore,7,'#F472B6')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Social tags</div><div style="color:var(--offwhite);font-weight:700">${d.socialTags||'0'}</div>${bar(d.tagScore,8,'var(--blue)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Referrals</div><div style="color:var(--offwhite);font-weight:700">${d.referrals||'0'}</div>${bar(d.refScore,7,'var(--blue-dim)')}</div>
           <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> Total jobs</div><div style="color:var(--offwhite);font-weight:700">${d.totalJobs}</div></div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Videos</div><div style="color:var(--offwhite);font-weight:700">${d.totalVideos}</div></div>
+          <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="19" cy="5" r="3" fill="currentColor" stroke="none"/></svg> Reels</div><div style="color:var(--offwhite);font-weight:700">${d.totalReels}</div></div>
         </div>
       </div>
       <!-- Score -->
@@ -4465,6 +4457,8 @@ function renderClientLeaderboard(sortKey){
         {key:'tags',     label:'Social Tags'},
         {key:'referrals',label:'Referrals'},
         {key:'jobs',     label:'Most Jobs'},
+        {key:'videos',   label:'Most Videos'},
+        {key:'reels',    label:'Most Reels'},
       ].map(s=>`<button onclick="renderClientLeaderboard('${s.key}')" style="padding:5px 12px;border-radius:20px;border:1px solid ${_lbSort===s.key?'var(--blue)':'var(--border)'};background:${_lbSort===s.key?'rgba(91,141,239,.18)':'transparent'};color:${_lbSort===s.key?'var(--blue-bright)':'var(--muted)'};font-size:11px;font-weight:${_lbSort===s.key?'700':'500'};cursor:pointer;font-family:var(--font);transition:all .12s">${s.label}</button>`).join('')}
     </div>
     ${_lbSort==='score'?podiumHtml:''}
