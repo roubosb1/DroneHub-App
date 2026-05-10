@@ -1414,7 +1414,7 @@ button{font-family:var(--font);}
           <button onclick="lcOpenMembersPanel()" id="lc-members-btn" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px">
             <span>👥</span> <span id="lc-members-count">Members</span>
           </button>
-          <button onclick="lcResetAllMessages()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;cursor:pointer;font-weight:600" title="Fix corrupted messages">🔄 Fix channels</button>
+          <button onclick="lcResetAllMessages()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer;font-weight:600" title="Fix corrupted messages">🔄 Fix channels</button>
           <button id="lc-delete-channel-btn" onclick="lcDeleteChannel(lcActiveChannel)" style="display:none;padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Delete</button>
         </div>
       </div>
@@ -1428,7 +1428,7 @@ button{font-family:var(--font);}
       </div>
 
       <!-- Pinned note (optional) -->
-      <div id="lc-pinned-bar" style="display:none;padding:6px 18px;background:rgba(245,166,35,.08);border-top:1px solid rgba(245,166,35,.2);border-bottom:1px solid rgba(245,166,35,.2);font-size:11px;color:var(--amber)">
+      <div id="lc-pinned-bar" style="display:none;padding:6px 18px;background:rgba(91,141,239,.08);border-top:1px solid rgba(91,141,239,.2);border-bottom:1px solid rgba(91,141,239,.2);font-size:11px;color:var(--blue-bright)">
         📌 <span id="lc-pinned-text"></span>
       </div>
 
@@ -7385,11 +7385,11 @@ function cancelImport(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 const LC_TYPE_META={
-  welcome:{icon:'👋',color:'#F5A623',label:'Welcome'},
+  welcome:{icon:'👋',color:'var(--blue-bright)',label:'Welcome'},
   general:{icon:'💬',color:'var(--blue-bright)',label:'General'},
-  project:{icon:'📋',color:'var(--purple)',label:'Project'},
-  client:{icon:'👤',color:'var(--green)',label:'Client'},
-  social:{icon:'📱',color:'var(--amber)',label:'Social Media'},
+  project:{icon:'📋',color:'var(--blue)',label:'Project'},
+  client:{icon:'👤',color:'var(--blue)',label:'Client'},
+  social:{icon:'📱',color:'var(--blue-bright)',label:'Social Media'},
   admin:{icon:'🔒',color:'var(--red)',label:'Admin'},
 };
 
