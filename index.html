@@ -1638,7 +1638,7 @@ button{font-family:var(--font);}
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">HST number</label><input type="text" id="biz-hst" placeholder="123456789 RT0001" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="divider"></div>
     <div class="section-label" style="margin-bottom:8px">Payment</div>
-    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/…" value="https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/…" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="note" style="margin-bottom:12px">Create a Payment Link at dashboard.stripe.com → Payment Links. Paste the URL here and it will appear as a "Pay now" button on every invoice.</div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Payment terms</label><input type="text" id="biz-terms" placeholder="Payment due upon receipt" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Invoice notes</label><input type="text" id="biz-notes" placeholder="Thank you for choosing DroneHub Media!" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
@@ -3470,8 +3470,6 @@ function showContractorDetail(key){
 
 
 let bizSettings=JSON.parse(localStorage.getItem('dronehub_settings')||'{}');
-// Pre-fill Stripe URL if not set
-if(!bizSettings.stripeUrl) bizSettings.stripeUrl='https://buy.stripe.com/8x228r6FC6VAcLNaiq4gg01';
 
 function saveSettings(){
   bizSettings={
