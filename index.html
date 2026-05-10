@@ -1389,12 +1389,12 @@ button{font-family:var(--font);}
             <div style="font-size:11px;color:var(--muted)" id="lc-channel-desc">Choose a channel from the sidebar</div>
           </div>
         </div>
-        <div id="lc-channel-actions" style="display:none;display:flex;gap:8px;align-items:center">
+        <div id="lc-channel-actions" style="display:none;gap:8px;align-items:center">
           <button onclick="lcOpenMembersPanel()" id="lc-members-btn" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px">
             <span>👥</span> <span id="lc-members-count">Members</span>
           </button>
           <button onclick="lcResetAllMessages()" style="padding:4px 10px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;cursor:pointer;font-weight:600" title="Fix corrupted messages">🔄 Fix channels</button>
-          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteChannel(lcActiveChannel)" style="padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Delete</button>`:''}
+          <button id="lc-delete-channel-btn" onclick="lcDeleteChannel(lcActiveChannel)" style="display:none;padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Delete</button>
         </div>
       </div>
 
@@ -7314,7 +7314,11 @@ function lcOpenChannel(channelId){
   document.getElementById('lc-channel-title').textContent='# '+ch.name;
   document.getElementById('lc-channel-desc').textContent=ch.topic||'No description set';
   document.getElementById('lc-input-area').style.display=ch.type==='welcome'?'none':'block';
-  document.getElementById('lc-channel-actions').style.display=ch.type==='welcome'?'none':'flex';
+  const actionsEl=document.getElementById('lc-channel-actions');
+  if(actionsEl) actionsEl.style.display=ch.type==='welcome'?'none':'flex';
+  // Show delete button only for admins
+  const delBtn=document.getElementById('lc-delete-channel-btn');
+  if(delBtn){const s=gateGetSession();delBtn.style.display=(s?.type==='admin'||s?.role==='admin')?'inline-block':'none';}
   document.getElementById('lc-empty-state').style.display='none';
   document.getElementById('lc-msg-input').placeholder='Message #'+ch.name+'…';
 
