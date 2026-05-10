@@ -8275,6 +8275,8 @@ function gateGetUsers(){
 }
 function gateSaveUsers(arr){
   try{localStorage.setItem('dronehub_gate_users',JSON.stringify(arr));}catch(e){}
+  // Always push to Firebase so accounts work across devices/browsers
+  fbSet('orgs',ORG_ID+':gate_users',{data:JSON.stringify(arr),updatedAt:Date.now()});
 }
 
 // Called on every page load — checks if already logged in
@@ -8351,7 +8353,7 @@ function gateShowTab(tab){
   }
 }
 
-function gateLogin(){
+async function gateLogin(){
   try{
   const email=(document.getElementById('gate-login-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('gate-login-pass')?.value||'';
@@ -8373,7 +8375,27 @@ function gateLogin(){
     gateSaveUsers(users);
   }
 
-  if(!user){errEl.textContent='No account found for that email.';errEl.style.display='block';return;}
+  if(!user){
+    // Local not found — check Firebase before giving up (handles cross-device logins)
+    if(db){
+      errEl.textContent='Checking…';errEl.style.display='block';
+      try{
+        const fbData=await fbGet('orgs',ORG_ID+':gate_users');
+        if(fbData?.data){
+          const fbUsers=JSON.parse(fbData.data);
+          const fbUser=fbUsers.find(u=>u.email.toLowerCase()===email);
+          if(fbUser){
+            // Pull into localStorage for future logins on this device
+            const merged=gateGetUsers();
+            if(!merged.find(u=>u.email.toLowerCase()===email)){merged.push(fbUser);try{localStorage.setItem('dronehub_gate_users',JSON.stringify(merged));}catch(e){}}
+            user=fbUser;
+          }
+        }
+      }catch(e){console.warn('Firebase user lookup failed:',e);}
+    }
+    if(!user){errEl.textContent='No account found for that email. Please sign up first or ask your admin to reset your access.';errEl.style.display='block';return;}
+    errEl.style.display='none';
+  }
 
   // Admin accounts: if no password set yet, any password works on first login and sets it
   if(user.type==='admin'&&!user.passHash){
