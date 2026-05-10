@@ -4406,19 +4406,14 @@ function renderClientLeaderboard(sortKey){
   const listHtml=data.map((d,i)=>{
     const tier=tierLabel(d.totalScore);
     const rank=i+1;
-    return `<div style="display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;padding:16px;background:${tier.bg};border:1px solid ${tier.border};border-radius:12px;margin-bottom:8px;cursor:pointer;transition:opacity .15s" onclick="openClientDetail('${d.c.id}')" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-      <!-- Rank -->
-      <div style="width:28px;height:28px;border-radius:50%;background:${rank<=3?['#7AABFF','#5B8DEF','#3A6AC8'][rank-1]:'rgba(255,255,255,.06)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${rank<=3?'#0D1117':tier.color};flex-shrink:0">${rank}</div>
+    return `<div style="display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:start;padding:14px 16px;background:var(--navy-card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:opacity .15s" onclick="openClientDetail('${d.c.id}')" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <!-- Rank + name -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:2px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${rank<=3?['#7AABFF','#5B8DEF','#3A6AC8'][rank-1]:'rgba(255,255,255,.06)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${rank<=3?'#0D1117':'var(--offwhite)'};flex-shrink:0">${rank}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2;word-break:break-word;max-width:52px">${d.c.name.split(' ')[0]}</div>
+      </div>
       <!-- Details -->
       <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          ${getAvatarHtml(d.c.name,d.c.email||'',28,10)}
-          <div>
-            <span style="font-size:14px;font-weight:700;color:var(--white)">${d.c.name}</span>
-            ${d.c.company?`<span style="font-size:11px;color:var(--muted);margin-left:6px">${d.c.company}</span>`:''}
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;background:${tier.bg};border:1px solid ${tier.border};color:${tier.color}">${tier.label}</span>
-          </div>
-        </div>
         <!-- Metric bars -->
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;font-size:11px">
           <div><div style="color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Revenue</div><div style="color:var(--blue-bright);font-weight:700">${d.totalRevenue>0?'$'+d.totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0}):'—'}</div>${bar(d.revenueScore,25,'var(--blue-bright)')}</div>
@@ -4435,7 +4430,7 @@ function renderClientLeaderboard(sortKey){
       </div>
       <!-- Score -->
       <div style="text-align:right">
-        <div style="font-size:26px;font-weight:900;color:${tier.color}">${d.totalScore}</div>
+        <div style="font-size:26px;font-weight:900;color:var(--blue-bright)">${d.totalScore}</div>
         <div style="font-size:10px;color:var(--muted)">/ 100 pts</div>
         <button onclick="event.stopPropagation();openLeaderboardEdit('${d.c.id}')" style="margin-top:8px;padding:3px 10px;border-radius:7px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:10px;cursor:pointer;font-weight:600">Edit tags</button>
       </div>
