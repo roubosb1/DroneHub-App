@@ -1492,11 +1492,44 @@ button{font-family:var(--font);}
           <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px">Invite teammates</div>
           <div id="lc-invite-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:28px;max-width:480px"></div>
 
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <button onclick="lcStartMeeting()" style="padding:11px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-              📹 Start Call
-            </button>
-            <div style="font-size:11px;color:var(--muted)">Powered by Daily.co · up to 3 hrs</div>
+          <!-- Call options -->
+          <div style="display:flex;flex-direction:column;gap:12px;max-width:480px">
+
+            <!-- Daily.co option -->
+            <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <span style="font-size:20px">📹</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:var(--white)">Embedded Video Call</div>
+                  <div style="font-size:11px;color:var(--muted)">Stays inside LouChat · up to 3 hrs · powered by Daily.co</div>
+                </div>
+              </div>
+              <button onclick="lcStartMeeting()" style="padding:9px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                📹 Start Embedded Call
+              </button>
+            </div>
+
+            <!-- Divider -->
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              <span style="font-size:11px;color:var(--muted);font-weight:600">OR</span>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+
+            <!-- Google Meet option -->
+            <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <span style="font-size:20px">🟢</span>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:var(--white)">Google Meet</div>
+                  <div style="font-size:11px;color:var(--muted)">Opens in a new tab · no time limit · free with Google account</div>
+                </div>
+              </div>
+              <button onclick="lcStartGoogleMeet()" style="padding:9px 24px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                🟢 Start Google Meet
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -2113,6 +2146,8 @@ function showPane(id,ev){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('pane-'+id).classList.add('active');
   if(ev&&ev.target)ev.target.classList.add('active');
+  // Persist so refresh returns to the same tab
+  try{localStorage.setItem('dronehub_active_pane',id);}catch(e){}
   if(id==='payroll'){refreshPayrollPeriods();renderPayroll();}
   if(id==='model'){renderEditorSelectors();}
   if(id==='jobs'){renderJobs();}
@@ -7693,28 +7728,31 @@ const DAILY_API_KEY='aefdd165794ee6eb1fec8174d06b5b806653776173c0dd394b62fa5f6da
 let _dailyFrame=null;
 
 function lcStartGoogleMeet(){
-  if(!lcActiveChannel) return;
-  const channels=getLcChannels();
-  const ch=channels.find(c=>c.id===lcActiveChannel);
-  if(!ch) return;
   const session=gateGetSession();
   const meetUrl='https://meet.google.com/new';
 
-  // Post meeting link to channel
-  const msg={
-    id:Date.now(),
-    author:session?.name||'DroneHub',
-    authorEmail:session?.email||'',
-    channelId:lcActiveChannel,
-    text:'🟢 **Google Meet started!**\nClick to join:',
-    ts:new Date().toISOString(),
-    reactions:{},
-    attachments:[],
-    isMeeting:true,
-    meetUrl,
-  };
-  saveLcMessage(lcActiveChannel,msg);
-  lcRenderMessages();
+  // Collect invited members
+  const invited=[...document.querySelectorAll('.lc-invite-check:checked')].map(c=>c.dataset.name||c.value).filter(Boolean);
+  const inviteNote=invited.length?`\nInvited: ${invited.join(', ')}`:'';
+
+  // Post link to general (or first) channel
+  const channels=getLcChannels();
+  const postCh=channels.find(c=>c.type==='general')||channels[0];
+  if(postCh){
+    const msg={
+      id:Date.now(),
+      author:session?.name||'DroneHub',
+      authorEmail:session?.email||'',
+      channelId:postCh.id,
+      text:`🟢 **Google Meet started!**${inviteNote}\n\nClick to join:`,
+      ts:new Date().toISOString(),
+      reactions:{},
+      attachments:[],
+      isMeeting:true,
+      meetUrl,
+    };
+    saveLcMessage(postCh.id,msg);
+  }
   window.open(meetUrl,'_blank');
 }
 
@@ -8714,9 +8752,11 @@ function gateShowTeamView(session){
     }
   });
 
-  // Show allowed pane
+  // Show allowed pane — restore last visited tab if still permitted
   const firstAllowed=allowed[0]||'tracker';
-  showPane(firstAllowed);
+  const savedPane=localStorage.getItem('dronehub_active_pane');
+  const startPane=(savedPane&&allowed.includes(savedPane))?savedPane:firstAllowed;
+  showPane(startPane);
 
   const userDisplay=document.getElementById('app-user-display');
   const roleLabels={admin:'Admin',editor:'Editor',videographer:'Videographer',sales:'Sales',contractor:'Contractor (Photographer/Videographer)'};
