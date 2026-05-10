@@ -38,6 +38,7 @@ exports.handler = async (event) => {
       cancel_url: 'https://sparkly-halva-0d1aa9.netlify.app/?payment=cancelled',
       metadata: {
         invoice_number: invoiceNumber || '',
+        job_id: String(jobId || ''),
       }
     });
 
