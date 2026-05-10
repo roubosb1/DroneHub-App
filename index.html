@@ -4339,10 +4339,32 @@ function getClientLeaderboardData(){
   }).filter(d=>d.totalJobs>0).sort((a,b)=>b.totalScore-a.totalScore);
 }
 
-function renderClientLeaderboard(){
+let _lbSort='score';
+function renderClientLeaderboard(sortKey){
+  if(sortKey) _lbSort=sortKey;
   const body = document.getElementById('clients-leaderboard-body');
   if(!body) return;
-  const data = getClientLeaderboardData();
+  let data = getClientLeaderboardData();
+
+  // Sort by selected metric
+  const sortFns={
+    score:   (a,b)=>b.totalScore-a.totalScore,
+    revenue: (a,b)=>b.totalRevenue-a.totalRevenue,
+    payspeed:(a,b)=>{
+      // Lower days = better; null (no data) goes to end
+      if(a.avgPayDays===null&&b.avgPayDays===null) return 0;
+      if(a.avgPayDays===null) return 1;
+      if(b.avgPayDays===null) return -1;
+      return a.avgPayDays-b.avgPayDays;
+    },
+    drafts:  (a,b)=>a.avgDrafts-b.avgDrafts,   // fewer = better
+    shoot:   (a,b)=>a.avgShootHours-b.avgShootHours, // shorter = better
+    edit:    (a,b)=>a.avgEditHours-b.avgEditHours,   // shorter = better
+    tags:    (a,b)=>b.socialTags-a.socialTags,
+    referrals:(a,b)=>b.referrals-a.referrals,
+    jobs:    (a,b)=>b.totalJobs-a.totalJobs,
+  };
+  data = data.slice().sort(sortFns[_lbSort]||sortFns.score);
 
   if(!data.length){
     body.innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted)">No clients with jobs yet — leaderboard will populate as you add jobs.</div>`;
@@ -4431,7 +4453,21 @@ function renderClientLeaderboard(){
       <div style="font-size:15px;font-weight:700;color:var(--white)">Client Leaderboard</div>
       <div style="font-size:11px;color:var(--muted)">Scored on revenue, payment speed, drafts, efficiency, tags & referrals</div>
     </div>
-    ${podiumHtml}
+    <!-- Sort filter bar -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">
+      ${[
+        {key:'score',    label:'⭐ Overall'},
+        {key:'revenue',  label:'💰 Revenue'},
+        {key:'payspeed', label:'⚡ Pay Speed'},
+        {key:'drafts',   label:'✏️ Fewest Drafts'},
+        {key:'shoot',    label:'📷 Shoot Time'},
+        {key:'edit',     label:'🎬 Edit Time'},
+        {key:'tags',     label:'📲 Social Tags'},
+        {key:'referrals',label:'🤝 Referrals'},
+        {key:'jobs',     label:'📁 Most Jobs'},
+      ].map(s=>`<button onclick="renderClientLeaderboard('${s.key}')" style="padding:5px 12px;border-radius:20px;border:1px solid ${_lbSort===s.key?'var(--blue)':'var(--border)'};background:${_lbSort===s.key?'rgba(91,141,239,.18)':'transparent'};color:${_lbSort===s.key?'var(--blue-bright)':'var(--muted)'};font-size:11px;font-weight:${_lbSort===s.key?'700':'500'};cursor:pointer;font-family:var(--font);transition:all .12s">${s.label}</button>`).join('')}
+    </div>
+    ${_lbSort==='score'?podiumHtml:''}
     ${listHtml}
     <!-- Edit modal for social tags / referrals -->
     <div id="leaderboard-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;align-items:center;justify-content:center">
