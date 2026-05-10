@@ -8718,6 +8718,9 @@ function gateShowAdminView(session){
   const title=session.jobTitle||PRESET_JOB_TITLES[session.email]?.title||'Admin';
   const avatarHtml=getAvatarHtml(displayName,session.email,28,10);
   if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span></div></div>`;
+  // Restore last visited tab instead of always defaulting to Quote Builder
+  const savedPane=localStorage.getItem('dronehub_active_pane');
+  showPane(savedPane||'quote');
 }
 
 function gateShowTeamView(session){
