@@ -7,7 +7,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { amount, jobName, invoiceNumber, clientEmail } = JSON.parse(event.body);
+    const { amount, jobName, invoiceNumber, clientEmail, currency } = JSON.parse(event.body);
 
     // amount comes in as dollars (e.g. 347.52), convert to cents
     const amountCents = Math.round(parseFloat(amount) * 100);
@@ -23,7 +23,7 @@ exports.handler = async (event) => {
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: 'cad', // Always CAD — DroneHub Canada
+          currency: (currency || 'cad').toLowerCase(), // CAD default; pass 'usd' for US invoices
           product_data: {
             name: jobName || 'DroneHub Media Invoice',
             description: invoiceNumber ? 'Invoice ' + invoiceNumber : '',

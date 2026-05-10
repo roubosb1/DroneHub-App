@@ -716,7 +716,7 @@ button{font-family:var(--font);}
       <label style="min-width:120px">Job name</label>
       <input type="text" id="job-name-input" placeholder="e.g. 4612 Lakeshore Rd, Oakville" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Shoot date</label>
         <input type="date" id="job-date-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
@@ -728,6 +728,13 @@ button{font-family:var(--font);}
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Duration (hrs)</label>
         <input type="number" id="job-duration-input" min="0.5" max="12" step="0.5" value="2" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Currency</label>
+        <select id="job-currency-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+          <option value="cad">🇨🇦 CAD</option>
+          <option value="usd">🇺🇸 USD</option>
+        </select>
       </div>
     </div>
     <div class="row" style="margin-bottom:8px">
@@ -3580,7 +3587,7 @@ async function sendInvoiceEmail(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         amount:grandTotal,
-        currency:'cad',
+        currency:currentInvoiceData?.currency||'cad',
         jobName:jobName,
         invoiceNumber:invNum,
         clientEmail:clientEmail
@@ -3719,7 +3726,8 @@ function openInvoice(jobId){
   const subtotal=lines.reduce((s,l)=>s+l.total,0);
   const hst=parseFloat((subtotal*0.13).toFixed(2));
   const grandTotal=subtotal+hst;
-  const fmtN=n=>'$'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const jobCurrency=(job.currency||'cad').toUpperCase();
+  const fmtN=n=>jobCurrency+' $'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   // ── INTEREST SCHEDULE ───────────────────────────────────────────────────────
   // Due date = issue date + 30 days
@@ -3805,14 +3813,14 @@ function openInvoice(jobId){
   const stripeBtn=`<div style="margin-top:20px;padding:20px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
       <div style="font-size:13px;color:#A8B4D0;margin-bottom:6px">Pay securely online via Stripe</div>
       <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:14px">${fmtN(grandTotal)}</div>
-      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}')" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
+      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}','${job.currency||'cad'}')" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
         💳 Pay now
       </button>
       <div style="font-size:11px;color:#7A8AAA;margin-top:10px">Powered by Stripe · Secure checkout</div>
     </div>`;
 
   // Store for Send Invoice button
-  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media'};
+  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media',currency:job.currency||'cad'};
   const sendStatus=document.getElementById('invoice-send-status');
   if(sendStatus) sendStatus.style.display='none';
 
@@ -3879,7 +3887,7 @@ function openAndSendInvoice(jobId){
   setTimeout(()=>sendInvoiceEmail(),300);
 }
 
-async function openStripeCheckout(amount, invoiceNumber, clientEmail){
+async function openStripeCheckout(amount, invoiceNumber, clientEmail, currency){
   const btn=event?.target;
   if(btn){btn.textContent='Loading…';btn.disabled=true;}
   try{
@@ -3888,7 +3896,7 @@ async function openStripeCheckout(amount, invoiceNumber, clientEmail){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         amount,
-        currency:'cad',
+        currency:currency||currentInvoiceData?.currency||'cad',
         jobName:currentInvoiceData?.jobName||'DroneHub Media Invoice',
         invoiceNumber,
         clientEmail
@@ -4798,6 +4806,7 @@ function saveJob(){
     name,date,
     shootTime:document.getElementById('job-time-input')?.value||'',
     duration:document.getElementById('job-duration-input')?.value||'2',
+    currency:document.getElementById('job-currency-input')?.value||'cad',
     notes:document.getElementById('job-notes-input')?.value.trim()||'',
     grand,driveCost,
     status:initialJobStatus,
@@ -6628,7 +6637,7 @@ function openInvoiceJob(jobId){
   const fields={
     'job-name-input':job.name,'job-date-input':job.date,
     'job-time-input':job.shootTime,'job-duration-input':job.duration,
-    'job-notes-input':job.notes
+    'job-notes-input':job.notes,'job-currency-input':job.currency||'cad'
   };
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val!=null)el.value=val;});
 
