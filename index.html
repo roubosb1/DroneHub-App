@@ -1054,6 +1054,19 @@ button{font-family:var(--font);}
 
 <!-- CLIENTS -->
 <div id="pane-clients" class="pane">
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:3px;width:fit-content">
+    <button id="clients-subtab-list" onclick="switchClientsSubtab('list')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:rgba(255,255,255,.08);color:var(--white)">All Clients</button>
+    <button id="clients-subtab-leaderboard" onclick="switchClientsSubtab('leaderboard')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted)">🏆 Leaderboard</button>
+  </div>
+
+  <!-- Leaderboard panel -->
+  <div id="clients-leaderboard-panel" style="display:none">
+    <div id="clients-leaderboard-body"></div>
+  </div>
+
+  <!-- All clients panel -->
+  <div id="clients-list-panel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div style="font-size:15px;font-weight:600;color:var(--white)">Clients</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1139,6 +1152,7 @@ button{font-family:var(--font);}
 
   <div id="clients-empty" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;display:none">No clients yet. Hit <strong style="color:var(--blue-bright)">+ Add client</strong> above to get started.</div>
   <div id="clients-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px"></div>
+  </div><!-- end clients-list-panel -->
 
   <!-- Client portal (full-screen overlay) -->
   <div id="client-detail-overlay" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:2000;overflow-y:auto">
@@ -4230,6 +4244,235 @@ function renderClients(){
       ${lastJob?`<div style="font-size:10px;color:#7A8AAA;margin-top:8px">Last job: ${lastJob.date} — ${lastJob.name}</div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── CLIENT LEADERBOARD ────────────────────────────────────────────────────────
+function switchClientsSubtab(tab){
+  const isLeaderboard = tab === 'leaderboard';
+  document.getElementById('clients-list-panel').style.display = isLeaderboard ? 'none' : 'block';
+  document.getElementById('clients-leaderboard-panel').style.display = isLeaderboard ? 'block' : 'none';
+  document.getElementById('clients-subtab-list').style.background = isLeaderboard ? 'transparent' : 'rgba(255,255,255,.08)';
+  document.getElementById('clients-subtab-list').style.color = isLeaderboard ? 'var(--muted)' : 'var(--white)';
+  document.getElementById('clients-subtab-leaderboard').style.background = isLeaderboard ? 'rgba(255,255,255,.08)' : 'transparent';
+  document.getElementById('clients-subtab-leaderboard').style.color = isLeaderboard ? 'var(--white)' : 'var(--muted)';
+  if(isLeaderboard) renderClientLeaderboard();
+}
+
+function getClientLeaderboardData(){
+  return clients.map(c=>{
+    const cJobs = savedJobs.filter(j=>j.clientId===c.id);
+    const invoicedJobs = cJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
+    const paidJobs = cJobs.filter(j=>j.markedPaid);
+
+    // 1. Total revenue
+    const totalRevenue = invoicedJobs.reduce((s,j)=>s+j.grand,0);
+
+    // 2. Avg shoot time (hours)
+    const shootTimes = cJobs.map(j=>parseFloat(j.duration)||0).filter(v=>v>0);
+    const avgShootHours = shootTimes.length ? shootTimes.reduce((s,v)=>s+v,0)/shootTimes.length : 0;
+
+    // 3. Avg edit time (hours from tracker)
+    const editTimes = cJobs.map(j=>{
+      const ts=getTrackerStage(j.id);
+      return parseFloat(ts.approxEditHours)||0;
+    }).filter(v=>v>0);
+    const avgEditHours = editTimes.length ? editTimes.reduce((s,v)=>s+v,0)/editTimes.length : 0;
+
+    // 4. Avg drafts per job
+    const draftCounts = cJobs.map(j=>{
+      const ts=getTrackerStage(j.id);
+      return parseInt(ts.draftCount)||0;
+    });
+    const avgDrafts = draftCounts.length ? draftCounts.reduce((s,v)=>s+v,0)/draftCounts.length : 0;
+
+    // 5. Avg payment time (days from invoicedAt to paidAt)
+    const payTimes = paidJobs.filter(j=>j.invoicedAt&&j.paidAt).map(j=>{
+      const sent=new Date(j.invoicedAt), paid=new Date(j.paidAt);
+      return Math.max(0,Math.floor((paid-sent)/(1000*60*60*24)));
+    });
+    const avgPayDays = payTimes.length ? payTimes.reduce((s,v)=>s+v,0)/payTimes.length : null;
+
+    // 6. Social media tags (manual field on client)
+    const socialTags = parseInt(c.socialTags)||0;
+
+    // 7. Referrals (manual field)
+    const referrals = parseInt(c.referrals)||0;
+
+    // 8. Job count & repeat business
+    const totalJobs = cJobs.length;
+    const repeatClient = totalJobs >= 3;
+
+    // 9. Payment rate (% of invoiced jobs that are paid)
+    const paymentRate = invoicedJobs.length ? paidJobs.length/invoicedJobs.length : 0;
+
+    // ── SCORING (100 pts total) ──
+    // Revenue: 25pts — top spenders get full points
+    // Payment speed: 20pts — faster = better (0 days=20, 60+ days=0)
+    // Drafts: 20pts — fewer drafts = better (0=20, 5+=0)
+    // Shoot efficiency: 10pts — shorter shoot time = easier client
+    // Edit efficiency: 10pts — shorter edit time = easier client
+    // Social tags: 8pts
+    // Referrals: 7pts
+
+    const allRevenues = clients.map(cl=>savedJobs.filter(j=>j.clientId===cl.id&&(j.status==='confirmed'||j.status==='completed')).reduce((s,j)=>s+j.grand,0));
+    const maxRevenue = Math.max(...allRevenues,1);
+    const revenueScore = Math.round((totalRevenue/maxRevenue)*25);
+
+    const payScore = avgPayDays===null ? 10 : Math.round(Math.max(0,(60-avgPayDays)/60)*20);
+
+    const draftScore = Math.round(Math.max(0,(5-avgDrafts)/5)*20);
+
+    const allShoot = clients.map(cl=>{ const t=savedJobs.filter(j=>j.clientId===cl.id).map(j=>parseFloat(j.duration)||0).filter(v=>v>0); return t.length?t.reduce((s,v)=>s+v,0)/t.length:0; });
+    const maxShoot = Math.max(...allShoot,1);
+    const shootScore = avgShootHours>0 ? Math.round((1-avgShootHours/maxShoot)*10) : 5;
+
+    const allEdit = clients.map(cl=>{ const t=savedJobs.filter(j=>j.clientId===cl.id).map(j=>{const ts=getTrackerStage(j.id);return parseFloat(ts.approxEditHours)||0;}).filter(v=>v>0); return t.length?t.reduce((s,v)=>s+v,0)/t.length:0; });
+    const maxEdit = Math.max(...allEdit,1);
+    const editScore = avgEditHours>0 ? Math.round((1-avgEditHours/maxEdit)*10) : 5;
+
+    const tagScore = Math.min(8,socialTags*2);
+    const refScore = Math.min(7,referrals*2);
+
+    const totalScore = revenueScore+payScore+draftScore+shootScore+editScore+tagScore+refScore;
+
+    return {c, totalRevenue, avgShootHours, avgEditHours, avgDrafts, avgPayDays, socialTags, referrals, totalJobs, paymentRate, totalScore, revenueScore, payScore, draftScore, shootScore, editScore, tagScore, refScore};
+  }).filter(d=>d.totalJobs>0).sort((a,b)=>b.totalScore-a.totalScore);
+}
+
+function renderClientLeaderboard(){
+  const body = document.getElementById('clients-leaderboard-body');
+  if(!body) return;
+  const data = getClientLeaderboardData();
+
+  if(!data.length){
+    body.innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted)">No clients with jobs yet — leaderboard will populate as you add jobs.</div>`;
+    return;
+  }
+
+  const tierLabel=(score)=>{
+    if(score>=80) return {label:'Platinum',color:'#B4D4FF',bg:'rgba(180,212,255,.12)',border:'rgba(180,212,255,.3)'};
+    if(score>=60) return {label:'Gold',color:'#F5C842',bg:'rgba(245,200,66,.1)',border:'rgba(245,200,66,.3)'};
+    if(score>=40) return {label:'Silver',color:'#C0C0C0',bg:'rgba(192,192,192,.1)',border:'rgba(192,192,192,.25)'};
+    if(score>=20) return {label:'Bronze',color:'#CD7F32',bg:'rgba(205,127,50,.1)',border:'rgba(205,127,50,.25)'};
+    return {label:'Standard',color:'var(--muted)',bg:'rgba(255,255,255,.03)',border:'var(--border)'};
+  };
+
+  const bar=(score,max,color)=>{
+    const pct=max>0?Math.round((score/max)*100):0;
+    return `<div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .4s"></div></div>`;
+  };
+
+  const fmt2=n=>n!=null?n.toFixed(1):'—';
+
+  // Podium top 3
+  let podiumHtml='';
+  if(data.length>=1){
+    const medals=['🥇','🥈','🥉'];
+    const podiumOrder = data.length>=3 ? [data[1],data[0],data[2]] : data.length===2 ? [data[0],data[1]] : [data[0]];
+    const podiumHeights = data.length>=3 ? ['80px','100px','60px'] : ['100px','80px'];
+    podiumHtml=`<div style="display:flex;justify-content:center;align-items:flex-end;gap:12px;margin-bottom:32px;padding:24px 0 0">
+      ${podiumOrder.map((d,i)=>{
+        const realRank = data.indexOf(d);
+        const tier=tierLabel(d.totalScore);
+        const h = podiumHeights[i]||'60px';
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer" onclick="openClientDetail('${d.c.id}')">
+          <div style="font-size:22px">${medals[realRank]||'🏅'}</div>
+          ${getAvatarHtml(d.c.name,d.c.email||'',40,14)}
+          <div style="font-size:12px;font-weight:700;color:var(--white);text-align:center;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.c.name.split(' ')[0]}</div>
+          <div style="font-size:11px;font-weight:700;color:${tier.color}">${d.totalScore}pts</div>
+          <div style="width:80px;height:${h};background:${tier.bg};border:1px solid ${tier.border};border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:10px;font-weight:700;color:${tier.color}">${tier.label}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // Full ranked list
+  const listHtml=data.map((d,i)=>{
+    const tier=tierLabel(d.totalScore);
+    const rank=i+1;
+    return `<div style="display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;padding:16px;background:${tier.bg};border:1px solid ${tier.border};border-radius:12px;margin-bottom:8px;cursor:pointer;transition:opacity .15s" onclick="openClientDetail('${d.c.id}')" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <!-- Rank -->
+      <div style="font-size:18px;font-weight:900;color:${tier.color};text-align:center;padding-top:2px">${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</div>
+      <!-- Details -->
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          ${getAvatarHtml(d.c.name,d.c.email||'',28,10)}
+          <div>
+            <span style="font-size:14px;font-weight:700;color:var(--white)">${d.c.name}</span>
+            ${d.c.company?`<span style="font-size:11px;color:var(--muted);margin-left:6px">${d.c.company}</span>`:''}
+            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;background:${tier.bg};border:1px solid ${tier.border};color:${tier.color}">${tier.label}</span>
+          </div>
+        </div>
+        <!-- Metric bars -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;font-size:11px">
+          <div><div style="color:var(--muted);margin-bottom:1px">💰 Revenue</div><div style="color:var(--green);font-weight:700">${d.totalRevenue>0?'$'+d.totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0}):'—'}</div>${bar(d.revenueScore,25,'var(--green)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">⚡ Pay speed</div><div style="color:${d.avgPayDays===null?'var(--muted)':d.avgPayDays<=7?'var(--green)':d.avgPayDays<=30?'var(--amber)':'var(--red)'};font-weight:700">${d.avgPayDays===null?'No data':d.avgPayDays===0?'Same day':d.avgPayDays+' days avg'}</div>${bar(d.payScore,20,d.avgPayDays===null?'var(--muted)':d.avgPayDays<=7?'var(--green)':d.avgPayDays<=30?'var(--amber)':'var(--red)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">✏️ Drafts/job</div><div style="color:${d.avgDrafts<=1?'var(--green)':d.avgDrafts<=3?'var(--amber)':'var(--red)'};font-weight:700">${d.totalJobs?fmt2(d.avgDrafts)+' avg':'—'}</div>${bar(d.draftScore,20,d.avgDrafts<=1?'var(--green)':d.avgDrafts<=3?'var(--amber)':'var(--red)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">📷 Shoot time</div><div style="color:var(--offwhite);font-weight:700">${d.avgShootHours>0?fmt2(d.avgShootHours)+'h avg':'—'}</div>${bar(d.shootScore,10,'var(--blue-bright)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">🎬 Edit time</div><div style="color:var(--offwhite);font-weight:700">${d.avgEditHours>0?fmt2(d.avgEditHours)+'h avg':'—'}</div>${bar(d.editScore,10,'var(--blue-bright)')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">📲 Social tags</div><div style="color:var(--offwhite);font-weight:700">${d.socialTags||'0'}</div>${bar(d.tagScore,8,'#A78BFA')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">🤝 Referrals</div><div style="color:var(--offwhite);font-weight:700">${d.referrals||'0'}</div>${bar(d.refScore,7,'#F472B6')}</div>
+          <div><div style="color:var(--muted);margin-bottom:1px">📁 Total jobs</div><div style="color:var(--offwhite);font-weight:700">${d.totalJobs}</div></div>
+        </div>
+      </div>
+      <!-- Score -->
+      <div style="text-align:right">
+        <div style="font-size:26px;font-weight:900;color:${tier.color}">${d.totalScore}</div>
+        <div style="font-size:10px;color:var(--muted)">/ 100 pts</div>
+        <button onclick="event.stopPropagation();openLeaderboardEdit('${d.c.id}')" style="margin-top:8px;padding:3px 10px;border-radius:7px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:10px;cursor:pointer;font-weight:600">Edit tags</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:15px;font-weight:700;color:var(--white)">Client Leaderboard</div>
+      <div style="font-size:11px;color:var(--muted)">Scored on revenue, payment speed, drafts, efficiency, tags & referrals</div>
+    </div>
+    ${podiumHtml}
+    ${listHtml}
+    <!-- Edit modal for social tags / referrals -->
+    <div id="leaderboard-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;align-items:center;justify-content:center">
+      <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;padding:24px;min-width:300px;max-width:400px">
+        <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:16px">Update client metrics</div>
+        <input type="hidden" id="lb-edit-client-id">
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">📲 Social media tags (total mentions/tags)</label>
+          <input type="number" id="lb-social-tags" min="0" placeholder="0" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">🤝 Referrals sent to DroneHub</label>
+          <input type="number" id="lb-referrals" min="0" placeholder="0" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="saveLeaderboardEdit()" style="flex:1;padding:8px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+          <button onclick="document.getElementById('leaderboard-edit-modal').style.display='none'" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openLeaderboardEdit(clientId){
+  const c=clients.find(cl=>cl.id===clientId);
+  if(!c) return;
+  document.getElementById('lb-edit-client-id').value=clientId;
+  document.getElementById('lb-social-tags').value=c.socialTags||0;
+  document.getElementById('lb-referrals').value=c.referrals||0;
+  const modal=document.getElementById('leaderboard-edit-modal');
+  modal.style.display='flex';
+}
+
+function saveLeaderboardEdit(){
+  const id=document.getElementById('lb-edit-client-id').value;
+  const c=clients.find(cl=>cl.id===id);
+  if(!c) return;
+  c.socialTags=parseInt(document.getElementById('lb-social-tags').value)||0;
+  c.referrals=parseInt(document.getElementById('lb-referrals').value)||0;
+  saveClientsToStorage();
+  document.getElementById('leaderboard-edit-modal').style.display='none';
+  renderClientLeaderboard();
 }
 
 function openClientDetail(id){
