@@ -7,7 +7,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { amount, jobName, invoiceNumber, clientEmail, currency } = JSON.parse(event.body);
+    const { amount, jobName, invoiceNumber, clientEmail, currency, jobId } = JSON.parse(event.body);
 
     // amount comes in as dollars (e.g. 347.52), convert to cents
     const amountCents = Math.round(parseFloat(amount) * 100);
@@ -34,7 +34,7 @@ exports.handler = async (event) => {
       }],
       mode: 'payment',
       customer_email: clientEmail || undefined,
-      success_url: 'https://sparkly-halva-0d1aa9.netlify.app/?payment=success',
+      success_url: `https://sparkly-halva-0d1aa9.netlify.app/?payment=success&jobId=${jobId||''}`,
       cancel_url: 'https://sparkly-halva-0d1aa9.netlify.app/?payment=cancelled',
       metadata: {
         invoice_number: invoiceNumber || '',

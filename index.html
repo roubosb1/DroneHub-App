@@ -3590,6 +3590,7 @@ async function sendInvoiceEmail(){
         currency:currentInvoiceData?.currency||'cad',
         jobName:jobName,
         invoiceNumber:invNum,
+        jobId:currentInvoiceData?.jobId||'',
         clientEmail:clientEmail
       })
     });
@@ -3813,14 +3814,14 @@ function openInvoice(jobId){
   const stripeBtn=`<div style="margin-top:20px;padding:20px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
       <div style="font-size:13px;color:#A8B4D0;margin-bottom:6px">Pay securely online via Stripe</div>
       <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:14px">${fmtN(grandTotal)}</div>
-      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}','${job.currency||'cad'}')" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
+      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}','${job.currency||'cad'}',${job.id})" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
         💳 Pay now
       </button>
       <div style="font-size:11px;color:#7A8AAA;margin-top:10px">Powered by Stripe · Secure checkout</div>
     </div>`;
 
   // Store for Send Invoice button
-  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media',currency:job.currency||'cad'};
+  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media',currency:job.currency||'cad',jobId:job.id};
   const sendStatus=document.getElementById('invoice-send-status');
   if(sendStatus) sendStatus.style.display='none';
 
@@ -3887,7 +3888,7 @@ function openAndSendInvoice(jobId){
   setTimeout(()=>sendInvoiceEmail(),300);
 }
 
-async function openStripeCheckout(amount, invoiceNumber, clientEmail, currency){
+async function openStripeCheckout(amount, invoiceNumber, clientEmail, currency, jobId){
   const btn=event?.target;
   if(btn){btn.textContent='Loading…';btn.disabled=true;}
   try{
@@ -3899,7 +3900,8 @@ async function openStripeCheckout(amount, invoiceNumber, clientEmail, currency){
         currency:currency||currentInvoiceData?.currency||'cad',
         jobName:currentInvoiceData?.jobName||'DroneHub Media Invoice',
         invoiceNumber,
-        clientEmail
+        clientEmail,
+        jobId:jobId||currentInvoiceData?.jobId||''
       })
     });
     const data=await res.json();
@@ -8786,6 +8788,8 @@ function gateShowAdminView(session){
   // Restore last visited tab instead of always defaulting to Quote Builder
   const savedPane=localStorage.getItem('dronehub_active_pane');
   showPane(savedPane||'quote');
+  // Auto-mark invoice paid if returning from Stripe success
+  checkStripePaymentReturn();
 }
 
 function gateShowTeamView(session){
@@ -8831,6 +8835,46 @@ function gateShowTeamView(session){
   const displayTitle=session.jobTitle||roleLabels[role]||role;
   const avatarHtml2=getAvatarHtml(session.name,session.email,28,10);
   if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml2}<div><span style="color:var(--white);font-weight:700">${session.name}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${displayTitle}</span></div></div>`;
+  checkStripePaymentReturn();
+}
+
+// ── STRIPE PAYMENT RETURN HANDLER ─────────────────────────────────────────────
+function checkStripePaymentReturn(){
+  const urlP=new URLSearchParams(window.location.search);
+  const payStatus=urlP.get('payment');
+  const jobId=parseInt(urlP.get('jobId')||'0');
+  if(!payStatus) return;
+  // Clean URL without reloading
+  const cleanUrl=window.location.href.split('?')[0];
+  window.history.replaceState({},'',cleanUrl);
+  if(payStatus==='success'&&jobId){
+    // Allow Firebase to sync first, then mark paid
+    const doMark=()=>{
+      const job=savedJobs.find(j=>j.id===jobId);
+      if(job&&!job.markedPaid){
+        job.markedPaid=true;
+        job.paidAt=new Date().toISOString().slice(0,10);
+        job.paidVia='stripe';
+        saveJobsToStorage();
+        renderInvoiceTracker?.();
+        renderFinance?.();
+        // Show confirmation toast
+        const toast=document.createElement('div');
+        toast.textContent='✅ Payment received — invoice marked as paid';
+        toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+        document.body.appendChild(toast);
+        setTimeout(()=>toast.remove(),4500);
+      }
+    };
+    // Delay to let Firebase restore run first
+    setTimeout(doMark, 1800);
+  } else if(payStatus==='cancelled'){
+    const toast=document.createElement('div');
+    toast.textContent='Payment cancelled — invoice not charged';
+    toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#555;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(),3500);
+  }
 }
 
 // ── TWO-FACTOR AUTHENTICATION (TOTP) ─────────────────────────────────────────
