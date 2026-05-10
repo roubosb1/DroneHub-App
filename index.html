@@ -4378,29 +4378,7 @@ function renderClientLeaderboard(sortKey){
 
   const fmt2=n=>n!=null?n.toFixed(1):'—';
 
-  // Podium top 3
-  let podiumHtml='';
-  if(data.length>=1){
-    const medals=['#7AABFF','#5B8DEF','#3A6AC8']; // 1st/2nd/3rd in DroneHub blue
-    const podiumOrder = data.length>=3 ? [data[1],data[0],data[2]] : data.length===2 ? [data[0],data[1]] : [data[0]];
-    const podiumHeights = data.length>=3 ? ['80px','100px','60px'] : ['100px','80px'];
-    podiumHtml=`<div style="display:flex;justify-content:center;align-items:flex-end;gap:12px;margin-bottom:32px;padding:24px 0 0">
-      ${podiumOrder.map((d,i)=>{
-        const realRank = data.indexOf(d);
-        const tier=tierLabel(d.totalScore);
-        const h = podiumHeights[i]||'60px';
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer" onclick="openClientDetail('${d.c.id}')">
-          <div style="width:26px;height:26px;border-radius:50%;background:${medals[realRank]||'#888'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#1a1a1a">${realRank+1}</div>
-          ${getAvatarHtml(d.c.name,d.c.email||'',40,14)}
-          <div style="font-size:12px;font-weight:700;color:var(--white);text-align:center;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.c.name.split(' ')[0]}</div>
-          <div style="font-size:11px;font-weight:700;color:${tier.color}">${d.totalScore}pts</div>
-          <div style="width:80px;height:${h};background:${tier.bg};border:1px solid ${tier.border};border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center">
-            <span style="font-size:10px;font-weight:700;color:${tier.color}">${tier.label}</span>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  }
+  // Podium removed — go straight to ranked list
 
   // Full ranked list
   const listHtml=data.map((d,i)=>{
@@ -4458,7 +4436,6 @@ function renderClientLeaderboard(sortKey){
         {key:'reels',    label:'Most Reels'},
       ].map(s=>`<button onclick="renderClientLeaderboard('${s.key}')" style="padding:5px 12px;border-radius:20px;border:1px solid ${_lbSort===s.key?'var(--blue)':'var(--border)'};background:${_lbSort===s.key?'rgba(91,141,239,.18)':'transparent'};color:${_lbSort===s.key?'var(--blue-bright)':'var(--muted)'};font-size:11px;font-weight:${_lbSort===s.key?'700':'500'};cursor:pointer;font-family:var(--font);transition:all .12s">${s.label}</button>`).join('')}
     </div>
-    ${_lbSort==='score'?podiumHtml:''}
     ${listHtml}
     <!-- Edit modal for social tags / referrals -->
     <div id="leaderboard-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;align-items:center;justify-content:center">
