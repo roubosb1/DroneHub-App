@@ -204,6 +204,11 @@ input::placeholder{color:var(--muted);}
 .status-confirmed{background:var(--amber-bg);color:var(--amber)}
 .status-completed{background:var(--green-bg);color:var(--green)}
 .status-pill-btn{padding:5px 14px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-family:var(--font);font-weight:600;cursor:pointer}
+.us-pkg-btn{padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s}
+.us-pkg-active{border-color:var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright)}
+.us-tier-btn{transition:all .15s}
+.us-tier-active{border-color:var(--blue)!important;background:rgba(91,141,239,.15)!important;color:var(--blue-bright)!important}
+.us-day-active{border-color:var(--blue)!important;background:rgba(91,141,239,.2)!important}
 .status-quoted-active{border-color:var(--muted);background:rgba(136,146,187,.15);color:var(--offwhite)}
 .status-confirmed-active{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
 .status-completed-active{border-color:var(--green);background:var(--green-bg);color:var(--green)}
@@ -615,6 +620,9 @@ button{font-family:var(--font);}
     <!-- Services bubble -->
     <div class="card" style="margin-bottom:0">
     <div class="section-label">Services</div>
+
+    <!-- ═══ CANADA SERVICES PANEL ═══ -->
+    <div id="canada-services-panel">
     <div class="svc-group-label">Core</div>
     <div class="svc-row">
       <button class="svc-tog on" id="tog-video" onclick="toggleSvc('video',this)">On</button>
@@ -707,7 +715,116 @@ button{font-family:var(--font);}
     <div style="padding-top:10px;margin-top:4px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <button onclick="openAddServiceModal()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">+ Add service</button>
       <button onclick="openManageServicesModal()" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">⚙ Manage services</button>
-    </div></div>
+    </div>
+    </div><!-- end canada-services-panel -->
+
+    <!-- ═══ US SERVICES PANEL ═══ -->
+    <div id="us-services-panel" style="display:none">
+
+      <!-- Package type selector -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <button id="us-pkg-listing" onclick="selectUSPkg('listing')" class="us-pkg-btn us-pkg-active">Listing Video</button>
+        <button id="us-pkg-social" onclick="selectUSPkg('social')" class="us-pkg-btn">Social Reels</button>
+        <button id="us-pkg-agent" onclick="selectUSPkg('agent')" class="us-pkg-btn">Agent Promo</button>
+        <button id="us-pkg-day" onclick="selectUSPkg('day')" class="us-pkg-btn">Social Day Rate</button>
+      </div>
+
+      <!-- LISTING VIDEO sub-panel -->
+      <div id="us-panel-listing">
+        <div class="svc-group-label" style="margin-top:0">Property Size</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <button id="us-tier-under4k" onclick="selectUSTier('under4k')" class="us-tier-btn" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;cursor:pointer;text-align:left">
+            <span>Under 4,000 sqft</span><span id="us-tier-under4k-price" style="font-weight:700;color:var(--blue-bright)"></span>
+          </button>
+          <button id="us-tier-over4k" onclick="selectUSTier('over4k')" class="us-tier-btn" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;cursor:pointer;text-align:left">
+            <span>4,000 – 8,000 sqft</span><span id="us-tier-over4k-price" style="font-weight:700;color:var(--blue-bright)"></span>
+          </button>
+          <button id="us-tier-over8k" onclick="selectUSTier('over8k')" class="us-tier-btn" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;cursor:pointer;text-align:left">
+            <span>Over 8,000 sqft</span><span id="us-tier-over8k-price" style="font-weight:700;color:var(--blue-bright)"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SOCIAL REELS sub-panel -->
+      <div id="us-panel-social" style="display:none">
+        <div class="svc-group-label" style="margin-top:0">Reel Package</div>
+        <div id="us-social-tiers" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <input type="checkbox" id="us-offseason-check" onchange="calcUS()" style="accent-color:var(--blue)">
+          <label for="us-offseason-check" style="font-size:12px;color:var(--muted);cursor:pointer">Off-season discount (Nov–Feb) <span style="color:var(--blue-bright);font-weight:700">–$1,000</span></label>
+        </div>
+      </div>
+
+      <!-- AGENT PROMO sub-panel -->
+      <div id="us-panel-agent" style="display:none">
+        <div style="padding:16px;background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;margin-bottom:12px">
+          <div style="font-size:22px;font-weight:900;color:var(--blue-bright)">$4,000</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Agent Promo Package · USD · No HST</div>
+          <div style="font-size:11px;color:var(--offwhite);margin-top:8px;line-height:1.5">Full personal brand shoot for real estate agents. Includes aerial + ground content, professional editing, and social-ready deliverables.</div>
+        </div>
+      </div>
+
+      <!-- SOCIAL DAY RATE sub-panel -->
+      <div id="us-panel-day" style="display:none">
+        <div class="svc-group-label" style="margin-top:0">Day Type</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="us-day-half" onclick="selectUSDayType('half')" class="us-tier-btn" style="flex:1;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;cursor:pointer">
+            <div style="font-weight:700">Half Day</div>
+            <div style="color:var(--blue-bright);font-size:18px;font-weight:900;margin-top:4px">$2,500</div>
+          </button>
+          <button id="us-day-full" onclick="selectUSDayType('full')" class="us-tier-btn" style="flex:1;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;cursor:pointer">
+            <div style="font-weight:700">Full Day</div>
+            <div style="color:var(--blue-bright);font-size:18px;font-weight:900;margin-top:4px">$4,000</div>
+          </button>
+        </div>
+        <!-- Post-shoot reel count -->
+        <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Post-Shoot Reels <span style="color:var(--blue-bright);font-weight:600;font-size:10px;text-transform:none">+$100 each</span></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px">
+              <button onclick="changeUSReelCount(-1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
+              <span id="us-reel-count-display" style="font-size:20px;font-weight:900;color:var(--blue-bright);min-width:28px;text-align:center">0</span>
+              <button onclick="changeUSReelCount(1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
+              <span style="font-size:12px;color:var(--muted)">reels</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer">
+              <input type="checkbox" id="us-reels-tbd" onchange="toggleUSReelsTBD(this.checked)" style="accent-color:var(--blue)">
+              TBD after shoot
+            </label>
+          </div>
+          <div id="us-reel-tbd-note" style="display:none;margin-top:8px;font-size:11px;color:var(--amber);font-style:italic">⚠ Reel count not set — invoice will be updated after shoot</div>
+        </div>
+      </div>
+
+      <!-- ADD-ONS (always visible when US panel is shown) -->
+      <div class="svc-group-label">Add-ons</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--navy-lift);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--white)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="us-addon-sunrise" onchange="calcUS()" style="accent-color:var(--blue)">
+            <span>Sunrise / Sunset shoot</span>
+          </div>
+          <span style="color:var(--blue-bright);font-weight:700">+$500</span>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--navy-lift);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--white)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="us-addon-photoHDR" onchange="calcUS()" style="accent-color:var(--blue)">
+            <span>Photo HDR</span>
+          </div>
+          <span style="color:var(--blue-bright);font-weight:700">+$500</span>
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--navy-lift);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--white)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="us-addon-photoFlash" onchange="calcUS()" style="accent-color:var(--blue)">
+            <span>Photo Flash</span>
+          </div>
+          <span style="color:var(--blue-bright);font-weight:700">+$1,000</span>
+        </label>
+      </div>
+
+    </div><!-- end us-services-panel -->
+
+    </div><!-- end services card -->
 
     <!-- Job details bubble -->
     <div class="card" style="margin-bottom:0">
@@ -715,6 +832,18 @@ button{font-family:var(--font);}
     <div class="row" style="margin-bottom:8px">
       <label style="min-width:120px">Job name</label>
       <input type="text" id="job-name-input" placeholder="e.g. 4612 Lakeshore Rd, Oakville" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+    </div>
+    <!-- Market selector (drives currency + services panel) -->
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Market</label>
+      <select id="job-market-input" onchange="onMarketChange(this.value)" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+        <option value="canada">🇨🇦 Canada</option>
+        <option value="new_york">🇺🇸 New York</option>
+        <option value="texas">🇺🇸 Texas</option>
+        <option value="arizona">🇺🇸 Arizona</option>
+        <option value="colorado">🇺🇸 Colorado / Vail–Aspen</option>
+        <option value="other_us">🇺🇸 Other US</option>
+      </select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
@@ -731,7 +860,8 @@ button{font-family:var(--font);}
       </div>
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Currency</label>
-        <select id="job-currency-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+        <!-- Auto-set by market; kept for saveJob() to read -->
+        <select id="job-currency-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;pointer-events:none;opacity:0.6">
           <option value="cad">🇨🇦 CAD</option>
           <option value="usd">🇺🇸 USD</option>
         </select>
@@ -797,9 +927,20 @@ button{font-family:var(--font);}
   </div>
   <div class="card" style="margin-top:12px">
     <div class="section-label" style="margin-bottom:10px">Live quote</div>
-    <div id="resultsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px"></div>
-    <div id="lineBreakdown"></div>
-    <div class="note" id="shooterNote"></div>
+
+    <!-- Canada quote (default) -->
+    <div id="canada-quote-panel">
+      <div id="resultsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px"></div>
+      <div id="lineBreakdown"></div>
+      <div class="note" id="shooterNote"></div>
+    </div>
+
+    <!-- US quote panel -->
+    <div id="us-quote-panel" style="display:none">
+      <div id="us-results-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px"></div>
+      <div id="us-line-breakdown" style="font-size:13px"></div>
+    </div>
+
   </div>
 
 </div><!-- END pane-quote -->
@@ -1163,6 +1304,19 @@ button{font-family:var(--font);}
 <!-- FINANCE -->
 <div id="pane-finance" class="pane">
 
+  <!-- 🇨🇦 / 🇺🇸 Market tab switcher -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+    <button id="fin-tab-canada" onclick="setFinanceMarket('canada')"
+      style="padding:7px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">
+      🇨🇦 Canada
+    </button>
+    <button id="fin-tab-usa" onclick="setFinanceMarket('usa')"
+      style="padding:7px 18px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;font-weight:700;cursor:pointer">
+      🇺🇸 United States
+    </button>
+    <span id="fin-market-badge" style="margin-left:auto;font-size:11px;color:var(--muted);font-style:italic">Showing Canada (CAD)</span>
+  </div>
+
   <!-- Summary metrics row -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="finance-metrics"></div>
 
@@ -1261,6 +1415,13 @@ button{font-family:var(--font);}
           <option value="Phone">Phone / internet</option>
           <option value="Education">Education / training</option>
           <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Country</label>
+        <select id="exp-market" style="flex:1;padding:5px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
+          <option value="canada">🇨🇦 Canada (CAD)</option>
+          <option value="usa">🇺🇸 United States (USD)</option>
         </select>
       </div>
       <div class="row" style="margin-bottom:12px">
@@ -1990,6 +2151,66 @@ const RANDOM_VIDEO_RATE_CLIENT=200,RANDOM_VIDEO_RATE_CONTRACTOR=80;
 const RANDOM_PHOTO_RATE_CLIENT=200,RANDOM_PHOTO_RATE_CONTRACTOR=80;
 const RUSH_FEE=200;
 const RANDOM_SHOOT_PAY=45,RANDOM_EDIT_PAY=35; // $45/hr to shooter, $35/hr to editor
+
+// ── US MARKET PRICING ─────────────────────────────────────────────────────
+const US_MARKET_PRICING={
+  'new_york':{
+    label:'New York',
+    listing:{ under4k:1400, over4k:1600, over8k:2000 },
+    social:{ r1:500, r2:900, r3:1200, r4:null, r5:null, fullDay:5000 },
+    agentPromo:4000,
+    addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    offSeasonDiscount:1000,
+  },
+  'texas':{
+    label:'Texas',
+    listing:{ under4k:1250, over4k:1600, over8k:2000 },
+    social:{ r1:500, r2:800, r3:1000, r4:null, r5:null, fullDay:5000 },
+    agentPromo:4000,
+    addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    offSeasonDiscount:1000,
+  },
+  'arizona':{
+    label:'Arizona',
+    listing:{ under4k:1400, over4k:1600, over8k:2000 },
+    social:{ r1:500, r2:900, r3:1200, r4:null, r5:null, fullDay:5000 },
+    agentPromo:4000,
+    addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    offSeasonDiscount:1000,
+  },
+  'colorado':{
+    label:'Colorado / Vail–Aspen',
+    listing:{ under4k:1400, over4k:1600, over8k:2000 },
+    social:{ r1:900, r2:null, r3:1500, r4:null, r5:2000, fullDay:5000 },
+    agentPromo:4000,
+    addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    offSeasonDiscount:1000,
+  },
+  'other_us':{
+    label:'Other US',
+    listing:{ under4k:1400, over4k:1600, over8k:2000 },
+    social:{ r1:500, r2:900, r3:1200, r4:null, r5:null, fullDay:5000 },
+    agentPromo:4000,
+    addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    offSeasonDiscount:1000,
+  },
+};
+// Social day rate (all US markets)
+const US_SOCIAL_DAY={ halfDay:2500, fullDay:4000, reelRate:100 };
+
+// US quote state — tracks current selections
+let usQuoteState={
+  market:null,          // key from US_MARKET_PRICING
+  pkgType:null,         // 'listing' | 'social' | 'agent' | 'day'
+  listingTier:null,     // 'under4k' | 'over4k' | 'over8k'
+  socialTier:null,      // 'r1'|'r2'|'r3'|'r5'|'fullDay'
+  dayType:null,         // 'half'|'full'
+  reelCount:0,
+  reelsTBD:false,
+  addons:{ sunrise:false, photoHDR:false, photoFlash:false },
+  offSeason:false,
+};
+
 // ── DYNAMIC EDITOR/TEAM LISTS ─────────────────────────────────────────────
 // These replace the old hardcoded EDITOR_OPTIONS and EDITOR_NAMES
 // They pull from team members + contractors automatically
@@ -2038,6 +2259,21 @@ const editors={video:'',photo:'',extvideo:'',extphoto:'',randomvideo:'',randomph
 // Saved jobs stored in memory (persists during session)
 
 let savedJobs=JSON.parse(localStorage.getItem('dronehub_jobs')||'[]');
+
+// Finance market filter — 'canada' | 'usa'
+let financeMarket='canada';
+
+function setFinanceMarket(m){
+  financeMarket=m;
+  // Update tab button styles
+  const caBtn=document.getElementById('fin-tab-canada');
+  const usBtn=document.getElementById('fin-tab-usa');
+  const badge=document.getElementById('fin-market-badge');
+  if(caBtn){ caBtn.style.borderColor=m==='canada'?'var(--blue)':'var(--border)'; caBtn.style.background=m==='canada'?'rgba(91,141,239,.15)':'var(--navy-lift)'; caBtn.style.color=m==='canada'?'var(--blue-bright)':'var(--muted)'; }
+  if(usBtn){ usBtn.style.borderColor=m==='usa'?'var(--blue)':'var(--border)'; usBtn.style.background=m==='usa'?'rgba(91,141,239,.15)':'var(--navy-lift)'; usBtn.style.color=m==='usa'?'var(--blue-bright)':'var(--muted)'; }
+  if(badge) badge.textContent=m==='canada'?'Showing Canada (CAD)':'Showing United States (USD)';
+  renderFinance();
+}
 
 function saveJobsToStorage(){
   try{localStorage.setItem('dronehub_jobs',JSON.stringify(savedJobs));}catch(e){}
@@ -5042,13 +5278,39 @@ function saveJob(){
   const name=document.getElementById('job-name-input').value.trim();
   const date=document.getElementById('job-date-input').value;
   if(!name||!date){document.getElementById('save-job-status').textContent='Please enter a job name and date.';return;}
-  const ds=buildDriveSummary();
-  const sqft=parseInt(document.getElementById('sqft').value);
-  const{lines,grand,driveCost}=buildQuote(sqft,svc,qty);
 
-  // Snapshot current payouts for this job
-  const payoutSnapshot=buildPayoutSnapshot(lines,ds);
+  const market=document.getElementById('job-market-input')?.value||'canada';
+  const isUS=market!=='canada';
   const period=getBiweeklyPeriod(date);
+
+  let grand=0,driveCost=0,payoutSnapshot={},lines=[];
+  let usJobData={};
+
+  if(isUS){
+    // US job — get grand from US quote state
+    grand=getUSGrand();
+    if(!grand){document.getElementById('save-job-status').textContent='Please build a US quote first.';return;}
+    driveCost=0; // no drive charge for US
+    // Record US-specific data for invoice rendering
+    usJobData={
+      market,
+      pkgType:usQuoteState.pkgType,
+      listingTier:usQuoteState.listingTier,
+      socialTier:usQuoteState.socialTier,
+      dayType:usQuoteState.dayType,
+      reelCount:usQuoteState.reelCount,
+      reelsTBD:usQuoteState.reelsTBD,
+      addons:{...usQuoteState.addons},
+      offSeason:usQuoteState.offSeason,
+    };
+  } else {
+    // Canada job — existing logic
+    const ds=buildDriveSummary();
+    const sqft=parseInt(document.getElementById('sqft').value);
+    const result=buildQuote(sqft,svc,qty);
+    lines=result.lines; grand=result.grand; driveCost=result.driveCost;
+    payoutSnapshot=buildPayoutSnapshot(lines,ds);
+  }
 
   const job={
     id:Date.now(),
@@ -5056,23 +5318,27 @@ function saveJob(){
     shootTime:document.getElementById('job-time-input')?.value||'',
     duration:document.getElementById('job-duration-input')?.value||'2',
     currency:document.getElementById('job-currency-input')?.value||'cad',
+    market,
     notes:document.getElementById('job-notes-input')?.value.trim()||'',
     grand,driveCost,
     status:initialJobStatus,
     clientId:selectedClientId||null,
     clientName:selectedClientId?(clients.find(c=>c.id===selectedClientId)?.name||''):'',
     period:period.label,periodStart:period.start,periodEnd:period.end,
-    sqft,services:{...svc},hours:{...qty},
-    payouts:payoutSnapshot,
-    editors:{...editors},
+    sqft:isUS?0:parseInt(document.getElementById('sqft').value),
+    services:isUS?{}:{...svc},
+    hours:isUS?{}:{...qty},
+    payouts:isUS?{}:payoutSnapshot,
+    editors:isUS?{}:{...editors},
     address:propAddrText||'(no address)',
-    customDesc:svc.custom?(document.getElementById('custom-svc-desc')?.value||'Custom service').trim():'',
-    customPrice:svc.custom?parseFloat(document.getElementById('custom-svc-price')?.value)||0:0,
-    customPayout:svc.custom?parseFloat(document.getElementById('custom-svc-payout')?.value||window._customPayout||0)||0:0,
-    extraServices:getExtraServiceLines().map(xs=>({name:xs.name,clientPrice:xs.clientPrice,contractorPayout:xs.contractorPayout,payoutType:xs.payoutType})),
+    customDesc:(!isUS&&svc.custom)?(document.getElementById('custom-svc-desc')?.value||'Custom service').trim():'',
+    customPrice:(!isUS&&svc.custom)?parseFloat(document.getElementById('custom-svc-price')?.value)||0:0,
+    customPayout:(!isUS&&svc.custom)?parseFloat(document.getElementById('custom-svc-payout')?.value||window._customPayout||0)||0:0,
+    extraServices:isUS?[]:getExtraServiceLines().map(xs=>({name:xs.name,clientPrice:xs.clientPrice,contractorPayout:xs.contractorPayout,payoutType:xs.payoutType})),
     commissionPct:parseInt(document.getElementById('commission-pct-sel')?.value||0),
     commissionSalesperson:document.getElementById('commission-salesperson-sel')?.value||'Mackenzie Woodhouse',
-    commissionAmt:0, // calculated below
+    commissionAmt:0,
+    ...(isUS?{usData:usJobData}:{}),
   };
   job.commissionAmt=job.commissionPct>0?Math.ceil(job.grand*job.commissionPct/100):0;
   savedJobs.push(job);
@@ -6077,6 +6343,10 @@ function exportPayroll(){
 
 
 function calc(){
+  // Skip Canadian calc when a US market is selected
+  const _market=document.getElementById('job-market-input')?.value||'canada';
+  if(_market!=='canada'){ calcUS(); return; }
+
   const sqft=parseInt(document.getElementById('sqft').value);
   document.getElementById('sqftVal').textContent=sqft.toLocaleString()+' sqft';
   const{lines,grand,driveCost,ds}=buildQuote(sqft,svc,qty);
@@ -6128,6 +6398,299 @@ function calc(){
   renderTierTable();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// US MARKET PRICING FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function onMarketChange(market){
+  const isUS = market !== 'canada';
+
+  // Auto-set currency
+  const currSel = document.getElementById('job-currency-input');
+  if(currSel){ currSel.value = isUS ? 'usd' : 'cad'; }
+
+  // Toggle services panels
+  const caPanel = document.getElementById('canada-services-panel');
+  const usPanel = document.getElementById('us-services-panel');
+  if(caPanel) caPanel.style.display = isUS ? 'none' : '';
+  if(usPanel) usPanel.style.display = isUS ? '' : 'none';
+
+  // Toggle quote panels
+  const caQ = document.getElementById('canada-quote-panel');
+  const usQ = document.getElementById('us-quote-panel');
+  if(caQ) caQ.style.display = isUS ? 'none' : '';
+  if(usQ) usQ.style.display = isUS ? '' : 'none';
+
+  if(isUS){
+    usQuoteState.market = market;
+    // Default to listing pkg if nothing selected
+    if(!usQuoteState.pkgType) usQuoteState.pkgType = 'listing';
+    renderUSServicePanel(market);
+    calcUS();
+  } else {
+    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, reelsTBD:false, addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
+    calc();
+  }
+}
+
+function renderUSServicePanel(market){
+  const p = US_MARKET_PRICING[market];
+  if(!p) return;
+
+  // Update pkg button active state
+  ['listing','social','agent','day'].forEach(k=>{
+    const btn = document.getElementById('us-pkg-'+k);
+    if(btn){ btn.classList.toggle('us-pkg-active', usQuoteState.pkgType===k); }
+  });
+
+  // Show the correct sub-panel
+  ['listing','social','agent','day'].forEach(k=>{
+    const el = document.getElementById('us-panel-'+k);
+    if(el) el.style.display = usQuoteState.pkgType===k ? '' : 'none';
+  });
+
+  // Update listing tier prices
+  if(p.listing){
+    const td = document.getElementById('us-tier-under4k-price');
+    const td2 = document.getElementById('us-tier-over4k-price');
+    const td3 = document.getElementById('us-tier-over8k-price');
+    if(td)  td.textContent  = '$'+p.listing.under4k.toLocaleString();
+    if(td2) td2.textContent = '$'+p.listing.over4k.toLocaleString();
+    if(td3) td3.textContent = '$'+p.listing.over8k.toLocaleString();
+  }
+
+  // Rebuild social tier buttons dynamically
+  if(usQuoteState.pkgType==='social'){
+    const container = document.getElementById('us-social-tiers');
+    if(container){
+      const tiers=[
+        {key:'r1', label:'1 Reel'},
+        {key:'r2', label:'2 Reels'},
+        {key:'r3', label:'3 Reels'},
+        {key:'r4', label:'4 Reels'},
+        {key:'r5', label:'5 Reels'},
+        {key:'fullDay', label:'Full Day (Unlimited)'},
+      ];
+      container.innerHTML = tiers.filter(t=>p.social[t.key]!==null && p.social[t.key]!==undefined)
+        .map(t=>`<button id="us-stier-${t.key}" onclick="selectUSSocialTier('${t.key}')"
+          class="us-tier-btn ${usQuoteState.socialTier===t.key?'us-tier-active':''}"
+          style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;
+          border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);
+          color:var(--white);font-size:13px;cursor:pointer;text-align:left">
+          <span>${t.label}</span>
+          <span style="font-weight:700;color:var(--blue-bright)">$${p.social[t.key].toLocaleString()}</span>
+        </button>`).join('');
+    }
+  }
+
+  // Update listing tier active states
+  if(usQuoteState.pkgType==='listing'){
+    ['under4k','over4k','over8k'].forEach(k=>{
+      const btn = document.getElementById('us-tier-'+k);
+      if(btn) btn.classList.toggle('us-tier-active', usQuoteState.listingTier===k);
+    });
+  }
+}
+
+function selectUSPkg(pkgType){
+  usQuoteState.pkgType = pkgType;
+  usQuoteState.listingTier = null;
+  usQuoteState.socialTier = null;
+  usQuoteState.dayType = null;
+  const market = document.getElementById('job-market-input')?.value || usQuoteState.market;
+  renderUSServicePanel(market);
+  calcUS();
+}
+
+function selectUSTier(tier){
+  usQuoteState.listingTier = tier;
+  // Update active states
+  ['under4k','over4k','over8k'].forEach(k=>{
+    const btn = document.getElementById('us-tier-'+k);
+    if(btn) btn.classList.toggle('us-tier-active', k===tier);
+  });
+  calcUS();
+}
+
+function selectUSSocialTier(tier){
+  usQuoteState.socialTier = tier;
+  // Update active states on dynamically generated buttons
+  document.querySelectorAll('[id^="us-stier-"]').forEach(btn=>{
+    btn.classList.toggle('us-tier-active', btn.id==='us-stier-'+tier);
+  });
+  calcUS();
+}
+
+function selectUSDayType(type){
+  usQuoteState.dayType = type;
+  const halfBtn = document.getElementById('us-day-half');
+  const fullBtn = document.getElementById('us-day-full');
+  if(halfBtn) halfBtn.classList.toggle('us-day-active', type==='half');
+  if(fullBtn) fullBtn.classList.toggle('us-day-active', type==='full');
+  calcUS();
+}
+
+function changeUSReelCount(delta){
+  if(usQuoteState.reelsTBD) return;
+  usQuoteState.reelCount = Math.max(0, (usQuoteState.reelCount||0)+delta);
+  const el = document.getElementById('us-reel-count-display');
+  if(el) el.textContent = usQuoteState.reelCount;
+  calcUS();
+}
+
+function toggleUSReelsTBD(checked){
+  usQuoteState.reelsTBD = checked;
+  const countEl = document.getElementById('us-reel-count-display');
+  const noteEl  = document.getElementById('us-reel-tbd-note');
+  const minusBtn = countEl?.previousElementSibling;
+  const plusBtn  = countEl?.nextElementSibling;
+  if(countEl) countEl.style.opacity = checked ? '0.3' : '1';
+  if(noteEl)  noteEl.style.display = checked ? '' : 'none';
+  calcUS();
+}
+
+function getUSGrand(){
+  const market = usQuoteState.market || document.getElementById('job-market-input')?.value;
+  if(!market || market==='canada') return 0;
+  const p = US_MARKET_PRICING[market];
+  if(!p) return 0;
+  let base = 0;
+
+  switch(usQuoteState.pkgType){
+    case 'listing':
+      if(!usQuoteState.listingTier) return 0;
+      base = p.listing[usQuoteState.listingTier] || 0;
+      break;
+    case 'social':
+      if(!usQuoteState.socialTier) return 0;
+      base = p.social[usQuoteState.socialTier] || 0;
+      if(usQuoteState.offSeason && document.getElementById('us-offseason-check')?.checked){
+        base = Math.max(0, base - p.offSeasonDiscount);
+      }
+      break;
+    case 'agent':
+      base = p.agentPromo;
+      break;
+    case 'day':
+      if(!usQuoteState.dayType) return 0;
+      base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
+      if(!usQuoteState.reelsTBD){
+        base += (usQuoteState.reelCount||0) * US_SOCIAL_DAY.reelRate;
+      }
+      break;
+    default:
+      return 0;
+  }
+
+  // Add-ons
+  if(document.getElementById('us-addon-sunrise')?.checked)    base += p.addons.sunrise;
+  if(document.getElementById('us-addon-photoHDR')?.checked)   base += p.addons.photoHDR;
+  if(document.getElementById('us-addon-photoFlash')?.checked) base += p.addons.photoFlash;
+
+  return base;
+}
+
+function calcUS(){
+  const market = usQuoteState.market || document.getElementById('job-market-input')?.value;
+  if(!market || market==='canada') return;
+
+  // Read live addon state
+  usQuoteState.addons.sunrise    = !!(document.getElementById('us-addon-sunrise')?.checked);
+  usQuoteState.addons.photoHDR   = !!(document.getElementById('us-addon-photoHDR')?.checked);
+  usQuoteState.addons.photoFlash = !!(document.getElementById('us-addon-photoFlash')?.checked);
+  usQuoteState.offSeason         = !!(document.getElementById('us-offseason-check')?.checked);
+
+  const grand = getUSGrand();
+  renderUSQuote(market, grand);
+}
+
+function renderUSQuote(market, grand){
+  const grid = document.getElementById('us-results-grid');
+  const breakdown = document.getElementById('us-line-breakdown');
+  if(!grid || !breakdown) return;
+
+  const p = US_MARKET_PRICING[market];
+  const fmt = n => '$'+n.toLocaleString();
+
+  if(!grand){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);font-size:13px">Select a package above to see your quote</div>`;
+    breakdown.innerHTML = '';
+    return;
+  }
+
+  // Build line items
+  const lines = [];
+  const pkgLabels = { listing:'Listing Video Tour', social:'Social Reels Package', agent:'Agent Promo', day:'Social Day Rate' };
+
+  switch(usQuoteState.pkgType){
+    case 'listing':{
+      const tierLabels = { under4k:'Under 4,000 sqft', over4k:'4,000–8,000 sqft', over8k:'Over 8,000 sqft' };
+      lines.push({ label:'Listing Video — '+tierLabels[usQuoteState.listingTier||'under4k'], amount: p?.listing[usQuoteState.listingTier]||0 });
+      break;
+    }
+    case 'social':{
+      const tierLabels = { r1:'1 Reel', r2:'2 Reels', r3:'3 Reels', r4:'4 Reels', r5:'5 Reels', fullDay:'Full Day (Unlimited Reels)' };
+      let base = p?.social[usQuoteState.socialTier]||0;
+      lines.push({ label:'Social Reels — '+tierLabels[usQuoteState.socialTier||'r1'], amount: base });
+      if(usQuoteState.offSeason && p){
+        lines.push({ label:'Off-season discount (Nov–Feb)', amount: -(p.offSeasonDiscount), color:'var(--green)' });
+      }
+      break;
+    }
+    case 'agent':
+      lines.push({ label:'Agent Promo Package', amount: p?.agentPromo||4000 });
+      break;
+    case 'day':{
+      const base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
+      lines.push({ label:(usQuoteState.dayType==='half'?'Half Day':'Full Day')+' Social Shoot', amount: base });
+      if(!usQuoteState.reelsTBD && usQuoteState.reelCount>0){
+        lines.push({ label:`Post-shoot reels (${usQuoteState.reelCount} × $100)`, amount: usQuoteState.reelCount * US_SOCIAL_DAY.reelRate });
+      }
+      if(usQuoteState.reelsTBD){
+        lines.push({ label:'Post-shoot reels', amount: 0, note:'TBD — invoice updated after shoot', color:'var(--amber)' });
+      }
+      break;
+    }
+  }
+
+  // Add-on lines
+  if(usQuoteState.addons.sunrise)    lines.push({ label:'Sunrise / Sunset shoot', amount: p?.addons.sunrise||500 });
+  if(usQuoteState.addons.photoHDR)   lines.push({ label:'Photo HDR', amount: p?.addons.photoHDR||500 });
+  if(usQuoteState.addons.photoFlash) lines.push({ label:'Photo Flash', amount: p?.addons.photoFlash||1000 });
+
+  // Summary grid cards
+  const marketLabel = p?.label || 'US';
+  grid.innerHTML = [
+    { label:'Market', value: marketLabel, icon:'📍' },
+    { label:'Package', value: pkgLabels[usQuoteState.pkgType]||'—', icon:'📦' },
+    { label:'Total (USD)', value: fmt(grand), icon:'💵', big:true, green:true },
+  ].map(c=>`<div style="background:var(--navy-lift);border:1px solid var(${c.green?'--blue':'--border'});
+    border-radius:10px;padding:12px 14px">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">${c.icon} ${c.label}</div>
+    <div style="font-size:${c.big?'22':'15'}px;font-weight:${c.big?'900':'700'};color:${c.green?'var(--blue-bright)':'var(--white)'}">${c.value}</div>
+  </div>`).join('');
+
+  // Line breakdown table
+  breakdown.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Invoice breakdown</div>
+      ${lines.map(l=>`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px">
+        <span style="color:${l.color||'var(--offwhite)'}">
+          ${l.label}${l.note?`<span style="font-size:11px;color:var(--amber);margin-left:6px">⚠ ${l.note}</span>`:''}
+        </span>
+        <span style="font-weight:700;color:${l.color||(l.amount<0?'var(--green)':'var(--white)')}">${l.amount===0&&l.note?'TBD':fmt(l.amount)}</span>
+      </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 0;font-size:15px;font-weight:900">
+        <span style="color:var(--white)">Total</span>
+        <span style="color:var(--blue-bright)">${fmt(grand)} <span style="font-size:11px;font-weight:600;color:var(--muted)">USD · No HST</span></span>
+      </div>
+      <div style="margin-top:8px;padding:8px 12px;background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.2);border-radius:8px;font-size:11px;color:var(--muted)">
+        💳 Invoice will be sent in <strong style="color:var(--white)">USD</strong> — payment processed via Stripe to Chase (US account)
+      </div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 
 async function geocodeAddress(addr){
@@ -6764,7 +7327,10 @@ function renderInvoiceTracker(){
   if(!el) return;
   const fmtN=n=>'$'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  const invoiced=savedJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
+  // Filter by financeMarket (canada = no market or market=canada; usa = any US market key)
+  const isUSInv=financeMarket==='usa';
+  const marketFilteredJobs=savedJobs.filter(j=>isUSInv?(j.market&&j.market!=='canada'):(!j.market||j.market==='canada'));
+  const invoiced=marketFilteredJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
   const filtered=invoiced.filter(j=>{
     const st=getInvoiceStatus(j);
     if(invoiceFilter==='all') return true;
@@ -7011,8 +7577,9 @@ function addExpense(){
   const desc=document.getElementById('exp-desc').value.trim();
   const cat=document.getElementById('exp-cat').value;
   const amount=parseFloat(document.getElementById('exp-amount').value);
+  const expMarket=document.getElementById('exp-market')?.value||'canada';
   if(!date||!desc||!amount||amount<=0){alert('Please fill in all expense fields.');return;}
-  expenses.push({id:Date.now(),date,desc,cat,amount});
+  expenses.push({id:Date.now(),date,desc,cat,amount,market:expMarket});
   expenses.sort((a,b)=>b.date.localeCompare(a.date));
   saveExpenses();
   document.getElementById('exp-desc').value='';
@@ -7046,10 +7613,25 @@ function renderExpenseList(){
 function renderFinance(){
   if(!document.getElementById('pane-finance')) return;
 
+  // Filter jobs by market (Canada = no market field OR market='canada'; USA = any US market key)
+  const isUSFinance = financeMarket==='usa';
+  const marketJobs = savedJobs.filter(j=>
+    isUSFinance ? (j.market && j.market!=='canada') : (!j.market || j.market==='canada')
+  );
+  // Filter expenses by market (expenses tagged with market field, or default to canada)
+  const marketExpenses = expenses.filter(e=>
+    isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada')
+  );
+  const currencyLabel = isUSFinance ? 'USD' : 'CAD';
+
+  // Update summary metrics label currency
+  const badge=document.getElementById('fin-market-badge');
+  if(badge) badge.textContent=isUSFinance?'Showing United States (USD)':'Showing Canada (CAD)';
+
   // Populate year selector
   const yearSel=document.getElementById('finance-year-sel');
-  const jobYears=[...new Set(savedJobs.filter(j=>j.status==='completed'&&j.date).map(j=>j.date.slice(0,4)))];
-  const expYears=[...new Set(expenses.filter(e=>e.date).map(e=>e.date.slice(0,4)))];
+  const jobYears=[...new Set(marketJobs.filter(j=>j.status==='completed'&&j.date).map(j=>j.date.slice(0,4)))];
+  const expYears=[...new Set(marketExpenses.filter(e=>e.date).map(e=>e.date.slice(0,4)))];
   const allYears=[...new Set([...jobYears,...expYears])].sort().reverse();
   const curYear=yearSel.value||allYears[0]||String(new Date().getFullYear());
   const prevVal=yearSel.value;
@@ -7063,14 +7645,14 @@ function renderFinance(){
 
   // Revenue per month (completed jobs only, excl HST)
   const revByMonth=Array(12).fill(0);
-  savedJobs.filter(j=>j.status==='completed'&&j.date&&j.date.startsWith(year)).forEach(j=>{
+  marketJobs.filter(j=>j.status==='completed'&&j.date&&j.date.startsWith(year)).forEach(j=>{
     const m=parseInt(j.date.slice(5,7))-1;
     revByMonth[m]+=j.grand||0;
   });
 
   // Expenses per month
   const expByMonth=Array(12).fill(0);
-  expenses.filter(e=>e.date&&e.date.startsWith(year)).forEach(e=>{
+  marketExpenses.filter(e=>e.date&&e.date.startsWith(year)).forEach(e=>{
     const m=parseInt(e.date.slice(5,7))-1;
     expByMonth[m]+=e.amount||0;
   });
@@ -7082,12 +7664,12 @@ function renderFinance(){
   const totalRev=revByMonth.reduce((a,b)=>a+b,0);
   const totalExp=expByMonth.reduce((a,b)=>a+b,0);
   const netProfit=totalRev-totalExp;
-  const hst=totalRev*0.13;
+  const hst=isUSFinance?0:totalRev*0.13;
   document.getElementById('finance-metrics').innerHTML=`
-    <div class="metric"><div class="mlabel">Revenue ${year}</div><div class="mval" style="color:#1D9E75">$${Math.round(totalRev).toLocaleString('en-CA')}</div><div class="msub">excl. HST</div></div>
-    <div class="metric"><div class="mlabel">HST collected</div><div class="mval">$${Math.round(hst).toLocaleString('en-CA')}</div><div class="msub">13% of revenue</div></div>
-    <div class="metric"><div class="mlabel">Expenses ${year}</div><div class="mval" style="color:#E85D3A">$${Math.round(totalExp).toLocaleString('en-CA')}</div></div>
-    <div class="metric"><div class="mlabel">Net profit</div><div class="mval" style="color:${netProfit>=0?'#1D9E75':'#E85D3A'}">$${Math.round(Math.abs(netProfit)).toLocaleString('en-CA')}${netProfit<0?' loss':''}</div></div>`;
+    <div class="metric"><div class="mlabel">Revenue ${year}</div><div class="mval" style="color:#1D9E75">$${Math.round(totalRev).toLocaleString('en-CA')}</div><div class="msub">excl. ${isUSFinance?'tax':'HST'} · ${currencyLabel}</div></div>
+    <div class="metric"><div class="mlabel">${isUSFinance?'Tax (US)':'HST collected'}</div><div class="mval">${isUSFinance?'<span style="color:var(--muted)">N/A</span>':'$'+Math.round(hst).toLocaleString('en-CA')}</div><div class="msub">${isUSFinance?'No HST on US invoices':'13% of revenue'}</div></div>
+    <div class="metric"><div class="mlabel">Expenses ${year}</div><div class="mval" style="color:#E85D3A">$${Math.round(totalExp).toLocaleString('en-CA')}</div><div class="msub">${currencyLabel}</div></div>
+    <div class="metric"><div class="mlabel">Net profit</div><div class="mval" style="color:${netProfit>=0?'#1D9E75':'#E85D3A'}">$${Math.round(Math.abs(netProfit)).toLocaleString('en-CA')}${netProfit<0?' loss':''}</div><div class="msub">${currencyLabel}</div></div>`;
 
   renderInvoiceTracker();
 
