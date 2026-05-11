@@ -1853,6 +1853,21 @@ button{font-family:var(--font);}
     </div>
   </div>
 
+  <!-- 2FA Management -->
+  <div class="card" style="margin-top:12px">
+    <div class="section-label">🔐 Two-Factor Authentication</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+      Manage your authenticator app setup. If you have multiple DroneHub entries in your authenticator app, reset here and set up a single fresh code.
+    </div>
+    <div id="twofa-status-display" style="margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="reset2FAForCurrentUser()" style="padding:9px 20px;border-radius:10px;border:1px solid #E85D3A;background:rgba(232,93,58,.1);color:#E85D3A;font-size:13px;font-weight:700;cursor:pointer">
+        🗑 Reset 2FA — set up fresh
+      </button>
+    </div>
+    <div id="twofa-reset-msg" style="font-size:12px;margin-top:10px;display:none;padding:8px 12px;border-radius:8px"></div>
+  </div>
+
   <div class="card" style="margin-top:12px">
     <div class="section-label" style="margin-bottom:12px">Contractors — contact info &amp; details</div>
     <div id="contractor-cards-settings"></div>
@@ -2441,7 +2456,7 @@ function showPane(id,ev){
     },500);
   }
   if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
-  if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();}
+  if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){renderFinance();}
   if(id==='louchat'){
@@ -9774,6 +9789,64 @@ function totp2faIsDeviceTrusted(email){
 function totp2faIsSetup(email){
   const d=totp2faGetSecret(email);
   return d&&d.verified===true;
+}
+
+async function reset2FAForCurrentUser(){
+  const session=gateGetSession();
+  if(!session?.email){alert('Not logged in.');return;}
+  const msg=document.getElementById('twofa-reset-msg');
+  const confirmed=confirm('This will delete your current 2FA setup. After resetting, you\'ll be asked to scan a new QR code next time you log in.\n\nDelete all 3 old entries from your authenticator app after resetting.\n\nContinue?');
+  if(!confirmed) return;
+
+  // Remove from localStorage
+  try{
+    const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+    delete data[session.email.toLowerCase()];
+    localStorage.setItem('dronehub_2fa',JSON.stringify(data));
+  }catch(e){}
+
+  // Remove device trust
+  try{
+    const key='dronehub_2fa_trusted_'+session.email.toLowerCase().replace(/[^a-z0-9]/g,'_');
+    localStorage.removeItem(key);
+  }catch(e){}
+
+  // Remove from Firebase
+  try{
+    if(db){
+      const fb2fa=await fbGet('orgs',ORG_ID+':2fa');
+      if(fb2fa?.data){
+        const all=JSON.parse(fb2fa.data);
+        delete all[session.email.toLowerCase()];
+        await fbSet('orgs',ORG_ID+':2fa',{data:JSON.stringify(all),updatedAt:Date.now()});
+      }
+    }
+  }catch(e){console.warn('Firebase 2FA reset failed:',e);}
+
+  if(msg){
+    msg.style.display='block';
+    msg.style.background='rgba(34,217,122,.1)';
+    msg.style.border='1px solid var(--green)';
+    msg.style.color='var(--green)';
+    msg.textContent='✓ 2FA reset. Next login will prompt you to set up a fresh code. Delete all old DroneHub entries from your authenticator app now.';
+  }
+  render2FAStatus();
+}
+
+function render2FAStatus(){
+  const session=gateGetSession();
+  const el=document.getElementById('twofa-status-display');
+  if(!el||!session?.email) return;
+  const isSetup=totp2faIsSetup(session.email);
+  const isTrusted=totp2faIsDeviceTrusted(session.email);
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--navy-lift);border:1px solid var(--border);border-radius:10px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${isSetup?'var(--green)':'var(--amber)'}"></div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--white)">${isSetup?'2FA is active':'2FA not configured'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${isTrusted?'This device is trusted (no code needed for 30 days)':isSetup?'You\'ll be asked for your code each login on new devices':''}</div>
+      </div>
+    </div>`;
 }
 function totp2faVerifyCode(email,code){
   const d=totp2faGetSecret(email);
