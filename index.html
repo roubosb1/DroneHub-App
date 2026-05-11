@@ -251,6 +251,155 @@ button{font-family:var(--font);}
   .invoice-toolbar{display:none!important}
   #invoice-body{padding:20px!important;background:#fff!important;color:#E8ECF8!important}
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MOBILE BOTTOM NAV — always in DOM, shown/hidden by media query
+   ───────────────────────────────────────────────────────────────────────────── */
+#mobile-bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  height:calc(60px + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--navy-card);border-top:1px solid var(--border);
+  z-index:200;align-items:stretch;
+}
+.mob-nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;border:none;background:transparent;
+  color:var(--muted);font-size:9px;font-family:var(--font);font-weight:700;
+  cursor:pointer;padding:6px 4px;letter-spacing:.04em;text-transform:uppercase;
+  transition:color .15s;-webkit-tap-highlight-color:transparent;
+  border-top:2px solid transparent;
+}
+.mob-nav-btn svg{flex-shrink:0;transition:stroke .15s;}
+.mob-nav-btn.active{color:var(--blue-bright);border-top-color:var(--blue-bright);}
+.mob-nav-btn.active svg{stroke:var(--blue-bright);}
+#mobile-more-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:300;-webkit-tap-highlight-color:transparent;
+}
+#mobile-more-drawer{
+  position:fixed;left:0;right:0;
+  bottom:calc(60px + env(safe-area-inset-bottom,0px));
+  background:var(--navy-card);border:1px solid var(--border);
+  border-radius:20px 20px 0 0;z-index:301;padding:16px 16px 20px;
+  transform:translateY(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+#mobile-more-drawer.open{transform:translateY(0);}
+.mob-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;}
+.mob-more-item{
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  padding:14px 6px 12px;border-radius:12px;border:1px solid var(--border);
+  background:var(--navy-lift);color:var(--muted);font-size:9px;font-family:var(--font);
+  font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;
+  min-height:72px;justify-content:center;
+}
+.mob-more-item:active,.mob-more-item.mob-more-active{
+  background:rgba(91,141,239,.15);border-color:var(--blue);color:var(--blue-bright);
+}
+.mob-more-item svg{flex-shrink:0;}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MOBILE RESPONSIVE OVERRIDES  (≤ 768px)
+   ───────────────────────────────────────────────────────────────────────────── */
+@media(max-width:768px){
+
+  /* ── Header ── */
+  .app-header{height:52px;padding:0 1rem;gap:10px;}
+  .app-header img{height:26px;}
+  .header-sub,.header-divider{display:none;}
+  #header-client-portal-btn{display:none;}
+  #app-user-display{font-size:10px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* ── Nav ── */
+  .tabs{display:none;}
+  #mobile-bottom-nav{display:flex;}
+
+  /* ── Wrap ── */
+  .wrap{padding:.75rem .75rem 5.5rem;}
+  .wrap:has(#pane-tracker.active){padding-left:0;padding-right:0;}
+
+  /* ── Pane ── */
+  .pane.active{min-height:calc(100vh - 52px - 60px);}
+
+  /* ── Cards ── */
+  .card{padding:.875rem 1rem;border-radius:12px;}
+
+  /* ── Typography ── */
+  .section-label{font-size:9px;}
+  h1{font-size:14px;}
+  .metric .mval{font-size:18px;}
+
+  /* ── Grid collapses ──
+     Target common inline grid patterns.
+     !important overrides inline styles. */
+
+  /* 2-col → 1-col (generic) */
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;}
+  /* Services+job details 2-col wrapper */
+  [style*="grid-template-columns:1fr 1fr;gap:16px"]{grid-template-columns:1fr!important;}
+  /* 4-col → 2-col (date/time/duration/currency) */
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important;}
+  /* repeat(4,1fr) → 2-col */
+  [style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:1fr 1fr!important;}
+  /* repeat(3,1fr) → 2-col */
+  [style*="grid-template-columns:repeat(3,1fr)"]{grid-template-columns:1fr 1fr!important;}
+  /* repeat(2,1fr) → 1-col */
+  [style*="grid-template-columns:repeat(2,1fr)"]{grid-template-columns:1fr!important;}
+
+  /* Known specific grids */
+  #finance-metrics{grid-template-columns:1fr 1fr!important;}
+  #resultsGrid{grid-template-columns:1fr 1fr!important;}
+  #us-results-grid{grid-template-columns:1fr 1fr!important;}
+
+  /* ── Rows ── */
+  .row{flex-wrap:wrap;}
+  .row label{min-width:unset!important;width:100%;margin-bottom:3px;}
+
+  /* ── Service rows ── */
+  .svc-tog{padding:6px 14px;font-size:12px;min-height:36px;}
+  .svc-name{font-size:12px;}
+  .qty-btn{width:32px;height:32px;font-size:18px;}
+
+  /* ── Prevent iOS input zoom (font-size < 16px triggers zoom) ── */
+  input[type=text],input[type=email],input[type=number],
+  input[type=date],input[type=time],input[type=url],
+  input[type=tel],select,textarea{font-size:16px!important;}
+
+  /* ── Tables: horizontal scroll ── */
+  .tier-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+
+  /* ── LouChat mobile layout ──
+     Sidebar becomes a horizontal channel scroller across the top;
+     messages fill the rest. */
+  #lc-flex-container{flex-direction:column!important;min-height:calc(100vh - 120px)!important;border-radius:12px!important;}
+  #lc-sidebar{width:100%!important;max-height:200px;border-right:none!important;border-bottom:1px solid var(--border)!important;overflow-y:auto;}
+  #lc-sidebar > div:first-child{padding:10px 12px!important;}
+
+  /* ── Finance chart container ── */
+  #finance-chart{max-height:200px;}
+
+  /* ── Payroll / tables horizontal scroll ── */
+  #pane-payroll .card{overflow-x:auto;}
+
+  /* ── US package tier buttons: full width ── */
+  .us-tier-btn{width:100%!important;}
+
+  /* ── Modals: full width on mobile ── */
+  [style*="max-width:460px"]{max-width:95vw!important;}
+  [style*="max-width:520px"]{max-width:95vw!important;}
+  [style*="max-width:600px"]{max-width:95vw!important;}
+  [style*="max-width:680px"]{max-width:95vw!important;}
+  [style*="max-width:720px"]{max-width:95vw!important;}
+  [style*="max-width:800px"]{max-width:95vw!important;}
+  [style*="margin:40px auto"]{margin:16px auto!important;}
+}
+
+/* Desktop: never show mobile nav elements */
+@media(min-width:769px){
+  #mobile-bottom-nav{display:none!important;}
+  #mobile-more-overlay,#mobile-more-drawer{display:none!important;}
+}
 </style>
 </head>
 <body>
@@ -499,7 +648,7 @@ button{font-family:var(--font);}
   <div class="header-divider"></div>
   <div class="header-sub">Operations Hub</div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:20px">
-    <button onclick="openClientPortal()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.02em">👤 Client Portal</button>
+    <button id="header-client-portal-btn" onclick="openClientPortal()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.02em">👤 Client Portal</button>
     <div style="display:flex;align-items:center;gap:10px">
       <span id="app-user-display" style="font-size:12px;color:var(--muted)"></span>
       <button onclick="gateLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Sign out</button>
@@ -1521,10 +1670,10 @@ button{font-family:var(--font);}
 
 <!-- LOUCHAT -->
 <div id="pane-louchat" class="pane">
-  <div style="display:flex;min-height:calc(100vh - 160px);gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+  <div id="lc-flex-container" style="display:flex;min-height:calc(100vh - 160px);gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
 
     <!-- Sidebar -->
-    <div style="width:230px;flex-shrink:0;background:#0D1117;border-right:1px solid var(--border);display:flex;flex-direction:column">
+    <div id="lc-sidebar" style="width:230px;flex-shrink:0;background:#0D1117;border-right:1px solid var(--border);display:flex;flex-direction:column">
       <!-- Workspace header -->
       <div style="padding:14px 14px 10px;border-bottom:1px solid var(--border)">
         <div style="font-size:13px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:6px">
@@ -2437,11 +2586,53 @@ const qty={reel:1,randomvideo:1,randomphoto:1};
 const asvc={video:true,photo:false,tvideo:false,tphoto:false,reel:false,extphoto:false,extvideo:false,randomvideo:false,randomphoto:false,floorplan:false};
 const aqty={reel:1};
 
+// ── MOBILE NAV ────────────────────────────────────────────────────────────────
+// Maps pane IDs → bottom-nav button IDs (primary 4 tabs)
+const MOB_NAV_MAP={quote:'mobnav-quote',jobs:'mobnav-jobs',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
+// Maps pane IDs → more-drawer button IDs (secondary tabs)
+const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',payroll:'mobmore-payroll',team:'mobmore-team',settings:'mobmore-settings'};
+
+function syncMobileNav(paneId){
+  // Clear all primary nav active states
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mob-more-item').forEach(b=>b.classList.remove('mob-more-active'));
+  // Highlight "More" button when a secondary pane is active
+  if(MOB_NAV_MAP[paneId]){
+    document.getElementById(MOB_NAV_MAP[paneId])?.classList.add('active');
+  } else if(MOB_MORE_MAP[paneId]){
+    document.getElementById('mobnav-more')?.classList.add('active');
+    document.getElementById(MOB_MORE_MAP[paneId])?.classList.add('mob-more-active');
+  }
+}
+
+function toggleMobileMore(){
+  const overlay=document.getElementById('mobile-more-overlay');
+  const drawer=document.getElementById('mobile-more-drawer');
+  const isOpen=drawer?.classList.contains('open');
+  if(isOpen){ closeMobileMore(); }
+  else {
+    if(overlay) overlay.style.display='block';
+    if(drawer){ drawer.style.display='block'; requestAnimationFrame(()=>drawer.classList.add('open')); }
+  }
+}
+
+function closeMobileMore(){
+  const overlay=document.getElementById('mobile-more-overlay');
+  const drawer=document.getElementById('mobile-more-drawer');
+  if(drawer){
+    drawer.classList.remove('open');
+    setTimeout(()=>{ if(!drawer.classList.contains('open')) drawer.style.display='none'; },280);
+  }
+  if(overlay) overlay.style.display='none';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function showPane(id,ev){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('pane-'+id).classList.add('active');
   if(ev&&ev.target)ev.target.classList.add('active');
+  syncMobileNav(id);
   // Persist so refresh returns to the same tab
   try{localStorage.setItem('dronehub_active_pane',id);}catch(e){}
   if(id==='payroll'){refreshPayrollPeriods();renderPayroll();}
@@ -12192,5 +12383,83 @@ function initGoogleMaps(){
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- ═══ MOBILE BOTTOM NAV ═══ -->
+<nav id="mobile-bottom-nav">
+
+  <!-- Quote -->
+  <button class="mob-nav-btn active" id="mobnav-quote" onclick="showPane('quote',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span>Quote</span>
+  </button>
+
+  <!-- Jobs -->
+  <button class="mob-nav-btn" id="mobnav-jobs" onclick="showPane('jobs',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+    <span>Jobs</span>
+  </button>
+
+  <!-- Tracker -->
+  <button class="mob-nav-btn" id="mobnav-tracker" onclick="showPane('tracker',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Projects</span>
+  </button>
+
+  <!-- LouChat -->
+  <button class="mob-nav-btn" id="mobnav-louchat" onclick="showPane('louchat',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span>Chat</span>
+  </button>
+
+  <!-- More -->
+  <button class="mob-nav-btn" id="mobnav-more" onclick="toggleMobileMore()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <span>More</span>
+  </button>
+
+</nav>
+
+<!-- More drawer overlay -->
+<div id="mobile-more-overlay" onclick="closeMobileMore()"></div>
+
+<!-- More drawer -->
+<div id="mobile-more-drawer">
+  <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright);margin:0 auto 14px"></div>
+  <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;text-align:center;margin-bottom:4px">All Sections</div>
+  <div class="mob-more-grid">
+
+    <button class="mob-more-item" id="mobmore-clients" onclick="showPane('clients',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Clients</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-finance" onclick="showPane('finance',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Finance</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-calendar" onclick="showPane('calendar',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Calendar</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-payroll" onclick="showPane('payroll',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Payroll</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-team" onclick="showPane('team',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Team</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-settings" onclick="showPane('settings',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
+    </button>
+
+  </div>
+</div>
+
 </body>
 </html>
