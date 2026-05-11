@@ -9288,8 +9288,10 @@ async function gateLogin(){
     gateSaveUsers(users);
     const adminSession={email:user.email,name:user.name,role:'admin',type:'admin'};
     if(typeof OTPAuth==='undefined'||totp2faIsDeviceTrusted(user.email)){gateEnterApp(adminSession);return;}
-    if(totp2faIsSetup(user.email)) gateShow2faVerify(adminSession);
-    else gateShow2faSetup(adminSession);
+    if(totp2faIsSetup(user.email)){gateShow2faVerify(adminSession);return;}
+    // Check Firebase for existing 2FA before showing setup
+    if(db){try{const _fb=await fbGet('orgs',ORG_ID+':2fa');if(_fb?.data){const _a=JSON.parse(_fb.data);const _e=_a[user.email.toLowerCase()];if(_e?.verified&&_e?.secret){const _l=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');_l[user.email.toLowerCase()]=_e;try{localStorage.setItem('dronehub_2fa',JSON.stringify(_l));}catch(e){}gateShow2faVerify(adminSession);return;}}}catch(e){}}
+    gateShow2faSetup(adminSession);
     return;
   }
 
@@ -9325,7 +9327,31 @@ async function gateLogin(){
   if(totp2faIsSetup(user.email)){
     gateShow2faVerify(loginSession);
   } else {
-    gateShow2faSetup(loginSession);
+    // Before showing setup screen, check Firebase for an existing verified 2FA secret.
+    // This fixes mobile/cross-device logins where localStorage is empty but 2FA was
+    // already configured on another device.
+    let syncedFrom2fa=false;
+    if(db){
+      try{
+        const fb2fa=await fbGet('orgs',ORG_ID+':2fa');
+        if(fb2fa?.data){
+          const all2fa=JSON.parse(fb2fa.data);
+          const entry=all2fa[user.email.toLowerCase()];
+          if(entry?.verified&&entry?.secret){
+            // Merge into local localStorage so future logins on this device skip this step
+            const local2fa=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+            local2fa[user.email.toLowerCase()]=entry;
+            try{localStorage.setItem('dronehub_2fa',JSON.stringify(local2fa));}catch(e){}
+            syncedFrom2fa=true;
+          }
+        }
+      }catch(e){console.warn('2FA Firebase sync failed:',e);}
+    }
+    if(syncedFrom2fa){
+      gateShow2faVerify(loginSession);
+    } else {
+      gateShow2faSetup(loginSession);
+    }
   }
   }catch(e){
     console.error('Login error:',e);
