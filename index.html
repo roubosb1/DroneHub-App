@@ -9503,19 +9503,20 @@ async function gateLogin(){
     errEl.style.display='none';
   }
 
-  // Admin accounts: if no password set yet, any password works on first login and sets it
-  if(user.type==='admin'&&!user.passHash){
+  // ── First-login: no password set yet — any password works and sets it ───────
+  // Applies to ALL user types (admin, team, contractor) not just admin.
+  // This covers accounts created via invite that never went through signup.
+  if(!user.passHash){
+    if(!pass){errEl.textContent='Please choose a password to continue.';errEl.style.display='block';return;}
     user.passHash=simpleHash(pass);
-    gateSaveUsers(users);
-    const adminSession={email:user.email,name:user.name,role:'admin',type:'admin'};
-    if(typeof OTPAuth==='undefined'||totp2faIsDeviceTrusted(user.email)){gateEnterApp(adminSession);return;}
-    if(totp2faIsSetup(user.email)){gateShow2faVerify(adminSession);return;}
-    // Check Firebase for existing 2FA before showing setup
-    if(db){try{const _fb=await fbGet('orgs',ORG_ID+':2fa');if(_fb?.data){const _a=JSON.parse(_fb.data);const _e=_a[user.email.toLowerCase()];if(_e?.verified&&_e?.secret){const _l=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');_l[user.email.toLowerCase()]=_e;try{localStorage.setItem('dronehub_2fa',JSON.stringify(_l));}catch(e){}gateShow2faVerify(adminSession);return;}}}catch(e){}}
-    gateShow2faSetup(adminSession);
-    return;
+    const allU=gateGetUsers();
+    const uIdx=allU.findIndex(u=>u.email.toLowerCase()===email);
+    if(uIdx>=0) allU[uIdx].passHash=user.passHash;
+    else allU.push(user);
+    gateSaveUsers(allU);
   }
 
+  // ── Password check ────────────────────────────────────────────────────────
   if(user.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
 
   // Force admin type for hardcoded owner accounts regardless of stored role
@@ -9527,8 +9528,8 @@ async function gateLogin(){
 
   const loginSession={email:user.email,name:user.name,role:user.role,type:user.type,jobTitle:user.jobTitle||PRESET_JOB_TITLES[user.email]?.title||'',clientId:user.clientId||null};
 
-  // Skip 2FA for client accounts
-  if(user.type==='client'){
+  // Skip 2FA for client and team/contractor accounts — only admins use 2FA
+  if(user.type==='client'||user.type==='team'){
     gateEnterApp(loginSession);
     return;
   }
