@@ -708,7 +708,6 @@ button{font-family:var(--font);}
   <button class="tab" onclick="showPane('jobs',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> Jobs</button>
   <button class="tab" onclick="showPane('calendar',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar</button>
   <button class="tab" onclick="showPane('clients',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Clients</button>
-  <button class="tab" onclick="showPane('payroll',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Payroll</button>
   <button class="tab" onclick="showPane('finance',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Finance</button>
   <button class="tab" onclick="showPane('louchat',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat</button>
   <button class="tab" onclick="showPane('team',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team</button>
@@ -1507,6 +1506,21 @@ button{font-family:var(--font);}
 <!-- FINANCE -->
 <div id="pane-finance" class="pane">
 
+  <!-- Finance / Payroll sub-tab switcher -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)">
+    <button id="fin-sub-tab-overview" onclick="setFinanceSubTab('overview')" style="padding:10px 22px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Finance
+    </button>
+    <button id="fin-sub-tab-payroll" onclick="setFinanceSubTab('payroll')" style="padding:10px 22px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Payroll
+    </button>
+  </div>
+
+  <!-- ── FINANCE OVERVIEW SUB-VIEW ── -->
+  <div id="finance-sub-overview">
+
   <!-- 🇨🇦 / 🇺🇸 Market tab switcher -->
   <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
     <button id="fin-tab-canada" onclick="setFinanceMarket('canada')"
@@ -1720,7 +1734,30 @@ button{font-family:var(--font);}
     </div>
   </div>
 
-</div>
+  </div><!-- end finance-sub-overview -->
+
+  <!-- ── PAYROLL SUB-VIEW ── -->
+  <div id="finance-sub-payroll" style="display:none">
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px">Payroll period</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <select id="payroll-period-sel" onchange="renderPayroll()" style="padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;flex:1;min-width:200px">
+          <option value="">— Select payroll period —</option>
+        </select>
+        <button onclick="exportPayroll()" style="padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#E6F1FB;color:#0C447C;cursor:pointer">Export CSV</button>
+      </div>
+      <div id="payroll-period-summary"></div>
+    </div>
+    <div id="payroll-contractor-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div id="payroll-contractor-content"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="section-label" style="margin-bottom:8px">All saved jobs</div>
+      <div id="payroll-all-jobs" style="font-size:12px;color:#A8B4D0"></div>
+      <button onclick="clearAllJobs()" style="margin-top:10px;padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:rgba(240,82,82,.1);color:#F05252;cursor:pointer">Clear all saved jobs</button>
+    </div>
+  </div><!-- end finance-sub-payroll -->
+
+</div><!-- end pane-finance -->
 
 <!-- LOUCHAT -->
 <div id="pane-louchat" class="pane">
@@ -1990,26 +2027,8 @@ button{font-family:var(--font);}
   </div>
 </div>
 
-<!-- PAYROLL -->
-<div id="pane-payroll" class="pane">
-  <div class="card">
-    <div class="section-label" style="margin-bottom:10px">Payroll period</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-      <select id="payroll-period-sel" onchange="renderPayroll()" style="padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;flex:1;min-width:200px">
-        <option value="">— Select payroll period —</option>
-      </select>
-      <button onclick="exportPayroll()" style="padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#E6F1FB;color:#0C447C;cursor:pointer">Export CSV</button>
-    </div>
-    <div id="payroll-period-summary"></div>
-  </div>
-  <div id="payroll-contractor-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-  <div id="payroll-contractor-content"></div>
-  <div class="card" style="margin-top:12px">
-    <div class="section-label" style="margin-bottom:8px">All saved jobs</div>
-    <div id="payroll-all-jobs" style="font-size:12px;color:#A8B4D0"></div>
-    <button onclick="clearAllJobs()" style="margin-top:10px;padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:rgba(240,82,82,.1);color:#F05252;cursor:pointer">Clear all saved jobs</button>
-  </div>
-</div>
+<!-- pane-payroll kept as empty hidden stub so existing code referencing it doesn't error -->
+<div id="pane-payroll" style="display:none"></div>
 
 <!-- SETTINGS -->
 <div id="pane-settings" class="pane">
@@ -2842,6 +2861,20 @@ let savedJobs=JSON.parse(localStorage.getItem('dronehub_jobs')||'[]');
 // Finance market filter — 'canada' | 'usa'
 let financeMarket='canada';
 
+function setFinanceSubTab(sub){
+  const overview = document.getElementById('finance-sub-overview');
+  const payroll  = document.getElementById('finance-sub-payroll');
+  const tabO     = document.getElementById('fin-sub-tab-overview');
+  const tabP     = document.getElementById('fin-sub-tab-payroll');
+  if(!overview || !payroll) return;
+  const showPayroll = sub === 'payroll';
+  overview.style.display = showPayroll ? 'none' : '';
+  payroll.style.display  = showPayroll ? ''     : 'none';
+  if(tabO){ tabO.style.borderBottomColor = showPayroll ? 'transparent' : 'var(--blue-bright)'; tabO.style.color = showPayroll ? 'var(--muted)' : 'var(--blue-bright)'; }
+  if(tabP){ tabP.style.borderBottomColor = showPayroll ? 'var(--blue-bright)' : 'transparent'; tabP.style.color = showPayroll ? 'var(--blue-bright)' : 'var(--muted)'; }
+  if(showPayroll){ refreshPayrollPeriods(); renderPayroll(); }
+}
+
 function setFinanceMarket(m){
   financeMarket=m;
   // Update tab button styles
@@ -3005,7 +3038,7 @@ const aqty={reel:1};
 // Maps pane IDs → bottom-nav button IDs (primary 4 tabs)
 const MOB_NAV_MAP={quote:'mobnav-quote',jobs:'mobnav-jobs',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
 // Maps pane IDs → more-drawer button IDs (secondary tabs)
-const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',payroll:'mobmore-payroll',team:'mobmore-team',settings:'mobmore-settings',sales:'mobmore-sales'};
+const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',team:'mobmore-team',settings:'mobmore-settings',sales:'mobmore-sales'};
 
 function syncMobileNav(paneId){
   // Clear all primary nav active states
@@ -3050,7 +3083,8 @@ function showPane(id,ev){
   syncMobileNav(id);
   // Persist so refresh returns to the same tab
   try{localStorage.setItem('dronehub_active_pane',id);}catch(e){}
-  if(id==='payroll'){refreshPayrollPeriods();renderPayroll();}
+  if(id==='payroll'){showPane('finance');setFinanceSubTab('payroll');return;}
+  if(id==='finance' && !document.getElementById('fin-sub-tab-overview')) {} // sub-tabs not yet rendered, skip
   if(id==='model'){renderEditorSelectors();}
   if(id==='jobs'){renderJobs();}
   if(id==='clients'){renderClients();}
@@ -3064,7 +3098,12 @@ function showPane(id,ev){
   if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();}
   if(id==='tracker'){renderTracker();}
-  if(id==='finance'){renderFinance();}
+  if(id==='finance'){
+    renderFinance();
+    // If payroll sub-tab was last active, refresh payroll too
+    const activeSub = document.getElementById('finance-sub-payroll')?.style.display;
+    if(activeSub && activeSub!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
+  }
   if(id==='sales'){renderSales();}
   if(id==='louchat'){
     lcCleanCorruptMessages();
@@ -13785,10 +13824,6 @@ function initGoogleMaps(){
       <span>Calendar</span>
     </button>
 
-    <button class="mob-more-item" id="mobmore-payroll" onclick="showPane('payroll',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <span>Payroll</span>
-    </button>
 
     <button class="mob-more-item" id="mobmore-team" onclick="showPane('team',event);closeMobileMore()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
