@@ -114,7 +114,7 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 .header-sub{font-size:11px;color:var(--offwhite);font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.7}
 .wrap{max-width:100%;width:100%;margin:0 auto;padding:1.5rem 2rem 4rem;box-sizing:border-box;}
 /* Comfortable reading width for form-heavy panes */
-#pane-model,#pane-settings,#pane-payroll,#pane-finance,#pane-team{max-width:1100px;}
+#pane-model,#pane-settings,#pane-payroll,#pane-finance,#pane-team,#pane-sales{max-width:1100px;}
 /* Full-width panes — no side padding constraint */
 #pane-tracker,#pane-louchat,#pane-jobs,#pane-clients,#pane-calendar{max-width:100%;}
 /* Give tracker full bleed — remove the .wrap horizontal padding for it */
@@ -415,6 +415,36 @@ button{font-family:var(--font);}
   #mobile-bottom-nav{display:none!important;}
   #mobile-more-overlay,#mobile-more-drawer{display:none!important;}
 }
+
+/* ── Sales CRM ── */
+.sales-list-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.sales-list-tab{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.sales-list-tab.active{background:rgba(91,141,239,.18);border-color:var(--blue);color:var(--blue-bright);}
+.sales-table{width:100%;border-collapse:collapse;font-size:13px;}
+.sales-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+.sales-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--offwhite);vertical-align:middle;}
+.sales-table tr:hover td{background:rgba(255,255,255,.03);}
+.sales-status-badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+.sales-status-new{background:rgba(91,141,239,.15);color:#7AABFF;}
+.sales-status-contacted{background:rgba(245,166,35,.15);color:#F5C842;}
+.sales-status-warm{background:rgba(34,217,122,.15);color:#22D97A;}
+.sales-status-unsubscribed{background:rgba(180,50,50,.15);color:#FF7070;}
+.sales-status-client{background:rgba(122,171,255,.2);color:#A8C8FF;}
+.sales-action-btn{padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer;font-weight:500;transition:background .12s;}
+.sales-action-btn:hover{background:var(--navy-card);color:var(--offwhite);}
+.sales-email-link{color:var(--blue-bright);cursor:pointer;text-decoration:none;font-size:13px;}
+.sales-email-link:hover{text-decoration:underline;}
+#sales-bulk-modal,#sales-add-modal,#sales-individual-email-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+#sales-bulk-modal.open,#sales-add-modal.open,#sales-individual-email-modal.open{display:flex;}
+.sales-modal-box{background:var(--navy-card);border-radius:14px;width:100%;max-width:600px;border:1px solid var(--border-bright);overflow:hidden;max-height:90vh;overflow-y:auto;}
+.sales-modal-header{background:var(--navy-mid);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.sales-modal-body{padding:20px 22px;}
+.sales-modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+@media(max-width:768px){
+  .sales-table th:nth-child(3),.sales-table td:nth-child(3){display:none;}
+  .sales-table th:nth-child(4),.sales-table td:nth-child(4){display:none;}
+  .sales-list-tab{font-size:11px;padding:6px 12px;}
+}
 </style>
 </head>
 <body>
@@ -683,6 +713,7 @@ button{font-family:var(--font);}
   <button class="tab" onclick="showPane('louchat',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat</button>
   <button class="tab" onclick="showPane('team',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team</button>
   <button class="tab" onclick="showPane('settings',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
+  <button class="tab" onclick="showPane('sales',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales</button>
 </div>
 
 <!-- QUOTE BUILDER -->
@@ -1034,6 +1065,14 @@ button{font-family:var(--font);}
     <div class="row" style="margin-bottom:8px">
       <label style="min-width:120px">Notes</label>
       <input type="text" id="job-notes-input" placeholder="Gate code, parking, special instructions…" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+    </div>
+    <div style="background:rgba(91,141,239,.08);border:1px solid var(--blue);border-radius:10px;padding:10px 14px;margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🎯 Link to Sales Deal (optional)</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="job-deal-id-input" placeholder="e.g. DH-2026-0042" oninput="onDealIdInput(this.value)" style="flex:1;min-width:140px;padding:6px 10px;border:1px solid var(--blue);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;font-family:monospace;letter-spacing:.04em">
+        <div id="job-deal-preview" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px">When you save this job, the deal will automatically be marked <strong style="color:#22D97A">Won</strong> and the contact moved to Existing Clients.</div>
     </div>
     <div class="row" style="margin-bottom:8px">
       <label style="min-width:120px">Status</label>
@@ -2204,6 +2243,349 @@ button{font-family:var(--font);}
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     PANE: SALES CRM
+     ═══════════════════════════════════════════════════ -->
+<div id="pane-sales" class="pane">
+
+  <!-- Top-level view switcher: Contacts vs Pipeline -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0">
+    <button id="sales-view-contacts-btn" onclick="setSalesView('contacts')" style="padding:9px 20px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">👥 Contacts</button>
+    <button id="sales-view-pipeline-btn" onclick="setSalesView('pipeline')" style="padding:9px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer">🎯 Deal Pipeline</button>
+  </div>
+
+  <!-- ── CONTACTS VIEW ── -->
+  <div id="sales-view-contacts">
+    <!-- Header row -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="sales-search" type="text" placeholder="Search contacts…" oninput="renderSalesTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
+        <button onclick="openSalesAddModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">+ Add Contact</button>
+        <label style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">
+          📂 Import Excel
+          <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importSalesExcel(this)">
+        </label>
+        <button onclick="openSalesBulkEmail()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">✉ Bulk Email</button>
+      </div>
+    </div>
+
+    <!-- List tab switcher -->
+    <div class="sales-list-tabs">
+      <button class="sales-list-tab active" id="sltab-realestate" onclick="setSalesList('realestate')">🏠 Real Estate</button>
+      <button class="sales-list-tab" id="sltab-resorts" onclick="setSalesList('resorts')">🏨 Resorts</button>
+      <button class="sales-list-tab" id="sltab-golf" onclick="setSalesList('golf')">⛳ Golf Courses</button>
+      <button class="sales-list-tab" id="sltab-other" onclick="setSalesList('other')">📋 Other</button>
+      <button class="sales-list-tab" id="sltab-warm" onclick="setSalesList('warm')" style="border-color:var(--amber);color:var(--amber)">🔥 Warm Leads</button>
+      <button class="sales-list-tab" id="sltab-clients" onclick="setSalesList('clients')" style="border-color:var(--green);color:var(--green)">✅ Existing Clients</button>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="sales-stats-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+    <!-- Contact table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th style="width:36px"><input type="checkbox" id="sales-select-all" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
+              <th>Name</th>
+              <th>Company</th>
+              <th>City / Region</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sales-table-body">
+            <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">No contacts yet — add one or import from Excel</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="sales-table-footer" style="padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span id="sales-count-label"></span>
+        <div id="sales-bulk-actions" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted)" id="sales-selected-label"></span>
+          <select id="sales-move-target" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--navy-lift);color:var(--white);font-size:12px">
+            <option value="">Move to list…</option>
+            <option value="realestate">🏠 Real Estate</option>
+            <option value="resorts">🏨 Resorts</option>
+            <option value="golf">⛳ Golf Courses</option>
+            <option value="other">📋 Other</option>
+            <option value="warm">🔥 Warm Leads</option>
+            <option value="clients">✅ Existing Clients</option>
+          </select>
+          <button onclick="salesMoveSelected()" class="sales-action-btn" style="border-color:var(--blue);color:var(--blue-bright)">Move</button>
+          <button onclick="salesUnsubSelected()" class="sales-action-btn" style="border-color:var(--amber);color:var(--amber)">Unsubscribe</button>
+          <button onclick="salesDeleteSelected()" class="sales-action-btn" style="border-color:#FF7070;color:#FF7070">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- end contacts view -->
+
+  <!-- ── PIPELINE VIEW ── -->
+  <div id="sales-view-pipeline" style="display:none">
+    <!-- Pipeline header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--white)">Deal Pipeline</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Each deal gets a unique ID — enter it in the Quote tab to link & close</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="deals-search" type="text" placeholder="Search deals…" oninput="renderDealsTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:160px">
+        <select id="deals-stage-filter" onchange="renderDealsTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px">
+          <option value="">All Stages</option>
+          <option value="new_lead">New Lead</option>
+          <option value="contacted">Contacted</option>
+          <option value="proposal">Proposal Sent</option>
+          <option value="negotiating">Negotiating</option>
+          <option value="won">Won ✅</option>
+          <option value="lost">Lost ✗</option>
+        </select>
+        <button onclick="openDealModal()" style="padding:7px 16px;border-radius:20px;border:1px solid #F5C842;background:rgba(245,166,35,.1);color:#F5C842;font-size:12px;font-weight:700;cursor:pointer">+ New Deal</button>
+      </div>
+    </div>
+
+    <!-- Pipeline stats -->
+    <div id="pipeline-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+    <!-- Stage column view -->
+    <div id="pipeline-kanban" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px;overflow-x:auto;min-width:0"></div>
+
+    <!-- Deals table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>Deal ID</th>
+              <th>Contact</th>
+              <th>Company</th>
+              <th>City</th>
+              <th>Stage</th>
+              <th>Value</th>
+              <th>Notes</th>
+              <th>Created</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="deals-table-body">
+            <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">No deals yet — click "+ New Deal" to start tracking</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- end pipeline view -->
+
+</div>
+
+<!-- ── SALES: Add Contact Modal ── -->
+<div id="sales-add-modal" onclick="if(event.target===this)closeSalesAddModal()">
+  <div class="sales-modal-box" onclick="event.stopPropagation()">
+    <div class="sales-modal-header">
+      <div style="font-size:14px;font-weight:700;color:var(--white)">➕ Add Contact</div>
+      <button onclick="closeSalesAddModal()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div class="sales-modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">First Name</div>
+          <input id="sc-fname" type="text" placeholder="Jane" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Last Name</div>
+          <input id="sc-lname" type="text" placeholder="Smith" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Company</div>
+          <input id="sc-company" type="text" placeholder="Acme Realty" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Phone</div>
+          <input id="sc-phone" type="tel" placeholder="+1 555 000 0000" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Email</div>
+          <input id="sc-email" type="email" placeholder="jane@example.com" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">City / Region</div>
+          <input id="sc-city" type="text" placeholder="Toronto, ON" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">List</div>
+          <select id="sc-list" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+            <option value="realestate">🏠 Real Estate</option>
+            <option value="resorts">🏨 Resorts</option>
+            <option value="golf">⛳ Golf Courses</option>
+            <option value="other">📋 Other</option>
+            <option value="warm">🔥 Warm Leads</option>
+            <option value="clients">✅ Existing Clients</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Status</div>
+          <select id="sc-status" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="warm">Warm</option>
+            <option value="client">Client</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Notes</div>
+          <textarea id="sc-notes" placeholder="Add any context…" rows="3" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+      </div>
+      <div id="sc-err" style="color:#FF7070;font-size:12px;margin-top:8px;display:none"></div>
+    </div>
+    <div class="sales-modal-footer">
+      <button onclick="closeSalesAddModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="saveSalesContact()" style="padding:8px 24px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save Contact ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SALES: Bulk Email Modal ── -->
+<div id="sales-bulk-modal" onclick="if(event.target===this)closeSalesBulkModal()">
+  <div class="sales-modal-box" onclick="event.stopPropagation()" style="max-width:660px">
+    <div class="sales-modal-header">
+      <div style="font-size:14px;font-weight:700;color:var(--white)">✉ Bulk Email</div>
+      <button onclick="closeSalesBulkModal()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div class="sales-modal-body">
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Send to list(s)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="bulk-list-checkboxes">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--offwhite);cursor:pointer"><input type="checkbox" value="realestate" checked> 🏠 Real Estate</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--offwhite);cursor:pointer"><input type="checkbox" value="resorts"> 🏨 Resorts</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--offwhite);cursor:pointer"><input type="checkbox" value="golf"> ⛳ Golf Courses</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--offwhite);cursor:pointer"><input type="checkbox" value="other"> 📋 Other</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--offwhite);cursor:pointer"><input type="checkbox" value="warm"> 🔥 Warm Leads</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--offwhite);cursor:pointer"><input type="checkbox" value="clients"> ✅ Existing Clients</label>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--muted)">Unsubscribed contacts are automatically excluded.</div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Subject</div>
+        <input id="bulk-subject" type="text" placeholder="Drone Media Services — Summer 2026" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Message Body</div>
+        <textarea id="bulk-body" rows="8" placeholder="Hi [Name],&#10;&#10;We wanted to reach out about our drone media services…&#10;&#10;Unsubscribe: reply with 'unsubscribe' to stop receiving emails." style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      </div>
+      <div style="background:var(--navy-mid);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Recipient List Preview</div>
+        <div id="bulk-recipients-preview" style="font-size:12px;color:var(--offwhite);max-height:100px;overflow-y:auto;word-break:break-all"></div>
+        <div id="bulk-recipient-count" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button onclick="bulkCopyEmails()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">📋 Copy Emails</button>
+        <button onclick="bulkOpenMail()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer">📬 Open in Mail App</button>
+      </div>
+      <div id="bulk-copy-msg" style="font-size:12px;color:var(--green);margin-top:6px;display:none">✓ Emails copied to clipboard</div>
+    </div>
+    <div class="sales-modal-footer">
+      <button onclick="closeSalesBulkModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SALES: Deal Modal ── -->
+<div id="sales-deal-modal" onclick="if(event.target===this)closeDealModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div class="sales-modal-box" onclick="event.stopPropagation()" style="max-width:580px">
+    <div class="sales-modal-header">
+      <div id="deal-modal-title" style="font-size:14px;font-weight:700;color:var(--white)">🎯 New Deal</div>
+      <button onclick="closeDealModal()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div class="sales-modal-body">
+      <!-- Deal ID display -->
+      <div style="background:rgba(91,141,239,.1);border:1px solid var(--blue);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">Deal ID (enter this in Quote tab)</div>
+          <div id="deal-id-display" style="font-size:20px;font-weight:800;color:var(--blue-bright);letter-spacing:.08em;font-family:monospace"></div>
+        </div>
+        <button onclick="copyDealId()" style="margin-left:auto;padding:5px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Copy</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Contact Name</div>
+          <input id="deal-contact-name" type="text" placeholder="Jane Smith" list="deal-contact-suggestions" oninput="dealContactAutofill(this.value)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+          <datalist id="deal-contact-suggestions"></datalist>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Contact Email</div>
+          <input id="deal-contact-email" type="email" placeholder="jane@example.com" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Company</div>
+          <input id="deal-company" type="text" placeholder="Acme Realty" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">City / Region</div>
+          <input id="deal-city" type="text" placeholder="Toronto, ON" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Stage</div>
+          <select id="deal-stage" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+            <option value="new_lead">New Lead</option>
+            <option value="contacted">Contacted</option>
+            <option value="proposal">Proposal Sent</option>
+            <option value="negotiating">Negotiating</option>
+            <option value="won">Won ✅</option>
+            <option value="lost">Lost ✗</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Est. Value ($)</div>
+          <input id="deal-value" type="number" min="0" step="50" placeholder="1500" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Notes / Conversation Log</div>
+          <textarea id="deal-notes" rows="4" placeholder="What was discussed, next steps, follow-up date…" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="sales-modal-footer">
+      <button onclick="closeDealModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="saveDeal()" style="padding:8px 24px;border-radius:20px;border:1px solid #F5C842;background:rgba(245,166,35,.12);color:#F5C842;font-size:13px;font-weight:700;cursor:pointer">Save Deal ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SALES: Individual Email Modal ── -->
+<div id="sales-individual-email-modal" onclick="if(event.target===this)closeSalesIndivModal()">
+  <div class="sales-modal-box" onclick="event.stopPropagation()" style="max-width:580px">
+    <div class="sales-modal-header">
+      <div style="font-size:14px;font-weight:700;color:var(--white)">📧 Send Email</div>
+      <button onclick="closeSalesIndivModal()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div class="sales-modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">To</div>
+          <input id="indiv-to" type="email" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Subject</div>
+          <input id="indiv-subject" type="text" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Message</div>
+        <textarea id="indiv-body" rows="10" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      </div>
+    </div>
+    <div class="sales-modal-footer">
+      <button onclick="closeSalesIndivModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="openIndivMailto()" style="padding:8px 24px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">📬 Open in Mail App</button>
+    </div>
+  </div>
+</div>
+
 <!-- INVOICE MODAL -->
 <div id="invoice-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto" onclick="if(event.target===this)closeInvoice()">
   <div style="background:#1C2333;max-width:700px;margin:30px auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,.6);border:1px solid #3A4890" onclick="event.stopPropagation()">
@@ -2605,7 +2987,7 @@ const aqty={reel:1};
 // Maps pane IDs → bottom-nav button IDs (primary 4 tabs)
 const MOB_NAV_MAP={quote:'mobnav-quote',jobs:'mobnav-jobs',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
 // Maps pane IDs → more-drawer button IDs (secondary tabs)
-const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',payroll:'mobmore-payroll',team:'mobmore-team',settings:'mobmore-settings'};
+const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',payroll:'mobmore-payroll',team:'mobmore-team',settings:'mobmore-settings',sales:'mobmore-sales'};
 
 function syncMobileNav(paneId){
   // Clear all primary nav active states
@@ -2665,6 +3047,7 @@ function showPane(id,ev){
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){renderFinance();}
+  if(id==='sales'){renderSales();}
   if(id==='louchat'){
     lcCleanCorruptMessages();
     lcRequestNotifications();
@@ -5562,6 +5945,14 @@ function saveJob(){
     ...(isUS?{usData:usJobData}:{}),
   };
   job.commissionAmt=job.commissionPct>0?Math.ceil(job.grand*job.commissionPct/100):0;
+
+  // ── Link to Sales Deal ───────────────────────────────────────────────────
+  const dealId=(document.getElementById('job-deal-id-input')?.value||'').trim().toUpperCase();
+  if(dealId){
+    job.dealId=dealId;
+    linkDealToJob(dealId, job.id, job.grand);
+  }
+
   savedJobs.push(job);
   saveJobsToStorage();
 
@@ -5684,6 +6075,11 @@ function saveJob(){
 
   document.getElementById('save-job-status').textContent=`✓ Saved "${name}" as ${initialJobStatus} — ${period.label} · Contractors notified in LouChat`;
   setTimeout(()=>document.getElementById('save-job-status').textContent='',5000);
+  // Clear deal ID field + preview
+  const dealIdEl = document.getElementById('job-deal-id-input');
+  if(dealIdEl) dealIdEl.value='';
+  const dealPreviewEl = document.getElementById('job-deal-preview');
+  if(dealPreviewEl) dealPreviewEl.textContent='';
   refreshPayrollPeriods();
   renderJobs();
   renderTracker();
@@ -12421,6 +12817,886 @@ if(!db){
 // Restore data from Firebase if localStorage was cleared
 if(db) setTimeout(()=>restoreFromFirebase(),1000);
 
+// ══════════════════════════════════════════════════════
+// SALES CRM
+// ══════════════════════════════════════════════════════
+
+const SALES_LISTS = [
+  {id:'realestate', label:'🏠 Real Estate'},
+  {id:'resorts',    label:'🏨 Resorts'},
+  {id:'golf',       label:'⛳ Golf Courses'},
+  {id:'other',      label:'📋 Other'},
+  {id:'warm',       label:'🔥 Warm Leads'},
+  {id:'clients',    label:'✅ Existing Clients'},
+];
+
+let salesActiveList = 'realestate';
+let salesEditingId   = null; // for future inline edit support
+
+function salesLoad(){
+  try{ return JSON.parse(localStorage.getItem('dronehub_sales')||'[]'); }
+  catch(e){ return []; }
+}
+function salesSave(arr){
+  localStorage.setItem('dronehub_sales', JSON.stringify(arr));
+  if(db) fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: Date.now()}).catch(()=>{});
+}
+
+async function salesSyncFirebase(){
+  if(!db) return;
+  try{
+    const fb = await fbGet('orgs', ORG_ID+':sales');
+    if(fb?.data){
+      const remote = JSON.parse(fb.data);
+      localStorage.setItem('dronehub_sales', JSON.stringify(remote));
+    }
+  }catch(e){}
+}
+
+function setSalesList(listId){
+  salesActiveList = listId;
+  document.querySelectorAll('.sales-list-tab').forEach(b=>{
+    b.classList.toggle('active', b.id === 'sltab-'+listId);
+  });
+  // Reset select-all checkbox
+  const sa = document.getElementById('sales-select-all');
+  if(sa) sa.checked = false;
+  renderSalesTable();
+}
+
+function renderSales(){
+  salesSyncFirebase().then(()=>renderSalesTable());
+  dealsSyncFirebase && dealsSyncFirebase().then(()=>{ if(salesView==='pipeline') renderDealsTable(); }).catch(()=>{});
+  renderSalesTable(); // immediate
+  if(salesView==='pipeline') renderDealsTable();
+}
+
+function renderSalesTable(){
+  const all = salesLoad();
+  const q   = (document.getElementById('sales-search')?.value||'').toLowerCase().trim();
+  const list= all.filter(c=> c.list === salesActiveList && !c._deleted);
+  const filtered = q ? list.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.notes].join(' ').toLowerCase().includes(q)) : list;
+
+  // Stats bar
+  const statsBar = document.getElementById('sales-stats-bar');
+  if(statsBar){
+    const total = all.filter(c=>!c._deleted).length;
+    const warm  = all.filter(c=>c.list==='warm'&&!c._deleted).length;
+    const unsub = all.filter(c=>c.unsubscribed&&!c._deleted).length;
+    statsBar.innerHTML = [
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>Total Contacts</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
+    ].join('');
+  }
+
+  // Count label
+  const cl = document.getElementById('sales-count-label');
+  if(cl) cl.textContent = `Showing ${filtered.length} of ${list.length} contacts in this list`;
+
+  const tbody = document.getElementById('sales-table-body');
+  if(!tbody) return;
+  if(!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">${q?'No contacts match your search.':'No contacts in this list yet.'}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(c=>{
+    const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
+    const statusClass = {new:'sales-status-new',contacted:'sales-status-contacted',warm:'sales-status-warm',unsubscribed:'sales-status-unsubscribed',client:'sales-status-client'}[c.unsubscribed?'unsubscribed':(c.status||'new')] || 'sales-status-new';
+    const statusLabel = c.unsubscribed ? 'Unsubscribed' : ({new:'New',contacted:'Contacted',warm:'Warm',client:'Client'}[c.status]||'New');
+    const emailCell = c.email ? `<a class="sales-email-link" onclick="openSalesIndivEmail('${escSalesAttr(c.id)}')" href="javascript:void(0)">${escSalesHtml(c.email)}</a>` : '—';
+    return `<tr>
+      <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
+      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}</td>
+      <td>${escSalesHtml(c.company||'—')}</td>
+      <td style="white-space:nowrap">${escSalesHtml(c.phone||'—')}</td>
+      <td>${emailCell}</td>
+      <td><span class="sales-status-badge ${statusClass}">${statusLabel}</span></td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(c.notes||'')}">${escSalesHtml((c.notes||'').slice(0,40))||'—'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="sales-action-btn" onclick="salesEditContact('${escSalesAttr(c.id)}')" title="Edit">✏</button>
+        <button class="sales-action-btn" onclick="salesToggleUnsub('${escSalesAttr(c.id)}')" title="${c.unsubscribed?'Re-subscribe':'Unsubscribe'}">${c.unsubscribed?'↩':'🚫'}</button>
+        <button class="sales-action-btn" onclick="salesQuickMove('${escSalesAttr(c.id)}')" title="Move to list">↗</button>
+        <button class="sales-action-btn" style="color:#FF7070;border-color:#FF7070" onclick="salesDeleteContact('${escSalesAttr(c.id)}')" title="Delete">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escSalesHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escSalesAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function salesCheckChanged(){
+  const checked = document.querySelectorAll('.sales-row-check:checked');
+  const bulk = document.getElementById('sales-bulk-actions');
+  const selLabel = document.getElementById('sales-selected-label');
+  if(bulk) bulk.style.display = checked.length ? 'flex' : 'none';
+  if(selLabel) selLabel.textContent = `${checked.length} selected`;
+  const sa = document.getElementById('sales-select-all');
+  const all = document.querySelectorAll('.sales-row-check');
+  if(sa) sa.indeterminate = checked.length > 0 && checked.length < all.length;
+  if(sa && checked.length === all.length && all.length > 0) sa.checked = true;
+}
+
+function salesToggleAll(checked){
+  document.querySelectorAll('.sales-row-check').forEach(cb=>cb.checked=checked);
+  salesCheckChanged();
+}
+
+function salesSelectedIds(){
+  return Array.from(document.querySelectorAll('.sales-row-check:checked')).map(cb=>cb.dataset.id);
+}
+
+function salesMoveSelected(){
+  const ids  = salesSelectedIds();
+  const dest = document.getElementById('sales-move-target')?.value;
+  if(!dest || !ids.length) return;
+  const all  = salesLoad();
+  ids.forEach(id=>{ const c = all.find(x=>x.id===id); if(c) c.list = dest; });
+  salesSave(all);
+  renderSalesTable();
+}
+
+function salesUnsubSelected(){
+  const ids = salesSelectedIds();
+  if(!ids.length) return;
+  const all = salesLoad();
+  ids.forEach(id=>{ const c = all.find(x=>x.id===id); if(c) c.unsubscribed = true; });
+  salesSave(all);
+  renderSalesTable();
+}
+
+function salesDeleteSelected(){
+  const ids = salesSelectedIds();
+  if(!ids.length) return;
+  if(!confirm(`Delete ${ids.length} contact(s)? This cannot be undone.`)) return;
+  const all = salesLoad().filter(c=>!ids.includes(c.id));
+  salesSave(all);
+  renderSalesTable();
+}
+
+function salesToggleUnsub(id){
+  const all = salesLoad();
+  const c   = all.find(x=>x.id===id);
+  if(!c) return;
+  c.unsubscribed = !c.unsubscribed;
+  salesSave(all);
+  renderSalesTable();
+}
+
+function salesQuickMove(id){
+  const dest = prompt('Move to list:\n1=Real Estate, 2=Resorts, 3=Golf, 4=Other, 5=Warm Leads, 6=Existing Clients\nType the list name:');
+  if(!dest) return;
+  const map = {'real estate':'realestate','realestate':'realestate','1':'realestate',
+    'resorts':'resorts','resort':'resorts','2':'resorts',
+    'golf':'golf','golf courses':'golf','3':'golf',
+    'other':'other','4':'other',
+    'warm':'warm','warm leads':'warm','5':'warm',
+    'clients':'clients','existing clients':'clients','6':'clients'};
+  const listId = map[dest.trim().toLowerCase()];
+  if(!listId){ alert('Unknown list — please try again.'); return; }
+  const all = salesLoad();
+  const c = all.find(x=>x.id===id);
+  if(c){ c.list = listId; salesSave(all); renderSalesTable(); }
+}
+
+function salesDeleteContact(id){
+  if(!confirm('Delete this contact?')) return;
+  const all = salesLoad().filter(c=>c.id!==id);
+  salesSave(all);
+  renderSalesTable();
+}
+
+// ── Add / Edit Modal ──
+function openSalesAddModal(editId){
+  salesEditingId = editId || null;
+  const modal = document.getElementById('sales-add-modal');
+  if(!modal) return;
+  const err = document.getElementById('sc-err');
+  if(err){ err.style.display='none'; err.textContent=''; }
+
+  if(editId){
+    const c = salesLoad().find(x=>x.id===editId);
+    if(c){
+      document.getElementById('sc-fname').value   = c.firstName||'';
+      document.getElementById('sc-lname').value   = c.lastName||'';
+      document.getElementById('sc-company').value = c.company||'';
+      document.getElementById('sc-phone').value   = c.phone||'';
+      document.getElementById('sc-email').value   = c.email||'';
+      document.getElementById('sc-list').value    = c.list||salesActiveList;
+      document.getElementById('sc-status').value  = c.status||'new';
+      document.getElementById('sc-notes').value   = c.notes||'';
+      modal.querySelector('.sales-modal-header div').textContent = '✏ Edit Contact';
+    }
+  } else {
+    ['sc-fname','sc-lname','sc-company','sc-phone','sc-email','sc-notes'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    document.getElementById('sc-list').value   = salesActiveList;
+    document.getElementById('sc-status').value = 'new';
+    modal.querySelector('.sales-modal-header div').textContent = '➕ Add Contact';
+  }
+  modal.classList.add('open');
+}
+function closeSalesAddModal(){ document.getElementById('sales-add-modal')?.classList.remove('open'); salesEditingId=null; }
+
+function salesEditContact(id){ openSalesAddModal(id); }
+
+function saveSalesContact(){
+  const email = document.getElementById('sc-email').value.trim();
+  const err   = document.getElementById('sc-err');
+
+  const all = salesLoad();
+
+  if(salesEditingId){
+    const idx = all.findIndex(c=>c.id===salesEditingId);
+    if(idx>=0){
+      all[idx].firstName = document.getElementById('sc-fname').value.trim();
+      all[idx].lastName  = document.getElementById('sc-lname').value.trim();
+      all[idx].company   = document.getElementById('sc-company').value.trim();
+      all[idx].phone     = document.getElementById('sc-phone').value.trim();
+      all[idx].email     = email;
+      all[idx].list      = document.getElementById('sc-list').value;
+      all[idx].status    = document.getElementById('sc-status').value;
+      all[idx].notes     = document.getElementById('sc-notes').value.trim();
+      all[idx].updatedAt = new Date().toISOString();
+    }
+    salesSave(all);
+    closeSalesAddModal();
+    renderSalesTable();
+    return;
+  }
+
+  const contact = {
+    id:        'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    firstName: document.getElementById('sc-fname').value.trim(),
+    lastName:  document.getElementById('sc-lname').value.trim(),
+    company:   document.getElementById('sc-company').value.trim(),
+    phone:     document.getElementById('sc-phone').value.trim(),
+    email:     email,
+    list:      document.getElementById('sc-list').value,
+    status:    document.getElementById('sc-status').value,
+    notes:     document.getElementById('sc-notes').value.trim(),
+    unsubscribed: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  if(!contact.firstName && !contact.lastName && !contact.email){
+    if(err){ err.textContent='Please enter at least a name or email.'; err.style.display='block'; }
+    return;
+  }
+
+  all.push(contact);
+  salesSave(all);
+  closeSalesAddModal();
+  // Switch to the list the contact was added to
+  setSalesList(contact.list);
+  renderSalesTable();
+}
+
+// ── Excel Import ──
+function importSalesExcel(input){
+  const file = input.files[0];
+  if(!file) return;
+  const listId = salesActiveList;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      if(!rows.length){ alert('No data found in the file.'); return; }
+
+      const all = salesLoad();
+      let added = 0;
+      rows.forEach(row=>{
+        // Normalise column names (case-insensitive)
+        const r = {};
+        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_]/g,'')] = row[k]; });
+
+        const firstName = String(r.firstname||r['first name']||r.fname||r.name||'').trim();
+        const lastName  = String(r.lastname||r['last name']||r.lname||'').trim();
+        const company   = String(r.company||r.organisation||r.organization||r.brokerage||'').trim();
+        const email     = String(r.email||r['e-mail']||r.emailaddress||'').trim().toLowerCase();
+        const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
+        const notes     = String(r.notes||r.note||r.comments||'').trim();
+        const status    = String(r.status||'new').toLowerCase();
+
+        if(!firstName && !lastName && !email) return; // skip blank rows
+
+        // Avoid exact email duplicates
+        if(email && all.some(c=>c.email && c.email.toLowerCase()===email)) return;
+
+        all.push({
+          id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          firstName, lastName, company, phone, email, notes,
+          list: listId,
+          status: ['new','contacted','warm','client'].includes(status) ? status : 'new',
+          unsubscribed: false,
+          createdAt: new Date().toISOString(),
+        });
+        added++;
+      });
+      salesSave(all);
+      renderSalesTable();
+      alert(`✅ Imported ${added} contacts into ${SALES_LISTS.find(l=>l.id===listId)?.label||listId}.\n(Duplicates by email were skipped.)`);
+    } catch(err){
+      alert('Error reading file: ' + err.message);
+    }
+    input.value = ''; // reset so same file can be re-imported
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ── Bulk Email ──
+function openSalesBulkEmail(){
+  const modal = document.getElementById('sales-bulk-modal');
+  if(!modal) return;
+  // Pre-check the active list
+  document.querySelectorAll('#bulk-list-checkboxes input[type=checkbox]').forEach(cb=>{
+    cb.checked = cb.value === salesActiveList;
+  });
+  updateBulkPreview();
+  // Update preview whenever checkboxes change
+  document.querySelectorAll('#bulk-list-checkboxes input[type=checkbox]').forEach(cb=>{
+    cb.onchange = updateBulkPreview;
+  });
+  modal.classList.add('open');
+}
+function closeSalesBulkModal(){ document.getElementById('sales-bulk-modal')?.classList.remove('open'); }
+
+function getBulkRecipients(){
+  const selected = Array.from(document.querySelectorAll('#bulk-list-checkboxes input:checked')).map(cb=>cb.value);
+  const all = salesLoad();
+  return all.filter(c=> selected.includes(c.list) && !c.unsubscribed && !c._deleted && c.email);
+}
+
+function updateBulkPreview(){
+  const recipients = getBulkRecipients();
+  const preview = document.getElementById('bulk-recipients-preview');
+  const countEl = document.getElementById('bulk-recipient-count');
+  if(preview) preview.textContent = recipients.map(c=>c.email).join(', ') || 'No subscribers found in selected lists.';
+  if(countEl) countEl.textContent = `${recipients.length} recipient${recipients.length!==1?'s':''} (unsubscribed excluded)`;
+}
+
+function bulkCopyEmails(){
+  const recipients = getBulkRecipients();
+  if(!recipients.length){ alert('No recipients to copy.'); return; }
+  const text = recipients.map(c=>c.email).join(', ');
+  navigator.clipboard.writeText(text).then(()=>{
+    const msg = document.getElementById('bulk-copy-msg');
+    if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none', 2500); }
+  }).catch(()=>{ prompt('Copy these emails:', text); });
+}
+
+function bulkOpenMail(){
+  const recipients = getBulkRecipients();
+  if(!recipients.length){ alert('No recipients to email.'); return; }
+  const subject = encodeURIComponent(document.getElementById('bulk-subject')?.value||'DroneHub Media — Services');
+  const body    = encodeURIComponent(document.getElementById('bulk-body')?.value||'');
+  // BCC all recipients so they don't see each other
+  const bcc = recipients.map(c=>encodeURIComponent(c.email)).join(',');
+  window.location.href = `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
+}
+
+// ── Individual Email ──
+function openSalesIndivEmail(id){
+  const c = salesLoad().find(x=>x.id===id);
+  if(!c) return;
+  const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.company || 'there';
+  document.getElementById('indiv-to').value = c.email||'';
+  document.getElementById('indiv-subject').value = 'DroneHub Media — Let\'s Connect';
+  document.getElementById('indiv-body').value = `Hi ${name},\n\nI wanted to reach out personally about our drone media services. We specialize in real estate listings, resort photography, and aerial videography.\n\nWould love to chat about how we can work together!\n\nBest,\nDroneHub Media`;
+  document.getElementById('sales-individual-email-modal').classList.add('open');
+}
+function closeSalesIndivModal(){ document.getElementById('sales-individual-email-modal')?.classList.remove('open'); }
+
+function openIndivMailto(){
+  const to      = encodeURIComponent(document.getElementById('indiv-to')?.value||'');
+  const subject = encodeURIComponent(document.getElementById('indiv-subject')?.value||'');
+  const body    = encodeURIComponent(document.getElementById('indiv-body')?.value||'');
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+}
+
+// ── Sales view switcher ──
+let salesView = 'contacts';
+function setSalesView(v){
+  salesView = v;
+  const cv = document.getElementById('sales-view-contacts');
+  const pv = document.getElementById('sales-view-pipeline');
+  const cb = document.getElementById('sales-view-contacts-btn');
+  const pb = document.getElementById('sales-view-pipeline-btn');
+  if(cv) cv.style.display = v==='contacts' ? '' : 'none';
+  if(pv) pv.style.display = v==='pipeline' ? '' : 'none';
+  if(cb){ cb.style.borderBottomColor = v==='contacts'?'var(--blue-bright)':'transparent'; cb.style.color = v==='contacts'?'var(--blue-bright)':'var(--muted)'; }
+  if(pb){ pb.style.borderBottomColor = v==='pipeline'?'var(--blue-bright)':'transparent'; pb.style.color = v==='pipeline'?'var(--blue-bright)':'var(--muted)'; }
+  if(v==='pipeline') renderDealsTable();
+}
+
+// ══════════════════════════════════════════════════════
+// SALES CRM — City/Region patch to renderSalesTable
+// (overrides the earlier renderSalesTable to include city column)
+// ══════════════════════════════════════════════════════
+// Re-define renderSalesTable to include the city column
+renderSalesTable = function(){
+  const all = salesLoad();
+  const q   = (document.getElementById('sales-search')?.value||'').toLowerCase().trim();
+  const list= all.filter(c=> c.list === salesActiveList && !c._deleted);
+  const filtered = q ? list.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : list;
+
+  // Stats bar
+  const statsBar = document.getElementById('sales-stats-bar');
+  if(statsBar){
+    const total = all.filter(c=>!c._deleted).length;
+    const warm  = all.filter(c=>c.list==='warm'&&!c._deleted).length;
+    const unsub = all.filter(c=>c.unsubscribed&&!c._deleted).length;
+    statsBar.innerHTML = [
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>Total Contacts</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
+    ].join('');
+  }
+  const cl = document.getElementById('sales-count-label');
+  if(cl) cl.textContent = `Showing ${filtered.length} of ${list.length} contacts in this list`;
+
+  const tbody = document.getElementById('sales-table-body');
+  if(!tbody) return;
+  if(!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">${q?'No contacts match your search.':'No contacts in this list yet.'}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(c=>{
+    const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
+    const statusClass = {new:'sales-status-new',contacted:'sales-status-contacted',warm:'sales-status-warm',unsubscribed:'sales-status-unsubscribed',client:'sales-status-client'}[c.unsubscribed?'unsubscribed':(c.status||'new')] || 'sales-status-new';
+    const statusLabel = c.unsubscribed ? 'Unsubscribed' : ({new:'New',contacted:'Contacted',warm:'Warm',client:'Client'}[c.status]||'New');
+    const emailCell = c.email ? `<a class="sales-email-link" onclick="openSalesIndivEmail('${escSalesAttr(c.id)}')" href="javascript:void(0)">${escSalesHtml(c.email)}</a>` : '—';
+    // Check if there's a deal for this contact
+    const deals = dealsLoad();
+    const contactDeals = deals.filter(d=>d.contactId===c.id&&d.stage!=='lost');
+    const dealBadge = contactDeals.length ? `<span style="background:rgba(245,166,35,.15);color:#F5C842;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:4px" title="Active deal: ${contactDeals.map(d=>d.id).join(', ')}">${contactDeals[0].id}</span>` : '';
+    return `<tr>
+      <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
+      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dealBadge}</td>
+      <td>${escSalesHtml(c.company||'—')}</td>
+      <td style="color:var(--muted);font-size:12px">${escSalesHtml(c.city||'—')}</td>
+      <td style="white-space:nowrap">${escSalesHtml(c.phone||'—')}</td>
+      <td>${emailCell}</td>
+      <td><span class="sales-status-badge ${statusClass}">${statusLabel}</span></td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(c.notes||'')}">${escSalesHtml((c.notes||'').slice(0,40))||'—'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="sales-action-btn" onclick="openDealModal(null,'${escSalesAttr(c.id)}')" title="New deal from contact" style="border-color:#F5C842;color:#F5C842">🎯</button>
+        <button class="sales-action-btn" onclick="salesEditContact('${escSalesAttr(c.id)}')" title="Edit">✏</button>
+        <button class="sales-action-btn" onclick="salesToggleUnsub('${escSalesAttr(c.id)}')" title="${c.unsubscribed?'Re-subscribe':'Unsubscribe'}">${c.unsubscribed?'↩':'🚫'}</button>
+        <button class="sales-action-btn" onclick="salesQuickMove('${escSalesAttr(c.id)}')" title="Move to list">↗</button>
+        <button class="sales-action-btn" style="color:#FF7070;border-color:#FF7070" onclick="salesDeleteContact('${escSalesAttr(c.id)}')" title="Delete">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+};
+
+// ── patch saveSalesContact to include city ──
+const _origSaveSalesContact = saveSalesContact;
+saveSalesContact = function(){
+  // Add city to existing logic by patching after the fact via overriding
+  // We rebuild the whole function properly here:
+  const email = document.getElementById('sc-email').value.trim();
+  const err   = document.getElementById('sc-err');
+  const all = salesLoad();
+
+  if(salesEditingId){
+    const idx = all.findIndex(c=>c.id===salesEditingId);
+    if(idx>=0){
+      all[idx].firstName = document.getElementById('sc-fname').value.trim();
+      all[idx].lastName  = document.getElementById('sc-lname').value.trim();
+      all[idx].company   = document.getElementById('sc-company').value.trim();
+      all[idx].phone     = document.getElementById('sc-phone').value.trim();
+      all[idx].email     = email;
+      all[idx].city      = document.getElementById('sc-city')?.value.trim()||'';
+      all[idx].list      = document.getElementById('sc-list').value;
+      all[idx].status    = document.getElementById('sc-status').value;
+      all[idx].notes     = document.getElementById('sc-notes').value.trim();
+      all[idx].updatedAt = new Date().toISOString();
+    }
+    salesSave(all);
+    closeSalesAddModal();
+    renderSalesTable();
+    return;
+  }
+
+  const contact = {
+    id:        'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    firstName: document.getElementById('sc-fname').value.trim(),
+    lastName:  document.getElementById('sc-lname').value.trim(),
+    company:   document.getElementById('sc-company').value.trim(),
+    phone:     document.getElementById('sc-phone').value.trim(),
+    email:     email,
+    city:      document.getElementById('sc-city')?.value.trim()||'',
+    list:      document.getElementById('sc-list').value,
+    status:    document.getElementById('sc-status').value,
+    notes:     document.getElementById('sc-notes').value.trim(),
+    unsubscribed: false,
+    createdAt: new Date().toISOString(),
+  };
+  if(!contact.firstName && !contact.lastName && !contact.email){
+    if(err){ err.textContent='Please enter at least a name or email.'; err.style.display='block'; }
+    return;
+  }
+  all.push(contact);
+  salesSave(all);
+  closeSalesAddModal();
+  setSalesList(contact.list);
+  renderSalesTable();
+};
+
+// patch openSalesAddModal to clear city
+const _origOpenSalesAddModal = openSalesAddModal;
+openSalesAddModal = function(editId){
+  _origOpenSalesAddModal(editId);
+  const cityEl = document.getElementById('sc-city');
+  if(!editId && cityEl) cityEl.value = '';
+  if(editId && cityEl){
+    const c = salesLoad().find(x=>x.id===editId);
+    if(c) cityEl.value = c.city||'';
+  }
+};
+
+// patch importSalesExcel to include city
+const _origImportSalesExcel = importSalesExcel;
+importSalesExcel = function(input){
+  const file = input.files[0];
+  if(!file) return;
+  const listId = salesActiveList;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if(!rows.length){ alert('No data found in the file.'); return; }
+      const all = salesLoad();
+      let added = 0;
+      rows.forEach(row=>{
+        const r = {};
+        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_]/g,'')] = row[k]; });
+        const firstName = String(r.firstname||r['firstname']||r.fname||r.name||'').trim();
+        const lastName  = String(r.lastname||r['lastname']||r.lname||'').trim();
+        const company   = String(r.company||r.organisation||r.organization||r.brokerage||'').trim();
+        const email     = String(r.email||r['e-mail']||r.emailaddress||'').trim().toLowerCase();
+        const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
+        const city      = String(r.city||r.region||r.location||r.market||'').trim();
+        const notes     = String(r.notes||r.note||r.comments||'').trim();
+        const status    = String(r.status||'new').toLowerCase();
+        if(!firstName && !lastName && !email) return;
+        if(email && all.some(c=>c.email && c.email.toLowerCase()===email)) return;
+        all.push({
+          id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          firstName, lastName, company, phone, email, city, notes,
+          list: listId,
+          status: ['new','contacted','warm','client'].includes(status) ? status : 'new',
+          unsubscribed: false,
+          createdAt: new Date().toISOString(),
+        });
+        added++;
+      });
+      salesSave(all);
+      renderSalesTable();
+      alert(`✅ Imported ${added} contacts into ${SALES_LISTS.find(l=>l.id===listId)?.label||listId}.\n(Duplicates by email were skipped.)`);
+    } catch(err){ alert('Error reading file: ' + err.message); }
+    input.value = '';
+  };
+  reader.readAsBinaryString(file);
+};
+
+// ══════════════════════════════════════════════════════
+// DEAL PIPELINE
+// ══════════════════════════════════════════════════════
+
+const DEAL_STAGES = [
+  {id:'new_lead',   label:'New Lead',       color:'#7AABFF'},
+  {id:'contacted',  label:'Contacted',      color:'#F5C842'},
+  {id:'proposal',   label:'Proposal Sent',  color:'#A78BFA'},
+  {id:'negotiating',label:'Negotiating',    color:'#FB923C'},
+  {id:'won',        label:'Won ✅',         color:'#22D97A'},
+  {id:'lost',       label:'Lost ✗',         color:'#FF7070'},
+];
+
+let dealEditingId = null;
+let _dealIdCounter = null; // cached for new deal generation
+
+function dealsLoad(){
+  try{ return JSON.parse(localStorage.getItem('dronehub_sales_deals')||'[]'); }
+  catch(e){ return []; }
+}
+function dealsSave(arr){
+  localStorage.setItem('dronehub_sales_deals', JSON.stringify(arr));
+  if(db) fbSet('orgs', ORG_ID+':sales_deals', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+}
+
+async function dealsSyncFirebase(){
+  if(!db) return;
+  try{
+    const fb = await fbGet('orgs', ORG_ID+':sales_deals');
+    if(fb?.data){
+      const remote = JSON.parse(fb.data);
+      localStorage.setItem('dronehub_sales_deals', JSON.stringify(remote));
+    }
+  }catch(e){}
+}
+
+function generateDealId(){
+  const deals = dealsLoad();
+  const year  = new Date().getFullYear();
+  const existing = deals.map(d=>d.id).filter(id=>id&&id.startsWith('DH-'+year+'-')).map(id=>parseInt(id.split('-')[2]||0)).filter(n=>!isNaN(n));
+  const next = existing.length ? Math.max(...existing) + 1 : 1;
+  return `DH-${year}-${String(next).padStart(4,'0')}`;
+}
+
+function openDealModal(editId, prefillContactId){
+  dealEditingId = editId || null;
+  const modal = document.getElementById('sales-deal-modal');
+  if(!modal) return;
+
+  // Populate contact datalist suggestions
+  const dl = document.getElementById('deal-contact-suggestions');
+  if(dl){
+    const contacts = salesLoad().filter(c=>!c._deleted);
+    dl.innerHTML = contacts.map(c=>{
+      const name = [c.firstName,c.lastName].filter(Boolean).join(' ');
+      return `<option value="${escSalesAttr(name)}" data-id="${escSalesAttr(c.id)}" data-email="${escSalesAttr(c.email||'')}" data-company="${escSalesAttr(c.company||'')}" data-city="${escSalesAttr(c.city||'')}">`;
+    }).join('');
+  }
+
+  if(editId){
+    const d = dealsLoad().find(x=>x.id===editId);
+    if(d){
+      document.getElementById('deal-id-display').textContent = d.id;
+      document.getElementById('deal-contact-name').value  = d.contactName||'';
+      document.getElementById('deal-contact-email').value = d.contactEmail||'';
+      document.getElementById('deal-company').value       = d.company||'';
+      document.getElementById('deal-city').value          = d.city||'';
+      document.getElementById('deal-stage').value         = d.stage||'new_lead';
+      document.getElementById('deal-value').value         = d.value||'';
+      document.getElementById('deal-notes').value         = d.notes||'';
+      document.getElementById('deal-modal-title').textContent = '✏ Edit Deal';
+    }
+  } else {
+    const newId = generateDealId();
+    document.getElementById('deal-id-display').textContent = newId;
+    document.getElementById('deal-modal-title').textContent = '🎯 New Deal';
+    document.getElementById('deal-stage').value = 'new_lead';
+    document.getElementById('deal-value').value = '';
+    document.getElementById('deal-notes').value = '';
+
+    if(prefillContactId){
+      const c = salesLoad().find(x=>x.id===prefillContactId);
+      if(c){
+        document.getElementById('deal-contact-name').value  = [c.firstName,c.lastName].filter(Boolean).join(' ');
+        document.getElementById('deal-contact-email').value = c.email||'';
+        document.getElementById('deal-company').value       = c.company||'';
+        document.getElementById('deal-city').value          = c.city||'';
+      }
+    } else {
+      document.getElementById('deal-contact-name').value  = '';
+      document.getElementById('deal-contact-email').value = '';
+      document.getElementById('deal-company').value       = '';
+      document.getElementById('deal-city').value          = '';
+    }
+  }
+  modal.style.display = 'flex';
+}
+
+function closeDealModal(){
+  const modal = document.getElementById('sales-deal-modal');
+  if(modal) modal.style.display = 'none';
+  dealEditingId = null;
+}
+
+function dealContactAutofill(val){
+  // Try to find matching contact and prefill fields
+  const contacts = salesLoad().filter(c=>!c._deleted);
+  const name = val.trim().toLowerCase();
+  const match = contacts.find(c=>[c.firstName,c.lastName].filter(Boolean).join(' ').toLowerCase()===name);
+  if(match){
+    document.getElementById('deal-contact-email').value = match.email||'';
+    document.getElementById('deal-company').value       = match.company||'';
+    document.getElementById('deal-city').value          = match.city||'';
+  }
+}
+
+function copyDealId(){
+  const id = document.getElementById('deal-id-display')?.textContent||'';
+  navigator.clipboard.writeText(id).catch(()=>{});
+  const btn = document.querySelector('#sales-deal-modal button[onclick="copyDealId()"]');
+  if(btn){ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy',1500); }
+}
+
+function saveDeal(){
+  const all = dealsLoad();
+  const id  = document.getElementById('deal-id-display').textContent.trim();
+  const contactName  = document.getElementById('deal-contact-name').value.trim();
+  const contactEmail = document.getElementById('deal-contact-email').value.trim().toLowerCase();
+  const company      = document.getElementById('deal-company').value.trim();
+  const city         = document.getElementById('deal-city').value.trim();
+  const stage        = document.getElementById('deal-stage').value;
+  const value        = parseFloat(document.getElementById('deal-value').value)||0;
+  const notes        = document.getElementById('deal-notes').value.trim();
+
+  // Try to link to a contact record
+  const contacts = salesLoad();
+  const linked = contacts.find(c=>{
+    const cName = [c.firstName,c.lastName].filter(Boolean).join(' ').toLowerCase();
+    return (contactEmail && c.email && c.email.toLowerCase()===contactEmail) || (contactName && cName===contactName.toLowerCase());
+  });
+
+  if(dealEditingId){
+    const idx = all.findIndex(d=>d.id===dealEditingId);
+    if(idx>=0){
+      all[idx] = {...all[idx], contactName, contactEmail, company, city, stage, value, notes,
+        contactId: linked?.id||all[idx].contactId||null,
+        updatedAt: new Date().toISOString()};
+    }
+  } else {
+    all.push({
+      id, contactName, contactEmail, company, city, stage, value, notes,
+      contactId: linked?.id||null,
+      jobId: null,
+      wonAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  dealsSave(all);
+  closeDealModal();
+  renderDealsTable();
+}
+
+function deleteDeal(id){
+  if(!confirm('Delete this deal?')) return;
+  dealsSave(dealsLoad().filter(d=>d.id!==id));
+  renderDealsTable();
+}
+
+function moveDealStage(id, stage){
+  const all = dealsLoad();
+  const d = all.find(x=>x.id===id);
+  if(!d) return;
+  d.stage = stage;
+  if(stage==='won') d.wonAt = new Date().toISOString().slice(0,10);
+  dealsSave(all);
+  renderDealsTable();
+}
+
+function renderDealsTable(){
+  dealsSyncFirebase().catch(()=>{});
+  const all    = dealsLoad();
+  const q      = (document.getElementById('deals-search')?.value||'').toLowerCase().trim();
+  const sFilter= document.getElementById('deals-stage-filter')?.value||'';
+
+  let list = all.filter(d=>!d._deleted);
+  if(sFilter) list = list.filter(d=>d.stage===sFilter);
+  if(q) list = list.filter(d=>[d.id,d.contactName,d.contactEmail,d.company,d.city,d.notes].join(' ').toLowerCase().includes(q));
+
+  // Pipeline stats
+  const statsBar = document.getElementById('pipeline-stats-bar');
+  if(statsBar){
+    const open   = all.filter(d=>!['won','lost'].includes(d.stage)&&!d._deleted);
+    const won    = all.filter(d=>d.stage==='won'&&!d._deleted);
+    const wonVal = won.reduce((s,d)=>s+(d.value||0),0);
+    const pipe   = open.reduce((s,d)=>s+(d.value||0),0);
+    statsBar.innerHTML = [
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${all.filter(d=>!d._deleted).length}</span>Total Deals</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#7AABFF;display:block">${open.length}</span>Open</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#22D97A;display:block">$${wonVal.toLocaleString()}</span>Won Revenue</div>`,
+      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">$${pipe.toLocaleString()}</span>Pipeline Value</div>`,
+    ].join('');
+  }
+
+  // Kanban summary
+  const kanban = document.getElementById('pipeline-kanban');
+  if(kanban){
+    kanban.innerHTML = DEAL_STAGES.map(s=>{
+      const stageDeals = all.filter(d=>d.stage===s.id&&!d._deleted);
+      const stageVal = stageDeals.reduce((sum,d)=>sum+(d.value||0),0);
+      return `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:120px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${s.color};margin-bottom:4px">${s.label}</div>
+        <div style="font-size:22px;font-weight:800;color:var(--white)">${stageDeals.length}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${stageVal?'$'+stageVal.toLocaleString():''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  const tbody = document.getElementById('deals-table-body');
+  if(!tbody) return;
+  if(!list.length){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">${q||sFilter?'No deals match your filter.':'No deals yet — click "+ New Deal" to start tracking'}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(d=>{
+    const stage = DEAL_STAGES.find(s=>s.id===d.stage)||DEAL_STAGES[0];
+    const jobLink = d.jobId ? `<span style="font-size:10px;color:#22D97A;margin-left:4px" title="Linked to job #${d.jobId}">⚡Job</span>` : '';
+    return `<tr>
+      <td style="font-family:monospace;font-weight:700;color:var(--blue-bright);white-space:nowrap;font-size:12px">${escSalesHtml(d.id)}${jobLink}</td>
+      <td style="font-weight:600;color:var(--white)">${escSalesHtml(d.contactName||'—')}</td>
+      <td>${escSalesHtml(d.company||'—')}</td>
+      <td style="font-size:12px;color:var(--muted)">${escSalesHtml(d.city||'—')}</td>
+      <td><span class="sales-status-badge" style="background:${stage.color}22;color:${stage.color}">${stage.label}</span></td>
+      <td style="font-weight:600;color:var(--white)">${d.value?'$'+Number(d.value).toLocaleString():'—'}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(d.notes||'')}">${escSalesHtml((d.notes||'').slice(0,50))||'—'}</td>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${(d.createdAt||'').slice(0,10)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <select onchange="moveDealStage('${escSalesAttr(d.id)}',this.value);this.value=''" style="padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;margin-right:4px">
+          <option value="">Move…</option>
+          ${DEAL_STAGES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}
+        </select>
+        <button class="sales-action-btn" onclick="openDealModal('${escSalesAttr(d.id)}')" title="Edit">✏</button>
+        <button class="sales-action-btn" style="color:#FF7070;border-color:#FF7070" onclick="deleteDeal('${escSalesAttr(d.id)}')" title="Delete">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Quote tab: Deal ID lookup ──
+function onDealIdInput(val){
+  const preview = document.getElementById('job-deal-preview');
+  if(!preview) return;
+  const id = val.trim().toUpperCase();
+  if(!id){ preview.textContent=''; return; }
+  const deal = dealsLoad().find(d=>d.id===id);
+  if(deal){
+    const stage = DEAL_STAGES.find(s=>s.id===deal.stage);
+    preview.innerHTML = `<span style="color:#22D97A">✓ Found:</span> <strong style="color:var(--white)">${escSalesHtml(deal.contactName||'?')}</strong> · ${escSalesHtml(deal.company||'')} · <span style="color:${stage?.color||'#7AABFF'}">${stage?.label||deal.stage}</span>`;
+  } else {
+    preview.innerHTML = `<span style="color:#FF7070">Deal not found</span>`;
+  }
+}
+
+// ── Called by saveJob() to mark a deal as Won ──
+function linkDealToJob(dealId, jobId, jobAmount){
+  const all = dealsLoad();
+  const idx = all.findIndex(d=>d.id===dealId);
+  if(idx<0) return;
+  all[idx].stage  = 'won';
+  all[idx].jobId  = jobId;
+  all[idx].wonAt  = new Date().toISOString().slice(0,10);
+  if(jobAmount && !all[idx].value) all[idx].value = jobAmount;
+  dealsSave(all);
+
+  // Move the linked contact to Existing Clients
+  const contactId = all[idx].contactId;
+  if(contactId){
+    const contacts = salesLoad();
+    const cIdx = contacts.findIndex(c=>c.id===contactId);
+    if(cIdx>=0 && contacts[cIdx].list!=='clients'){
+      contacts[cIdx].list   = 'clients';
+      contacts[cIdx].status = 'client';
+      salesSave(contacts);
+    }
+  }
+}
+
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA28gkUrGxyC-WfZN29pSpQV9IsDXzti90&libraries=geocoding&callback=initGoogleMaps" async defer></script>
 <script>
@@ -12504,6 +13780,11 @@ function initGoogleMaps(){
     <button class="mob-more-item" id="mobmore-settings" onclick="showPane('settings',event);closeMobileMore()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span>Settings</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Sales</span>
     </button>
 
   </div>
