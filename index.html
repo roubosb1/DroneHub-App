@@ -10897,7 +10897,10 @@ function _renderTeamUI(){
     const statusLabel=m.status==='active'
       ?`${isRecent?dot('var(--green)')+'Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
       :m.status==='invited'?dot('var(--amber)')+'Invited — awaiting signup':dot('var(--muted)')+'Inactive';
-    const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('');
+    const salesBadge = canAccessSales(m.email)
+      ? `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(91,141,239,.15);color:var(--blue-bright);border:1px solid rgba(91,141,239,.4);display:inline-flex;align-items:center;gap:3px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales CRM</span>`
+      : '';
+    const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('')+salesBadge;
     return `<div class="card" style="padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
         <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
