@@ -422,6 +422,11 @@ button{font-family:var(--font);}
 .sales-list-tab.active{background:rgba(91,141,239,.18);border-color:var(--blue);color:var(--blue-bright);}
 .sales-table{width:100%;border-collapse:collapse;font-size:13px;}
 .sales-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+.sales-table th.sortable{cursor:pointer;user-select:none;}
+.sales-table th.sortable:hover{color:var(--offwhite);}
+.sales-table th.sort-asc,.sales-table th.sort-desc{color:var(--blue-bright);}
+.sort-arrow{display:inline-block;margin-left:4px;opacity:.4;font-size:10px;}
+.sort-asc .sort-arrow,.sort-desc .sort-arrow{opacity:1;}
 .sales-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--offwhite);vertical-align:middle;}
 .sales-table tr:hover td{background:rgba(255,255,255,.03);}
 .sales-status-badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
@@ -2323,12 +2328,12 @@ button{font-family:var(--font);}
           <thead>
             <tr>
               <th style="width:36px"><input type="checkbox" id="sales-select-all" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
-              <th>Name</th>
-              <th>Company</th>
-              <th>City / Region</th>
+              <th class="sortable" id="sth-name"    onclick="setSalesSort('name')"    >Name<span class="sort-arrow">↕</span></th>
+              <th class="sortable" id="sth-company" onclick="setSalesSort('company')" >Company<span class="sort-arrow">↕</span></th>
+              <th class="sortable" id="sth-city"    onclick="setSalesSort('city')"    >City / Region<span class="sort-arrow">↕</span></th>
               <th>Phone</th>
-              <th>Email</th>
-              <th>Status</th>
+              <th class="sortable" id="sth-email"   onclick="setSalesSort('email')"   >Email<span class="sort-arrow">↕</span></th>
+              <th class="sortable" id="sth-status"  onclick="setSalesSort('status')"  >Status<span class="sort-arrow">↕</span></th>
               <th>Notes</th>
               <th style="text-align:right">Actions</th>
             </tr>
@@ -13009,7 +13014,35 @@ const SALES_LISTS = [
 ];
 
 let salesActiveList = 'realestate';
-let salesEditingId   = null; // for future inline edit support
+let salesEditingId  = null;
+let salesSortCol    = 'name';   // default sort column
+let salesSortDir    = 'asc';    // 'asc' | 'desc'
+
+function setSalesSort(col){
+  if(salesSortCol === col){
+    salesSortDir = salesSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    salesSortCol = col;
+    salesSortDir = 'asc';
+  }
+  renderSalesTable();
+}
+
+function applySalesSortHeaders(){
+  const cols = ['name','company','city','email','status'];
+  cols.forEach(col=>{
+    const th = document.getElementById('sth-'+col);
+    if(!th) return;
+    const arrow = th.querySelector('.sort-arrow');
+    th.classList.remove('sort-asc','sort-desc');
+    if(salesSortCol === col){
+      th.classList.add(salesSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+      if(arrow) arrow.textContent = salesSortDir === 'asc' ? '↑' : '↓';
+    } else {
+      if(arrow) arrow.textContent = '↕';
+    }
+  });
+}
 
 function salesLoad(){
   try{ return JSON.parse(localStorage.getItem('dronehub_sales')||'[]'); }
@@ -13529,7 +13562,29 @@ renderSalesTable = function(){
   const all = salesLoad();
   const q   = (document.getElementById('sales-search')?.value||'').toLowerCase().trim();
   const list= all.filter(c=> c.list === salesActiveList && !c._deleted);
-  const filtered = q ? list.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : list;
+  let filtered = q ? list.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : list;
+
+  // ── Apply sort ──
+  const STATUS_ORDER = {new:0, contacted:1, warm:2, client:3, unsubscribed:4};
+  filtered = [...filtered].sort((a,b)=>{
+    let va='', vb='';
+    if(salesSortCol==='name'){
+      va=[a.firstName,a.lastName].filter(Boolean).join(' ').toLowerCase();
+      vb=[b.firstName,b.lastName].filter(Boolean).join(' ').toLowerCase();
+    } else if(salesSortCol==='status'){
+      const sa = a.unsubscribed?'unsubscribed':(a.status||'new');
+      const sb = b.unsubscribed?'unsubscribed':(b.status||'new');
+      va = STATUS_ORDER[sa]??9;
+      vb = STATUS_ORDER[sb]??9;
+    } else {
+      va = (a[salesSortCol]||'').toLowerCase();
+      vb = (b[salesSortCol]||'').toLowerCase();
+    }
+    if(va < vb) return salesSortDir==='asc'?-1:1;
+    if(va > vb) return salesSortDir==='asc'?1:-1;
+    return 0;
+  });
+  applySalesSortHeaders();
 
   // Stats bar
   const statsBar = document.getElementById('sales-stats-bar');
