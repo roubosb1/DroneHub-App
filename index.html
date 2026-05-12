@@ -2280,10 +2280,7 @@ button{font-family:var(--font);}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="sales-search" type="text" placeholder="Search contacts…" oninput="renderSalesTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
         <button onclick="openSalesAddModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Contact</button>
-        <label style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg> Import Excel
-          <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importSalesExcel(this)">
-        </label>
+        <button onclick="openImportModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg> Import Excel</button>
         <button onclick="openSalesBulkEmail()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Bulk Email</button>
       </div>
     </div>
@@ -2481,6 +2478,83 @@ button{font-family:var(--font);}
     <div class="sales-modal-footer">
       <button onclick="closeSalesAddModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
       <button onclick="saveSalesContact()" style="padding:8px 24px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save Contact ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SALES: Import Excel Modal ── -->
+<div id="sales-import-modal" onclick="if(event.target===this)closeSalesImportModal()" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="sales-modal-box" onclick="event.stopPropagation()" style="max-width:480px">
+    <div class="sales-modal-header">
+      <div style="font-size:14px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:7px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        Import Excel / CSV
+      </div>
+      <button onclick="closeSalesImportModal()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div class="sales-modal-body">
+
+      <!-- List selector -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Import contacts into which list?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="import-list-picker">
+          <label id="import-pick-realestate" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--blue);background:rgba(91,141,239,.12);cursor:pointer;font-size:13px;font-weight:600;color:var(--blue-bright)">
+            <input type="radio" name="import-list" value="realestate" checked style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Real Estate
+          </label>
+          <label id="import-pick-resorts" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="resorts" style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+            Resorts
+          </label>
+          <label id="import-pick-golf" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="golf" style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M12 7l6 4-6 4V7z"/><path d="M5 21c0-3 7-3 7-6"/></svg>
+            Golf Courses
+          </label>
+          <label id="import-pick-other" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="other" style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            Other
+          </label>
+          <label id="import-pick-warm" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="warm" style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            Warm Leads
+          </label>
+          <label id="import-pick-clients" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="clients" style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Existing Clients
+          </label>
+        </div>
+      </div>
+
+      <!-- File drop zone -->
+      <div id="import-dropzone" ondragover="event.preventDefault();this.style.borderColor='var(--blue-bright)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="onImportDrop(event)" style="border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s" onclick="document.getElementById('import-file-input').click()">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:13px;font-weight:600;color:var(--offwhite);margin-bottom:4px">Click to choose file or drag &amp; drop</div>
+        <div style="font-size:11px;color:var(--muted)">.xlsx, .xls, or .csv — duplicates by email are skipped</div>
+        <input id="import-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="runSalesImport(this)">
+      </div>
+      <div id="import-filename" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
+
+      <!-- Column mapping hint -->
+      <div style="margin-top:14px;background:var(--navy-mid);border-radius:10px;padding:10px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Recognised column names</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.8">
+          <strong style="color:var(--offwhite)">Name:</strong> First Name, Last Name, Name &nbsp;·&nbsp;
+          <strong style="color:var(--offwhite)">Company:</strong> Company, Brokerage, Organisation &nbsp;·&nbsp;
+          <strong style="color:var(--offwhite)">Email:</strong> Email, E-mail &nbsp;·&nbsp;
+          <strong style="color:var(--offwhite)">Phone:</strong> Phone, Mobile, Cell &nbsp;·&nbsp;
+          <strong style="color:var(--offwhite)">City:</strong> City, Region, Location, Market
+        </div>
+      </div>
+
+    </div>
+    <div class="sales-modal-footer">
+      <button onclick="closeSalesImportModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
     </div>
   </div>
 </div>
@@ -13305,6 +13379,113 @@ function openIndivMailto(){
   const subject = encodeURIComponent(document.getElementById('indiv-subject')?.value||'');
   const body    = encodeURIComponent(document.getElementById('indiv-body')?.value||'');
   window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+}
+
+// ── Import Excel Modal ──
+function openImportModal(){
+  const modal = document.getElementById('sales-import-modal');
+  if(!modal) return;
+  // Pre-select the currently active list
+  const radios = modal.querySelectorAll('input[name="import-list"]');
+  radios.forEach(r => r.checked = r.value === salesActiveList);
+  updateImportPickerStyles();
+  // Wire up radio change to update styles
+  radios.forEach(r => r.onchange = updateImportPickerStyles);
+  // Clear previous file selection
+  const fi = document.getElementById('import-file-input');
+  if(fi) fi.value = '';
+  document.getElementById('import-filename').textContent = '';
+  modal.style.display = 'flex';
+}
+
+function closeSalesImportModal(){
+  document.getElementById('sales-import-modal').style.display = 'none';
+}
+
+function updateImportPickerStyles(){
+  const LIST_IDS = ['realestate','resorts','golf','other','warm','clients'];
+  LIST_IDS.forEach(id => {
+    const lbl = document.getElementById('import-pick-'+id);
+    const radio = lbl?.querySelector('input[type=radio]');
+    if(!lbl || !radio) return;
+    if(radio.checked){
+      lbl.style.borderColor = 'var(--blue-bright)';
+      lbl.style.background  = 'rgba(91,141,239,.12)';
+      lbl.style.color       = 'var(--blue-bright)';
+    } else {
+      lbl.style.borderColor = 'var(--border)';
+      lbl.style.background  = 'var(--navy-lift)';
+      lbl.style.color       = 'var(--muted)';
+    }
+  });
+}
+
+function getImportSelectedList(){
+  const checked = document.querySelector('input[name="import-list"]:checked');
+  return checked ? checked.value : salesActiveList;
+}
+
+function onImportDrop(e){
+  e.preventDefault();
+  document.getElementById('import-dropzone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer?.files?.[0];
+  if(!file) return;
+  const fn = document.getElementById('import-filename');
+  if(fn) fn.textContent = '📄 ' + file.name;
+  processSalesImportFile(file, getImportSelectedList());
+}
+
+function runSalesImport(input){
+  const file = input.files[0];
+  if(!file) return;
+  const fn = document.getElementById('import-filename');
+  if(fn) fn.textContent = '📄 ' + file.name;
+  processSalesImportFile(file, getImportSelectedList());
+}
+
+function processSalesImportFile(file, listId){
+  const LIST_LABELS = {realestate:'Real Estate',resorts:'Resorts',golf:'Golf Courses',other:'Other',warm:'Warm Leads',clients:'Existing Clients'};
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if(!rows.length){ alert('No data found in the file.'); return; }
+      const all = salesLoad();
+      let added = 0, skipped = 0;
+      rows.forEach(row=>{
+        const r = {};
+        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_\-]/g,'')] = row[k]; });
+        const firstName = String(r.firstname||r.fname||r.name||'').trim();
+        const lastName  = String(r.lastname||r.lname||'').trim();
+        const company   = String(r.company||r.organisation||r.organization||r.brokerage||'').trim();
+        const email     = String(r.email||r['e-mail']||r.emailaddress||'').trim().toLowerCase();
+        const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
+        const city      = String(r.city||r.region||r.location||r.market||'').trim();
+        const notes     = String(r.notes||r.note||r.comments||'').trim();
+        const status    = String(r.status||'new').toLowerCase();
+        if(!firstName && !lastName && !email){ skipped++; return; }
+        if(email && all.some(c=>c.email && c.email.toLowerCase()===email)){ skipped++; return; }
+        all.push({
+          id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          firstName, lastName, company, phone, email, city, notes,
+          list: listId,
+          status: ['new','contacted','warm','client'].includes(status) ? status : 'new',
+          unsubscribed: false,
+          createdAt: new Date().toISOString(),
+        });
+        added++;
+      });
+      salesSave(all);
+      closeSalesImportModal();
+      setSalesList(listId);
+      renderSalesTable();
+      const label = LIST_LABELS[listId] || listId;
+      alert(`✅ Imported ${added} contact${added!==1?'s':''} into ${label}.\n${skipped?`(${skipped} row${skipped!==1?'s':''} skipped — blank or duplicate email)`:'All rows were new.'}`);
+    } catch(err){ alert('Error reading file: ' + err.message); }
+  };
+  reader.readAsBinaryString(file);
 }
 
 // ── Sales view switcher ──
