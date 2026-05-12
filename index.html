@@ -3179,7 +3179,7 @@ function showPane(id,ev){
     if(activeSub && activeSub!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
   }
   if(id==='sales'){
-    const sess=JSON.parse(localStorage.getItem('dronehub_gate_session')||'null');
+    const sess=gateGetSession();
     if(!canAccessSales(sess?.email)){ showPane('quote'); return; }
     renderSales();
   }
