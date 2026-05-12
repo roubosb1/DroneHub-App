@@ -9719,20 +9719,34 @@ function gateSignup(){
   }
 }
 
-function gateEnterApp(session){
+async function gateEnterApp(session){
   // Always inject jobTitle from preset map if not already set
   if(!session.jobTitle) session.jobTitle=PRESET_JOB_TITLES[session.email?.toLowerCase()]?.title||'';
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
 
-  // Track last seen time on team member record
+  // ── Sync team roster from Firebase so every device has current data ──────
+  // This fixes: (1) team members getting "Link to team" on their own device,
+  // (2) lastSeen/status never updating because localStorage was always empty.
   try{
-    const allMembers=getAdminTeamMembers();
+    if(db){
+      const fbTeam=await fbGet('orgs',ORG_ID+':team');
+      if(fbTeam?.data){
+        const fbMembers=JSON.parse(fbTeam.data);
+        // Merge into local cache (Firebase is source of truth for team roster)
+        try{localStorage.setItem('dronehub_admin_team',JSON.stringify(fbMembers));}catch(e){}
+      }
+    }
+  }catch(e){console.warn('Team sync failed:',e);}
+
+  // ── Update lastSeen + status for this user in roster ─────────────────────
+  try{
+    const allMembers=getAdminTeamMembers(); // now has Firebase data from above
     const mIdx=allMembers.findIndex(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(mIdx>=0){
       allMembers[mIdx].lastSeen=new Date().toISOString().slice(0,19).replace('T',' ');
       allMembers[mIdx].status='active';
-      saveAdminTeamMembers(allMembers);
+      saveAdminTeamMembers(allMembers); // writes back to localStorage + Firebase
     }
   }catch(e){}
 
@@ -9760,11 +9774,10 @@ function gateEnterApp(session){
   }
 
   if(session.type==='team'){
-    // Check if they're linked to the team roster
+    // Check if they're linked to the team roster (now uses Firebase-synced data)
     const adminMembers=getAdminTeamMembers();
     const isLinked=adminMembers.find(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(!isLinked){
-      // Show team link screen
       gateShowLinkTeam(session);
       return;
     }
@@ -10285,6 +10298,22 @@ function getRelativeTime(ts){
 }
 
 function renderTeam(){
+  // Pull fresh data from Firebase so lastSeen/status from team member devices
+  // is always reflected in the admin view.
+  if(db){
+    fbGet('orgs',ORG_ID+':team').then(fbTeam=>{
+      if(fbTeam?.data){
+        try{
+          const fbMembers=JSON.parse(fbTeam.data);
+          localStorage.setItem('dronehub_admin_team',JSON.stringify(fbMembers));
+          _renderTeamUI(); // re-render with fresh data
+        }catch(e){}
+      }
+    }).catch(()=>{});
+  }
+  _renderTeamUI(); // render immediately with cached data, Firebase update follows
+}
+function _renderTeamUI(){
   const members=getAdminTeamMembers();
   const grid=document.getElementById('team-members-grid');
   const empty=document.getElementById('team-empty-state');
