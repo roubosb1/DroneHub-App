@@ -3104,7 +3104,11 @@ function showPane(id,ev){
     const activeSub = document.getElementById('finance-sub-payroll')?.style.display;
     if(activeSub && activeSub!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
   }
-  if(id==='sales'){renderSales();}
+  if(id==='sales'){
+    const sess=JSON.parse(localStorage.getItem('dronehub_gate_session')||'null');
+    if(!canAccessSales(sess?.email)){ showPane('quote'); return; }
+    renderSales();
+  }
   if(id==='louchat'){
     lcCleanCorruptMessages();
     lcRequestNotifications();
@@ -10333,10 +10337,34 @@ function gateLinkToTeam(email, encodedName, role, type){
   }
 }
 
+// Emails allowed to see the Sales CRM tab (lowercase)
+const SALES_ALLOWED_EMAILS = [
+  'mackenzie@dronehubmedia.com',
+  'roubosb1@gmail.com',
+  'alex@dronehubmedia.com',
+];
+
+function canAccessSales(email){
+  return SALES_ALLOWED_EMAILS.includes((email||'').toLowerCase().trim());
+}
+
+function applySalesAccess(session){
+  const allowed = canAccessSales(session?.email);
+  // Desktop tab
+  document.querySelectorAll('.tabs .tab').forEach(btn=>{
+    const paneId=btn.getAttribute('onclick')?.match(/showPane\('(\w+)'/)?.[1]||'';
+    if(paneId==='sales') btn.style.display = allowed ? '' : 'none';
+  });
+  // Mobile more drawer
+  const mobSales = document.getElementById('mobmore-sales');
+  if(mobSales) mobSales.style.display = allowed ? '' : 'none';
+}
+
 function gateShowAdminView(session){
   document.querySelector('.app-header')?.style.setProperty('display','flex');
   document.querySelector('.wrap')?.style.setProperty('display','block');
   document.querySelectorAll('.tabs .tab').forEach(t=>t.style.display='');
+  applySalesAccess(session);
   const userDisplay=document.getElementById('app-user-display');
   const displayName=session.email==='roubosb1@gmail.com'?'Bailey Roubos':(session.name||session.email);
   const title=session.jobTitle||PRESET_JOB_TITLES[session.email]?.title||'Admin';
@@ -10344,7 +10372,8 @@ function gateShowAdminView(session){
   if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span></div></div>`;
   // Restore last visited tab instead of always defaulting to Quote Builder
   const savedPane=localStorage.getItem('dronehub_active_pane');
-  showPane(savedPane||'quote');
+  const startPane=(savedPane==='sales'&&!canAccessSales(session.email))?'quote':(savedPane||'quote');
+  showPane(startPane);
   // Auto-mark invoice paid if returning from Stripe success
   checkStripePaymentReturn();
 }
@@ -10372,6 +10401,7 @@ function gateShowTeamView(session){
       btn.style.display='none';
     }
   });
+  applySalesAccess(session);
 
   // Hide financial panes even if navigated to directly
   ['pane-finance','pane-model','pane-quote','pane-payroll'].forEach(id=>{
