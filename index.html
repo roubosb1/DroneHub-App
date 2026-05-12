@@ -10898,7 +10898,7 @@ function _renderTeamUI(){
       ?`${isRecent?dot('var(--green)')+'Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
       :m.status==='invited'?dot('var(--amber)')+'Invited — awaiting signup':dot('var(--muted)')+'Inactive';
     const salesBadge = canAccessSales(m.email)
-      ? `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(91,141,239,.15);color:var(--blue-bright);border:1px solid rgba(91,141,239,.4);display:inline-flex;align-items:center;gap:3px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales CRM</span>`
+      ? `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(34,217,122,.12);color:var(--green)">✓ Sales CRM</span>`
       : '';
     const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('')+salesBadge;
     return `<div class="card" style="padding:16px">
@@ -12737,7 +12737,7 @@ function renderTeamMemberSettings(){
   el.innerHTML=members.map(m=>{
     const hasSales = canAccessSales(m.email);
     const salesBadge = hasSales
-      ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:8px;background:rgba(91,141,239,.15);border:1px solid var(--blue);color:var(--blue-bright);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-left:5px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales CRM</span>`
+      ? `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(34,217,122,.12);color:var(--green);margin-left:5px">✓ Sales CRM</span>`
       : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
       <div>
