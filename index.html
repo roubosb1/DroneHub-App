@@ -10463,7 +10463,10 @@ function gateShowTeamView(session){
     contractor:  ['tracker','louchat','calendar','payroll'],
   };
   const role=session.role||'contractor';
-  const allowed=TEAM_ACCESS_MAP[role]||TEAM_ACCESS_MAP.contractor;
+  const allowed=[...(TEAM_ACCESS_MAP[role]||TEAM_ACCESS_MAP.contractor)];
+
+  // Grant Sales access to email-allowlisted team members
+  if(canAccessSales(session.email) && !allowed.includes('sales')) allowed.push('sales');
 
   document.querySelector('.app-header')?.style.setProperty('display','flex');
   document.querySelector('.wrap')?.style.setProperty('display','block');
