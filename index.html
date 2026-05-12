@@ -3179,8 +3179,8 @@ function showPane(id,ev){
     if(activeSub && activeSub!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
   }
   if(id==='sales'){
-    const sess=gateGetSession();
-    if(!canAccessSales(sess?.email)){ showPane('quote'); return; }
+    const emailToCheck = _activeSessionEmail || gateGetSession()?.email || '';
+    if(!canAccessSales(emailToCheck)){ showPane('quote'); return; }
     renderSales();
   }
   if(id==='louchat'){
@@ -10251,9 +10251,12 @@ function gateSignup(){
   }
 }
 
+let _activeSessionEmail = ''; // module-level so showPane can read it without re-parsing storage
+
 async function gateEnterApp(session){
   // Always inject jobTitle from preset map if not already set
   if(!session.jobTitle) session.jobTitle=PRESET_JOB_TITLES[session.email?.toLowerCase()]?.title||'';
+  _activeSessionEmail = (session.email||'').toLowerCase().trim();
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
 
@@ -12728,11 +12731,19 @@ function renderTeamMemberSettings(){
   document.getElementById('org-name-display').textContent=org.name;
 
   if(!members.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No team members yet. Share your invite code for them to sign up.</div>';return;}
-  el.innerHTML=members.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
-    <div><div style="font-size:12px;font-weight:600;color:var(--white)">${m.name}</div>
-    <div style="font-size:10px;color:var(--muted)">${m.email} · ${m.role} · Joined ${m.createdAt||'—'}</div></div>
-    <button onclick="removeTeamMember('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
-  </div>`).join('');
+  el.innerHTML=members.map(m=>{
+    const hasSales = canAccessSales(m.email);
+    const salesBadge = hasSales
+      ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:8px;background:rgba(91,141,239,.15);border:1px solid var(--blue);color:var(--blue-bright);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-left:5px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales CRM</span>`
+      : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--white);display:flex;align-items:center;flex-wrap:wrap;gap:2px">${m.name}${salesBadge}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${m.email} · ${m.role} · Joined ${m.createdAt||'—'}</div>
+      </div>
+      <button onclick="removeTeamMember('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
