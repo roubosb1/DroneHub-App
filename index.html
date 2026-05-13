@@ -13871,13 +13871,13 @@ importSalesExcel = function(input){
       let added = 0;
       rows.forEach(row=>{
         const r = {};
-        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_]/g,'')] = row[k]; });
+        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_\-\/]/g,'')] = row[k]; });
         const firstName = String(r.firstname||r['firstname']||r.fname||r.name||'').trim();
         const lastName  = String(r.lastname||r['lastname']||r.lname||'').trim();
         const company   = String(r.company||r.organisation||r.organization||r.brokerage||'').trim();
         const email     = String(r.email||r['e-mail']||r.emailaddress||'').trim().toLowerCase();
         const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
-        const city      = String(r.city||r.region||r.location||r.market||'').trim();
+        const city      = String(r.city||r.cityregion||r.region||r.location||r.market||r.area||r.territory||'').trim();
         const notes     = String(r.notes||r.note||r.comments||'').trim();
         const status    = String(r.status||'new').toLowerCase();
         if(!firstName && !lastName && !email) return;
