@@ -718,6 +718,7 @@ button{font-family:var(--font);}
   <button class="tab" onclick="showPane('team',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team</button>
   <button class="tab" onclick="showPane('settings',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
   <button class="tab" onclick="showPane('sales',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales</button>
+  <button class="tab" onclick="showPane('social',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Social</button>
 </div>
 
 <!-- QUOTE BUILDER -->
@@ -2702,6 +2703,156 @@ button{font-family:var(--font);}
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- SOCIAL MEDIA PANE -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div id="pane-social" class="pane">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      <span style="font-size:20px;font-weight:700;color:var(--white)">Social Media</span>
+    </div>
+    <button onclick="openSocialWorkspaceModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Workspace
+    </button>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px">
+    <button id="social-stab-workspaces" onclick="setSocialSubTab('workspaces')" style="padding:10px 20px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Workspaces
+    </button>
+    <button id="social-stab-calendar" onclick="setSocialSubTab('calendar')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar
+    </button>
+    <button id="social-stab-approvals" onclick="setSocialSubTab('approvals')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Approvals <span id="social-approval-badge" style="display:none;padding:1px 6px;border-radius:8px;background:rgba(245,200,66,.18);color:#F5C842;font-size:10px;font-weight:700;margin-left:4px"></span>
+    </button>
+  </div>
+
+  <!-- Workspaces sub-view -->
+  <div id="social-sub-workspaces">
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div id="social-ws-sidebar" style="width:220px;flex-shrink:0;max-height:75vh;overflow-y:auto"></div>
+      <div id="social-ws-content" style="flex:1;min-width:0"></div>
+    </div>
+  </div>
+
+  <!-- Calendar sub-view -->
+  <div id="social-sub-calendar" style="display:none"></div>
+
+  <!-- Approvals sub-view -->
+  <div id="social-sub-approvals" style="display:none"></div>
+
+</div>
+
+<!-- SOCIAL: Workspace Modal -->
+<div id="social-ws-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;align-items:center;justify-content:center" onclick="if(event.target===this)closeSocialWorkspaceModal()">
+  <div style="background:#1C2333;border-radius:16px;padding:28px;width:460px;max-width:95vw;border:1px solid #3A4890;box-shadow:0 8px 48px rgba(0,0,0,.6)" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 id="social-ws-modal-title" style="margin:0;font-size:16px;font-weight:700;color:var(--white)">New Workspace</h3>
+      <button onclick="closeSocialWorkspaceModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Client / Workspace Name</label>
+      <input id="social-ws-name" type="text" placeholder="e.g. Acme Real Estate" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:10px">Social Channels</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy);cursor:pointer"><input type="checkbox" id="social-ch-instagram" style="accent-color:var(--blue-bright)"><span style="font-size:12px;color:var(--white)">Instagram</span></label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy);cursor:pointer"><input type="checkbox" id="social-ch-facebook" style="accent-color:var(--blue-bright)"><span style="font-size:12px;color:var(--white)">Facebook</span></label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy);cursor:pointer"><input type="checkbox" id="social-ch-tiktok" style="accent-color:var(--blue-bright)"><span style="font-size:12px;color:var(--white)">TikTok</span></label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy);cursor:pointer"><input type="checkbox" id="social-ch-linkedin" style="accent-color:var(--blue-bright)"><span style="font-size:12px;color:var(--white)">LinkedIn</span></label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy);cursor:pointer"><input type="checkbox" id="social-ch-twitter" style="accent-color:var(--blue-bright)"><span style="font-size:12px;color:var(--white)">X / Twitter</span></label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy);cursor:pointer"><input type="checkbox" id="social-ch-youtube" style="accent-color:var(--blue-bright)"><span style="font-size:12px;color:var(--white)">YouTube</span></label>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeSocialWorkspaceModal()" style="padding:9px 22px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="saveSocialWorkspace()" style="padding:9px 26px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Save Workspace</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOCIAL: Post Modal -->
+<div id="social-post-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;align-items:center;justify-content:center;overflow-y:auto" onclick="if(event.target===this)closeSocialPostModal()">
+  <div style="background:#1C2333;border-radius:16px;padding:28px;width:560px;max-width:95vw;border:1px solid #3A4890;box-shadow:0 8px 48px rgba(0,0,0,.6);margin:20px auto" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 id="social-post-modal-title" style="margin:0;font-size:16px;font-weight:700;color:var(--white)">New Post</h3>
+      <button onclick="closeSocialPostModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div style="grid-column:1/-1">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Title / Caption Headline</label>
+        <input id="social-post-title" type="text" placeholder="Post title or headline…" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Format</label>
+        <select id="social-post-format" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+          <option value="post">Post</option>
+          <option value="video">Video</option>
+          <option value="reel">Reel / Story</option>
+          <option value="pdf">PDF</option>
+          <option value="presentation">Presentation</option>
+          <option value="ad_mockup">Ad Mock-up</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Status</label>
+        <select id="social-post-status" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+          <option value="draft">Draft</option>
+          <option value="pending_approval">Pending Approval</option>
+          <option value="revision_requested">Revision Requested</option>
+          <option value="approved">Approved</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="published">Published</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Scheduled Date</label>
+        <input id="social-post-sched" type="date" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Caption / Content</label>
+      <textarea id="social-post-content" rows="5" oninput="updateSocialPlatformSpecs()" placeholder="Write the post content or caption here…" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <div id="social-platform-specs"></div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">Platforms</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy);cursor:pointer;font-size:12px;color:var(--white)"><input type="checkbox" id="social-plt-instagram" onchange="updateSocialPlatformSpecs()" style="accent-color:#E1306C"> Instagram</label>
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy);cursor:pointer;font-size:12px;color:var(--white)"><input type="checkbox" id="social-plt-facebook" onchange="updateSocialPlatformSpecs()" style="accent-color:#1877F2"> Facebook</label>
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy);cursor:pointer;font-size:12px;color:var(--white)"><input type="checkbox" id="social-plt-tiktok" onchange="updateSocialPlatformSpecs()" style="accent-color:#69C9D0"> TikTok</label>
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy);cursor:pointer;font-size:12px;color:var(--white)"><input type="checkbox" id="social-plt-linkedin" onchange="updateSocialPlatformSpecs()" style="accent-color:#0A66C2"> LinkedIn</label>
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy);cursor:pointer;font-size:12px;color:var(--white)"><input type="checkbox" id="social-plt-twitter" onchange="updateSocialPlatformSpecs()" style="accent-color:#1DA1F2"> X / Twitter</label>
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy);cursor:pointer;font-size:12px;color:var(--white)"><input type="checkbox" id="social-plt-youtube" onchange="updateSocialPlatformSpecs()" style="accent-color:#FF0000"> YouTube</label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Asset / File Reference <span style="color:var(--muted);font-weight:400">(link, Drive URL, or filename)</span></label>
+      <input id="social-post-asset" type="text" placeholder="e.g. Google Drive link or filename.mp4" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+    </div>
+
+    <div style="margin-bottom:22px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Revision Note <span style="color:var(--muted);font-weight:400">(internal feedback)</span></label>
+      <input id="social-post-revision" type="text" placeholder="Optional revision or feedback note…" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeSocialPostModal()" style="padding:9px 22px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="saveSocialPost()" style="padding:9px 28px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Save Post</button>
+    </div>
+  </div>
+</div>
+
 <!-- INVOICE MODAL -->
 <div id="invoice-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto" onclick="if(event.target===this)closeInvoice()">
   <div style="background:#1C2333;max-width:700px;margin:30px auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,.6);border:1px solid #3A4890" onclick="event.stopPropagation()">
@@ -3117,7 +3268,7 @@ const aqty={reel:1};
 // Maps pane IDs → bottom-nav button IDs (primary 4 tabs)
 const MOB_NAV_MAP={quote:'mobnav-quote',jobs:'mobnav-jobs',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
 // Maps pane IDs → more-drawer button IDs (secondary tabs)
-const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',team:'mobmore-team',settings:'mobmore-settings',sales:'mobmore-sales'};
+const MOB_MORE_MAP={clients:'mobmore-clients',finance:'mobmore-finance',calendar:'mobmore-calendar',team:'mobmore-team',settings:'mobmore-settings',sales:'mobmore-sales',social:'mobmore-social'};
 
 function syncMobileNav(paneId){
   // Clear all primary nav active states
@@ -3188,6 +3339,7 @@ function showPane(id,ev){
     if(!canAccessSales(emailToCheck)){ showPane('quote'); return; }
     renderSales();
   }
+  if(id==='social'){ renderSocial(); }
   if(id==='louchat'){
     lcCleanCorruptMessages();
     lcRequestNotifications();
@@ -14037,6 +14189,476 @@ function linkDealToJob(dealId, jobId, jobAmount){
   }
 }
 
+// ── SOCIAL MEDIA MANAGEMENT ───────────────────────────────────────────────────
+
+const SOCIAL_PLATFORMS = [
+  {id:'instagram', label:'Instagram'},
+  {id:'facebook',  label:'Facebook'},
+  {id:'tiktok',    label:'TikTok'},
+  {id:'linkedin',  label:'LinkedIn'},
+  {id:'twitter',   label:'X / Twitter'},
+  {id:'youtube',   label:'YouTube'},
+];
+
+const SOCIAL_FORMATS = [
+  {id:'post',         label:'Post'},
+  {id:'video',        label:'Video'},
+  {id:'reel',         label:'Reel / Story'},
+  {id:'pdf',          label:'PDF'},
+  {id:'presentation', label:'Presentation'},
+  {id:'ad_mockup',    label:'Ad Mock-up'},
+];
+
+const SOCIAL_STATUSES = [
+  {id:'draft',              label:'Draft',              color:'#A8B4D0'},
+  {id:'pending_approval',   label:'Pending Approval',   color:'#F5C842'},
+  {id:'revision_requested', label:'Revision Needed',    color:'#FB923C'},
+  {id:'approved',           label:'Approved',           color:'#22D97A'},
+  {id:'scheduled',          label:'Scheduled',          color:'#7AABFF'},
+  {id:'published',          label:'Published',          color:'#A78BFA'},
+];
+
+const PLATFORM_SPECS = {
+  instagram: {maxChars:2200,   label:'Instagram: max 2,200 chars'},
+  facebook:  {maxChars:63206,  label:'Facebook: max 63,206 chars'},
+  twitter:   {maxChars:280,    label:'X/Twitter: max 280 chars'},
+  linkedin:  {maxChars:3000,   label:'LinkedIn: max 3,000 chars'},
+  tiktok:    {maxChars:2200,   label:'TikTok: max 2,200 chars'},
+  youtube:   {maxChars:5000,   label:'YouTube desc: max 5,000 chars'},
+};
+
+const FORMAT_COLORS = {
+  post:'#7AABFF', video:'#A78BFA', reel:'#E1306C',
+  pdf:'#22D97A', presentation:'#F5C842', ad_mockup:'#FB923C',
+};
+
+let _socialActiveWorkspace = null;
+let _socialSubTab = 'workspaces';
+let _socialPostFilter = 'all';
+let _socialEditingWsId = null;
+let _socialEditingPostId = null;
+let _socialCalYear = new Date().getFullYear();
+let _socialCalMonth = new Date().getMonth();
+
+// Storage
+function socialWorkspacesLoad(){
+  try{ return JSON.parse(localStorage.getItem('dronehub_social_workspaces')||'[]'); }catch(e){ return []; }
+}
+function socialWorkspacesSave(arr){
+  localStorage.setItem('dronehub_social_workspaces', JSON.stringify(arr));
+  if(db) fbSet('orgs', ORG_ID+':social_workspaces', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+}
+function socialPostsLoad(){
+  try{ return JSON.parse(localStorage.getItem('dronehub_social_posts')||'[]'); }catch(e){ return []; }
+}
+function socialPostsSave(arr){
+  localStorage.setItem('dronehub_social_posts', JSON.stringify(arr));
+  if(db) fbSet('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+}
+async function socialSyncFirebase(){
+  if(!db) return;
+  try{
+    const [fbWs, fbPosts] = await Promise.all([
+      fbGet('orgs', ORG_ID+':social_workspaces'),
+      fbGet('orgs', ORG_ID+':social_posts'),
+    ]);
+    if(fbWs?.data){ const r=JSON.parse(fbWs.data); if(r.length>=socialWorkspacesLoad().length) localStorage.setItem('dronehub_social_workspaces',JSON.stringify(r)); }
+    if(fbPosts?.data){ const r=JSON.parse(fbPosts.data); if(r.length>=socialPostsLoad().length) localStorage.setItem('dronehub_social_posts',JSON.stringify(r)); }
+  }catch(e){}
+}
+
+// Entry point
+function renderSocial(){
+  socialSyncFirebase().then(()=>{ setSocialSubTab(_socialSubTab); refreshSocialApprovalBadge(); });
+  setSocialSubTab(_socialSubTab);
+  refreshSocialApprovalBadge();
+}
+
+function refreshSocialApprovalBadge(){
+  const count = socialPostsLoad().filter(p=>p.status==='pending_approval'||p.status==='revision_requested').length;
+  const badge = document.getElementById('social-approval-badge');
+  if(!badge) return;
+  if(count>0){ badge.textContent=count; badge.style.display='inline'; }
+  else { badge.style.display='none'; }
+}
+
+function setSocialSubTab(sub){
+  _socialSubTab = sub;
+  ['workspaces','calendar','approvals'].forEach(s=>{
+    const el  = document.getElementById('social-sub-'+s);
+    const btn = document.getElementById('social-stab-'+s);
+    if(el)  el.style.display  = s===sub ? '' : 'none';
+    if(btn){
+      btn.style.borderBottom = s===sub ? '2px solid var(--blue-bright)' : '2px solid transparent';
+      btn.style.color        = s===sub ? 'var(--blue-bright)' : 'var(--muted)';
+    }
+  });
+  if(sub==='workspaces') renderSocialWorkspaces();
+  else if(sub==='calendar') renderSocialCalendar();
+  else if(sub==='approvals') renderSocialApprovals();
+}
+
+// ── Workspaces ────────────────────────────────────────────────────────────────
+function renderSocialWorkspaces(){
+  const workspaces = socialWorkspacesLoad();
+  const posts      = socialPostsLoad();
+  const sidebar    = document.getElementById('social-ws-sidebar');
+  if(!sidebar) return;
+
+  if(workspaces.length===0){
+    sidebar.innerHTML=`<div style="padding:16px 10px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6">No workspaces yet.<br><button onclick="openSocialWorkspaceModal()" style="margin-top:10px;padding:7px 18px;border-radius:16px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;cursor:pointer">+ Create First</button></div>`;
+    const content=document.getElementById('social-ws-content');
+    if(content) content.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:260px;color:var(--muted);font-size:14px;gap:10px"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg><span>Create a workspace to start managing social content</span></div>`;
+    return;
+  }
+
+  if(!_socialActiveWorkspace || !workspaces.find(w=>w.id===_socialActiveWorkspace)){
+    _socialActiveWorkspace = workspaces[0]?.id || null;
+  }
+
+  sidebar.innerHTML = workspaces.map(ws=>{
+    const wsPosts  = posts.filter(p=>p.workspaceId===ws.id);
+    const pending  = wsPosts.filter(p=>p.status==='pending_approval'||p.status==='revision_requested').length;
+    const isActive = _socialActiveWorkspace===ws.id;
+    const chLabels = (ws.channels||[]).map(c=>SOCIAL_PLATFORMS.find(p=>p.id===c)?.label||c).join(', ');
+    return `<div onclick="selectSocialWorkspace('${ws.id}')" style="padding:11px 14px;border-radius:10px;cursor:pointer;border:1px solid ${isActive?'var(--blue)':'transparent'};background:${isActive?'rgba(91,141,239,.1)':'var(--navy-lift)'};margin-bottom:8px;transition:all .18s">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <span style="font-weight:600;font-size:13px;color:${isActive?'var(--blue-bright)':'var(--white)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ws.name}</span>
+        ${pending>0?`<span style="margin-left:6px;padding:1px 7px;border-radius:10px;background:rgba(245,200,66,.15);color:#F5C842;font-size:10px;font-weight:700;white-space:nowrap">${pending}</span>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--muted)">${wsPosts.length} post${wsPosts.length!==1?'s':''} · ${chLabels||'No channels'}</div>
+    </div>`;
+  }).join('');
+
+  renderSocialPostsArea();
+}
+
+function selectSocialWorkspace(id){
+  _socialActiveWorkspace = id;
+  _socialPostFilter = 'all';
+  renderSocialWorkspaces();
+}
+
+function renderSocialPostsArea(){
+  const content = document.getElementById('social-ws-content');
+  if(!content||!_socialActiveWorkspace) return;
+  const ws = socialWorkspacesLoad().find(w=>w.id===_socialActiveWorkspace);
+  if(!ws){ content.innerHTML=''; return; }
+
+  const allPosts = socialPostsLoad().filter(p=>p.workspaceId===_socialActiveWorkspace);
+
+  const filters = [
+    {id:'all',label:'All'},
+    {id:'draft',label:'Draft'},
+    {id:'pending_approval',label:'Pending'},
+    {id:'revision_requested',label:'Revision'},
+    {id:'approved',label:'Approved'},
+    {id:'scheduled',label:'Scheduled'},
+    {id:'published',label:'Published'},
+  ];
+
+  const filtered = _socialPostFilter==='all' ? allPosts : allPosts.filter(p=>p.status===_socialPostFilter);
+
+  const filterHtml = filters.map(f=>{
+    const count = f.id==='all' ? allPosts.length : allPosts.filter(p=>p.status===f.id).length;
+    const on = _socialPostFilter===f.id;
+    return `<button onclick="setSocialPostFilter('${f.id}')" style="padding:5px 12px;border-radius:20px;border:1px solid ${on?'var(--blue)':'var(--border)'};background:${on?'rgba(91,141,239,.12)':'transparent'};color:${on?'var(--blue-bright)':'var(--muted)'};font-size:12px;cursor:pointer;white-space:nowrap">${f.label}${count>0?' '+count:''}</button>`;
+  }).join('');
+
+  const chBadges = (ws.channels||[]).map(c=>{
+    const pl=SOCIAL_PLATFORMS.find(p=>p.id===c);
+    return `<span style="padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(122,171,255,.1);color:var(--blue-bright)">${pl?pl.label:c}</span>`;
+  }).join('');
+
+  const postsGrid = filtered.length===0
+    ? `<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No ${_socialPostFilter==='all'?'':_socialPostFilter.replace(/_/g,' ')+' '}posts yet</div>`
+    : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(256px,1fr));gap:16px;margin-top:16px">${filtered.map(p=>renderSocialPostCard(p)).join('')}</div>`;
+
+  content.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--white)">${ws.name}</div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${chBadges||'<span style="font-size:12px;color:var(--muted)">No channels configured</span>'}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="openSocialPostModal()" style="padding:8px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Post</button>
+        <button onclick="openSocialWorkspaceModal('${ws.id}')" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Edit</button>
+        <button onclick="deleteSocialWorkspace('${ws.id}')" style="padding:7px 14px;border-radius:20px;border:1px solid rgba(255,112,112,.3);background:rgba(255,112,112,.07);color:#FF7070;font-size:12px;cursor:pointer">Delete</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border)">${filterHtml}</div>
+    ${postsGrid}`;
+}
+
+function renderSocialPostCard(p){
+  const status  = SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+  const format  = SOCIAL_FORMATS.find(f=>f.id===p.format)||{label:p.format||'Post'};
+  const fColor  = FORMAT_COLORS[p.format]||'#7AABFF';
+  const plats   = (p.platforms||[]).map(pid=>{
+    const pl=SOCIAL_PLATFORMS.find(x=>x.id===pid);
+    return pl?`<span style="font-size:10px;padding:1px 7px;border-radius:9px;background:rgba(122,171,255,.08);color:var(--blue-bright)">${pl.label}</span>`:'';
+  }).join('');
+  const schedLine  = p.scheduledAt ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">📅 ${p.scheduledAt}</div>` : '';
+  const assetLine  = p.assetName   ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.assetName}">📎 ${p.assetName}</div>` : '';
+  const revLine    = (p.status==='revision_requested'&&p.revisionNote) ? `<div style="font-size:11px;color:#FB923C;margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(251,146,60,.08);border-left:2px solid #FB923C">${p.revisionNote}</div>` : '';
+  return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+    <div style="height:5px;background:${fColor}"></div>
+    <div style="padding:14px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px">
+        <div style="font-weight:600;font-size:13px;color:var(--white);flex:1;margin-right:8px;line-height:1.35">${p.title||'Untitled'}</div>
+        <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${status.color}22;color:${status.color};white-space:nowrap;flex-shrink:0">${status.label}</span>
+      </div>
+      ${p.content?`<div style="font-size:12px;color:var(--muted);margin-bottom:7px;line-height:1.5;max-height:46px;overflow:hidden">${p.content.substring(0,110)}${p.content.length>110?'…':''}</div>`:''}
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px">${plats}</div>
+      <div style="font-size:11px;color:${fColor};font-weight:600">${format.label}</div>
+      ${schedLine}${assetLine}${revLine}
+      <div style="display:flex;gap:5px;margin-top:12px;flex-wrap:wrap">${getSocialPostActions(p)}</div>
+    </div>
+  </div>`;
+}
+
+function getSocialPostActions(p){
+  const btns=[];
+  btns.push(`<button onclick="openSocialPostModal('${p.id}')" style="padding:5px 11px;border-radius:14px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:11px;cursor:pointer">Edit</button>`);
+  if(p.status==='draft')
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','pending_approval')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Submit</button>`);
+  if(p.status==='pending_approval'){
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','approved')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:11px;cursor:pointer">Approve</button>`);
+    btns.push(`<button onclick="promptSocialRevision('${p.id}')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:11px;cursor:pointer">Revise</button>`);
+  }
+  if(p.status==='revision_requested')
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','pending_approval')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Re-submit</button>`);
+  if(p.status==='approved'){
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','scheduled')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:#7AABFF;font-size:11px;cursor:pointer">Schedule</button>`);
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','published')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:11px;cursor:pointer">Publish</button>`);
+  }
+  if(p.status==='scheduled')
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','published')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#A78BFA;font-size:11px;cursor:pointer">Mark Published</button>`);
+  btns.push(`<button onclick="deleteSocialPost('${p.id}')" style="padding:5px 9px;border-radius:14px;border:1px solid rgba(255,112,112,.2);background:transparent;color:#FF7070;font-size:11px;cursor:pointer">✕</button>`);
+  return btns.join('');
+}
+
+function setSocialPostStatus(postId, newStatus){
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  posts[idx].status=newStatus;
+  if(newStatus==='published') posts[idx].publishedAt=new Date().toISOString().slice(0,10);
+  if(newStatus==='approved')  posts[idx].approvedAt=new Date().toISOString().slice(0,10);
+  if(newStatus==='pending_approval') delete posts[idx].revisionNote;
+  socialPostsSave(posts);
+  refreshSocialApprovalBadge();
+  renderSocialPostsArea();
+  if(document.getElementById('social-sub-approvals')?.style.display!=='none') renderSocialApprovals();
+}
+
+function promptSocialRevision(postId){
+  const note=prompt('Revision note for the team (optional):');
+  if(note===null) return;
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  posts[idx].status='revision_requested';
+  posts[idx].revisionNote=note||'';
+  socialPostsSave(posts);
+  refreshSocialApprovalBadge();
+  renderSocialPostsArea();
+  if(document.getElementById('social-sub-approvals')?.style.display!=='none') renderSocialApprovals();
+}
+
+function setSocialPostFilter(filter){
+  _socialPostFilter=filter;
+  renderSocialPostsArea();
+}
+
+function deleteSocialPost(id){
+  if(!confirm('Delete this post?')) return;
+  socialPostsSave(socialPostsLoad().filter(p=>p.id!==id));
+  refreshSocialApprovalBadge();
+  renderSocialPostsArea();
+}
+
+function deleteSocialWorkspace(id){
+  if(!confirm('Delete this workspace and all its posts? This cannot be undone.')) return;
+  socialWorkspacesSave(socialWorkspacesLoad().filter(w=>w.id!==id));
+  socialPostsSave(socialPostsLoad().filter(p=>p.workspaceId!==id));
+  if(_socialActiveWorkspace===id) _socialActiveWorkspace=null;
+  refreshSocialApprovalBadge();
+  renderSocialWorkspaces();
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function renderSocialCalendar(){
+  const cal=document.getElementById('social-sub-calendar');
+  if(!cal) return;
+  const posts=socialPostsLoad().filter(p=>p.scheduledAt);
+  const workspaces=socialWorkspacesLoad();
+  const now=new Date();
+  const yr=_socialCalYear||now.getFullYear();
+  const mo=_socialCalMonth!==undefined?_socialCalMonth:now.getMonth();
+  const firstDow=new Date(yr,mo,1).getDay();
+  const days=new Date(yr,mo+1,0).getDate();
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const todayStr=new Date().toISOString().slice(0,10);
+  let cells='';
+  for(let i=0;i<firstDow;i++) cells+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dp=posts.filter(p=>p.scheduledAt===ds);
+    const isToday=ds===todayStr;
+    cells+=`<div style="min-height:68px;padding:5px;border-radius:8px;border:1px solid ${isToday?'var(--blue)':'var(--border)'};background:var(--navy-lift)">
+      <div style="font-size:12px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--blue-bright)':'var(--muted)'};margin-bottom:3px">${d}</div>
+      ${dp.map(p=>{
+        const ws=workspaces.find(w=>w.id===p.workspaceId);
+        const st=SOCIAL_STATUSES.find(s=>s.id===p.status);
+        return `<div onclick="selectSocialWorkspace('${p.workspaceId}');setSocialSubTab('workspaces')" title="${p.title} — ${ws?.name||''}" style="font-size:10px;padding:2px 5px;border-radius:4px;background:${st?.color||'#7AABFF'}22;color:${st?.color||'#7AABFF'};margin-bottom:2px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${p.title}</div>`;
+      }).join('')}
+    </div>`;
+  }
+  cal.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <button onclick="_socialCalMonth--;if(_socialCalMonth<0){_socialCalMonth=11;_socialCalYear--;}renderSocialCalendar()" style="padding:6px 16px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">‹ Prev</button>
+      <div style="font-size:16px;font-weight:700;color:var(--white)">${monthNames[mo]} ${yr}</div>
+      <button onclick="_socialCalMonth++;if(_socialCalMonth>11){_socialCalMonth=0;_socialCalYear++;}renderSocialCalendar()" style="padding:6px 16px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Next ›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px">
+      ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;padding:4px">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">${cells}</div>`;
+}
+
+// ── Approvals ─────────────────────────────────────────────────────────────────
+function renderSocialApprovals(){
+  const appr=document.getElementById('social-sub-approvals');
+  if(!appr) return;
+  const posts=socialPostsLoad().filter(p=>p.status==='pending_approval'||p.status==='revision_requested');
+  const workspaces=socialWorkspacesLoad();
+  if(posts.length===0){
+    appr.innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted);font-size:14px"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25" style="display:block;margin:0 auto 12px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>No posts pending approval — all clear!</div>`;
+    return;
+  }
+  appr.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:16px">${posts.length} post${posts.length>1?'s':''} need${posts.length===1?'s':''} attention</div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+  ${posts.map(p=>{
+    const ws=workspaces.find(w=>w.id===p.workspaceId);
+    const status=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+    const format=SOCIAL_FORMATS.find(f=>f.id===p.format);
+    const plats=(p.platforms||[]).map(pid=>SOCIAL_PLATFORMS.find(x=>x.id===pid)?.label||pid).join(', ');
+    return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid ${status.color}33;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px">${p.title}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${ws?.name||'—'} · ${format?.label||'Post'}${plats?' · '+plats:''}</div>
+        ${p.content?`<div style="font-size:12px;color:var(--muted);line-height:1.55;border-left:2px solid var(--border);padding-left:10px;margin-bottom:8px">${p.content.substring(0,220)}${p.content.length>220?'…':''}</div>`:''}
+        ${p.status==='revision_requested'&&p.revisionNote?`<div style="font-size:12px;color:#FB923C;background:rgba(251,146,60,.08);padding:8px 10px;border-radius:6px;border-left:3px solid #FB923C">Revision note: ${p.revisionNote}</div>`:''}
+        ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted);margin-top:6px">📅 Scheduled: ${p.scheduledAt}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;min-width:148px">
+        <span style="padding:4px 12px;border-radius:10px;font-size:11px;font-weight:700;background:${status.color}22;color:${status.color};text-align:center">${status.label}</span>
+        ${p.status==='pending_approval'?`<button onclick="setSocialPostStatus('${p.id}','approved');renderSocialApprovals()" style="padding:8px 14px;border-radius:14px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:600;cursor:pointer">✓ Approve</button>`:''}
+        ${p.status==='pending_approval'?`<button onclick="promptSocialRevision('${p.id}')" style="padding:8px 14px;border-radius:14px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Revision</button>`:''}
+        ${p.status==='revision_requested'?`<button onclick="setSocialPostStatus('${p.id}','pending_approval');renderSocialApprovals()" style="padding:8px 14px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:12px;cursor:pointer">Re-submit</button>`:''}
+        <button onclick="openSocialPostModal('${p.id}')" style="padding:8px 14px;border-radius:14px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:12px;cursor:pointer">Edit</button>
+      </div>
+    </div>`;
+  }).join('')}
+  </div>`;
+}
+
+// ── Workspace Modal ────────────────────────────────────────────────────────────
+function openSocialWorkspaceModal(id){
+  _socialEditingWsId=id||null;
+  const ws=id?socialWorkspacesLoad().find(w=>w.id===id):null;
+  document.getElementById('social-ws-modal-title').textContent=ws?'Edit Workspace':'New Workspace';
+  document.getElementById('social-ws-name').value=ws?.name||'';
+  const selected=ws?.channels||[];
+  SOCIAL_PLATFORMS.forEach(p=>{ const cb=document.getElementById('social-ch-'+p.id); if(cb) cb.checked=selected.includes(p.id); });
+  document.getElementById('social-ws-modal').style.display='flex';
+}
+function closeSocialWorkspaceModal(){
+  document.getElementById('social-ws-modal').style.display='none';
+}
+function saveSocialWorkspace(){
+  const name=document.getElementById('social-ws-name').value.trim();
+  if(!name){ alert('Workspace name is required'); return; }
+  const channels=SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-ch-'+p.id)?.checked).map(p=>p.id);
+  const workspaces=socialWorkspacesLoad();
+  if(_socialEditingWsId){
+    const idx=workspaces.findIndex(w=>w.id===_socialEditingWsId);
+    if(idx>=0){ workspaces[idx].name=name; workspaces[idx].channels=channels; }
+  } else {
+    const nw={id:'ws_'+Date.now(),name,channels,createdAt:new Date().toISOString().slice(0,10)};
+    workspaces.push(nw);
+    _socialActiveWorkspace=nw.id;
+  }
+  socialWorkspacesSave(workspaces);
+  closeSocialWorkspaceModal();
+  renderSocialWorkspaces();
+}
+
+// ── Post Modal ─────────────────────────────────────────────────────────────────
+function openSocialPostModal(id){
+  _socialEditingPostId=id||null;
+  const post=id?socialPostsLoad().find(p=>p.id===id):null;
+  document.getElementById('social-post-modal-title').textContent=post?'Edit Post':'New Post';
+  document.getElementById('social-post-title').value=post?.title||'';
+  document.getElementById('social-post-content').value=post?.content||'';
+  document.getElementById('social-post-format').value=post?.format||'post';
+  document.getElementById('social-post-status').value=post?.status||'draft';
+  document.getElementById('social-post-sched').value=post?.scheduledAt||'';
+  document.getElementById('social-post-revision').value=post?.revisionNote||'';
+  document.getElementById('social-post-asset').value=post?.assetName||'';
+  SOCIAL_PLATFORMS.forEach(p=>{ const cb=document.getElementById('social-plt-'+p.id); if(cb) cb.checked=(post?.platforms||[]).includes(p.id); });
+  updateSocialPlatformSpecs();
+  document.getElementById('social-post-modal').style.display='flex';
+}
+function closeSocialPostModal(){
+  document.getElementById('social-post-modal').style.display='none';
+}
+function saveSocialPost(){
+  const title=document.getElementById('social-post-title').value.trim();
+  if(!title){ alert('Post title is required'); return; }
+  if(!_socialActiveWorkspace){ alert('Please select a workspace first'); return; }
+  const platforms=SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-plt-'+p.id)?.checked).map(p=>p.id);
+  const postData={
+    title,
+    content:     document.getElementById('social-post-content').value,
+    format:      document.getElementById('social-post-format').value,
+    platforms,
+    status:      document.getElementById('social-post-status').value,
+    scheduledAt: document.getElementById('social-post-sched').value||null,
+    revisionNote:document.getElementById('social-post-revision').value||null,
+    assetName:   document.getElementById('social-post-asset').value||null,
+    workspaceId: _socialActiveWorkspace,
+  };
+  const posts=socialPostsLoad();
+  if(_socialEditingPostId){
+    const idx=posts.findIndex(p=>p.id===_socialEditingPostId);
+    if(idx>=0){ Object.assign(posts[idx],postData); posts[idx].updatedAt=new Date().toISOString().slice(0,10); }
+  } else {
+    posts.push({id:'post_'+Date.now(),...postData,createdAt:new Date().toISOString().slice(0,10)});
+  }
+  socialPostsSave(posts);
+  closeSocialPostModal();
+  _socialPostFilter='all';
+  refreshSocialApprovalBadge();
+  renderSocialWorkspaces();
+}
+
+// Platform spec pre-check
+function updateSocialPlatformSpecs(){
+  const len=(document.getElementById('social-post-content')?.value||'').length;
+  const sel=SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-plt-'+p.id)?.checked).map(p=>p.id);
+  const specEl=document.getElementById('social-platform-specs');
+  if(!specEl) return;
+  if(sel.length===0){ specEl.innerHTML=''; return; }
+  const checks=sel.map(pid=>{
+    const spec=PLATFORM_SPECS[pid]; if(!spec) return '';
+    const ok=len<=spec.maxChars;
+    return `<span style="font-size:11px;padding:2px 8px;border-radius:8px;background:${ok?'rgba(34,217,122,.08)':'rgba(255,112,112,.1)'};color:${ok?'#22D97A':'#FF7070'}">${spec.label} (${len}/${spec.maxChars}) ${ok?'✓':'⚠'}</span>`;
+  }).join('');
+  specEl.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${checks}</div>`;
+}
+
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA28gkUrGxyC-WfZN29pSpQV9IsDXzti90&libraries=geocoding&callback=initGoogleMaps" async defer></script>
 <script>
@@ -14121,6 +14743,11 @@ function initGoogleMaps(){
     <button class="mob-more-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobileMore()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       <span>Sales</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-social" onclick="showPane('social',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      <span>Social</span>
     </button>
 
   </div>
