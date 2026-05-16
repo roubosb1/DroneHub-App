@@ -6408,6 +6408,7 @@ function saveJob(){
         name:chName,
         type:'project',
         topic:cname+' — assigned shoots and updates',
+        ownerName:cname,
         createdAt:new Date().toISOString().slice(0,10),
         pinned:'',
         members:[],
@@ -6416,12 +6417,12 @@ function saveJob(){
       saveLcChannels(channels);
     }
 
-    // Build their specific role lines
-    const theirRoles=contractor.entries?.map(e=>`${e.role}: ${e.shootFee>0?'$'+e.shootFee.toFixed(2):''}${e.editFee>0?'$'+e.editFee.toFixed(2):''}${e.driveFee>0?' + $'+e.driveFee.toFixed(2)+' drive':''}`).join('\n') || '';
+    // Build role labels only — no dollar amounts in chat (payout details are in the Payroll section)
+    const theirRoles=contractor.entries?.map(e=>e.role).filter(Boolean).join(', ') || 'Assigned';
     const msg2={
       id:Date.now()+Math.random(),
       author:'DroneHub System',
-      text:`📅 **New shoot assigned to you**\n\n**${job.name}**\n📍 ${job.address}\n🗓 ${job.date}${job.shootTime?' at '+job.shootTime:''}\n${theirRoles?'\n'+theirRoles:''}${job.notes?'\n\n📝 Notes: '+job.notes:''}`,
+      text:`📅 **New shoot assigned to you**\n\n**${job.name}**\n📍 ${job.address}\n🗓 ${job.date}${job.shootTime?' at '+job.shootTime:''}\nRole: ${theirRoles}${job.notes?'\n\n📝 Notes: '+job.notes:''}`,
       ts:new Date().toISOString(),
       reactions:{},
       attachments:[],
@@ -6746,6 +6747,7 @@ function jobDetailReassign(jobId){
         personalCh={id:'lc_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
           name:name.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-'),
           type:'project',topic:name+' — assigned shoots and updates',
+          ownerName:name,
           createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]};
         channels.push(personalCh);
         saveLcChannels(channels);
@@ -9100,9 +9102,23 @@ function renderLouChat(){
   const channels=getLcChannels();
   const unread=getLcUnread();
 
-  // Group channels by type
+  // Determine current user for channel visibility filtering
+  const _lcSession=gateGetSession();
+  const _lcIsAdmin=!_lcSession||_lcSession.type==='admin'||_lcSession.role==='admin';
+  const _lcMyName=(_lcSession?.name||'').toLowerCase().trim();
+
+  // Group channels by type — personal contractor channels are filtered per-user
   const groups={};
   channels.forEach(ch=>{
+    // Admin-only channel: hide from non-admins
+    if(ch.type==='admin' && !_lcIsAdmin) return;
+    // Personal contractor channels (tagged with ownerName or topic pattern) are private:
+    // only the channel owner and admins can see them
+    const isPersonalCh = ch.ownerName || (ch.topic||'').includes('— assigned shoots and updates');
+    if(isPersonalCh && !_lcIsAdmin){
+      const ownerName=(ch.ownerName||ch.topic.split(' — ')[0]||'').toLowerCase().trim();
+      if(ownerName && ownerName!==_lcMyName) return; // hide other people's private channels
+    }
     if(!groups[ch.type]) groups[ch.type]=[];
     groups[ch.type].push(ch);
   });
