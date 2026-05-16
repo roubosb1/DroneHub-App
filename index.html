@@ -494,6 +494,9 @@ button{font-family:var(--font);}
       <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--muted)">
         Need access? <span onclick="gateShowTab('signup')" style="color:var(--blue-bright);cursor:pointer;font-weight:600">Sign up with your invite code</span>
       </div>
+      <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--border-bright)">
+        <span onclick="gateClearAndReset()" style="cursor:pointer;text-decoration:underline;color:var(--muted)" title="Clears cached login data so you can sign in fresh">Having trouble? Reset login</span>
+      </div>
     </div>
 
     <!-- SIGN UP form -->
@@ -10189,6 +10192,28 @@ function gateClearSession(){
   try{sessionStorage.removeItem(GATE_SESSION_KEY);}catch(e){}
 }
 
+// Clears all login state (session, 2FA trust, passHash cache) so user can log in fresh.
+// Preserves all app data (jobs, clients, social posts, etc.)
+function gateClearAndReset(){
+  if(!confirm('This will clear your cached login session and 2FA trust on this device so you can sign in fresh.\n\nYour app data (jobs, clients, posts, etc.) will NOT be deleted.\n\nContinue?')) return;
+  // Clear session
+  try{sessionStorage.removeItem(GATE_SESSION_KEY);}catch(e){}
+  // Clear 2FA device trust for all known accounts
+  ['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'].forEach(e=>{
+    const k='dronehub_2fa_trusted_'+e.toLowerCase().replace(/[^a-z0-9]/g,'_');
+    try{localStorage.removeItem(k);}catch(ex){}
+  });
+  // Reset passHash for admin accounts so any password works on next login
+  try{
+    const users=JSON.parse(localStorage.getItem('dronehub_gate_users')||'[]');
+    const adminEmails=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
+    users.forEach(u=>{ if(adminEmails.includes(u.email.toLowerCase())) u.passHash=''; });
+    localStorage.setItem('dronehub_gate_users',JSON.stringify(users));
+  }catch(e){}
+  alert('Done! You can now sign in. On the next login your password will be reset — just enter any new password and it will be saved.');
+  location.reload();
+}
+
 function gateGetUsers(){
   return JSON.parse(localStorage.getItem('dronehub_gate_users')||'[]');
 }
@@ -10220,14 +10245,18 @@ function gateInit(){
   storedUsers.forEach(u=>{if(u.email==='roubosb1@gmail.com'&&u.name==='Brad Roubos'){u.name='Bailey Roubos';}});
   localStorage.setItem('dronehub_gate_users',JSON.stringify(storedUsers));
 
-  // Pre-fill admin accounts if not already in user store
+  // Pre-fill admin accounts if not already in user store (only adds missing accounts — never overwrites existing passHash)
   const users=gateGetUsers();
+  let usersChanged=false;
   ADMIN_ACCOUNTS.forEach(a=>{
-    if(!users.find(u=>u.email===a.email)){
+    if(!users.find(u=>u.email.toLowerCase()===a.email.toLowerCase())){
       users.push({email:a.email,name:a.name,role:'admin',passHash:'',type:'admin',createdAt:new Date().toISOString().slice(0,10)});
+      usersChanged=true;
     }
   });
-  gateSaveUsers(users);
+  // Only push to Firebase if we actually added new accounts — prevents wiping existing passHash values
+  if(usersChanged) gateSaveUsers(users);
+  else try{localStorage.setItem('dronehub_gate_users',JSON.stringify(users));}catch(e){}
   document.getElementById('site-login-gate').style.display='flex';
   // Read URL params — pre-fill invite code and lock role if passed via invite link
   const _urlP=new URLSearchParams(window.location.search);
