@@ -710,6 +710,19 @@ button{font-family:var(--font);}
     <!-- Dashboard content -->
     <div style="max-width:800px;margin:0 auto;padding:24px 20px 60px" id="cp-content"></div>
 
+    <!-- Social post detail overlay -->
+    <div id="cp-post-overlay" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(13,17,23,.97);overflow-y:auto;padding:24px 16px 60px">
+      <div style="max-width:680px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <button onclick="cpClosePost()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back to calendar
+          </button>
+          <div id="cp-post-overlay-status" style="font-size:11px;padding:3px 12px;border-radius:20px;font-weight:700"></div>
+        </div>
+        <div id="cp-post-overlay-body" style="display:flex;flex-direction:column;gap:14px"></div>
+      </div>
+    </div>
+
     <!-- Full invoice overlay (shown when client clicks View Invoice) -->
     <div id="cp-invoice-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(13,17,23,.96);overflow-y:auto;padding:24px 16px 60px">
       <div style="max-width:720px;margin:0 auto">
@@ -8559,48 +8572,104 @@ function cpShowTab(tab){
     const socialPosts=socialPostsLoad();
     const clientAddr=(c?.address||'').toLowerCase();
     const clientName=(c?.name||'').toLowerCase();
-    // Find posts linked to this client — by clientId first, then fall back to address matching
     const myPosts=socialPosts.filter(p=>{
+      if(p.status==='draft') return false; // hide drafts from client
       if(p.clientId && p.clientId===cpActiveClientId) return true;
       const addr=(p.address||'').toLowerCase();
       if(!addr) return false;
       const searchStr=clientAddr||clientName;
       if(!searchStr) return false;
       return addr.includes(searchStr.split(',')[0]) || searchStr.includes(addr.split(',')[0]);
-    });
-    const pending=myPosts.filter(p=>p.status==='pending_r1'||p.status==='pending_r2');
-    const others=myPosts.filter(p=>p.status!=='pending_r1'&&p.status!=='pending_r2');
+    }).sort((a,b)=>(a.scheduledAt||'').localeCompare(b.scheduledAt||''));
 
-    html=`<div>
-      <div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px">Social Content</div>
-      ${pending.length===0&&myPosts.length===0?`<div style="text-align:center;padding:48px;color:var(--muted);font-size:13px">No social content yet — check back soon!</div>`:''}
-      ${pending.length?`<div style="font-size:11px;font-weight:700;color:#F5C842;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">⏳ Needs Your Approval (${pending.length})</div>
-      ${pending.map(p=>{
-        const st=SOCIAL_STATUSES.find(s=>s.id===p.status);
-        return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid rgba(245,200,66,.25);padding:16px;margin-bottom:12px">
-          <div style="font-weight:700;color:var(--white);margin-bottom:4px">${p.address||p.title||'Post'}</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.content?p.content.substring(0,180)+(p.content.length>180?'…':''):''}</div>
-          ${p.overlayText?`<div style="font-size:12px;color:#A78BFA;margin-bottom:10px;font-style:italic">"${p.overlayText}"</div>`:''}
-          ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">📅 Planned: ${p.scheduledAt}</div>`:''}
-          <div style="display:flex;gap:8px">
-            <button onclick="cpApprovePost('${p.id}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:700;cursor:pointer">✓ Approve</button>
-            <button onclick="cpRequestRevision('${p.id}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Changes</button>
+    if(!myPosts.length){
+      html=`<div style="text-align:center;padding:60px 20px;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:12px">📅</div>
+        <div style="font-size:15px;font-weight:700;color:var(--offwhite);margin-bottom:6px">No content yet</div>
+        <div style="font-size:12px;line-height:1.7">Your content calendar will appear here once our team starts planning posts for your property.</div>
+      </div>`;
+    } else {
+      // Status filter state (stored on window to survive re-renders)
+      if(!window._cpSocialFilter) window._cpSocialFilter='all';
+      const filter=window._cpSocialFilter;
+      const filtered=filter==='all'?myPosts:myPosts.filter(p=>{
+        if(filter==='needs_approval') return p.status==='pending_r1'||p.status==='pending_r2';
+        if(filter==='revision') return p.status==='revision_r1'||p.status==='revision_r2';
+        if(filter==='approved') return p.status==='approved_r1'||p.status==='scheduled';
+        if(filter==='published') return p.status==='published';
+        return true;
+      });
+      const needsApproval=myPosts.filter(p=>p.status==='pending_r1'||p.status==='pending_r2').length;
+
+      // Platform icon helper
+      const platIcon=id=>({instagram:'📸',facebook:'👍',tiktok:'🎵',linkedin:'💼',twitter:'🐦'}[id]||'📱');
+      const platLabel=id=>SOCIAL_PLATFORMS.find(p=>p.id===id)?.label||id;
+
+      // Group by month
+      const byMonth={};
+      filtered.forEach(p=>{
+        const d=p.scheduledAt?p.scheduledAt.slice(0,7):'Unscheduled';
+        if(!byMonth[d]) byMonth[d]=[];
+        byMonth[d].push(p);
+      });
+      const monthKeys=Object.keys(byMonth).sort();
+
+      const filterBtn=(key,label,count)=>`<button onclick="window._cpSocialFilter='${key}';cpShowTab('social')" style="padding:6px 14px;border-radius:20px;border:1px solid ${filter===key?'var(--blue)':'var(--border)'};background:${filter===key?'rgba(91,141,239,.15)':'transparent'};color:${filter===key?'var(--blue-bright)':'var(--muted)'};font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);display:inline-flex;align-items:center;gap:5px">${label}${count?` <span style="background:${filter===key?'var(--blue)':'var(--border-bright)'};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px">${count}</span>`:''}</button>`;
+
+      html=`<div>
+        ${needsApproval?`<div style="background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:12px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px">⏳</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#F5C842">${needsApproval} post${needsApproval>1?'s':''} waiting for your approval</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Review and approve to keep your content calendar on track.</div>
           </div>
-        </div>`;
-      }).join('')}`:''}
-      ${others.length?`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;margin-top:${pending.length?'20':'0'}px">Recent Posts</div>
-      ${others.map(p=>{
-        const st=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
-        return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
-          <div style="flex:1">
-            <div style="font-weight:600;color:var(--white);font-size:13px;margin-bottom:3px">${p.address||p.title||'Post'}</div>
-            <div style="font-size:12px;color:var(--muted)">${p.content?p.content.substring(0,120)+(p.content.length>120?'…':''):''}</div>
-            ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted);margin-top:4px">📅 ${p.scheduledAt}</div>`:''}
-          </div>
-          <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color};white-space:nowrap">${st.label}</span>
-        </div>`;
-      }).join('')}`:''}
-    </div>`;
+        </div>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
+          ${filterBtn('all','All',myPosts.length)}
+          ${filterBtn('needs_approval','Needs Approval',needsApproval)}
+          ${filterBtn('revision','In Revision',myPosts.filter(p=>p.status==='revision_r1'||p.status==='revision_r2').length)}
+          ${filterBtn('approved','Approved / Scheduled',myPosts.filter(p=>p.status==='approved_r1'||p.status==='scheduled').length)}
+          ${filterBtn('published','Published',myPosts.filter(p=>p.status==='published').length)}
+        </div>
+        ${filtered.length===0?`<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px">No posts in this category.</div>`:''}
+        ${monthKeys.map(monthKey=>{
+          const label=monthKey==='Unscheduled'?'Unscheduled':new Date(monthKey+'-15').toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+          return `<div style="margin-bottom:28px">
+            <div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">${label}</div>
+            ${byMonth[monthKey].map(p=>{
+              const st=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+              const plats=(p.platforms||[]).slice(0,3).map(pid=>platIcon(pid)).join(' ');
+              const isPending=p.status==='pending_r1'||p.status==='pending_r2';
+              const isRevision=p.status==='revision_r1'||p.status==='revision_r2';
+              const comments=(p.clientComments||[]);
+              const lastComment=comments[comments.length-1];
+              const dateStr=p.scheduledAt?new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'}):'No date';
+              return `<div style="background:var(--navy-card);border-radius:14px;border:1px solid ${isPending?'rgba(245,200,66,.3)':isRevision?'rgba(251,146,60,.3)':'var(--border)'};padding:16px;margin-bottom:10px;cursor:pointer" onclick="cpOpenPost('${p.id}')">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">
+                  <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                      <span style="font-size:13px">${plats||'📱'}</span>
+                      <span style="font-size:11px;color:var(--muted)">${dateStr}</span>
+                      ${p.format?`<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:var(--navy-lift);color:var(--muted)">${SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format}</span>`:''}
+                    </div>
+                    <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">${p.address||p.title||'Post'}</div>
+                    <div style="font-size:12px;color:var(--muted);line-height:1.5">${p.content?p.content.substring(0,140)+(p.content.length>140?'…':''):''}</div>
+                    ${lastComment?`<div style="font-size:11px;color:var(--muted);margin-top:8px;padding:8px 10px;background:var(--navy-lift);border-radius:8px;border-left:3px solid ${lastComment.from==='client'?'var(--blue)':'var(--border-bright)'}">
+                      <span style="font-weight:700;color:${lastComment.from==='client'?'var(--blue-bright)':'var(--muted)'}">${lastComment.from==='client'?'You':'DroneHub'}</span>: ${lastComment.text.substring(0,80)}${lastComment.text.length>80?'…':''}
+                    </div>`:''}
+                  </div>
+                  <div style="flex-shrink:0;text-align:right">
+                    <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color};display:block;margin-bottom:6px">${st.label}</span>
+                    ${isPending?`<span style="font-size:10px;color:#F5C842;font-weight:600">Tap to review →</span>`:''}
+                    ${isRevision?`<span style="font-size:10px;color:#FB923C;font-weight:600">In revision</span>`:''}
+                  </div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
   }
 
   document.getElementById('cp-content').innerHTML=html;
@@ -8611,8 +8680,21 @@ function cpCloseInvoice(){
 }
 
 function cpViewInvoice(jobId){
-  const job=savedJobs.find(j=>j.id==jobId);
-  if(!job){alert('Invoice not found.');return;}
+  const job=savedJobs.find(j=>j.id==jobId||String(j.id)===String(jobId));
+  if(!job){
+    // Jobs might not have synced yet — try loading from Firebase then retry
+    if(db){
+      fbGet('orgs',ORG_ID+':jobs').then(fb=>{
+        if(fb?.data){
+          const fbJobs=JSON.parse(fb.data);
+          const j=fbJobs.find(x=>String(x.id)===String(jobId));
+          if(j){savedJobs=fbJobs;localStorage.setItem('dronehub_jobs',JSON.stringify(fbJobs));cpViewInvoice(jobId);}
+          else{alert('Invoice not found. Please try again in a moment.');}
+        }
+      }).catch(()=>alert('Could not load invoice. Check your connection.'));
+    } else {alert('Invoice not found.');}
+    return;
+  }
   const client=clients.find(c=>c.id===job.clientId)||{name:'Client',email:'',company:''};
   const biz=bizSettings||{};
   const bname=biz.name||'DroneHub Media';
@@ -8742,31 +8824,128 @@ function cpViewInvoice(jobId){
   document.getElementById('cp-invoice-overlay').scrollTop=0;
 }
 
-function cpApprovePost(postId){
+function cpClosePost(){
+  document.getElementById('cp-post-overlay').style.display='none';
+}
+
+function cpOpenPost(postId){
+  const posts=socialPostsLoad();
+  const p=posts.find(x=>x.id===postId);
+  if(!p){return;}
+  const st=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+  const isPending=p.status==='pending_r1'||p.status==='pending_r2';
+  const isRevision=p.status==='revision_r1'||p.status==='revision_r2';
+  const fmtDt=iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const platLabel=id=>SOCIAL_PLATFORMS.find(pl=>pl.id===id)?.label||id;
+  const platIcon=id=>({instagram:'📸',facebook:'👍',tiktok:'🎵',linkedin:'💼',twitter:'🐦'}[id]||'📱');
+  const comments=p.clientComments||[];
+
+  // Status bar
+  const statusEl=document.getElementById('cp-post-overlay-status');
+  if(statusEl){statusEl.textContent=st.label;statusEl.style.background=st.color+'22';statusEl.style.color=st.color;}
+
+  const commentThread=comments.length?`
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Feedback Thread</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${comments.map(cm=>`
+          <div style="display:flex;flex-direction:column;align-items:${cm.from==='client'?'flex-end':'flex-start'}">
+            <div style="max-width:85%;padding:10px 14px;border-radius:12px;background:${cm.from==='client'?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};color:#fff">
+              <div style="font-size:11px;font-weight:700;opacity:.7;margin-bottom:4px">${cm.from==='client'?'You':'DroneHub Media'}</div>
+              <div style="font-size:13px;line-height:1.5">${cm.text}</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">${fmtDt(cm.at)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  const actionArea=isPending?`
+    <div class="card" style="border:1px solid rgba(245,200,66,.25)">
+      <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:6px">Your Review</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Approve this post to add it to your calendar, or request changes with a note for our team.</div>
+      <textarea id="cp-feedback-text" placeholder="Leave a note for our team (optional for approval, required for revisions)…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:vertical;min-height:80px;margin-bottom:12px"></textarea>
+      <div style="display:flex;gap:10px">
+        <button onclick="cpClientRevision('${p.id}')" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(251,146,60,.4);background:rgba(251,146,60,.08);color:#FB923C;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
+          ✏ Request Changes
+        </button>
+        <button onclick="cpClientApprove('${p.id}')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22D97A,#0E7A4C);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
+          ✓ Approve Post
+        </button>
+      </div>
+    </div>`
+  :isRevision?`
+    <div class="card" style="border:1px solid rgba(251,146,60,.25)">
+      <div style="font-size:13px;font-weight:700;color:#FB923C;margin-bottom:4px">In Revision</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7">Our team is working on the changes you requested. You'll be notified when it's ready for your next review.</div>
+    </div>`
+  :`<div class="card" style="background:var(--navy-lift)">
+    <div style="font-size:12px;color:var(--muted)">Status: <strong style="color:var(--offwhite)">${st.label}</strong> — no action needed from you right now.</div>
+  </div>`;
+
+  document.getElementById('cp-post-overlay-body').innerHTML=`
+    <div class="card">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        ${(p.platforms||[]).map(pid=>`<span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(91,141,239,.1);color:var(--blue-bright)">${platIcon(pid)} ${platLabel(pid)}</span>`).join('')}
+        ${p.format?`<span style="padding:4px 12px;border-radius:20px;font-size:12px;background:var(--navy-lift);color:var(--muted)">${SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format}</span>`:''}
+      </div>
+      ${p.address?`<div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">${p.address}</div>`:''}
+      ${p.scheduledAt?`<div style="font-size:12px;color:var(--muted)">📅 Planned for ${new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</div>`:''}
+    </div>
+    ${p.content?`<div class="card">
+      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Caption</div>
+      <div style="font-size:13px;color:var(--offwhite);line-height:1.75;white-space:pre-line">${p.content}</div>
+    </div>`:''}
+    ${p.overlayText?`<div class="card">
+      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Video Overlay Text</div>
+      <div style="font-size:13px;color:#A78BFA;font-style:italic">"${p.overlayText}"</div>
+    </div>`:''}
+    ${p.hashtags?`<div class="card">
+      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">First Comment (Hashtags)</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-line">${p.hashtags}</div>
+    </div>`:''}
+    ${commentThread}
+    ${actionArea}
+  `;
+
+  document.getElementById('cp-post-overlay').style.display='block';
+  document.getElementById('cp-post-overlay').scrollTop=0;
+}
+
+function cpClientApprove(postId){
   const posts=socialPostsLoad();
   const idx=posts.findIndex(p=>p.id===postId);
   if(idx<0) return;
-  // Move to next stage
+  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
+  posts[idx].clientComments=posts[idx].clientComments||[];
+  if(note) posts[idx].clientComments.push({from:'client',text:note,at:new Date().toISOString()});
+  posts[idx].clientComments.push({from:'client',text:'✓ Approved this post.',at:new Date().toISOString()});
   if(posts[idx].status==='pending_r1') posts[idx].status='approved_r1';
   else if(posts[idx].status==='pending_r2') posts[idx].status='scheduled';
   posts[idx].history=posts[idx].history||[];
   posts[idx].history.push({action:'Client approved',by:'client',at:new Date().toISOString()});
   socialPostsSave(posts);
+  cpClosePost();
   cpShowTab('social');
 }
 
-function cpRequestRevision(postId){
-  const note=prompt('What would you like changed?');
-  if(!note) return;
+function cpClientRevision(postId){
+  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
+  if(!note){
+    const el=document.getElementById('cp-feedback-text');
+    if(el){el.style.borderColor='var(--red)';el.placeholder='Please describe what changes you need…';el.focus();}
+    return;
+  }
   const posts=socialPostsLoad();
   const idx=posts.findIndex(p=>p.id===postId);
   if(idx<0) return;
+  posts[idx].clientComments=posts[idx].clientComments||[];
+  posts[idx].clientComments.push({from:'client',text:note,at:new Date().toISOString()});
   if(posts[idx].status==='pending_r1') posts[idx].status='revision_r1';
   else if(posts[idx].status==='pending_r2') posts[idx].status='revision_r2';
-  posts[idx].revisionNote=note;
   posts[idx].history=posts[idx].history||[];
   posts[idx].history.push({action:'Client requested revision: '+note,by:'client',at:new Date().toISOString()});
   socialPostsSave(posts);
+  cpClosePost();
   cpShowTab('social');
 }
 
