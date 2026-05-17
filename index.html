@@ -637,6 +637,19 @@ button{font-family:var(--font);}
     <!-- Dashboard content -->
     <div style="max-width:800px;margin:0 auto;padding:24px 20px 60px" id="cp-content"></div>
 
+    <!-- Full invoice overlay (shown when client clicks View Invoice) -->
+    <div id="cp-invoice-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(13,17,23,.96);overflow-y:auto;padding:24px 16px 60px">
+      <div style="max-width:720px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <button onclick="cpCloseInvoice()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back to invoices
+          </button>
+          <div style="font-size:11px;color:var(--muted)">Invoice</div>
+        </div>
+        <div id="cp-invoice-body" style="background:#fff;color:#111;border-radius:14px;padding:36px;font-family:system-ui,sans-serif;box-shadow:0 8px 40px rgba(0,0,0,.5)"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -8361,35 +8374,65 @@ function cpShowTab(tab){
   }
   else if(tab==='invoices'){
     const inv=cJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
-    const biz=bizSettings||{};
-    html=`<div class="card">
-      <div class="section-label" style="margin-bottom:14px">Your invoices</div>
-      ${inv.length?inv.map(j=>{
+    const paid=inv.filter(j=>getInvoiceStatus(j)==='paid');
+    const unpaid=inv.filter(j=>getInvoiceStatus(j)!=='paid');
+    html=`<div>
+      ${unpaid.length?`<div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Outstanding (${unpaid.length})</div>
+      ${unpaid.map(j=>{
         const st=getInvoiceStatus(j);
         const {owed,interest,daysOverdue}=calcCurrentOwed(j);
         const refDate=j.invoicedAt?new Date(j.invoicedAt):new Date(j.date||Date.now());
         const dueDate=new Date(refDate); dueDate.setDate(dueDate.getDate()+30);
-        const stBadge=st==='paid'
-          ?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green)">PAID</span>`
-          :st==='overdue'
+        const amtDue=st==='overdue'?owed:j.grand;
+        const stBadge=st==='overdue'
           ?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--red-bg);color:var(--red)">OVERDUE ${daysOverdue}d</span>`
           :`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-bg);color:var(--amber)">OUTSTANDING</span>`;
-        return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        return `<div class="card" style="margin-bottom:12px;border:1px solid ${st==='overdue'?'rgba(240,82,82,.3)':'rgba(245,166,35,.2)'}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px">
             <div style="flex:1">
-              <div style="font-size:13px;font-weight:700;color:var(--white)">${j.name}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">Due ${dueDate.toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'})}</div>
-              ${st==='overdue'&&interest>0?`<div style="font-size:11px;color:var(--red);margin-top:3px">⚠ ${fmtN(interest)} in late interest charges</div>`:''}
+              <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:3px">${j.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${j.address||''}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">Shoot: ${j.date} · Due: ${dueDate.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}</div>
+              ${j.invNum?`<div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;letter-spacing:.04em">INV# ${j.invNum}</div>`:''}
+              ${st==='overdue'&&interest>0?`<div style="font-size:11px;color:var(--red);margin-top:5px;font-weight:600">⚠ ${fmtN(interest)} in late interest charges</div>`:''}
             </div>
-            <div style="text-align:right">
+            <div style="text-align:right;flex-shrink:0">
               <div style="margin-bottom:6px">${stBadge}</div>
-              <div style="font-size:15px;font-weight:700;color:${st==='overdue'?'var(--red)':st==='paid'?'var(--green)':'var(--amber)'}">${fmtN(st==='overdue'?owed:j.grand)}</div>
+              <div style="font-size:18px;font-weight:800;color:${st==='overdue'?'var(--red)':'var(--amber)'}">${fmtN(amtDue)}</div>
             </div>
           </div>
-          ${st!=='paid'?`<button onclick="openStripeCheckout(${st==='overdue'?owed:j.grand},'${j.invNum||''}','${j.clientEmail||''}')" style="display:inline-block;margin-top:10px;padding:9px 22px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">💳 Pay now — ${fmtN(st==='overdue'?owed:j.grand)}</button>`:''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="cpViewInvoice('${j.id}')" style="flex:1;min-width:120px;padding:9px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> View Invoice
+            </button>
+            <button onclick="openStripeCheckout(${amtDue},'${j.invNum||''}','${c.email||''}','${j.currency||'cad'}',${j.id})" style="flex:1;min-width:120px;padding:9px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">
+              💳 Pay now — ${fmtN(amtDue)}
+            </button>
+          </div>
         </div>`;
-      }).join('')
-      :'<div style="color:var(--muted);font-size:13px;padding:12px 0">No invoices yet.</div>'}
+      }).join('')}`:''}
+      ${paid.length?`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;margin-top:${unpaid.length?'20':'0'}px">Paid (${paid.length})</div>
+      ${paid.map(j=>{
+        const refDate=j.invoicedAt?new Date(j.invoicedAt):new Date(j.date||Date.now());
+        return `<div class="card" style="margin-bottom:10px;opacity:.85">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date}${j.invNum?' · INV# '+j.invNum:''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(j.grand)}</div>
+              <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green)">PAID</span>
+            </div>
+          </div>
+          <button onclick="cpViewInvoice('${j.id}')" style="margin-top:10px;padding:7px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">
+            View receipt
+          </button>
+        </div>`;
+      }).join('')}`:''}
+      ${!inv.length?`<div class="card" style="text-align:center;padding:40px">
+        <div style="font-size:13px;color:var(--muted)">No invoices yet — they'll appear here once your first project is invoiced.</div>
+      </div>`:''}
     </div>`;
   }
   else if(tab==='files'){
@@ -8488,6 +8531,142 @@ function cpShowTab(tab){
   }
 
   document.getElementById('cp-content').innerHTML=html;
+}
+
+function cpCloseInvoice(){
+  document.getElementById('cp-invoice-overlay').style.display='none';
+}
+
+function cpViewInvoice(jobId){
+  const job=savedJobs.find(j=>j.id==jobId);
+  if(!job){alert('Invoice not found.');return;}
+  const client=clients.find(c=>c.id===job.clientId)||{name:'Client',email:'',company:''};
+  const biz=bizSettings||{};
+  const bname=biz.name||'DroneHub Media';
+  const fmtC=n=>(job.currency||'CAD').toUpperCase()+' $'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // ── Build line items (same logic as openInvoice) ───────────────────────────
+  const svcs=job.services||{};
+  const hrs=job.hours||{};
+  const sqft=job.sqft||0;
+  const driveCost=job.driveCost||0;
+  const lines=[];
+  let vidDriveBaked=0,phoDriveBaked=0;
+  if(driveCost>0){
+    const hasVid=svcs.video||svcs.randomvideo,hasPho=svcs.photo||svcs.randomphoto;
+    if(hasVid&&hasPho){vidDriveBaked=driveCost*0.6;phoDriveBaked=driveCost*0.4;}
+    else if(hasVid) vidDriveBaked=driveCost;
+    else if(hasPho) phoDriveBaked=driveCost;
+  }
+  if(svcs.video&&svcs.photo){
+    const vt=Math.ceil(baseVideoRate(sqft)/(1-MARGIN))+Math.ceil(vidDriveBaked);
+    const pt=photoBase(sqft,true)+Math.ceil(phoDriveBaked);
+    lines.push({desc:'Video production',qty:1,unit:vt,total:vt});
+    lines.push({desc:'Photography',qty:1,unit:pt,total:pt});
+  } else {
+    if(svcs.video){const vt=Math.ceil(baseVideoRate(sqft)/(1-MARGIN))+Math.ceil(vidDriveBaked);lines.push({desc:'Video production',qty:1,unit:vt,total:vt});}
+    if(svcs.photo){const pt=photoBase(sqft,false)+Math.ceil(phoDriveBaked);lines.push({desc:'Photography',qty:1,unit:pt,total:pt});}
+  }
+  if(svcs.tvideo&&svcs.tphoto) lines.push({desc:'Twilight session — video & photography',qty:1,unit:TWILIGHT_BOTH,total:TWILIGHT_BOTH});
+  else if(svcs.tvideo) lines.push({desc:'Twilight video session',qty:1,unit:TWILIGHT_VIDEO,total:TWILIGHT_VIDEO});
+  else if(svcs.tphoto) lines.push({desc:'Twilight photography session',qty:1,unit:TWILIGHT_PHOTO,total:TWILIGHT_PHOTO});
+  if(svcs.reel){const q=hrs.reel||1;lines.push({desc:'Social media reels',qty:q,unit:150,total:150*q});}
+  if(svcs.extvideo) lines.push({desc:'Exterior video shoot',qty:1,unit:150,total:150});
+  if(svcs.extphoto) lines.push({desc:'Exterior photo shoot',qty:1,unit:150,total:150});
+  if(svcs.floorplan) lines.push({desc:'Floor plan',qty:1,unit:150,total:150});
+  if(svcs.randomvideo){const h=hrs.randomvideo||1;const u=RANDOM_VIDEO_RATE_CLIENT+(Math.ceil(vidDriveBaked)/h);lines.push({desc:'Video production (hourly)',qty:h,unit:Math.ceil(u),total:Math.ceil(u)*h});}
+  if(svcs.randomphoto){const h=hrs.randomphoto||1;const u=RANDOM_PHOTO_RATE_CLIENT+(Math.ceil(phoDriveBaked)/h);lines.push({desc:'Photography (hourly)',qty:h,unit:Math.ceil(u),total:Math.ceil(u)*h});}
+  if(svcs.rush) lines.push({desc:'Rush order',qty:1,unit:RUSH_FEE,total:RUSH_FEE});
+  if(svcs.custom&&job.customPrice>0) lines.push({desc:job.customDesc||'Custom service',qty:1,unit:job.customPrice,total:job.customPrice});
+  (job.extraServices||[]).forEach(xs=>{if(xs.clientPrice>0) lines.push({desc:xs.name,qty:1,unit:xs.clientPrice,total:xs.clientPrice});});
+
+  // Fallback: if no lines built (old job format), derive from grand total
+  const subtotal=lines.length?lines.reduce((s,l)=>s+l.total,0):Math.round(job.grand/1.13);
+  const hst=lines.length?parseFloat((subtotal*0.13).toFixed(2)):job.grand-subtotal;
+  const grandTotal=lines.length?subtotal+hst:job.grand;
+
+  // ── Dates ─────────────────────────────────────────────────────────────────
+  const issueDate=job.invoicedAt
+    ?new Date(job.invoicedAt).toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})
+    :new Date(job.date||Date.now()).toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'});
+  const refD=job.invoicedAt?new Date(job.invoicedAt):new Date(job.date||Date.now());
+  const dueD=new Date(refD); dueD.setDate(dueD.getDate()+30);
+  const dueDateStr=dueD.toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'});
+  const invStatus=getInvoiceStatus(job);
+  const {owed}=calcCurrentOwed(job);
+  const amtDue=invStatus==='overdue'?owed:grandTotal;
+
+  const statusBar=invStatus==='paid'
+    ?`<div style="background:#dcfce7;color:#15803d;border-radius:8px;padding:12px 18px;font-weight:700;font-size:13px;margin-bottom:24px;display:flex;align-items:center;gap:8px">✓ This invoice has been paid in full</div>`
+    :invStatus==='overdue'
+    ?`<div style="background:#fef2f2;color:#dc2626;border-radius:8px;padding:12px 18px;font-weight:700;font-size:13px;margin-bottom:24px">⚠ This invoice is overdue. Current amount owing: <strong>${fmtC(amtDue)}</strong></div>`
+    :`<div style="background:#fffbeb;color:#b45309;border-radius:8px;padding:12px 18px;font-weight:700;font-size:13px;margin-bottom:24px">Payment due by ${dueDateStr}</div>`;
+
+  const lineRows=lines.map(l=>`<tr>
+    <td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111">${l.desc}</td>
+    <td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:center;color:#6b7280">${l.qty}</td>
+    <td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;color:#6b7280">${fmtC(l.unit)}</td>
+    <td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;font-weight:600;color:#111">${fmtC(l.total)}</td>
+  </tr>`).join('');
+
+  const payBtn=invStatus!=='paid'?`<div style="text-align:center;margin-top:28px;padding:24px;background:#f5f3ff;border-radius:10px;border:1px solid #ddd6fe">
+    <div style="font-size:12px;color:#6b7280;margin-bottom:6px">Secure online payment via Stripe</div>
+    <div style="font-size:28px;font-weight:900;color:#111;margin-bottom:14px">${fmtC(amtDue)}</div>
+    <button onclick="openStripeCheckout(${amtDue},'${job.invNum||''}','${client.email||''}','${job.currency||'cad'}',${job.id})" style="padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer">💳 Pay now</button>
+    <div style="font-size:11px;color:#9ca3af;margin-top:10px">Powered by Stripe · Secure checkout</div>
+  </div>`:'';
+
+  document.getElementById('cp-invoice-body').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #111">
+      <div>
+        <div style="font-size:22px;font-weight:800;color:#111;margin-bottom:4px">${bname}</div>
+        ${[biz.addr1,biz.addr2,biz.phone,biz.email,biz.website].filter(Boolean).map(v=>`<div style="font-size:12px;color:#6b7280;line-height:1.7">${v}</div>`).join('')}
+        ${biz.hst?`<div style="font-size:11px;color:#9ca3af;margin-top:4px">HST # ${biz.hst}</div>`:''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:36px;font-weight:200;color:#1D9E75;letter-spacing:.04em">INVOICE</div>
+        ${job.invNum?`<div style="font-size:14px;font-weight:700;color:#111;margin-top:2px">${job.invNum}</div>`:''}
+        <div style="font-size:12px;color:#6b7280;margin-top:2px">Issued ${issueDate}</div>
+        <div style="font-size:12px;color:#d97706;font-weight:600;margin-top:2px">Due ${dueDateStr}</div>
+      </div>
+    </div>
+    ${statusBar}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:6px">Bill to</div>
+        <div style="font-size:14px;font-weight:600;color:#111">${client.name}</div>
+        ${client.company?`<div style="font-size:12px;color:#6b7280">${client.company}</div>`:''}
+        ${client.email?`<div style="font-size:12px;color:#6b7280">${client.email}</div>`:''}
+      </div>
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:6px">Property</div>
+        <div style="font-size:13px;font-weight:600;color:#111">${job.name}</div>
+        <div style="font-size:12px;color:#6b7280">${job.address||''}</div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:2px">Shoot date: ${job.date}</div>
+      </div>
+    </div>
+    ${lines.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <thead><tr style="border-bottom:2px solid #111">
+        <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;padding-bottom:8px">Description</th>
+        <th style="text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;padding-bottom:8px">Qty</th>
+        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;padding-bottom:8px">Unit price</th>
+        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;padding-bottom:8px">Amount</th>
+      </tr></thead>
+      <tbody>${lineRows}</tbody>
+    </table>`:''}
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;border-top:2px solid #111;padding-top:16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;width:220px;font-size:13px;color:#6b7280"><span>Subtotal</span><span>${fmtC(subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;width:220px;font-size:13px;color:#6b7280"><span>HST (13%)</span><span>${fmtC(hst)}</span></div>
+      <div style="display:flex;justify-content:space-between;width:220px;font-size:17px;font-weight:800;color:#111;margin-top:6px;padding-top:8px;border-top:1px solid #e5e7eb"><span>Total</span><span>${fmtC(grandTotal)}</span></div>
+    </div>
+    ${payBtn}
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;line-height:1.7;text-align:center">
+      Payment is due within 30 days of invoice date. Overdue balances are subject to 2% monthly compounding interest plus a 20% penalty every 6 months unpaid.<br>
+      Thank you for your business — ${bname}
+    </div>`;
+
+  document.getElementById('cp-invoice-overlay').style.display='block';
+  document.getElementById('cp-invoice-overlay').scrollTop=0;
 }
 
 function cpApprovePost(postId){
