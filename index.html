@@ -2934,6 +2934,12 @@ button{font-family:var(--font);}
         <input id="social-post-reel" type="text" placeholder="e.g. Reel 1, R3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
       </div>
       <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Assign to Client <span style="font-weight:400">(shows in their portal)</span></label>
+        <select id="social-post-client-id" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+          <option value="">— No client assigned —</option>
+        </select>
+      </div>
+      <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Format</label>
         <select id="social-post-format" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
           <option value="reel">Instagram Reel</option>
@@ -15776,6 +15782,7 @@ function openSocialPostPreview(postId){
     ${contentDesc?`<div style="margin-bottom:14px"><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Content Details</div><div style="font-size:12px;color:var(--white)">${contentDesc}</div><div style="margin-top:6px"><span style="padding:2px 10px;border-radius:12px;background:rgba(122,171,255,.12);color:var(--blue-bright);font-size:11px">${post.address||''}</span></div></div>`:''}
     ${post.overlayText?`<div style="margin-bottom:14px"><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Overlay (${post.overlayType||'description'})</div><div style="font-size:13px;color:#A78BFA;font-style:italic">"${post.overlayText}"</div></div>`:''}
     ${post.songName?`<div style="margin-bottom:14px"><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Music</div><div style="font-size:12px;color:var(--white)">🎵 ${post.songName}${post.songTimestamps?' · '+post.songTimestamps:''}</div></div>`:''}
+    ${(post.clientComments&&post.clientComments.length)?`<div style="margin-bottom:14px"><div style="font-size:10px;color:#F5C842;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Client Feedback</div><div style="display:flex;flex-direction:column;gap:6px">${post.clientComments.map(c=>`<div style="background:${c.from==='client'?'rgba(91,141,239,.1)':'rgba(34,217,122,.08)'};border-radius:8px;padding:8px 10px;border-left:2px solid ${c.from==='client'?'#7AABFF':'#22D97A'}"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">${c.from==='client'?'👤 Client':'🏢 DroneHub'} · ${c.at?new Date(c.at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}</div><div style="font-size:12px;color:var(--white)">${c.text}</div></div>`).join('')}</div></div>`:''}
     <div style="display:flex;gap:8px;margin-top:16px">
       <button onclick="document.getElementById('social-post-preview-modal').remove();openSocialPostModal('${postId}')" style="flex:1;padding:9px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;cursor:pointer">Edit Post</button>
       <button onclick="document.getElementById('social-post-preview-modal').remove()" style="padding:9px 18px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Close</button>
@@ -15816,6 +15823,7 @@ function renderSocialApprovals(){
           ${p.content?`<div style="font-size:12px;color:var(--muted);line-height:1.5;border-left:2px solid var(--border);padding-left:10px;margin-bottom:8px">${p.content.substring(0,200)}${p.content.length>200?'…':''}</div>`:''}
           ${p.overlayText?`<div style="font-size:12px;color:#A78BFA;margin-bottom:6px;font-style:italic">Overlay: "${p.overlayText}" <span style="font-style:normal;color:var(--muted)">(${p.overlayType||'description'})</span></div>`:''}
           ${(p.status==='revision_r1'||p.status==='revision_r2')&&p.revisionNote?`<div style="font-size:12px;color:#FB923C;background:rgba(251,146,60,.08);padding:8px;border-radius:6px;border-left:3px solid #FB923C;margin-bottom:6px">Revision: ${p.revisionNote}</div>`:''}
+          ${(p.clientComments&&p.clientComments.length)?`<div style="margin-top:8px"><div style="font-size:10px;color:#F5C842;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Client Feedback</div>${p.clientComments.slice(-3).map(c=>`<div style="font-size:11px;padding:5px 8px;border-radius:5px;background:rgba(91,141,239,.07);border-left:2px solid #7AABFF;margin-bottom:4px;color:var(--white)">${c.text}</div>`).join('')}${p.clientComments.length>3?`<div style="font-size:10px;color:var(--muted)">(+${p.clientComments.length-3} more — open post to see all)</div>`:''}</div>`:''}
           ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted)">📅 Scheduled: ${p.scheduledAt}</div>`:''}
           ${approvers?`<div style="font-size:11px;color:var(--muted);margin-top:6px">📧 Approvers: ${approvers}</div>`:''}
         </div>
@@ -15942,6 +15950,14 @@ function openSocialPostModal(id){
   document.getElementById('social-post-revision').value=post?.revisionNote||'';
   document.getElementById('social-post-label-color').value=post?.labelColor||'';
 
+  // Populate client dropdown
+  const clientSel=document.getElementById('social-post-client-id');
+  if(clientSel){
+    clientSel.innerHTML='<option value="">— No client assigned —</option>'
+      +(clients||[]).map(c=>`<option value="${c.id}">${c.name}${c.address?' — '+c.address:''}</option>`).join('');
+    clientSel.value=post?.clientId||'';
+  }
+
   SOCIAL_PLATFORMS.forEach(p=>{ const cb=document.getElementById('social-plt-'+p.id); if(cb) cb.checked=(post?.platforms||[]).includes(p.id); });
 
   // Build label color picker
@@ -15996,6 +16012,7 @@ function saveSocialPost(forceStatus){
     revisionNote:document.getElementById('social-post-revision').value||null,
     labelColor:  document.getElementById('social-post-label-color').value||null,
     workspaceId: _socialActiveWorkspace,
+    clientId:    document.getElementById('social-post-client-id')?.value||null,
   };
   const posts=socialPostsLoad();
   if(_socialEditingPostId){
