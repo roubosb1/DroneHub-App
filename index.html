@@ -687,8 +687,9 @@ button{font-family:var(--font);}
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:-.02em">
         <span style="color:#fff">DRONE</span><span style="color:#5B8DEF">HUB</span><span style="color:#5B8DEF">.</span>
       </div>
-      <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
         <span id="cp-welcome-name" style="font-size:13px;color:var(--offwhite);font-weight:600"></span>
+        <button onclick="switchToTeamPortal()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1px solid rgba(245,166,35,.4);background:rgba(245,166,35,.08);color:var(--amber);font-size:12px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team Portal</button>
         <button onclick="cpLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">Sign out</button>
       </div>
     </div>
@@ -779,6 +780,7 @@ button{font-family:var(--font);}
       <div style="display:flex;align-items:center;gap:10px">
         <span id="tp-welcome" style="font-size:13px;color:var(--offwhite);font-weight:600"></span>
         <span id="tp-org-badge" style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(245,166,35,.15);color:var(--amber)"></span>
+        <button onclick="switchToClientPortal()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:12px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Client Portal</button>
         <button onclick="tpLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">Sign out</button>
       </div>
     </div>
@@ -8082,6 +8084,50 @@ function exitClientPortal(){
   document.getElementById('client-portal-root').style.display='none';
   document.body.style.overflow='';
   cpActiveClientId=null;
+}
+
+// ── PORTAL SWITCHER — stays logged in to both portals simultaneously ──────
+function switchToTeamPortal(){
+  document.getElementById('client-portal-root').style.display='none';
+  document.getElementById('team-portal-root').style.display='block';
+  document.body.style.overflow='hidden';
+  if(tpActiveMemberId){
+    // Already authenticated — go straight to dashboard
+    document.getElementById('tp-login').style.display='none';
+    document.getElementById('tp-dashboard').style.display='block';
+  } else {
+    // Not yet logged in — show team login screen
+    document.getElementById('tp-login').style.display='flex';
+    document.getElementById('tp-dashboard').style.display='none';
+    tpSwitchMode('login');
+  }
+}
+
+function switchToClientPortal(){
+  document.getElementById('team-portal-root').style.display='none';
+  document.getElementById('client-portal-root').style.display='block';
+  document.body.style.overflow='hidden';
+  if(cpActiveClientId){
+    // Already authenticated — go straight to dashboard
+    document.getElementById('cp-login').style.display='none';
+    document.getElementById('cp-dashboard').style.display='block';
+  } else {
+    // Try to restore from sessionStorage
+    try{
+      const saved=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
+      if(saved?.clientId){
+        cpActiveClientId=saved.clientId;
+        document.getElementById('cp-welcome-name').textContent=(saved.name||'').split(' ')[0];
+        document.getElementById('cp-login').style.display='none';
+        document.getElementById('cp-dashboard').style.display='block';
+        restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
+        return;
+      }
+    }catch(e){}
+    // Not logged in — show client login screen
+    document.getElementById('cp-login').style.display='flex';
+    document.getElementById('cp-dashboard').style.display='none';
+  }
 }
 
 // ── CLIENT PORTAL — STANDALONE ROUTING ───────────────────────────────────
