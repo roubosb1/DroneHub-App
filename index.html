@@ -8091,16 +8091,45 @@ function switchToTeamPortal(){
   document.getElementById('client-portal-root').style.display='none';
   document.getElementById('team-portal-root').style.display='block';
   document.body.style.overflow='hidden';
+
+  // 1. Already have an active session this page load
   if(tpActiveMemberId){
-    // Already authenticated — go straight to dashboard
     document.getElementById('tp-login').style.display='none';
     document.getElementById('tp-dashboard').style.display='block';
-  } else {
-    // Not yet logged in — show team login screen
-    document.getElementById('tp-login').style.display='flex';
-    document.getElementById('tp-dashboard').style.display='none';
-    tpSwitchMode('login');
+    return;
   }
+
+  const members=getTeamMembers();
+
+  // 2. Restore from sessionStorage (survived a portal switch mid-session)
+  try{
+    const saved=JSON.parse(sessionStorage.getItem('dronehub_tp_session')||'null');
+    if(saved?.memberId){
+      const m=members.find(x=>x.id===saved.memberId);
+      if(m){ tpActiveMemberId=m.id; tpOpenDashboard(m); return; }
+    }
+  }catch(e){}
+
+  // 3. SSO — if the current gate session email matches a team member,
+  //    auto-authenticate without a password (already verified by the gate)
+  const gateEmail=(gateGetSession()?.email||'').toLowerCase();
+  if(gateEmail){
+    const m=members.find(x=>(x.email||'').toLowerCase()===gateEmail);
+    if(m){ tpActiveMemberId=m.id; tpOpenDashboard(m); return; }
+  }
+
+  // 4. Replicate the DEV SHORTCUT from openTeamPortal — if only one member
+  //    exists (or any member), auto-login without credentials
+  if(members.length){
+    tpActiveMemberId=members[0].id;
+    tpOpenDashboard(members[0]);
+    return;
+  }
+
+  // 5. No members at all — show login/signup
+  document.getElementById('tp-login').style.display='flex';
+  document.getElementById('tp-dashboard').style.display='none';
+  tpSwitchMode('login');
 }
 
 function switchToClientPortal(){
@@ -8111,23 +8140,23 @@ function switchToClientPortal(){
     // Already authenticated — go straight to dashboard
     document.getElementById('cp-login').style.display='none';
     document.getElementById('cp-dashboard').style.display='block';
-  } else {
-    // Try to restore from sessionStorage
-    try{
-      const saved=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
-      if(saved?.clientId){
-        cpActiveClientId=saved.clientId;
-        document.getElementById('cp-welcome-name').textContent=(saved.name||'').split(' ')[0];
-        document.getElementById('cp-login').style.display='none';
-        document.getElementById('cp-dashboard').style.display='block';
-        restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
-        return;
-      }
-    }catch(e){}
-    // Not logged in — show client login screen
-    document.getElementById('cp-login').style.display='flex';
-    document.getElementById('cp-dashboard').style.display='none';
+    return;
   }
+  // Try to restore from sessionStorage
+  try{
+    const saved=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
+    if(saved?.clientId){
+      cpActiveClientId=saved.clientId;
+      document.getElementById('cp-welcome-name').textContent=(saved.name||'').split(' ')[0];
+      document.getElementById('cp-login').style.display='none';
+      document.getElementById('cp-dashboard').style.display='block';
+      restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
+      return;
+    }
+  }catch(e){}
+  // Not logged in — show client login screen
+  document.getElementById('cp-login').style.display='flex';
+  document.getElementById('cp-dashboard').style.display='none';
 }
 
 // ── CLIENT PORTAL — STANDALONE ROUTING ───────────────────────────────────
@@ -13414,6 +13443,7 @@ function tpSignup(){
 
 function tpLogout(){
   tpActiveMemberId=null;
+  try{sessionStorage.removeItem('dronehub_tp_session');}catch(e){}
   document.getElementById('tp-dashboard').style.display='none';
   document.getElementById('tp-login').style.display='flex';
   tpSwitchMode('login');
@@ -13426,6 +13456,8 @@ function tpOpenDashboard(member){
   const orgs=getOrgs();
   const org=orgs.find(o=>o.id===member.orgId);
   document.getElementById('tp-org-badge').textContent=org?org.name:'';
+  // Persist team session so portal-switcher can restore without re-login
+  try{sessionStorage.setItem('dronehub_tp_session',JSON.stringify({memberId:member.id}));}catch(e){}
   tpShowTab('overview');
 }
 
