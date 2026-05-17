@@ -623,14 +623,14 @@ button{font-family:var(--font);}
     <!-- Dashboard tabs -->
     <div style="background:var(--navy-mid);border-bottom:1px solid var(--border);padding:0 20px">
       <div style="display:flex;gap:0;overflow-x:auto" id="cp-tabs">
-        <button onclick="cpShowTab('overview')" class="cp-tab active" data-tab="overview">Overview</button>
-        <button onclick="cpShowTab('production')" class="cp-tab" data-tab="production">📋 My Videos</button>
-        <button onclick="cpShowTab('projects')" class="cp-tab" data-tab="projects">All Jobs</button>
-        <button onclick="cpShowTab('invoices')" class="cp-tab" data-tab="invoices">Invoices</button>
-        <button onclick="cpShowTab('spending')" class="cp-tab" data-tab="spending">💰 Spending</button>
-        <button onclick="cpShowTab('files')" class="cp-tab" data-tab="files">Files & Downloads</button>
-        <button onclick="cpShowTab('messages')" class="cp-tab" data-tab="messages">💬 LouChat</button>
-        <button onclick="cpShowTab('social')" class="cp-tab" data-tab="social">📱 Social Approval</button>
+        <button onclick="cpShowTab('overview')" class="cp-tab active" data-tab="overview" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Overview</button>
+        <button onclick="cpShowTab('production')" class="cp-tab" data-tab="production" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> My Videos</button>
+        <button onclick="cpShowTab('projects')" class="cp-tab" data-tab="projects" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> All Jobs</button>
+        <button onclick="cpShowTab('invoices')" class="cp-tab" data-tab="invoices" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Invoices</button>
+        <button onclick="cpShowTab('spending')" class="cp-tab" data-tab="spending" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Spending</button>
+        <button onclick="cpShowTab('files')" class="cp-tab" data-tab="files" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Files</button>
+        <button onclick="cpShowTab('messages')" class="cp-tab" data-tab="messages" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat</button>
+        <button onclick="cpShowTab('social')" class="cp-tab" data-tab="social" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Social</button>
       </div>
     </div>
 
@@ -7906,24 +7906,28 @@ function sendClientPortalInvite(clientId, pass){
   if(!c||!c.email) return;
   const biz=bizSettings||{};
   const bname=biz.name||'DroneHub Media';
-  const subject=encodeURIComponent('Your '+bname+' client portal is ready');
-  const body=encodeURIComponent(
-    'Hi '+c.name.split(' ')[0]+',\n\n'+
-    'Your client portal is now set up on '+bname+'.\n\n'+
-    'In your portal you can:\n'+
-    '• Track the progress of your videos and photos in real time\n'+
-    '• Review and download your completed files\n'+
-    '• View all your invoices and payment history\n'+
-    '• See your spending history for tax records\n'+
-    '• Review videos on Frame.io and leave feedback\n'+
-    '• Message the '+bname+' team directly via LouChat\n\n'+
-    'To log in:\n'+
-    '• Email: '+c.email+'\n'+
-    (pass?'• Password: '+pass+'\n':'')+
-    '\nIf you have any questions, just reply to this email.\n\n'+
-    'Welcome to the portal!\n'+bname
-  );
-  window.open('mailto:'+c.email+'?subject='+subject+'&body='+body);
+  // Generate/reuse invite code so they get the proper sign-up link
+  const accounts=getPortalAccounts();
+  let acct=accounts.find(a=>a.clientId===clientId);
+  let code;
+  if(acct?.inviteCode){ code=acct.inviteCode; }
+  else {
+    code=cpGenerateInviteCode();
+    if(acct){ acct.inviteCode=code; }
+    else { accounts.push({clientId,email:c.email,inviteCode:code,createdAt:new Date().toISOString().slice(0,10),status:'invited'}); }
+    savePortalAccounts(accounts);
+  }
+  const base=window.location.origin+window.location.pathname;
+  const link=`${base}?portal=client&invite=${code}&cid=${clientId}`;
+  if(typeof emailjs==='undefined'){ console.warn('EmailJS not loaded'); return; }
+  emailjs.send('service_f0gwd3p','template_5demfu7',{
+    to_email: c.email,
+    to_name:  c.name.split(' ')[0],
+    invite_link: link,
+    company_name: bname,
+  },'Ch7hmj99uF1tLKhMj').then(()=>{
+    console.log('Client portal invite sent to',c.email);
+  }).catch(err=>console.error('Invite email error:',err));
 }
 
 function revokeClientPortal(clientId){
