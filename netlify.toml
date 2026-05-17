@@ -8,3 +8,8 @@
 
 [build.environment]
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
+# Disable ALL asset processing — the app is a single large HTML file with
+# inline JS/CSS. Netlify's minifier breaks template literals and event handlers.
+[build.processing]
+  skip_processing = true
