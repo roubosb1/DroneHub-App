@@ -8153,7 +8153,7 @@ function cpEmailInvite(clientId, btnEl){
   // Use the dedicated client invite template (create in EmailJS with these params:
   //   to_email, to_name, invite_link, company_name)
   // Falls back gracefully if template fields differ
-  emailjs.send('service_f0gwd3p','template_dcp_invite',{
+  emailjs.send('service_f0gwd3p','template_5demfu7',{
     to_email: clientEmail,
     to_name:  firstName,
     invite_link: link,
@@ -8167,10 +8167,8 @@ function cpEmailInvite(clientId, btnEl){
     console.error('EmailJS client invite error:',err);
     if(btnEl){btnEl.textContent='Failed — retry';btnEl.disabled=false;btnEl.style.color='var(--red)';}
     setTimeout(()=>{if(btnEl){btnEl.textContent='✉ Send Email Invite';btnEl.style.color='';}},4000);
-    // Fallback: open mail client so the invite still goes out
-    const subject=encodeURIComponent('Your '+bname+' Client Portal Access');
-    const body=encodeURIComponent('Hi '+firstName+',\n\nYour client portal is ready. Click below to create your account:\n\n'+link+'\n\nBest,\n'+bname);
-    window.open('mailto:'+clientEmail+'?subject='+subject+'&body='+body,'_blank');
+    // Show the link so it can be copied manually if needed
+    prompt('Email failed — copy this link and send manually:', link);
   });
 }
 
