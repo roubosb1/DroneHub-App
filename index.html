@@ -8059,12 +8059,13 @@ function cpSignup(){
   else accounts.push(entry);
   savePortalAccounts(accounts);
 
-  // Also update client record email if missing
+  // Also update client record email if missing — save to both localStorage AND Firebase
   if(clientId){
     const cIdx=clients.findIndex(c=>c.id===clientId);
     if(cIdx>=0 && !clients[cIdx].email){
       clients[cIdx].email=email;
       try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}
+      fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
     }
   }
 
@@ -8075,8 +8076,10 @@ function cpSignup(){
     gateSaveUsers(gUsers);
   }
 
-  // Log them in immediately
-  cpActiveClientId=clientId||entry.clientId;
+  // Log them in immediately and persist session
+  const resolvedClientId=clientId||entry.clientId;
+  cpActiveClientId=resolvedClientId;
+  try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:resolvedClientId,email,name}));}catch(e){}
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
   document.getElementById('cp-welcome-name').textContent=name.split(' ')[0];
@@ -8138,37 +8141,47 @@ function cpLogin(){
   const pass=document.getElementById('cp-login-pass').value;
   const errEl=document.getElementById('cp-login-error');
   if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
-  
+
+  // Look up directly in portal accounts — don't require a matching client record
   const accounts=getPortalAccounts();
-  const client=clients.find(c=>(c.email||'').toLowerCase()===email);
-  if(!client){errEl.textContent='No account found for that email address.';errEl.style.display='block';return;}
-  
-  const account=accounts.find(a=>a.clientId===client.id);
-  if(!account){errEl.textContent='Portal access not set up for this account. Contact DroneHub Media.';errEl.style.display='block';return;}
-  
+  const account=accounts.find(a=>(a.email||'').toLowerCase()===email);
+  if(!account||!account.passHash){errEl.textContent='No account found for that email. Please use your invite link to set up access.';errEl.style.display='block';return;}
   if(account.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
-  
+
   // Success
-  cpActiveClientId=client.id;
+  cpActiveClientId=account.clientId;
+  const displayName=account.name||email.split('@')[0];
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
-  document.getElementById('cp-welcome-name').textContent=client.name.split(' ')[0];
+  document.getElementById('cp-welcome-name').textContent=displayName.split(' ')[0];
+  // Persist session so page refresh doesn't log client out
+  try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:account.clientId,email,name:displayName}));}catch(e){}
   cpShowTab('overview');
 }
 
 function cpLogout(){
   cpActiveClientId=null;
+  try{sessionStorage.removeItem('dronehub_cp_session');}catch(e){}
   document.getElementById('cp-dashboard').style.display='none';
   document.getElementById('cp-login').style.display='flex';
   document.getElementById('cp-login-pass').value='';
 }
 
 function cpShowTab(tab){
-  document.querySelectorAll('.cp-tab').forEach(t=>{
+  // Only toggle tabs inside the client portal (not team portal which shares .cp-tab class)
+  document.querySelectorAll('#cp-dashboard .cp-tab').forEach(t=>{
     t.classList.toggle('active', t.dataset.tab===tab);
   });
-  const c=clients.find(cl=>cl.id===cpActiveClientId);
-  if(!c) return;
+  // Fall back to portal account data if no matching client record exists
+  const cpAcctFallback=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
+  const c=clients.find(cl=>cl.id===cpActiveClientId)||{
+    id:cpActiveClientId,
+    name:cpAcctFallback.name||'Client',
+    email:cpAcctFallback.email||'',
+    assets:[],
+    address:'',
+  };
+  if(!c.id) return;
   const fmtN=n=>'$'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const cJobs=savedJobs.filter(j=>j.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
   const completed=cJobs.filter(j=>j.status==='completed');
@@ -8388,11 +8401,16 @@ function cpShowTab(tab){
   }
   else if(tab==='social'){
     const socialPosts=socialPostsLoad();
-    const clientAddr=(c?.address||c?.name||'').toLowerCase();
-    // Find posts linked to this client's properties
+    const clientAddr=(c?.address||'').toLowerCase();
+    const clientName=(c?.name||'').toLowerCase();
+    // Find posts linked to this client — by clientId first, then fall back to address matching
     const myPosts=socialPosts.filter(p=>{
+      if(p.clientId && p.clientId===cpActiveClientId) return true;
       const addr=(p.address||'').toLowerCase();
-      return addr && clientAddr && (addr.includes(clientAddr.split(',')[0]) || clientAddr.includes(addr.split(',')[0]));
+      if(!addr) return false;
+      const searchStr=clientAddr||clientName;
+      if(!searchStr) return false;
+      return addr.includes(searchStr.split(',')[0]) || searchStr.includes(addr.split(',')[0]);
     });
     const pending=myPosts.filter(p=>p.status==='pending_r1'||p.status==='pending_r2');
     const others=myPosts.filter(p=>p.status!=='pending_r1'&&p.status!=='pending_r2');
@@ -10491,8 +10509,22 @@ function gateInit(){
     document.querySelector('.wrap')?.style.setProperty('display','none');
     document.getElementById('client-portal-root').style.display='block';
     if(_cpInvite && _cpCid){
+      // Arriving via invite link → show sign-up form
       cpShowSignup(_cpInvite, _cpCid);
     } else {
+      // Check for a saved session (so refresh doesn't log the client out)
+      try{
+        const savedCpSession=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
+        if(savedCpSession?.clientId){
+          cpActiveClientId=savedCpSession.clientId;
+          document.getElementById('cp-login').style.display='none';
+          document.getElementById('cp-dashboard').style.display='block';
+          document.getElementById('cp-welcome-name').textContent=(savedCpSession.name||'').split(' ')[0];
+          // Load fresh Firebase data then render — ensures social/invoice data is current
+          restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
+          return;
+        }
+      }catch(e){}
       cpShowSignin();
     }
     return;
@@ -10879,12 +10911,12 @@ async function gateEnterApp(session){
     document.querySelector('.app-header')?.style.setProperty('display','none');
     document.querySelector('.wrap')?.style.setProperty('display','none');
     if(session.clientId){
+      cpActiveClientId=session.clientId;
       document.getElementById('client-portal-root').style.display='block';
-      const acct=getPortalAccounts().find(a=>a.clientId===session.clientId)||{clientId:session.clientId};
-      const c=clients.find(cl=>cl.id===session.clientId)||{name:session.name};
+      const displayName=(session.name||session.email||'Client').split(' ')[0];
       const nameEl=document.getElementById('cp-welcome-name');
-      if(nameEl) nameEl.textContent='Welcome, '+c.name.split(' ')[0];
-      document.getElementById('cp-login-screen').style.display='none';
+      if(nameEl) nameEl.textContent=displayName;
+      document.getElementById('cp-login').style.display='none';
       document.getElementById('cp-dashboard').style.display='block';
       cpShowTab('overview');
     }
