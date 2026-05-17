@@ -13415,11 +13415,30 @@ function tpLogin(){
   const pass=document.getElementById('tp-pass').value;
   const errEl=document.getElementById('tp-login-error');
   if(!email||!pass){errEl.textContent='Please enter email and password.';errEl.style.display='block';return;}
+  const hash=simpleHash(pass);
+
+  // 1. Check team_members store (normal path)
   const members=getTeamMembers();
-  const member=members.find(m=>m.email.toLowerCase()===email);
-  if(!member||member.passHash!==simpleHash(pass)){errEl.textContent='Invalid email or password.';errEl.style.display='block';return;}
-  tpActiveMemberId=member.id;
-  tpOpenDashboard(member);
+  const member=members.find(m=>(m.email||'').toLowerCase()===email);
+  if(member&&member.passHash===hash){
+    tpActiveMemberId=member.id;
+    tpOpenDashboard(member);
+    return;
+  }
+
+  // 2. Fall back to gate_users — same password hash system.
+  //    Allows the platform owner / admins to use their main credentials here.
+  const gUser=gateGetUsers().find(u=>(u.email||'').toLowerCase()===email&&u.passHash===hash);
+  if(gUser){
+    const syntheticId='tp_gate_'+email.replace(/[^a-z0-9]/g,'_');
+    const synthetic={id:syntheticId,name:gUser.name||email.split('@')[0],email:gUser.email,role:gUser.role||'admin',orgId:null};
+    tpActiveMemberId=syntheticId;
+    tpOpenDashboard(synthetic);
+    return;
+  }
+
+  errEl.textContent='Invalid email or password.';
+  errEl.style.display='block';
 }
 
 function tpSignup(){
