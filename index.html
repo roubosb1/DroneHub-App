@@ -580,6 +580,26 @@ button{font-family:var(--font);}
         <button onclick="cpLogin()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);letter-spacing:.02em">Sign in →</button>
         <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">Don't have access? Contact DroneHub Media to set up your account.</div>
       </div>
+      <!-- Client sign-up (shown when arriving via invite link) -->
+      <div id="cp-signup-card" style="display:none;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;padding:28px;margin-top:12px">
+        <div style="font-size:18px;font-weight:700;color:var(--white);margin-bottom:4px">Create your account</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:20px">You've been invited to the DroneHub client portal.</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Your name</label>
+          <input type="text" id="cp-signup-name" placeholder="First Last" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white)">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Email address</label>
+          <input type="email" id="cp-signup-email" placeholder="your@email.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white)">
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Choose a password</label>
+          <input type="password" id="cp-signup-pass" placeholder="Min 6 characters" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white)">
+        </div>
+        <div id="cp-signup-error" style="font-size:11px;color:var(--red);margin-bottom:10px;display:none"></div>
+        <button onclick="cpSignup()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Create account →</button>
+        <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--muted)">Already have an account? <span onclick="cpShowSignin()" style="color:var(--blue-bright);cursor:pointer">Sign in</span></div>
+      </div>
       <div style="text-align:center;margin-top:20px">
         <button onclick="exitClientPortal()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">← Back to admin</button>
       </div>
@@ -610,6 +630,7 @@ button{font-family:var(--font);}
         <button onclick="cpShowTab('spending')" class="cp-tab" data-tab="spending">💰 Spending</button>
         <button onclick="cpShowTab('files')" class="cp-tab" data-tab="files">Files & Downloads</button>
         <button onclick="cpShowTab('messages')" class="cp-tab" data-tab="messages">💬 LouChat</button>
+        <button onclick="cpShowTab('social')" class="cp-tab" data-tab="social">📱 Social Approval</button>
       </div>
     </div>
 
@@ -6085,6 +6106,10 @@ function renderClientPortal(id, activeTab){
           <div style="font-size:13px;font-weight:600;color:var(--offwhite);margin-bottom:4px">No portal access yet</div>
           <div style="font-size:11px;color:var(--muted);line-height:1.7">${c.name} doesn't have a login yet. Create credentials below and send them an invite email — they'll be able to log in and see their projects, invoices, video progress and download links.</div>
         </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="cp-invite-btn-${c.id}" onclick="cpCopyInviteLink('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer">📋 Copy Invite Link</button>
+          <button onclick="cpEmailInvite('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">✉ Send Email Invite</button>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
             <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Password</label>
@@ -7950,6 +7975,164 @@ function exitClientPortal(){
   cpActiveClientId=null;
 }
 
+// ── CLIENT PORTAL — STANDALONE ROUTING ───────────────────────────────────
+let _cpInviteCode='';
+let _cpInviteClientId='';
+
+function cpShowSignin(){
+  document.getElementById('cp-login').style.display='flex';
+  document.getElementById('cp-dashboard').style.display='none';
+  const signupCard=document.getElementById('cp-signup-card');
+  const loginCard=document.querySelector('#cp-login .cp-login-main-card');
+  if(signupCard) signupCard.style.display='none';
+  // Show sign-in card - find it by looking for cp-login-email
+  const emailInput=document.getElementById('cp-login-email');
+  if(emailInput) emailInput.closest('[style*="border-radius:16px"]').style.display='block';
+  setTimeout(()=>document.getElementById('cp-login-email')?.focus(),100);
+}
+
+function cpShowSignup(inviteCode, clientId){
+  _cpInviteCode=inviteCode||'';
+  _cpInviteClientId=clientId||'';
+  document.getElementById('cp-login').style.display='flex';
+  document.getElementById('cp-dashboard').style.display='none';
+  // Hide sign-in card, show sign-up card
+  const signupCard=document.getElementById('cp-signup-card');
+  if(signupCard){
+    signupCard.style.display='block';
+    // Pre-fill name from client record if available
+    if(clientId){
+      const c=clients.find(cl=>cl.id===clientId);
+      if(c){
+        const nameEl=document.getElementById('cp-signup-name');
+        if(nameEl) nameEl.value=c.name||'';
+        const emailEl=document.getElementById('cp-signup-email');
+        if(emailEl && c.email) emailEl.value=c.email;
+      }
+    }
+  }
+  // Hide the sign-in form (the card with cp-login-email)
+  const emailInput=document.getElementById('cp-login-email');
+  if(emailInput){
+    const card=emailInput.closest('div[style*="border-radius:16px"]');
+    if(card) card.style.display='none';
+  }
+  setTimeout(()=>document.getElementById('cp-signup-name')?.focus(),100);
+}
+
+function cpSignup(){
+  const name=(document.getElementById('cp-signup-name')?.value||'').trim();
+  const email=(document.getElementById('cp-signup-email')?.value||'').trim().toLowerCase();
+  const pass=document.getElementById('cp-signup-pass')?.value||'';
+  const errEl=document.getElementById('cp-signup-error');
+  if(!errEl) return;
+  errEl.style.display='none';
+
+  if(!name){errEl.textContent='Please enter your name.';errEl.style.display='block';return;}
+  if(!email||!email.includes('@')){errEl.textContent='Please enter a valid email.';errEl.style.display='block';return;}
+  if(pass.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
+
+  // Validate invite code
+  if(!_cpInviteCode.startsWith('DC-')){errEl.textContent='Invalid invite link. Please ask DroneHub for a new invite.';errEl.style.display='block';return;}
+
+  // Find or match client record
+  let clientId=_cpInviteClientId;
+  if(!clientId){
+    // Try to match by email
+    const matched=clients.find(c=>(c.email||'').toLowerCase()===email);
+    if(matched) clientId=matched.id;
+  }
+
+  // Create/update portal account
+  const accounts=getPortalAccounts();
+  const existingIdx=accounts.findIndex(a=>a.clientId===clientId || (a.email||'').toLowerCase()===email);
+  const entry={
+    clientId: clientId||('cp_'+Date.now()),
+    email,
+    name,
+    passHash: simpleHash(pass),
+    inviteCode: _cpInviteCode,
+    createdAt: new Date().toISOString().slice(0,10),
+    status: 'active',
+  };
+  if(existingIdx>=0) accounts[existingIdx]=entry;
+  else accounts.push(entry);
+  savePortalAccounts(accounts);
+
+  // Also update client record email if missing
+  if(clientId){
+    const cIdx=clients.findIndex(c=>c.id===clientId);
+    if(cIdx>=0 && !clients[cIdx].email){
+      clients[cIdx].email=email;
+      try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}
+    }
+  }
+
+  // Add to gate_users so gateInit recognises them as client type
+  const gUsers=gateGetUsers();
+  if(!gUsers.find(u=>u.email.toLowerCase()===email)){
+    gUsers.push({email,name,role:'client',type:'client',passHash:simpleHash(pass),clientId:clientId||entry.clientId,createdAt:entry.createdAt});
+    gateSaveUsers(gUsers);
+  }
+
+  // Log them in immediately
+  cpActiveClientId=clientId||entry.clientId;
+  document.getElementById('cp-login').style.display='none';
+  document.getElementById('cp-dashboard').style.display='block';
+  document.getElementById('cp-welcome-name').textContent=name.split(' ')[0];
+  cpShowTab('overview');
+}
+
+// Generate a unique invite code for a client
+function cpGenerateInviteCode(){
+  return 'DC-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+}
+
+// Copy invite link to clipboard for a specific client
+function cpCopyInviteLink(clientId){
+  const accounts=getPortalAccounts();
+  let acct=accounts.find(a=>a.clientId===clientId);
+  let code;
+  if(acct?.inviteCode) {
+    code=acct.inviteCode;
+  } else {
+    code=cpGenerateInviteCode();
+    // Save the code
+    if(acct){ acct.inviteCode=code; }
+    else { accounts.push({clientId,inviteCode:code,createdAt:new Date().toISOString().slice(0,10),status:'invited'}); }
+    savePortalAccounts(accounts);
+  }
+  const base=window.location.origin+window.location.pathname;
+  const link=`${base}?portal=client&invite=${code}&cid=${clientId}`;
+  navigator.clipboard.writeText(link).then(()=>{
+    const btn=document.getElementById('cp-invite-btn-'+clientId);
+    if(btn){const orig=btn.textContent;btn.textContent='✓ Copied!';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.color='';},2000);}
+  }).catch(()=>{
+    prompt('Copy this invite link:', link);
+  });
+}
+
+// Send invite via email (opens mail client)
+function cpEmailInvite(clientId){
+  const c=clients.find(cl=>cl.id===clientId);
+  if(!c){return;}
+  const accounts=getPortalAccounts();
+  let acct=accounts.find(a=>a.clientId===clientId);
+  let code;
+  if(acct?.inviteCode){ code=acct.inviteCode; }
+  else {
+    code=cpGenerateInviteCode();
+    if(acct){ acct.inviteCode=code; }
+    else { accounts.push({clientId,inviteCode:code,createdAt:new Date().toISOString().slice(0,10),status:'invited'}); }
+    savePortalAccounts(accounts);
+  }
+  const base=window.location.origin+window.location.pathname;
+  const link=`${base}?portal=client&invite=${code}&cid=${clientId}`;
+  const subject=encodeURIComponent('Your DroneHub Media Client Portal Access');
+  const body=encodeURIComponent(`Hi ${c.name.split(' ')[0]},\n\nYour DroneHub Media client portal is ready! You can view your projects, invoices, social content approvals and more.\n\nClick the link below to create your account:\n${link}\n\nIf you have any questions, reply to this email.\n\nBest,\nDroneHub Media`);
+  window.location.href=`mailto:${c.email||''}?subject=${subject}&body=${body}`;
+}
+
 function cpLogin(){
   const email=document.getElementById('cp-login-email').value.trim().toLowerCase();
   const pass=document.getElementById('cp-login-pass').value;
@@ -8203,8 +8386,78 @@ function cpShowTab(tab){
     // Scroll to bottom of messages after render
     setTimeout(()=>{const b=document.getElementById('cp-messages-body');if(b)b.scrollTop=b.scrollHeight;},50);
   }
+  else if(tab==='social'){
+    const socialPosts=socialPostsLoad();
+    const clientAddr=(c?.address||c?.name||'').toLowerCase();
+    // Find posts linked to this client's properties
+    const myPosts=socialPosts.filter(p=>{
+      const addr=(p.address||'').toLowerCase();
+      return addr && clientAddr && (addr.includes(clientAddr.split(',')[0]) || clientAddr.includes(addr.split(',')[0]));
+    });
+    const pending=myPosts.filter(p=>p.status==='pending_r1'||p.status==='pending_r2');
+    const others=myPosts.filter(p=>p.status!=='pending_r1'&&p.status!=='pending_r2');
+
+    html=`<div>
+      <div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px">Social Content</div>
+      ${pending.length===0&&myPosts.length===0?`<div style="text-align:center;padding:48px;color:var(--muted);font-size:13px">No social content yet — check back soon!</div>`:''}
+      ${pending.length?`<div style="font-size:11px;font-weight:700;color:#F5C842;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">⏳ Needs Your Approval (${pending.length})</div>
+      ${pending.map(p=>{
+        const st=SOCIAL_STATUSES.find(s=>s.id===p.status);
+        return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid rgba(245,200,66,.25);padding:16px;margin-bottom:12px">
+          <div style="font-weight:700;color:var(--white);margin-bottom:4px">${p.address||p.title||'Post'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.content?p.content.substring(0,180)+(p.content.length>180?'…':''):''}</div>
+          ${p.overlayText?`<div style="font-size:12px;color:#A78BFA;margin-bottom:10px;font-style:italic">"${p.overlayText}"</div>`:''}
+          ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">📅 Planned: ${p.scheduledAt}</div>`:''}
+          <div style="display:flex;gap:8px">
+            <button onclick="cpApprovePost('${p.id}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:700;cursor:pointer">✓ Approve</button>
+            <button onclick="cpRequestRevision('${p.id}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Changes</button>
+          </div>
+        </div>`;
+      }).join('')}`:''}
+      ${others.length?`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;margin-top:${pending.length?'20':'0'}px">Recent Posts</div>
+      ${others.map(p=>{
+        const st=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+        return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+          <div style="flex:1">
+            <div style="font-weight:600;color:var(--white);font-size:13px;margin-bottom:3px">${p.address||p.title||'Post'}</div>
+            <div style="font-size:12px;color:var(--muted)">${p.content?p.content.substring(0,120)+(p.content.length>120?'…':''):''}</div>
+            ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted);margin-top:4px">📅 ${p.scheduledAt}</div>`:''}
+          </div>
+          <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color};white-space:nowrap">${st.label}</span>
+        </div>`;
+      }).join('')}`:''}
+    </div>`;
+  }
 
   document.getElementById('cp-content').innerHTML=html;
+}
+
+function cpApprovePost(postId){
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  // Move to next stage
+  if(posts[idx].status==='pending_r1') posts[idx].status='approved_r1';
+  else if(posts[idx].status==='pending_r2') posts[idx].status='scheduled';
+  posts[idx].history=posts[idx].history||[];
+  posts[idx].history.push({action:'Client approved',by:'client',at:new Date().toISOString()});
+  socialPostsSave(posts);
+  cpShowTab('social');
+}
+
+function cpRequestRevision(postId){
+  const note=prompt('What would you like changed?');
+  if(!note) return;
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  if(posts[idx].status==='pending_r1') posts[idx].status='revision_r1';
+  else if(posts[idx].status==='pending_r2') posts[idx].status='revision_r2';
+  posts[idx].revisionNote=note;
+  posts[idx].history=posts[idx].history||[];
+  posts[idx].history.push({action:'Client requested revision: '+note,by:'client',at:new Date().toISOString()});
+  socialPostsSave(posts);
+  cpShowTab('social');
 }
 
 function cpSendMessage(){
@@ -8238,10 +8491,12 @@ function renderPortalAccounts(){
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--white)">${c?.name||'Unknown client'}</div>
-        <div style="font-size:10px;color:var(--muted)">${c?.email||'no email'} · Created ${a.createdAt||'—'}</div>
+        <div style="font-size:10px;color:var(--muted)">${c?.email||a.email||'no email'} · ${a.status==='invited'?'<span style="color:#F5C842">Invited</span>':'<span style="color:var(--green)">Active</span>'} · ${a.createdAt||'—'}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
-        <button onclick="previewPortalAs('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;cursor:pointer;font-weight:600">Preview</button>
+        <button id="cp-invite-btn-${a.clientId}" onclick="cpCopyInviteLink('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:10px;cursor:pointer;font-weight:600">📋 Copy Link</button>
+        <button onclick="cpEmailInvite('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;cursor:pointer;font-weight:600">✉ Email</button>
+        <button onclick="previewPortalAs('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:10px;cursor:pointer;font-weight:600">Preview</button>
         <button onclick="deletePortalAccount('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Revoke</button>
       </div>
     </div>`;
@@ -10225,6 +10480,23 @@ function gateSaveUsers(arr){
 
 // Called on every page load — checks if already logged in
 function gateInit(){
+  const _cpParams = new URLSearchParams(window.location.search);
+  const _cpMode = _cpParams.get('portal');
+  const _cpInvite = _cpParams.get('invite');
+  const _cpCid = _cpParams.get('cid');
+  if(_cpMode==='client' || (_cpInvite && _cpInvite.startsWith('DC-'))){
+    // Hide ops UI, show client portal directly
+    document.getElementById('site-login-gate').style.display='none';
+    document.querySelector('.app-header')?.style.setProperty('display','none');
+    document.querySelector('.wrap')?.style.setProperty('display','none');
+    document.getElementById('client-portal-root').style.display='block';
+    if(_cpInvite && _cpCid){
+      cpShowSignup(_cpInvite, _cpCid);
+    } else {
+      cpShowSignin();
+    }
+    return;
+  }
   const session=gateGetSession();
   if(session&&session.email){
     gateEnterApp(session);
