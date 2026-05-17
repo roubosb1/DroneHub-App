@@ -14822,7 +14822,7 @@ function renderSocialCalendar(){
           const timeStr=p.scheduledTime||'';
           return `<div onclick="openSocialPostPreview('${p.id}')" title="${p.address||p.title||''}" style="margin-bottom:3px;cursor:pointer;border-radius:4px;overflow:hidden;background:var(--navy)">
             ${timeStr?`<div style="font-size:9px;color:${dotColor};padding:1px 4px;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>${timeStr}</div>`:''}
-            ${p.content?`<div style="font-size:10px;color:var(--muted);padding:2px 4px 3px;line-height:1.3;max-height:32px;overflow:hidden">${p.content.substring(0,55)}${p.content.length>55?'…':''}</div>`:'<div style="font-size:10px;color:var(--muted);padding:2px 4px">${p.address||p.reelNumber||'Post'}</div>'}
+            ${p.content?`<div style="font-size:10px;color:var(--muted);padding:2px 4px 3px;line-height:1.3;max-height:32px;overflow:hidden">${p.content.substring(0,55)}${p.content.length>55?'…':''}</div>`:`<div style="font-size:10px;color:var(--muted);padding:2px 4px">${p.address||p.reelNumber||'Post'}</div>`}
           </div>`;
         }).join('')}
       </div>`;
