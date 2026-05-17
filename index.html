@@ -6108,7 +6108,7 @@ function renderClientPortal(id, activeTab){
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <button id="cp-invite-btn-${c.id}" onclick="cpCopyInviteLink('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer">📋 Copy Invite Link</button>
-          <button onclick="cpEmailInvite('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">✉ Send Email Invite</button>
+          <button onclick="cpEmailInvite('${c.id}',this)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">✉ Send Email Invite</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
@@ -8115,25 +8115,63 @@ function cpCopyInviteLink(clientId){
   });
 }
 
-// Send invite via email (opens mail client)
-function cpEmailInvite(clientId){
+// Send client portal invite email automatically via EmailJS
+function cpEmailInvite(clientId, btnEl){
   const c=clients.find(cl=>cl.id===clientId);
-  if(!c){return;}
+  const clientEmail=(c?.email||'').trim();
+  if(!c){alert('Client record not found.');return;}
+  if(!clientEmail){
+    alert('No email address on file for '+c.name+'. Please add one in their client record first.');
+    return;
+  }
+
+  // Generate or reuse invite code
   const accounts=getPortalAccounts();
   let acct=accounts.find(a=>a.clientId===clientId);
   let code;
   if(acct?.inviteCode){ code=acct.inviteCode; }
   else {
     code=cpGenerateInviteCode();
-    if(acct){ acct.inviteCode=code; }
-    else { accounts.push({clientId,inviteCode:code,createdAt:new Date().toISOString().slice(0,10),status:'invited'}); }
+    if(acct){ acct.inviteCode=code; acct.status='invited'; }
+    else { accounts.push({clientId,email:clientEmail,inviteCode:code,createdAt:new Date().toISOString().slice(0,10),status:'invited'}); }
     savePortalAccounts(accounts);
   }
+
   const base=window.location.origin+window.location.pathname;
   const link=`${base}?portal=client&invite=${code}&cid=${clientId}`;
-  const subject=encodeURIComponent('Your DroneHub Media Client Portal Access');
-  const body=encodeURIComponent(`Hi ${c.name.split(' ')[0]},\n\nYour DroneHub Media client portal is ready! You can view your projects, invoices, social content approvals and more.\n\nClick the link below to create your account:\n${link}\n\nIf you have any questions, reply to this email.\n\nBest,\nDroneHub Media`);
-  window.location.href=`mailto:${c.email||''}?subject=${subject}&body=${body}`;
+  const firstName=c.name.split(' ')[0];
+  const bname=bizSettings?.name||'DroneHub Media';
+
+  if(typeof emailjs==='undefined'){
+    alert('EmailJS not loaded. Please refresh and try again.');
+    return;
+  }
+
+  // Button state → Sending
+  if(btnEl){btnEl.textContent='Sending…';btnEl.disabled=true;}
+
+  // Use the dedicated client invite template (create in EmailJS with these params:
+  //   to_email, to_name, invite_link, company_name)
+  // Falls back gracefully if template fields differ
+  emailjs.send('service_f0gwd3p','template_dcp_invite',{
+    to_email: clientEmail,
+    to_name:  firstName,
+    invite_link: link,
+    company_name: bname,
+  },'Ch7hmj99uF1tLKhMj').then(()=>{
+    if(btnEl){btnEl.textContent='✓ Sent!';btnEl.style.color='var(--green)';btnEl.style.borderColor='rgba(34,217,122,.4)';}
+    setTimeout(()=>{
+      if(btnEl){btnEl.textContent='✉ Send Email Invite';btnEl.disabled=false;btnEl.style.color='';btnEl.style.borderColor='';}
+    },3000);
+  }).catch(err=>{
+    console.error('EmailJS client invite error:',err);
+    if(btnEl){btnEl.textContent='Failed — retry';btnEl.disabled=false;btnEl.style.color='var(--red)';}
+    setTimeout(()=>{if(btnEl){btnEl.textContent='✉ Send Email Invite';btnEl.style.color='';}},4000);
+    // Fallback: open mail client so the invite still goes out
+    const subject=encodeURIComponent('Your '+bname+' Client Portal Access');
+    const body=encodeURIComponent('Hi '+firstName+',\n\nYour client portal is ready. Click below to create your account:\n\n'+link+'\n\nBest,\n'+bname);
+    window.open('mailto:'+clientEmail+'?subject='+subject+'&body='+body,'_blank');
+  });
 }
 
 function cpLogin(){
@@ -8513,7 +8551,7 @@ function renderPortalAccounts(){
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <button id="cp-invite-btn-${a.clientId}" onclick="cpCopyInviteLink('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:10px;cursor:pointer;font-weight:600">📋 Copy Link</button>
-        <button onclick="cpEmailInvite('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;cursor:pointer;font-weight:600">✉ Email</button>
+        <button onclick="cpEmailInvite('${a.clientId}',this)" style="padding:4px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;cursor:pointer;font-weight:600">✉ Email</button>
         <button onclick="previewPortalAs('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:10px;cursor:pointer;font-weight:600">Preview</button>
         <button onclick="deletePortalAccount('${a.clientId}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Revoke</button>
       </div>
