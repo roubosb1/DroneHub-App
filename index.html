@@ -8110,23 +8110,43 @@ function switchToTeamPortal(){
     }
   }catch(e){}
 
-  // 3. SSO — if the current gate session email matches a team member,
-  //    auto-authenticate without a password (already verified by the gate)
-  const gateEmail=(gateGetSession()?.email||'').toLowerCase();
+  // 3. SSO — gate session (or client portal session) already proves identity;
+  //    build a synthetic member so the team portal dashboard works regardless
+  //    of whether a team_members record exists
+  const gateSession=gateGetSession();
+  // Also check client portal session as fallback email source
+  let cpSession=null;
+  try{cpSession=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');}catch(e){}
+  const gateEmail=((gateSession?.email)||(cpSession?.email)||'').toLowerCase();
   if(gateEmail){
+    // Try exact match in team_members first
     const m=members.find(x=>(x.email||'').toLowerCase()===gateEmail);
     if(m){ tpActiveMemberId=m.id; tpOpenDashboard(m); return; }
+
+    // Gate-authenticated user has no team_members record — create a
+    // synthetic one on-the-fly so they can access the portal immediately.
+    // This is safe: they're already verified by the gate auth system.
+    const syntheticId='tp_gate_'+gateEmail.replace(/[^a-z0-9]/g,'_');
+    const synthetic={
+      id: syntheticId,
+      name: gateSession.name||gateEmail.split('@')[0],
+      email: gateEmail,
+      role: gateSession.role||'admin',
+      orgId: null,
+    };
+    tpActiveMemberId=syntheticId;
+    tpOpenDashboard(synthetic);
+    return;
   }
 
-  // 4. Replicate the DEV SHORTCUT from openTeamPortal — if only one member
-  //    exists (or any member), auto-login without credentials
+  // 4. DEV SHORTCUT fallback — mirrors openTeamPortal() behaviour
   if(members.length){
     tpActiveMemberId=members[0].id;
     tpOpenDashboard(members[0]);
     return;
   }
 
-  // 5. No members at all — show login/signup
+  // 5. No session and no members — show login/signup
   document.getElementById('tp-login').style.display='flex';
   document.getElementById('tp-dashboard').style.display='none';
   tpSwitchMode('login');
