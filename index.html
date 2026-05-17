@@ -839,7 +839,7 @@ button{font-family:var(--font);}
   <button class="tab" onclick="showPane('calendar',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar</button>
   <button class="tab" onclick="showPane('clients',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Clients</button>
   <button class="tab" onclick="showPane('finance',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Finance</button>
-  <button class="tab" onclick="showPane('louchat',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat</button>
+  <button class="tab" id="tab-louchat" onclick="showPane('louchat',event)" style="display:flex;align-items:center;gap:5px;position:relative"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat<span id="lc-nav-badge" style="display:none;min-width:16px;height:16px;border-radius:8px;background:#E85D5D;color:#fff;font-size:10px;font-weight:700;padding:0 4px;line-height:16px;text-align:center;box-sizing:border-box"></span></button>
   <button class="tab" onclick="showPane('team',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team</button>
   <button class="tab" onclick="showPane('settings',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
   <button class="tab" onclick="showPane('sales',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales</button>
@@ -1622,6 +1622,14 @@ button{font-family:var(--font);}
       </div>
 
     </div>
+  </div>
+
+  <!-- Client filter pills -->
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+    <button id="cfil-all"      onclick="setClientFilter('all')"      style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">All</button>
+    <button id="cfil-messages" onclick="setClientFilter('messages')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</button>
+    <button id="cfil-active"   onclick="setClientFilter('active')"   style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Active jobs</button>
+    <button id="cfil-inactive" onclick="setClientFilter('inactive')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">Inactive</button>
   </div>
 
   <div id="clients-empty" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;display:none">No clients yet. Hit <strong style="color:var(--blue-bright)">+ Add client</strong> above to get started.</div>
@@ -5575,38 +5583,86 @@ function clearAllClients(){
   clients=[];saveClientsToStorage();renderClients();
 }
 
+let _clientFilter='all';
+function setClientFilter(f){
+  _clientFilter=f;
+  const pillColors={
+    all:     {bg:'rgba(91,141,239,.18)', color:'var(--blue-bright)', border:'var(--blue)'},
+    messages:{bg:'rgba(34,217,122,.12)', color:'var(--green)',       border:'rgba(34,217,122,.4)'},
+    active:  {bg:'rgba(245,166,35,.12)', color:'var(--amber)',       border:'rgba(245,166,35,.4)'},
+    inactive:{bg:'rgba(255,255,255,.06)',color:'var(--muted)',       border:'var(--border)'},
+  };
+  ['all','messages','active','inactive'].forEach(k=>{
+    const el=document.getElementById('cfil-'+k);
+    if(!el) return;
+    const isActive=k===f;
+    const c=isActive?pillColors[k]:{bg:'var(--navy-lift)',color:'var(--muted)',border:'var(--border)'};
+    el.style.background=c.bg; el.style.color=c.color; el.style.borderColor=c.border;
+  });
+  renderClients();
+}
 function renderClients(){
   const q=(document.getElementById('clients-search')?.value||'').trim().toLowerCase();
   const list=document.getElementById('clients-list');
   const empty=document.getElementById('clients-empty');
   if(!list) return;
 
-  const filtered=clients.filter(c=>
-    !q||c.name.toLowerCase().includes(q)||
-    (c.email&&c.email.toLowerCase().includes(q))||
-    (c.company&&c.company.toLowerCase().includes(q))
-  );
-
-  empty.style.display=filtered.length?'none':'block';
-  list.style.display=filtered.length?'grid':'none';
-
   const _lcUnread=getLcUnread();
-  list.innerHTML=filtered.map(c=>{
+  const portalAccts=getPortalAccounts();
+
+  // Build enriched client records for sorting
+  const enriched=clients.map(c=>{
     const cJobs=savedJobs.filter(j=>j.clientId===c.id);
+    const hasActiveJob=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress');
+    const newMsgs=_lcUnread['lc_client_'+c.id]||0;
+    // Get last message timestamp for sorting within unread group
+    let lastMsgTs='';
+    if(newMsgs>0){
+      const msgs=getLcMessages('lc_client_'+c.id);
+      if(msgs.length) lastMsgTs=msgs[msgs.length-1].ts||'';
+    }
+    return {c, cJobs, hasActiveJob, newMsgs, lastMsgTs};
+  });
+
+  // Apply filter pill
+  const afterFilter=enriched.filter(({c, hasActiveJob, newMsgs})=>{
+    const matchesQ=!q||c.name.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))||(c.company&&c.company.toLowerCase().includes(q));
+    if(!matchesQ) return false;
+    if(_clientFilter==='messages') return newMsgs>0;
+    if(_clientFilter==='active')   return hasActiveJob;
+    if(_clientFilter==='inactive') return !hasActiveJob;
+    return true;
+  });
+
+  // Smart sort: 1) unread messages (newest first), 2) active jobs, 3) alphabetical
+  afterFilter.sort((a,b)=>{
+    const aUnread=a.newMsgs>0, bUnread=b.newMsgs>0;
+    if(aUnread!==bUnread) return aUnread?-1:1;
+    if(aUnread&&bUnread){
+      if(a.lastMsgTs&&b.lastMsgTs) return b.lastMsgTs.localeCompare(a.lastMsgTs);
+    }
+    const aActive=a.hasActiveJob, bActive=b.hasActiveJob;
+    if(aActive!==bActive) return aActive?-1:1;
+    return a.c.name.localeCompare(b.c.name);
+  });
+
+  empty.style.display=afterFilter.length?'none':'block';
+  list.style.display=afterFilter.length?'grid':'none';
+
+  list.innerHTML=afterFilter.map(({c, cJobs, hasActiveJob, newMsgs})=>{
     const completed=cJobs.filter(j=>j.status==='completed');
     const revenue=completed.reduce((s,j)=>s+j.grand,0);
-    const lastJob=cJobs.sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const portalAccts=getPortalAccounts();
+    const sortedJobs=[...cJobs].sort((a,b)=>b.date.localeCompare(a.date));
+    const lastJob=sortedJobs[0];
     const hasPortal=portalAccts.find(a=>a.clientId===c.id);
     const activeTrackerJobs=cJobs.filter(j=>{
       const ts=getTrackerStage(j.id);
       return ts.editStatus&&ts.editStatus!=='finals_sent'&&(j.status==='confirmed'||j.status==='completed');
     });
-    const newMsgs=_lcUnread['lc_client_'+c.id]||0;
-    return `<div class="client-card" onclick="openClientDetail('${c.id}')">
+    return `<div class="client-card" onclick="openClientDetail('${c.id}')" style="${newMsgs>0?'border-color:rgba(34,217,122,.35);':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div class="client-card-name">${c.name}</div>
-        <div style="display:flex;align-items:center;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           ${newMsgs>0?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;background:rgba(34,217,122,.15);color:var(--green);border:1px solid rgba(34,217,122,.3)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${newMsgs} new</span>`:''}
           <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;background:${hasPortal?'var(--green-bg)':'rgba(255,255,255,.05)'};color:${hasPortal?'var(--green)':'var(--muted)'}">
             ${hasPortal?'✓ Portal':'No portal'}
@@ -9968,13 +10024,26 @@ function deleteLcChannelMessages(channelId){
 
 // Unread counts
 function getLcUnread(){return JSON.parse(localStorage.getItem('dronehub_lc_unread')||'{}');}
+function refreshLcNavBadge(){
+  const u=getLcUnread();
+  const total=Object.values(u).reduce((s,v)=>s+(v||0),0);
+  const el=document.getElementById('lc-nav-badge');
+  if(!el) return;
+  if(total>0){el.textContent=total>99?'99+':String(total);el.style.display='inline-block';}
+  else{el.style.display='none';}
+  // Also refresh clients badge count in client cards
+  const cListEl=document.getElementById('clients-list');
+  if(cListEl&&cListEl.style.display!=='none') renderClients();
+}
 function markLcRead(channelId){
   const u=getLcUnread(); delete u[channelId];
   try{localStorage.setItem('dronehub_lc_unread',JSON.stringify(u));}catch(e){}
+  refreshLcNavBadge();
 }
 function addLcUnread(channelId){
   const u=getLcUnread(); u[channelId]=(u[channelId]||0)+1;
   try{localStorage.setItem('dronehub_lc_unread',JSON.stringify(u));}catch(e){}
+  refreshLcNavBadge();
 }
 
 let lcActiveChannel=null;
@@ -14392,6 +14461,7 @@ if(expDateInput) expDateInput.value=new Date().toISOString().slice(0,10);
 populateContractorDropdowns();
 ensureDefaultOrg();
 lcEnsureDefaults();
+refreshLcNavBadge();
 renderExtraServices();
 populateSalespersonDropdown();
 calc();
