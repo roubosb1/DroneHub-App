@@ -9054,7 +9054,39 @@ function cpSendMessage(){
   const input=document.getElementById('cp-msg-input');
   const text=input?.value.trim();
   if(!text||!cpActiveClientId) return;
+
+  // 1. Save to portal_msgs (client-side thread the client can read)
   savePortalMessage(cpActiveClientId,'client',text);
+
+  // 2. Mirror into ops-side LouChat so the team sees it immediately
+  const cpSess=(() => { try{return JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');}catch(e){return null;} })();
+  const clientDisplayName=cpSess?.name||'Client';
+  const lcChannelId='lc_client_'+cpActiveClientId;
+  let channels=getLcChannels();
+  if(!channels.find(c=>c.id===lcChannelId)){
+    channels.push({
+      id:lcChannelId,
+      name:clientDisplayName.split(' ')[0].toLowerCase(),
+      type:'client_dm',
+      topic:'Direct messages from '+clientDisplayName,
+      clientId:cpActiveClientId,
+      clientName:clientDisplayName,
+      createdAt:new Date().toISOString().slice(0,10),
+      members:[],
+    });
+    saveLcChannels(channels);
+  }
+  saveLcMessage(lcChannelId,{
+    id:Date.now(),
+    author:clientDisplayName,
+    text,
+    ts:new Date().toISOString(),
+    from:'client',
+    clientId:cpActiveClientId,
+    reactions:{},
+  });
+  addLcUnread(lcChannelId);
+
   input.value='';
   cpShowTab('messages');
 }
@@ -9823,7 +9855,8 @@ const LC_TYPE_META={
   welcome:{icon:LC_SVG.welcome,color:'var(--blue-bright)',label:'Welcome'},
   general:{icon:LC_SVG.general,color:'var(--blue-bright)',label:'General'},
   project:{icon:LC_SVG.project,color:'var(--blue)',label:'Project'},
-  client: {icon:LC_SVG.client, color:'var(--blue)',label:'Client'},
+  client:     {icon:LC_SVG.client, color:'var(--blue)',label:'Client'},
+  client_dm:  {icon:LC_SVG.client, color:'#22D97A',label:'Client Messages'},
   social: {icon:LC_SVG.social, color:'var(--blue-bright)',label:'Social Media'},
   admin:  {icon:LC_SVG.admin,  color:'var(--red)',label:'Admin'},
 };
@@ -9982,7 +10015,7 @@ function renderLouChat(){
     groups[ch.type].push(ch);
   });
 
-  const typeOrder=['welcome','general','project','client','social','admin'];
+  const typeOrder=['welcome','general','project','client','client_dm','social','admin'];
   let html='';
   typeOrder.forEach(type=>{
     if(!groups[type]) return;
@@ -10766,6 +10799,13 @@ function lcSendMessage(){
     attachments:lcPendingAttachments.length?[...lcPendingAttachments]:[],
   };
   saveLcMessage(lcActiveChannel,msg);
+
+  // If replying in a client DM channel → mirror back to portal_msgs
+  // so the client sees the reply in their portal LouChat tab
+  if(ch.type==='client_dm' && ch.clientId){
+    savePortalMessage(ch.clientId,'team',text);
+  }
+
   if(input){input.value='';input.style.height='auto';}
   lcPendingAttachments=[];
   lcRenderAttachPreview();
@@ -13766,7 +13806,7 @@ function tpShowTab(tab){
     const tpActiveCh=window._tpActiveLcChannel||null;
     const activeCh=tpActiveCh?accessible.find(c=>c.id===tpActiveCh):null;
 
-    const typeOrder=['welcome','general','project','client','social','admin'];
+    const typeOrder=['welcome','general','project','client','client_dm','social','admin'];
     const groups={};
     accessible.forEach(ch=>{if(!groups[ch.type])groups[ch.type]=[];groups[ch.type].push(ch);});
 
