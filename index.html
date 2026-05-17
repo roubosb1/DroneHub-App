@@ -8085,14 +8085,62 @@ function savePortalMessage(clientId, from, text){
 
 let cpActiveClientId=null;
 
+// ── Shared client-portal auto-login helper ───────────────────────────────
+// Returns true and shows the dashboard if any session can be restored.
+// Returns false and the caller must show the login screen.
+function _cpTryAutoLogin(){
+  // 1. In-memory session already active
+  if(cpActiveClientId){
+    document.getElementById('cp-login').style.display='none';
+    document.getElementById('cp-dashboard').style.display='block';
+    return true;
+  }
+
+  // 2. Saved sessionStorage session (survived a portal switch)
+  try{
+    const saved=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
+    if(saved?.clientId){
+      cpActiveClientId=saved.clientId;
+      document.getElementById('cp-welcome-name').textContent=(saved.name||'').split(' ')[0];
+      document.getElementById('cp-login').style.display='none';
+      document.getElementById('cp-dashboard').style.display='block';
+      restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
+      return true;
+    }
+  }catch(e){}
+
+  // 3. SSO — gate session email matched against portal_accounts.
+  //    If the logged-in ops/team user has a client portal account under
+  //    the same email, authenticate them silently.
+  const gateSession=gateGetSession();
+  const gateEmail=((gateSession?.email)||'').toLowerCase();
+  if(gateEmail){
+    const acct=getPortalAccounts().find(a=>(a.email||'').toLowerCase()===gateEmail);
+    if(acct?.clientId){
+      cpActiveClientId=acct.clientId;
+      const displayName=acct.name||gateSession?.name||gateEmail.split('@')[0];
+      try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:acct.clientId,email:gateEmail,name:displayName}));}catch(e){}
+      document.getElementById('cp-welcome-name').textContent=displayName.split(' ')[0];
+      document.getElementById('cp-login').style.display='none';
+      document.getElementById('cp-dashboard').style.display='block';
+      restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
+      return true;
+    }
+  }
+
+  return false; // caller must show login form
+}
+
 function openClientPortal(){
   document.getElementById('client-portal-root').style.display='block';
+  document.body.style.overflow='hidden';
+  if(_cpTryAutoLogin()) return;
+  // No session found — show login
   document.getElementById('cp-login').style.display='flex';
   document.getElementById('cp-dashboard').style.display='none';
   document.getElementById('cp-login-email').value='';
   document.getElementById('cp-login-pass').value='';
   document.getElementById('cp-login-error').style.display='none';
-  document.body.style.overflow='hidden';
   setTimeout(()=>document.getElementById('cp-login-email').focus(),100);
 }
 
@@ -8172,25 +8220,8 @@ function switchToClientPortal(){
   document.getElementById('team-portal-root').style.display='none';
   document.getElementById('client-portal-root').style.display='block';
   document.body.style.overflow='hidden';
-  if(cpActiveClientId){
-    // Already authenticated — go straight to dashboard
-    document.getElementById('cp-login').style.display='none';
-    document.getElementById('cp-dashboard').style.display='block';
-    return;
-  }
-  // Try to restore from sessionStorage
-  try{
-    const saved=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
-    if(saved?.clientId){
-      cpActiveClientId=saved.clientId;
-      document.getElementById('cp-welcome-name').textContent=(saved.name||'').split(' ')[0];
-      document.getElementById('cp-login').style.display='none';
-      document.getElementById('cp-dashboard').style.display='block';
-      restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
-      return;
-    }
-  }catch(e){}
-  // Not logged in — show client login screen
+  if(_cpTryAutoLogin()) return;
+  // No session — show login screen
   document.getElementById('cp-login').style.display='flex';
   document.getElementById('cp-dashboard').style.display='none';
 }
