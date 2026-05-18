@@ -873,9 +873,9 @@ button{font-family:var(--font);}
   <div class="header-divider"></div>
   <div class="header-sub">Operations Hub</div>
   <div id="header-right" style="margin-left:auto;display:flex;align-items:center;gap:20px">
-    <button id="header-client-portal-btn" onclick="openClientPortal()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.02em">👤 Client Portal</button>
     <div id="header-user-wrap" style="display:flex;align-items:center;gap:10px">
       <span id="app-user-display" style="font-size:12px;color:var(--muted)"></span>
+      <button id="header-client-portal-btn" onclick="openClientPortal()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Client Portal</button>
       <button id="header-platform-btn" onclick="showPane('platform')" title="Platform Dashboard" style="display:none;padding:5px 10px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Platform</button>
       <button id="header-signout-btn" onclick="gateLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Sign out</button>
     </div>
