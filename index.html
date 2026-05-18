@@ -813,7 +813,7 @@ button{font-family:var(--font);}
 .cp-tab{padding:12px 18px;border:none;background:transparent;color:var(--muted);font-size:13px;font-family:var(--font);font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
 .cp-tab:hover{color:var(--offwhite)}
 .cp-tab.active{color:var(--blue-bright);border-bottom-color:var(--blue-bright)}
-.cp-msg{padding:12px 14px;border-radius:10px;margin-bottom:8px;max-width:78%;line-height:1.5;font-size:13px}
+.cp-msg{padding:12px 14px;border-radius:10px;max-width:78%;line-height:1.5;font-size:13px}
 .cp-msg-from-client{background:var(--navy-lift);color:var(--offwhite);align-self:flex-start}
 .cp-msg-from-team{background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;align-self:flex-end}
 </style>
@@ -8759,7 +8759,7 @@ function cpShowTab(tab){
       </div>
       <div id="cp-messages-body" style="min-height:280px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0;margin-bottom:14px">
         ${msgs.length?msgs.map(m=>m.from==='seen'
-          ?`<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;color:var(--muted);margin-top:-4px;padding-right:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Seen ${new Date(m.ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>`
+          ?`<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;color:var(--muted);padding-right:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Seen ${new Date(m.ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>`
           :`<div class="cp-msg cp-msg-from-${m.from==='client'?'client':'team'}" style="padding:10px 14px;border-radius:12px;max-width:78%;background:${m.from==='client'?'var(--navy-lift)':'linear-gradient(135deg,var(--blue),var(--blue-dim))'};color:${m.from==='client'?'var(--offwhite)':'#fff'};${m.from==='client'?'align-self:flex-start':'align-self:flex-end'}">
             <div style="font-size:12px;line-height:1.5">${m.text}</div>
             <div style="font-size:10px;opacity:.6;margin-top:4px">${new Date(m.ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
