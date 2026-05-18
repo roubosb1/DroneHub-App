@@ -6282,8 +6282,8 @@ function renderClientPortal(id, activeTab){
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-          <button onclick="previewClientPortal('${id}')" style="padding:7px 16px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">👁 Preview as client</button>
-          <button onclick="sendClientPortalInvite('${id}')" style="padding:7px 16px;border-radius:12px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">📧 Resend invite email</button>
+          <button onclick="previewClientPortal('${id}')" style="padding:7px 16px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Preview as client</button>
+          <button onclick="sendClientPortalInvite('${id}')" style="padding:7px 16px;border-radius:12px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Resend invite email</button>
           <button onclick="revokeClientPortal('${id}');renderClientPortal('${id}','portal')" style="padding:7px 14px;border-radius:12px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;font-weight:600;cursor:pointer">Revoke access</button>
         </div>`
       :`
@@ -6292,8 +6292,8 @@ function renderClientPortal(id, activeTab){
           <div style="font-size:11px;color:var(--muted);line-height:1.7">${c.name} doesn't have a login yet. Create credentials below and send them an invite email — they'll be able to log in and see their projects, invoices, video progress and download links.</div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button id="cp-invite-btn-${c.id}" onclick="cpCopyInviteLink('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer">📋 Copy Invite Link</button>
-          <button onclick="cpEmailInvite('${c.id}',this)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">✉ Send Email Invite</button>
+          <button id="cp-invite-btn-${c.id}" onclick="cpCopyInviteLink('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Invite Link</button>
+          <button onclick="cpEmailInvite('${c.id}',this)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Send Email Invite</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
@@ -6301,7 +6301,7 @@ function renderClientPortal(id, activeTab){
             <input type="text" id="cp-new-pass-inline" placeholder="Set a password for ${c.name.split(' ')[0]}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
           </div>
           <div style="display:flex;align-items:flex-end">
-            <button onclick="createClientPortalFromDetail('${id}')" style="padding:8px 18px;border-radius:12px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;width:100%">Create & send invite ✉</button>
+            <button onclick="createClientPortalFromDetail('${id}')" style="padding:8px 18px;border-radius:12px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Create & send invite</button>
           </div>
         </div>`}
 
