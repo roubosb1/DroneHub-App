@@ -25,7 +25,26 @@ try{
 }catch(e){
   console.warn('Firebase not available — running in local-only mode');
 }
-const ORG_ID='dronehub_main';
+let ORG_ID='dronehub_main';
+
+// ── Platform helpers ────────────────────────────────────────────────────────
+// Scoped localStorage key — dronehub_main keeps legacy keys for backward compat
+function lsKey(suffix){ return ORG_ID==='dronehub_main'?'dronehub_'+suffix:ORG_ID+'_'+suffix; }
+// Platform owner check
+function isPlatformOwner(email){ return (email||'').toLowerCase().trim()==='roubosb1@gmail.com'; }
+// Look up which org an email belongs to (for multi-tenant logins)
+async function lookupUserOrg(email){
+  if(!db) return null;
+  try{
+    const snap=await db.collection('platform').doc('users').get();
+    if(snap.exists){
+      const data=snap.data();
+      const orgId=data[email.toLowerCase().replace(/[.@]/g,'_')];
+      if(orgId) return orgId;
+    }
+  }catch(e){console.warn('lookupUserOrg failed:',e);}
+  return null;
+}
 
 // Firebase helpers — safe no-ops if Firebase not loaded
 async function fbSet(col,docId,data){
@@ -435,6 +454,21 @@ button{font-family:var(--font);}
 .sales-status-warm{background:rgba(34,217,122,.15);color:#22D97A;}
 .sales-status-unsubscribed{background:rgba(180,50,50,.15);color:#FF7070;}
 .sales-status-client{background:rgba(122,171,255,.2);color:#A8C8FF;}
+/* ── Wizard ── */
+.wiz-panel{animation:fadeIn .2s}
+.wiz-step{width:32px;height:32px;border-radius:50%;border:2px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.wiz-step.active{border-color:var(--blue-bright);background:rgba(91,141,239,.18);color:var(--blue-bright)}
+.wiz-step.done{border-color:var(--green);background:rgba(34,217,122,.15);color:var(--green)}
+.wiz-connector{width:28px;height:2px;background:var(--border);flex-shrink:0}
+.wiz-module-card{padding:14px;border-radius:12px;border:1px solid var(--border);cursor:pointer;transition:all .15s;user-select:none}
+.wiz-module-card.selected{border-color:var(--blue-bright);background:rgba(91,141,239,.1)}
+.wiz-module-card:hover{border-color:var(--border-bright)}
+/* ── Platform cards ── */
+.platform-org-card{background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border-color .15s}
+.platform-org-card:hover{border-color:var(--border-bright)}
+.platform-kpi{background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:16px 20px}
+.platform-kpi .kpi-val{font-size:26px;font-weight:800;color:var(--white);line-height:1}
+.platform-kpi .kpi-label{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .sales-action-btn{padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer;font-weight:500;transition:background .12s;}
 .sales-action-btn:hover{background:var(--navy-card);color:var(--offwhite);}
 .sales-email-link{color:var(--blue-bright);cursor:pointer;text-decoration:none;font-size:13px;}
@@ -513,6 +547,10 @@ button{font-family:var(--font);}
         </div>
         <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--border-bright)">
           <span onclick="gateClearAndReset()" style="cursor:pointer;text-decoration:underline;color:var(--muted)">Having trouble? Reset login</span>
+        </div>
+        <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+          <span style="font-size:11px;color:var(--muted)">Running a media business? </span>
+          <span onclick="showOrgSignupWizard()" style="font-size:11px;color:var(--blue-bright);cursor:pointer;font-weight:700">Start your free workspace →</span>
         </div>
       </div>
 
@@ -844,6 +882,7 @@ button{font-family:var(--font);}
   <button class="tab" onclick="showPane('settings',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
   <button class="tab" onclick="showPane('sales',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Sales</button>
   <button class="tab" onclick="showPane('social',event)" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Social</button>
+  <button class="tab" id="tab-platform" onclick="showPane('platform',event)" style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(91,141,239,.15),rgba(91,141,239,.05));border:1px solid rgba(91,141,239,.3)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> <span style="color:var(--blue-bright);font-weight:700">Platform</span></button>
 </div>
 
 <!-- QUOTE BUILDER -->
@@ -2279,6 +2318,17 @@ button{font-family:var(--font);}
       </div>
     </div>
   </div>
+
+  <!-- Suggestion Box — hidden for dronehub_main (platform owner doesn't need to suggest to herself) -->
+  <div class="card" style="margin-top:12px" id="settings-suggestion-box">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div class="section-label" style="margin:0">Suggestion box</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Have an idea or found something that could be better? Let the DroneHub team know!</div>
+    <textarea id="suggestion-text" placeholder="Share your idea, feature request, or feedback…" rows="3" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:vertical;margin-bottom:10px"></textarea>
+    <button onclick="submitSuggestion()" style="padding:8px 22px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Send suggestion →</button>
+  </div>
 </div>
 
 <!-- TEAM -->
@@ -3084,6 +3134,199 @@ button{font-family:var(--font);}
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════
+     PLATFORM OWNER DASHBOARD — visible only to roubosb1@gmail.com
+     ═══════════════════════════════════════════════════════ -->
+<div id="pane-platform" class="pane">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div>
+        <span style="font-size:20px;font-weight:700;color:var(--white)">Platform Dashboard</span>
+        <span style="font-size:11px;color:var(--blue-bright);margin-left:10px;font-weight:600;padding:2px 8px;background:rgba(91,141,239,.15);border-radius:6px">Owner Only</span>
+      </div>
+    </div>
+    <button onclick="platformRefresh()" style="padding:8px 18px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- KPI strip -->
+  <div id="platform-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px"></div>
+
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto">
+    <button id="ptab-orgs" onclick="setPlatformTab('orgs')" style="padding:10px 18px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Organizations
+    </button>
+    <button id="ptab-revenue" onclick="setPlatformTab('revenue')" style="padding:10px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Revenue
+    </button>
+    <button id="ptab-suggestions" onclick="setPlatformTab('suggestions')" style="padding:10px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Suggestions <span id="platform-suggest-badge" style="display:none;padding:1px 6px;border-radius:8px;background:rgba(245,200,66,.2);color:#F5C842;font-size:10px;font-weight:700;margin-left:4px"></span>
+    </button>
+  </div>
+
+  <!-- Sub-tab content -->
+  <div id="platform-tab-orgs">
+    <div id="platform-orgs-list" style="display:grid;gap:12px"></div>
+  </div>
+  <div id="platform-tab-revenue" style="display:none">
+    <div id="platform-revenue-content"></div>
+  </div>
+  <div id="platform-tab-suggestions" style="display:none">
+    <div id="platform-suggestions-list" style="display:grid;gap:10px"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     COMPANY ONBOARDING WIZARD — full-screen overlay
+     ═══════════════════════════════════════════════════════ -->
+<div id="org-signup-wizard" style="display:none;position:fixed;inset:0;z-index:99999;background:var(--navy);overflow-y:auto;font-family:var(--font)">
+  <div style="max-width:560px;margin:0 auto;padding:40px 20px 80px">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;letter-spacing:-.02em;line-height:1">
+        <span style="color:#fff">DRONE</span><span style="color:#5B8DEF">HUB</span><span style="color:#5B8DEF">.</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:.1em;text-transform:uppercase;font-weight:700">Business Sign Up</div>
+    </div>
+
+    <!-- Step progress -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px" id="wizard-steps">
+      <div class="wiz-step active" data-step="1">1</div>
+      <div class="wiz-connector"></div>
+      <div class="wiz-step" data-step="2">2</div>
+      <div class="wiz-connector"></div>
+      <div class="wiz-step" data-step="3">3</div>
+      <div class="wiz-connector"></div>
+      <div class="wiz-step" data-step="4">4</div>
+      <div class="wiz-connector"></div>
+      <div class="wiz-step" data-step="5">5</div>
+    </div>
+
+    <!-- Step panels -->
+    <div id="wiz-step-1" class="wiz-panel">
+      <div style="font-size:22px;font-weight:800;color:var(--white);margin-bottom:6px">👋 Welcome! Let's get you set up.</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">This takes about 3 minutes. First, tell us about your company.</div>
+      <div style="display:grid;gap:14px">
+        <div>
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Company / Business Name *</label>
+          <input id="wiz-company" type="text" placeholder="e.g. Aerial Vision Media" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Your First Name *</label>
+            <input id="wiz-first" type="text" placeholder="First" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Last Name *</label>
+            <input id="wiz-last" type="text" placeholder="Last" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Work Email *</label>
+          <input id="wiz-email" type="email" placeholder="you@yourbusiness.com" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Password *</label>
+          <input id="wiz-pass" type="password" placeholder="Choose a strong password" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">What do you do?</label>
+          <select id="wiz-industry" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <option value="">Select your industry…</option>
+            <option value="real_estate">Real Estate Photography/Videography</option>
+            <option value="drone_services">Drone Services</option>
+            <option value="event_video">Event Videography</option>
+            <option value="commercial_photo">Commercial Photography</option>
+            <option value="marketing_agency">Marketing / Creative Agency</option>
+            <option value="wedding">Wedding Photography/Videography</option>
+            <option value="other">Other media production</option>
+          </select>
+        </div>
+      </div>
+      <div id="wiz-error-1" style="font-size:11px;color:var(--red);margin-top:12px;display:none;padding:8px 12px;background:rgba(240,82,82,.1);border-radius:8px"></div>
+    </div>
+
+    <div id="wiz-step-2" class="wiz-panel" style="display:none">
+      <div style="font-size:22px;font-weight:800;color:var(--white);margin-bottom:6px">🛠️ Pick your tools</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Choose which modules to enable. You can change this any time in Settings.</div>
+      <div id="wiz-module-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div style="margin-top:16px;padding:12px 14px;background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.2);border-radius:10px;font-size:11px;color:var(--muted)">
+        💡 <strong style="color:var(--white)">Tip:</strong> Start with just what you need. More tools = more complexity. You can always enable more later.
+      </div>
+    </div>
+
+    <div id="wiz-step-3" class="wiz-panel" style="display:none">
+      <div style="font-size:22px;font-weight:800;color:var(--white);margin-bottom:6px">💰 Pricing sheet</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Upload your services pricing CSV and we'll auto-build your quote tool. You can skip this and set it up manually later.</div>
+      <div id="wiz-csv-drop" onclick="document.getElementById('wiz-csv-input').click()" style="border:2px dashed var(--border-bright);border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border-bright)'">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" style="margin-bottom:10px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:4px">Drop your CSV here or click to browse</div>
+        <div style="font-size:11px;color:var(--muted)">Format: Service Name, Price, Description (one row per service)</div>
+      </div>
+      <input id="wiz-csv-input" type="file" accept=".csv" style="display:none" onchange="wizHandleCsvUpload(this)">
+      <div id="wiz-csv-preview" style="margin-top:14px;display:none">
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✓ Pricing sheet loaded</div>
+        <div id="wiz-csv-preview-list" style="max-height:200px;overflow-y:auto;display:grid;gap:4px"></div>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <span onclick="wizStep(4)" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">Skip for now — I'll set this up later</span>
+      </div>
+    </div>
+
+    <div id="wiz-step-4" class="wiz-panel" style="display:none">
+      <div style="font-size:22px;font-weight:800;color:var(--white);margin-bottom:6px">✉️ Email setup</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Connect your own SendGrid account to send bulk emails to clients. Platform covers transactional emails (quotes, invoices) — you only need this for marketing campaigns.</div>
+      <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:12px">SendGrid API Key <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">optional — for bulk email campaigns</span></div>
+        <input id="wiz-sendgrid" type="text" placeholder="SG.xxxxxxxx..." style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);letter-spacing:.04em">
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">
+          Get a free key at <span style="color:var(--blue-bright)">sendgrid.com</span> → Settings → API Keys. Free plan = 100 emails/day. Paid plans from $20/mo for unlimited.
+        </div>
+      </div>
+      <div style="padding:12px 14px;background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.2);border-radius:10px;font-size:11px;color:var(--muted)">
+        🔒 Your API key is encrypted and stored only in your workspace. We never see it.
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <span onclick="wizStep(5)" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">Skip for now</span>
+      </div>
+    </div>
+
+    <div id="wiz-step-5" class="wiz-panel" style="display:none">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:48px;margin-bottom:12px">🚀</div>
+        <div style="font-size:22px;font-weight:800;color:var(--white);margin-bottom:8px">You're all set!</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">Here's a summary of your workspace. Review it and click <strong style="color:var(--white)">Create my workspace</strong> to go live.</div>
+      </div>
+      <div id="wiz-summary" style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;padding:20px;margin-bottom:20px;display:grid;gap:10px"></div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.6">
+        By creating a workspace you agree to our Terms of Service. DroneHub takes a <strong style="color:var(--white)">2% platform fee</strong> on invoices processed through the platform.
+      </div>
+      <div id="wiz-error-5" style="font-size:11px;color:var(--red);margin-bottom:12px;display:none;padding:8px 12px;background:rgba(240,82,82,.1);border-radius:8px"></div>
+    </div>
+
+    <!-- Navigation -->
+    <div style="display:flex;gap:10px;margin-top:28px;align-items:center" id="wiz-nav">
+      <button id="wiz-btn-back" onclick="wizStep(_wizCurrentStep-1)" style="padding:12px 24px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;display:none">← Back</button>
+      <div style="flex:1"></div>
+      <button id="wiz-btn-cancel" onclick="hideOrgSignupWizard()" style="padding:12px 20px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button id="wiz-btn-next" onclick="wizNext()" style="padding:12px 32px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Next →</button>
+      <button id="wiz-btn-create" onclick="wizCreateOrg()" style="display:none;padding:12px 32px;border-radius:14px;border:none;background:linear-gradient(135deg,#22D97A,#1aad60);color:#fff;font-size:14px;font-weight:700;cursor:pointer">
+        <span id="wiz-create-label">Create my workspace ✓</span>
+      </button>
+    </div>
+
+    <div style="text-align:center;margin-top:20px">
+      <span onclick="hideOrgSignupWizard()" style="font-size:11px;color:var(--muted);cursor:pointer">← Back to sign in</span>
+    </div>
+  </div>
+</div>
+
 <!-- SOCIAL: Label Manager Modal -->
 <div id="social-label-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3100;align-items:center;justify-content:center" onclick="if(event.target===this)closeSocialLabelModal()">
   <div style="background:#1C2333;border-radius:16px;padding:24px;width:420px;max-width:95vw;border:1px solid #3A4890;box-shadow:0 8px 48px rgba(0,0,0,.6)" onclick="event.stopPropagation()">
@@ -3588,6 +3831,7 @@ function showPane(id,ev){
     renderSales();
   }
   if(id==='social'){ renderSocial(); }
+  if(id==='platform'){ renderPlatformDashboard(); }
   if(id==='louchat'){
     lcCleanCorruptMessages();
     lcRequestNotifications();
@@ -4937,6 +5181,9 @@ function changePassword(){
 }
 
 function loadSettings(){
+  // Show/hide suggestion box based on org (platform owner doesn't submit suggestions to herself)
+  const suggBox=document.getElementById('settings-suggestion-box');
+  if(suggBox) suggBox.style.display=isPlatformOwner(_activeSessionEmail)||ORG_ID==='dronehub_main'?'none':'block';
   const map={name:'biz-name',addr1:'biz-addr1',addr2:'biz-addr2',phone:'biz-phone',
     email:'biz-email',website:'biz-website',hst:'biz-hst',stripeUrl:'biz-stripe-url',
     terms:'biz-terms',notes:'biz-notes'};
@@ -11473,19 +11720,36 @@ async function gateLogin(){
     // Local not found — check Firebase before giving up (handles cross-device logins)
     if(db){
       errEl.textContent='Checking…';errEl.style.display='block';
+      // First: check if this email belongs to a different org (multi-tenant)
       try{
-        const fbData=await fbGet('orgs',ORG_ID+':gate_users');
-        if(fbData?.data){
-          const fbUsers=JSON.parse(fbData.data);
-          const fbUser=fbUsers.find(u=>u.email.toLowerCase()===email);
-          if(fbUser){
-            // Pull into localStorage for future logins on this device
-            const merged=gateGetUsers();
-            if(!merged.find(u=>u.email.toLowerCase()===email)){merged.push(fbUser);try{localStorage.setItem('dronehub_gate_users',JSON.stringify(merged));}catch(e){}}
-            user=fbUser;
+        const theirOrgId=await lookupUserOrg(email);
+        if(theirOrgId && theirOrgId!==ORG_ID){
+          // Switch to their org and load their users
+          ORG_ID=theirOrgId;
+          const fbOrgData=await fbGet('orgs',ORG_ID+':gate_users');
+          if(fbOrgData?.data){
+            const orgUsers=JSON.parse(fbOrgData.data);
+            const orgUser=orgUsers.find(u=>u.email.toLowerCase()===email);
+            if(orgUser){ user=orgUser; }
           }
         }
-      }catch(e){console.warn('Firebase user lookup failed:',e);}
+      }catch(e){console.warn('Org lookup failed:',e);}
+      // Fallback: check dronehub_main Firebase users
+      if(!user){
+        try{
+          const fbData=await fbGet('orgs',ORG_ID+':gate_users');
+          if(fbData?.data){
+            const fbUsers=JSON.parse(fbData.data);
+            const fbUser=fbUsers.find(u=>u.email.toLowerCase()===email);
+            if(fbUser){
+              // Pull into localStorage for future logins on this device
+              const merged=gateGetUsers();
+              if(!merged.find(u=>u.email.toLowerCase()===email)){merged.push(fbUser);try{localStorage.setItem('dronehub_gate_users',JSON.stringify(merged));}catch(e){}}
+              user=fbUser;
+            }
+          }
+        }catch(e){console.warn('Firebase user lookup failed:',e);}
+      }
     }
     if(!user){errEl.textContent='No account found for that email. Please sign up first or ask your admin to reset your access.';errEl.style.display='block';return;}
     errEl.style.display='none';
@@ -11514,7 +11778,8 @@ async function gateLogin(){
     user.type='admin';
   }
 
-  const loginSession={email:user.email,name:user.name,role:user.role,type:user.type,jobTitle:user.jobTitle||PRESET_JOB_TITLES[user.email]?.title||'',clientId:user.clientId||null};
+  // Include orgId in session so gateEnterApp can restore ORG_ID across page refreshes
+  const loginSession={email:user.email,name:user.name,role:user.role,type:user.type,jobTitle:user.jobTitle||PRESET_JOB_TITLES[user.email]?.title||'',clientId:user.clientId||null,orgId:ORG_ID!=='dronehub_main'?ORG_ID:undefined};
 
   // Skip 2FA for client and team/contractor accounts — only admins use 2FA
   if(user.type==='client'||user.type==='team'){
@@ -11714,6 +11979,8 @@ async function gateEnterApp(session){
   // Always inject jobTitle from preset map if not already set
   if(!session.jobTitle) session.jobTitle=PRESET_JOB_TITLES[session.email?.toLowerCase()]?.title||'';
   _activeSessionEmail = (session.email||'').toLowerCase().trim();
+  // Restore ORG_ID from session (multi-tenant: each org has its own ORG_ID)
+  if(session.orgId && session.orgId!=='dronehub_main') ORG_ID=session.orgId;
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
 
@@ -11894,10 +12161,33 @@ function applySalesAccess(session){
   if(mobSales) mobSales.style.display = allowed ? '' : 'none';
 }
 
-function gateShowAdminView(session){
+async function gateShowAdminView(session){
   document.querySelector('.app-header')?.style.setProperty('display','flex');
   document.querySelector('.wrap')?.style.setProperty('display','block');
   document.querySelectorAll('.tabs .tab').forEach(t=>t.style.display='');
+  // Show platform tab only for platform owner
+  const platformTab=document.getElementById('tab-platform');
+  if(platformTab) platformTab.style.display=isPlatformOwner(session.email)?'flex':'none';
+  // Load org settings for non-dronehub_main orgs (tab customization)
+  if(ORG_ID!=='dronehub_main'&&db){
+    try{
+      const orgSettingsData=await fbGet('orgs',ORG_ID+':settings');
+      if(orgSettingsData?.data){
+        const orgSettings=JSON.parse(orgSettingsData.data);
+        window._orgData=orgSettings;
+        const enabledTabs=orgSettings.enabledTabs;
+        if(enabledTabs&&enabledTabs.length>0){
+          // Hide tabs not in org's enabled list
+          document.querySelectorAll('.tabs .tab').forEach(btn=>{
+            const paneId=btn.getAttribute('onclick')?.match(/showPane\('(\w+)'/)?.[1]||'';
+            if(paneId&&paneId!=='platform'&&!enabledTabs.includes(paneId)){
+              btn.style.display='none';
+            }
+          });
+        }
+      }
+    }catch(e){console.warn('Org settings load failed:',e);}
+  }
   applySalesAccess(session);
   const userDisplay=document.getElementById('app-user-display');
   const displayName=session.email==='roubosb1@gmail.com'?'Bailey Roubos':(session.name||session.email);
@@ -16382,6 +16672,461 @@ function deleteSocialLabel(idx){
   labels.splice(idx,1);
   socialLabelsSave(_socialActiveWorkspace,labels);
   renderSocialLabelList();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PLATFORM OWNER DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _platformActiveTab='orgs';
+let _platformOrgs=[];
+let _platformSuggestions=[];
+
+function setPlatformTab(tab){
+  _platformActiveTab=tab;
+  ['orgs','revenue','suggestions'].forEach(t=>{
+    const btn=document.getElementById('ptab-'+t);
+    const panel=document.getElementById('platform-tab-'+t);
+    if(btn) btn.style.cssText=btn.style.cssText.replace(/border-bottom:[^;]+/,'')
+      +';border-bottom:2px solid '+(t===tab?'var(--blue-bright)':'transparent');
+    if(btn){ btn.style.color=t===tab?'var(--blue-bright)':'var(--muted)'; btn.style.borderBottom='2px solid '+(t===tab?'var(--blue-bright)':'transparent');}
+    if(panel) panel.style.display=t===tab?'block':'none';
+  });
+  if(tab==='orgs') renderPlatformOrgs();
+  if(tab==='revenue') renderPlatformRevenue();
+  if(tab==='suggestions') renderPlatformSuggestions();
+}
+
+async function platformRefresh(){
+  await renderPlatformDashboard();
+}
+
+async function renderPlatformDashboard(){
+  if(!isPlatformOwner(_activeSessionEmail)) return;
+  // Load orgs from Firebase
+  if(db){
+    try{
+      const snap=await db.collection('platform').doc('orgs_registry').get();
+      _platformOrgs=snap.exists?(snap.data().orgs||[]):[];
+    }catch(e){ _platformOrgs=[]; }
+    try{
+      const snap=await db.collection('platform').doc('suggestions').get();
+      _platformSuggestions=snap.exists?(snap.data().items||[]):[];
+    }catch(e){ _platformSuggestions=[]; }
+  }
+  // KPI strip
+  const kpiEl=document.getElementById('platform-kpi-strip');
+  if(kpiEl){
+    const totalOrgs=_platformOrgs.length;
+    const activeOrgs=_platformOrgs.filter(o=>o.status!=='suspended').length;
+    const totalUsers=_platformOrgs.reduce((s,o)=>s+(o.teamCount||1),0);
+    const totalRevenue=_platformOrgs.reduce((s,o)=>s+(o.totalRevenue||0),0);
+    const platformFee=(totalRevenue*0.02);
+    kpiEl.innerHTML=[
+      {val:totalOrgs,label:'Total orgs'},
+      {val:activeOrgs,label:'Active'},
+      {val:totalUsers,label:'Total users'},
+      {val:'$'+totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0}),label:'Org revenue (est.)'},
+      {val:'$'+platformFee.toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0}),label:'Platform fees (2%)'},
+      {val:_platformSuggestions.filter(s=>!s.resolved).length,label:'Open suggestions'},
+    ].map(k=>`<div class="platform-kpi"><div class="kpi-val">${k.val}</div><div class="kpi-label">${k.label}</div></div>`).join('');
+  }
+  // Update suggestion badge
+  const badge=document.getElementById('platform-suggest-badge');
+  const openSug=_platformSuggestions.filter(s=>!s.resolved).length;
+  if(badge){ badge.textContent=openSug; badge.style.display=openSug>0?'inline-block':'none'; }
+  // Render active tab
+  setPlatformTab(_platformActiveTab);
+}
+
+function renderPlatformOrgs(){
+  const el=document.getElementById('platform-orgs-list');
+  if(!el) return;
+  if(_platformOrgs.length===0){
+    el.innerHTML=`<div style="text-align:center;padding:48px 20px;color:var(--muted)">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">No organizations yet</div>
+      <div style="font-size:12px">Companies that sign up will appear here.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML=_platformOrgs.map(org=>{
+    const statusColor=org.status==='active'?'var(--green)':org.status==='suspended'?'var(--red)':'var(--muted)';
+    const modules=(org.enabledTabs||[]).join(', ')||'All';
+    const created=org.createdAt?new Date(org.createdAt).toLocaleDateString('en-CA',{year:'numeric',month:'short',day:'numeric'}):'—';
+    return `<div class="platform-org-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:15px;font-weight:700;color:var(--white)">${org.companyName||'Unnamed org'}</span>
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${statusColor}22;color:${statusColor}">${(org.status||'active').toUpperCase()}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${org.adminEmail||'—'} · ${org.industry||'Media'}</div>
+          <div style="font-size:11px;color:var(--muted)">Joined ${created} · Modules: ${modules}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <div style="font-size:11px;color:var(--muted)">
+            <span style="color:var(--white);font-weight:700">${org.teamCount||1}</span> users &nbsp;
+            <span style="color:var(--white);font-weight:700">${org.clientCount||0}</span> clients
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--green)">$${((org.totalRevenue||0)).toLocaleString('en-CA',{minimumFractionDigits:0})} invoiced</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="platformSuspendOrg('${org.orgId}')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer">${org.status==='suspended'?'Reactivate':'Suspend'}</button>
+            <button onclick="platformViewOrg('${org.orgId}')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;cursor:pointer">View →</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPlatformRevenue(){
+  const el=document.getElementById('platform-revenue-content');
+  if(!el) return;
+  const totalRevenue=_platformOrgs.reduce((s,o)=>s+(o.totalRevenue||0),0);
+  const platformFee=totalRevenue*0.02;
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+      <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:20px">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Total Org Revenue</div>
+        <div style="font-size:32px;font-weight:800;color:var(--white)">$${totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">across ${_platformOrgs.length} org(s)</div>
+      </div>
+      <div style="background:var(--navy-card);border:1px solid rgba(34,217,122,.3);border-radius:14px;padding:20px">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Your Platform Fees (2%)</div>
+        <div style="font-size:32px;font-weight:800;color:var(--green)">$${platformFee.toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">2% of all invoiced revenue</div>
+      </div>
+    </div>
+    <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Company</th>
+          <th style="padding:12px 16px;text-align:right;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Revenue</th>
+          <th style="padding:12px 16px;text-align:right;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Your Fee</th>
+        </tr></thead>
+        <tbody>
+          ${_platformOrgs.length===0?`<tr><td colspan="3" style="padding:32px;text-align:center;color:var(--muted)">No data yet</td></tr>`:
+          _platformOrgs.map(o=>`<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:12px 16px;color:var(--white);font-weight:600">${o.companyName||'—'}</td>
+            <td style="padding:12px 16px;text-align:right;color:var(--offwhite)">$${(o.totalRevenue||0).toLocaleString('en-CA',{minimumFractionDigits:0})}</td>
+            <td style="padding:12px 16px;text-align:right;color:var(--green);font-weight:600">$${((o.totalRevenue||0)*0.02).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderPlatformSuggestions(){
+  const el=document.getElementById('platform-suggestions-list');
+  if(!el) return;
+  const items=_platformSuggestions.slice().reverse();
+  if(items.length===0){
+    el.innerHTML=`<div style="text-align:center;padding:48px 20px;color:var(--muted)">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">No suggestions yet</div>
+      <div style="font-size:12px">Companies can submit feedback from their Settings page.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML=items.map((s,i)=>{
+    const date=s.createdAt?new Date(s.createdAt).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):'—';
+    return `<div style="background:var(--navy-card);border:1px solid ${s.resolved?'var(--border)':'rgba(91,141,239,.3)'};border-radius:12px;padding:16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--white);margin-bottom:4px;line-height:1.5">${s.text||''}</div>
+          <div style="font-size:11px;color:var(--muted)">${s.orgName||'Unknown org'} · ${date}</div>
+        </div>
+        ${s.resolved
+          ?`<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(34,217,122,.1);color:var(--green);flex-shrink:0">RESOLVED</span>`
+          :`<button onclick="platformResolveSuggestion(${_platformSuggestions.length-1-i})" style="padding:5px 12px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.08);color:var(--green);font-size:11px;cursor:pointer;flex-shrink:0">Mark resolved</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function platformResolveSuggestion(idx){
+  if(!db) return;
+  _platformSuggestions[idx].resolved=true;
+  await fbSet('platform','suggestions',{items:_platformSuggestions});
+  renderPlatformSuggestions();
+  const badge=document.getElementById('platform-suggest-badge');
+  const open=_platformSuggestions.filter(s=>!s.resolved).length;
+  if(badge){ badge.textContent=open; badge.style.display=open>0?'inline-block':'none'; }
+}
+
+async function platformSuspendOrg(orgId){
+  const org=_platformOrgs.find(o=>o.orgId===orgId);
+  if(!org) return;
+  const action=org.status==='suspended'?'reactivate':'suspend';
+  if(!confirm(`${action.charAt(0).toUpperCase()+action.slice(1)} ${org.companyName}?`)) return;
+  org.status=org.status==='suspended'?'active':'suspended';
+  await fbSet('platform','orgs_registry',{orgs:_platformOrgs});
+  renderPlatformOrgs();
+}
+
+function platformViewOrg(orgId){
+  // TODO: drill-down into org in a future release
+  alert('Org drill-down coming soon! Org ID: '+orgId);
+}
+
+// Submit a suggestion (called from Settings pane for org admins)
+async function submitSuggestion(){
+  const text=(document.getElementById('suggestion-text')?.value||'').trim();
+  if(!text){ alert('Please enter your suggestion first.'); return; }
+  const session=gateGetSession();
+  const orgName=window._orgData?.companyName||ORG_ID;
+  const item={text,orgId:ORG_ID,orgName,submittedBy:session?.email||'',createdAt:new Date().toISOString(),resolved:false};
+  if(db){
+    try{
+      const snap=await db.collection('platform').doc('suggestions').get();
+      const current=snap.exists?(snap.data().items||[]):[];
+      current.push(item);
+      await fbSet('platform','suggestions',{items:current});
+    }catch(e){console.warn('submitSuggestion failed:',e);}
+  }
+  const textEl=document.getElementById('suggestion-text');
+  if(textEl) textEl.value='';
+  showToast('✓ Suggestion submitted — thanks!');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPANY ONBOARDING WIZARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _wizCurrentStep=1;
+let _wizData={};
+let _wizCsvServices=[];
+
+const WIZ_MODULES=[
+  {id:'quote',icon:'📄',label:'Quote Builder',desc:'Build and send quotes to clients'},
+  {id:'jobs',icon:'💼',label:'Jobs',desc:'Manage bookings and shoot schedules'},
+  {id:'clients',icon:'👤',label:'Clients',desc:'Client database and portal access'},
+  {id:'louchat',icon:'💬',label:'LouChat',desc:'Messaging with clients & team'},
+  {id:'calendar',icon:'📅',label:'Calendar',desc:'Scheduling and availability'},
+  {id:'finance',icon:'💰',label:'Finance',desc:'Invoicing and revenue tracking'},
+  {id:'tracker',icon:'📊',label:'Projects',desc:'Job progress tracking'},
+  {id:'team',icon:'👥',label:'Team',desc:'Manage staff and contractors'},
+  {id:'social',icon:'📱',label:'Social Media',desc:'Content planning and approvals'},
+  {id:'sales',icon:'📈',label:'Sales CRM',desc:'Lead tracking and pipeline'},
+];
+
+function showOrgSignupWizard(){
+  _wizCurrentStep=1;
+  _wizData={};
+  _wizCsvServices=[];
+  document.getElementById('org-signup-wizard').style.display='block';
+  document.getElementById('site-login-gate').style.display='none';
+  wizRenderModules();
+  wizGoToStep(1);
+}
+
+function hideOrgSignupWizard(){
+  document.getElementById('org-signup-wizard').style.display='none';
+  document.getElementById('site-login-gate').style.display='flex';
+}
+
+function wizRenderModules(){
+  // Default: all except sales (advanced)
+  const defaults=['quote','jobs','clients','louchat','calendar','finance','tracker','team'];
+  _wizData.enabledTabs=_wizData.enabledTabs||[...defaults];
+  const grid=document.getElementById('wiz-module-grid');
+  if(!grid) return;
+  grid.innerHTML=WIZ_MODULES.map(m=>`
+    <div class="wiz-module-card ${_wizData.enabledTabs.includes(m.id)?'selected':''}" id="wiz-mod-${m.id}" onclick="wizToggleModule('${m.id}')">
+      <div style="font-size:20px;margin-bottom:6px">${m.icon}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px">${m.label}</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.4">${m.desc}</div>
+      <div style="margin-top:8px;width:18px;height:18px;border-radius:50%;border:2px solid ${_wizData.enabledTabs.includes(m.id)?'var(--blue-bright)':'var(--border)'};background:${_wizData.enabledTabs.includes(m.id)?'var(--blue-bright)':'transparent'};display:flex;align-items:center;justify-content:center">
+        ${_wizData.enabledTabs.includes(m.id)?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function wizToggleModule(id){
+  const idx=(_wizData.enabledTabs||[]).indexOf(id);
+  if(idx>=0) _wizData.enabledTabs.splice(idx,1);
+  else (_wizData.enabledTabs=_wizData.enabledTabs||[]).push(id);
+  wizRenderModules();
+}
+
+function wizGoToStep(step){
+  _wizCurrentStep=step;
+  for(let i=1;i<=5;i++){
+    const panel=document.getElementById('wiz-step-'+i);
+    if(panel) panel.style.display=i===step?'block':'none';
+    const dot=document.querySelector(`.wiz-step[data-step="${i}"]`);
+    if(dot){
+      dot.classList.remove('active','done');
+      if(i<step) dot.classList.add('done');
+      else if(i===step) dot.classList.add('active');
+    }
+    const conn=document.querySelectorAll('.wiz-connector')[i-1];
+    if(conn) conn.style.background=i<step?'var(--blue-bright)':'var(--border)';
+  }
+  // Nav buttons
+  const btnBack=document.getElementById('wiz-btn-back');
+  const btnNext=document.getElementById('wiz-btn-next');
+  const btnCreate=document.getElementById('wiz-btn-create');
+  if(btnBack) btnBack.style.display=step>1?'inline-flex':'none';
+  if(btnNext) btnNext.style.display=step<5?'inline-flex':'none';
+  if(btnCreate) btnCreate.style.display=step===5?'inline-flex':'none';
+  if(step===5) wizBuildSummary();
+}
+
+function wizNext(){
+  if(_wizCurrentStep===1){
+    const company=(document.getElementById('wiz-company')?.value||'').trim();
+    const first=(document.getElementById('wiz-first')?.value||'').trim();
+    const last=(document.getElementById('wiz-last')?.value||'').trim();
+    const email=(document.getElementById('wiz-email')?.value||'').trim().toLowerCase();
+    const pass=(document.getElementById('wiz-pass')?.value||'').trim();
+    const err=document.getElementById('wiz-error-1');
+    if(!company||!first||!last||!email||!pass){if(err){err.textContent='Please fill in all required fields.';err.style.display='block';}return;}
+    if(pass.length<6){if(err){err.textContent='Password must be at least 6 characters.';err.style.display='block';}return;}
+    if(!email.includes('@')){if(err){err.textContent='Please enter a valid email.';err.style.display='block';}return;}
+    if(err) err.style.display='none';
+    _wizData.companyName=company;
+    _wizData.firstName=first;
+    _wizData.lastName=last;
+    _wizData.email=email;
+    _wizData.pass=pass;
+    _wizData.industry=document.getElementById('wiz-industry')?.value||'other';
+  }
+  if(_wizCurrentStep===4){
+    _wizData.sendgridKey=(document.getElementById('wiz-sendgrid')?.value||'').trim();
+  }
+  wizStep(_wizCurrentStep+1);
+}
+
+function wizStep(step){
+  if(step<1||step>5) return;
+  wizGoToStep(step);
+}
+
+function wizHandleCsvUpload(input){
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    _wizCsvServices=[];
+    lines.forEach((line,idx)=>{
+      if(idx===0&&line.toLowerCase().includes('service')) return; // skip header
+      const parts=line.split(',');
+      if(parts.length>=2){
+        const name=(parts[0]||'').trim().replace(/"/g,'');
+        const price=parseFloat((parts[1]||'0').replace(/[^0-9.]/g,''))||0;
+        const desc=(parts[2]||'').trim().replace(/"/g,'');
+        if(name&&price>0) _wizCsvServices.push({name,price,desc});
+      }
+    });
+    _wizData.csvServices=_wizCsvServices;
+    const preview=document.getElementById('wiz-csv-preview');
+    const list=document.getElementById('wiz-csv-preview-list');
+    if(preview) preview.style.display='block';
+    if(list) list.innerHTML=_wizCsvServices.map(s=>`
+      <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--navy-lift);border-radius:8px;font-size:12px">
+        <span style="color:var(--white)">${s.name}</span>
+        <span style="color:var(--green);font-weight:700">$${s.price.toFixed(2)}</span>
+      </div>`).join('');
+  };
+  reader.readAsText(file);
+}
+
+function wizBuildSummary(){
+  const el=document.getElementById('wiz-summary');
+  if(!el) return;
+  const modules=(_wizData.enabledTabs||[]).map(id=>{
+    const m=WIZ_MODULES.find(x=>x.id===id);
+    return m?m.label:id;
+  }).join(', ');
+  el.innerHTML=[
+    {label:'Company',val:_wizData.companyName||'—'},
+    {label:'Admin',val:(_wizData.firstName||'')+' '+(_wizData.lastName||'')+' ('+(_wizData.email||'')+')'  },
+    {label:'Industry',val:_wizData.industry||'—'},
+    {label:'Modules',val:modules||'None selected'},
+    {label:'Pricing sheet',val:_wizCsvServices.length>0?_wizCsvServices.length+' services imported':'Not provided (set up manually later)'},
+    {label:'SendGrid',val:_wizData.sendgridKey?'Connected':'Not connected (emails via platform)'},
+  ].map(r=>`<div style="display:flex;align-items:baseline;gap:10px">
+    <span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;min-width:110px;flex-shrink:0">${r.label}</span>
+    <span style="font-size:13px;color:var(--white)">${r.val}</span>
+  </div>`).join('');
+}
+
+async function wizCreateOrg(){
+  const btn=document.getElementById('wiz-create-label');
+  if(btn) btn.textContent='Creating…';
+  try{
+    // Generate org ID
+    const orgId='org_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    const now=new Date().toISOString();
+    // Build org record
+    const orgRecord={
+      orgId,
+      companyName:_wizData.companyName,
+      adminEmail:_wizData.email,
+      adminName:_wizData.firstName+' '+_wizData.lastName,
+      industry:_wizData.industry||'other',
+      enabledTabs:_wizData.enabledTabs||['quote','jobs','clients','louchat','calendar','finance','tracker','team'],
+      sendgridKey:_wizData.sendgridKey||'',
+      csvServices:_wizCsvServices,
+      status:'active',
+      createdAt:now,
+      teamCount:1,
+      clientCount:0,
+      totalRevenue:0,
+    };
+    // Build admin user record for this org
+    const adminUser={
+      email:_wizData.email,
+      name:_wizData.firstName+' '+_wizData.lastName,
+      role:'admin',
+      type:'admin',
+      passHash:simpleHash(_wizData.pass),
+      createdAt:now.slice(0,10),
+    };
+    if(db){
+      // Save org's gate users
+      await fbSet('orgs',orgId+':gate_users',{data:JSON.stringify([adminUser]),updatedAt:Date.now()});
+      // Register org in platform registry
+      const snap=await db.collection('platform').doc('orgs_registry').get();
+      const existing=snap.exists?(snap.data().orgs||[]):[];
+      existing.push(orgRecord);
+      await fbSet('platform','orgs_registry',{orgs:existing});
+      // Map email → orgId for login routing
+      const snap2=await db.collection('platform').doc('users').get();
+      const userMap=snap2.exists?snap2.data():{};
+      const emailKey=_wizData.email.toLowerCase().replace(/[.@]/g,'_');
+      userMap[emailKey]=orgId;
+      await fbSet('platform','users',userMap);
+      // Save org settings (name, enabledTabs, etc.)
+      await fbSet('orgs',orgId+':settings',{data:JSON.stringify({companyName:_wizData.companyName,enabledTabs:orgRecord.enabledTabs,sendgridKey:_wizData.sendgridKey||'',csvServices:_wizCsvServices}),updatedAt:Date.now()});
+    }
+    // Set active org and log in
+    ORG_ID=orgId;
+    window._orgData=orgRecord;
+    const session={email:_wizData.email,name:_wizData.firstName+' '+_wizData.lastName,role:'admin',type:'admin',orgId};
+    gateSaveSession(session);
+    document.getElementById('org-signup-wizard').style.display='none';
+    gateEnterApp(session);
+    showToast('🎉 Welcome to DroneHub, '+_wizData.firstName+'! Your workspace is ready.');
+  }catch(e){
+    console.error('wizCreateOrg failed:',e);
+    const errEl=document.getElementById('wiz-error-5');
+    if(errEl){errEl.textContent='Something went wrong: '+e.message+'. Please try again.';errEl.style.display='block';}
+    if(btn) btn.textContent='Create my workspace ✓';
+  }
+}
+
+// Helper toast (reuse if already defined)
+function showToast(msg, duration=4000){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);white-space:nowrap';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),duration);
 }
 
 </script>
