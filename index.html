@@ -13967,6 +13967,7 @@ function renderTracker(){
         ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:#22D97A;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${filemaLink}">📦 Filemail ↗</a>`:''}
         ${dlLink?`<a href="${dlLink}" target="_blank" style="color:#5B8DEF;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis;max-width:140px;margin-top:2px" title="${dlLink}">↓ Download ↗</a>`:''}
         ${!filemaLink&&!dlLink?'<span style="color:var(--border-bright);font-size:10px">—</span>':''}
+        <button onclick="openVdProfile('${j.id}','team')" title="Video Draft Review" style="margin-top:4px;padding:3px 8px;border-radius:8px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:block">📽 Review</button>
       </td>
     </tr>`;
   }).join('');
@@ -14116,6 +14117,7 @@ function openTrackerModal(jobId){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="saveTrackerModal(${jobId},document.getElementById('tracker-modal-overlay'))" style="padding:9px 24px;border-radius:14px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save ✓</button>
         <button onclick="document.getElementById('tracker-modal-overlay').remove()" style="padding:9px 16px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+        <button onclick="document.getElementById('tracker-modal-overlay').remove();openVdProfile('${jobId}','team')" style="padding:9px 18px;border-radius:14px;border:1px solid rgba(91,141,239,.5);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">📽 Video Review</button>
       </div>
     </div>
   </div>`;
@@ -16605,6 +16607,23 @@ function socialPostsSave(arr){
   localStorage.setItem('dronehub_social_posts', JSON.stringify(arr));
   if(db) fbSet('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
 }
+function videoDraftsLoad(){
+  try{ return JSON.parse(localStorage.getItem('dh_video_drafts')||'[]'); }catch(e){ return []; }
+}
+function videoDraftsSave(arr){
+  localStorage.setItem('dh_video_drafts', JSON.stringify(arr));
+  if(db) fbSet('orgs', ORG_ID+':video_drafts',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+}
+async function videoDraftsSyncFirebase(){
+  if(!db) return;
+  try{
+    const fb = await fbGet('orgs', ORG_ID+':video_drafts');
+    if(fb?.data){ const r=JSON.parse(fb.data); localStorage.setItem('dh_video_drafts',JSON.stringify(r)); }
+  }catch(e){}
+}
+function videoDraftForJob(jobId){
+  return videoDraftsLoad().find(d=>d.jobId===jobId)||null;
+}
 function chatLogAppend(posts,idx,entry){
   if(!posts[idx].chatLog) posts[idx].chatLog=[];
   posts[idx].chatLog.push({
@@ -16650,6 +16669,430 @@ function addSocialNotification(postId,text,type){
   notificationsSave(notifs);
   refreshNotificationBadge();
 }
+
+// ══════════════════════════════════════════════
+// ── VIDEO DRAFT REVIEW SYSTEM ─────────────────
+// ══════════════════════════════════════════════
+
+let _vdActiveJobId   = null;  // jobId currently open in the profile modal
+let _vdActiveDraftId = null;  // which draft version is being viewed
+let _vdCommentTs     = null;  // captured timestamp in seconds (null = no timestamp)
+let _vdViewerMode    = 'team'; // 'team' | 'client'
+
+function openVdProfile(jobId, viewerMode){
+  _vdActiveJobId  = jobId;
+  _vdViewerMode   = viewerMode || 'team';
+  _vdCommentTs    = null;
+
+  const job = (savedJobs||[]).find(j=>j.id===jobId);
+  const vd  = videoDraftForJob(jobId);
+  const modal = document.getElementById('vd-profile-modal');
+  if(!modal) return;
+
+  // Header
+  document.getElementById('vd-profile-title').textContent   = job ? (job.title||job.client||job.name||'Project Review') : 'Project Review';
+  document.getElementById('vd-profile-subtitle').textContent = job ? `${job.clientName||job.client||''} · ${job.date||''}`.replace(/^·\s*/,'').replace(/\s*·$/,'') : '';
+
+  // If no draft record yet, create a shell
+  if(!vd){
+    _vdActiveDraftId = null;
+    vdRenderNoDraft();
+  } else {
+    // Default to latest draft
+    const latest = vd.drafts[vd.drafts.length-1];
+    _vdActiveDraftId = latest?.id || null;
+    vdRenderProfile(vd);
+  }
+
+  // Show/hide team vs client sections
+  const uploadSec   = document.getElementById('vd-upload-section');
+  const approvalSec = document.getElementById('vd-approval-section');
+  if(uploadSec)   uploadSec.style.display   = _vdViewerMode==='team'   ? '' : 'none';
+  if(approvalSec) approvalSec.style.display = _vdViewerMode==='client' ? '' : 'none';
+
+  modal.style.display = 'flex';
+  videoDraftsSyncFirebase().then(()=>{ const v=videoDraftForJob(jobId); if(v) vdRenderProfile(v); });
+}
+
+function closeVdProfile(){
+  document.getElementById('vd-profile-modal').style.display = 'none';
+  _vdActiveJobId   = null;
+  _vdActiveDraftId = null;
+  _vdCommentTs     = null;
+  // Stop any playing video
+  const vid = document.getElementById('vd-video-el');
+  if(vid){ vid.pause(); vid.src=''; }
+  const iframe = document.getElementById('vd-iframe');
+  if(iframe) iframe.src='';
+}
+
+function vdRenderNoDraft(){
+  document.getElementById('vd-profile-status-badge').textContent  = 'No Draft Yet';
+  document.getElementById('vd-profile-status-badge').style.cssText = 'font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);background:transparent';
+  document.getElementById('vd-draft-selector').innerHTML  = '';
+  document.getElementById('vd-draft-history').innerHTML   = '<div style="font-size:12px;color:var(--muted)">No drafts yet.</div>';
+  document.getElementById('vd-comments-list').innerHTML   = '';
+  document.getElementById('vd-edit-requests').innerHTML   = '<div style="font-size:12px;color:var(--muted)">None</div>';
+  document.getElementById('vd-no-video').style.display    = 'flex';
+  document.getElementById('vd-iframe').style.display      = 'none';
+  document.getElementById('vd-video-el').style.display    = 'none';
+  document.getElementById('vd-comment-bar').style.display = 'none';
+}
+
+function vdRenderProfile(vd){
+  if(!vd) return;
+  const STATUS_MAP = {
+    awaiting_upload:   {label:'Awaiting Upload',   color:'var(--muted)',       bg:'transparent'},
+    awaiting_review:   {label:'Awaiting Review',   color:'#F5C842',            bg:'rgba(245,200,66,.1)'},
+    in_review:         {label:'In Review',          color:'var(--blue-bright)', bg:'rgba(91,141,239,.1)'},
+    changes_requested: {label:'Changes Requested',  color:'var(--amber)',       bg:'rgba(245,200,66,.1)'},
+    approved:          {label:'Approved ✓',         color:'var(--green)',       bg:'rgba(34,217,122,.1)'},
+  };
+  const st = STATUS_MAP[vd.status] || STATUS_MAP.awaiting_upload;
+
+  // Status badge
+  const badge = document.getElementById('vd-profile-status-badge');
+  badge.textContent = st.label;
+  badge.style.cssText = `font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid ${st.color};color:${st.color};background:${st.bg}`;
+
+  // Draft selector pills
+  const ds = document.getElementById('vd-draft-selector');
+  ds.innerHTML = vd.drafts.map(d=>{
+    const active = d.id === _vdActiveDraftId;
+    const dSt = STATUS_MAP[d.status]||STATUS_MAP.awaiting_upload;
+    return `<button onclick="vdSelectDraft('${vd.jobId}','${d.id}')" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${active?dSt.color:'var(--border)'};background:${active?dSt.bg:'var(--navy-lift)'};color:${active?dSt.color:'var(--muted)'}">
+      Draft ${d.draftNumber}${active?' ←':''}
+    </button>`;
+  }).join('');
+
+  // Find active draft object
+  const activeDraft = vd.drafts.find(d=>d.id===_vdActiveDraftId) || vd.drafts[vd.drafts.length-1];
+  if(activeDraft?.videoUrl){
+    vdLoadVideo(activeDraft.videoUrl);
+  } else {
+    document.getElementById('vd-no-video').style.display = 'flex';
+    document.getElementById('vd-iframe').style.display   = 'none';
+    document.getElementById('vd-video-el').style.display = 'none';
+  }
+
+  // Comments for this draft
+  const draftComments = (vd.comments||[]).filter(c=>c.draftId===_vdActiveDraftId);
+  vdRenderComments(draftComments);
+
+  // Draft history sidebar
+  const dh = document.getElementById('vd-draft-history');
+  dh.innerHTML = vd.drafts.slice().reverse().map(d=>{
+    const dSt = STATUS_MAP[d.status]||STATUS_MAP.awaiting_upload;
+    const commCount = (vd.comments||[]).filter(c=>c.draftId===d.id).length;
+    return `<div style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-mid)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:12px;font-weight:700;color:var(--white)">Draft ${d.draftNumber}</span>
+        <span style="font-size:10px;font-weight:700;color:${dSt.color};background:${dSt.bg};border:1px solid ${dSt.color};border-radius:10px;padding:1px 8px">${dSt.label}</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted)">${commCount} comment${commCount!==1?'s':''} · ${d.uploadedAt?new Date(d.uploadedAt).toLocaleDateString():''}</div>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--muted)">No drafts yet.</div>';
+
+  // Open edit requests (unresolved comments from client)
+  const openEdits = (vd.comments||[]).filter(c=>!c.resolved && c.from==='client');
+  const er = document.getElementById('vd-edit-requests');
+  er.innerHTML = openEdits.length ? openEdits.map(c=>`
+    <div style="padding:8px 10px;border-radius:8px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.05)">
+      ${c.videoTimestamp!=null?`<div style="font-size:10px;font-weight:700;color:var(--blue-bright);margin-bottom:3px">🕐 ${vdFmtTime(c.videoTimestamp)} — Draft ${(vd.drafts.find(d=>d.id===c.draftId)||{}).draftNumber||'?'}</div>`:''}
+      <div style="font-size:12px;color:var(--offwhite)">${escSalesHtml(c.text)}</div>
+      <button onclick="vdResolveComment('${vd.jobId}','${c.id}')" style="margin-top:5px;font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer">Mark Resolved</button>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--muted)">All clear ✓</div>';
+}
+
+function vdSelectDraft(jobId, draftId){
+  _vdActiveDraftId = draftId;
+  const vd = videoDraftForJob(jobId);
+  if(vd) vdRenderProfile(vd);
+}
+
+function vdLoadVideo(url){
+  const iframe  = document.getElementById('vd-iframe');
+  const videoEl = document.getElementById('vd-video-el');
+  const noVid   = document.getElementById('vd-no-video');
+  const bar     = document.getElementById('vd-comment-bar');
+
+  // Detect URL type
+  const ytMatch  = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  const viMatch  = url.match(/vimeo\.com\/(\d+)/);
+
+  if(ytMatch){
+    iframe.src = `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?enablejsapi=1`;
+    iframe.style.display = 'block';
+    videoEl.style.display = 'none';
+    noVid.style.display   = 'none';
+    bar.style.display     = 'none';
+    document.getElementById('vd-free-comment').placeholder = 'Type "at 1:23 —" or pause and use the timestamp button below the player';
+  } else if(viMatch){
+    iframe.src = `https://player.vimeo.com/video/${viMatch[1]}?api=1`;
+    iframe.style.display = 'block';
+    videoEl.style.display = 'none';
+    noVid.style.display   = 'none';
+    bar.style.display     = 'none';
+  } else {
+    // Direct video file
+    videoEl.src = url;
+    videoEl.style.display = 'block';
+    iframe.style.display  = 'none';
+    noVid.style.display   = 'none';
+    // Wire up pause listener for timestamp capture
+    videoEl.onpause = function(){
+      if(videoEl.readyState < 2) return;
+      _vdCommentTs = videoEl.currentTime;
+      const badge = document.getElementById('vd-comment-ts-badge');
+      if(badge) badge.textContent = '🕐 ' + vdFmtTime(_vdCommentTs);
+      bar.style.display = 'flex';
+      bar.style.flexDirection = 'column';
+      setTimeout(()=>{ document.getElementById('vd-comment-text')?.focus(); }, 50);
+    };
+    videoEl.onplay = function(){
+      bar.style.display = 'none';
+    };
+  }
+}
+
+function vdFmtTime(sec){
+  if(sec==null) return '';
+  const s = Math.floor(sec);
+  const m = Math.floor(s/60);
+  const h = Math.floor(m/60);
+  const ss = String(s%60).padStart(2,'0');
+  const mm = String(m%60).padStart(2,'0');
+  return h>0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
+// Manual timestamp button for YouTube/Vimeo iframes
+function vdCaptureManualTs(){
+  const tsRaw = prompt('Enter timestamp (e.g. 1:23 or 83):');
+  if(!tsRaw) return;
+  const parts = tsRaw.trim().split(':').map(Number);
+  let secs = 0;
+  if(parts.length===1) secs = parts[0];
+  else if(parts.length===2) secs = parts[0]*60+parts[1];
+  else if(parts.length===3) secs = parts[0]*3600+parts[1]*60+parts[2];
+  _vdCommentTs = isNaN(secs) ? null : secs;
+  const badge = document.getElementById('vd-comment-ts-badge');
+  if(badge) badge.textContent = '🕐 ' + vdFmtTime(_vdCommentTs);
+  document.getElementById('vd-comment-bar').style.display = 'flex';
+  document.getElementById('vd-comment-bar').style.flexDirection = 'column';
+  setTimeout(()=>{ document.getElementById('vd-comment-text')?.focus(); }, 50);
+}
+
+function vdCloseCommentBar(){
+  document.getElementById('vd-comment-bar').style.display = 'none';
+  _vdCommentTs = null;
+}
+
+function vdSubmitComment(){
+  const text = document.getElementById('vd-comment-text')?.value.trim();
+  if(!text) return;
+  _vdAddComment(text, _vdCommentTs);
+  document.getElementById('vd-comment-text').value = '';
+  vdCloseCommentBar();
+}
+
+function vdSubmitFreeComment(){
+  const text = document.getElementById('vd-free-comment')?.value.trim();
+  if(!text) return;
+  _vdAddComment(text, null);
+  document.getElementById('vd-free-comment').value = '';
+}
+
+function _vdAddComment(text, timestamp){
+  if(!_vdActiveJobId) return;
+  const all = videoDraftsLoad();
+  let vd = all.find(d=>d.jobId===_vdActiveJobId);
+  if(!vd){ vd = vdCreateShell(_vdActiveJobId); all.push(vd); }
+
+  const comment = {
+    id:             'vc_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    draftId:        _vdActiveDraftId,
+    videoTimestamp: timestamp!=null ? timestamp : null,
+    text,
+    from:           _vdViewerMode,
+    by:             _vdViewerMode==='client' ? 'Client' : 'DroneHub',
+    at:             new Date().toISOString(),
+    resolved:       false,
+  };
+  if(!vd.comments) vd.comments = [];
+  vd.comments.push(comment);
+
+  // Update status if client commented
+  if(_vdViewerMode==='client' && vd.status==='awaiting_review') vd.status='in_review';
+
+  videoDraftsSave(all);
+  vdRenderProfile(vd);
+
+  // Notify team if client commented
+  if(_vdViewerMode==='client'){
+    const tsNote = timestamp!=null ? ` at ${vdFmtTime(timestamp)}` : '';
+    addSocialNotification && addSocialNotification(
+      _vdActiveJobId,
+      `Client commented${tsNote}: "${text.slice(0,60)}${text.length>60?'…':''}"`,
+      'video_comment'
+    );
+  }
+}
+
+function vdResolveComment(jobId, commentId){
+  const all = videoDraftsLoad();
+  const vd = all.find(d=>d.jobId===jobId);
+  if(!vd) return;
+  const c = vd.comments.find(x=>x.id===commentId);
+  if(c){ c.resolved=true; c.resolvedAt=new Date().toISOString(); }
+  videoDraftsSave(all);
+  vdRenderProfile(vd);
+}
+
+function vdRenderComments(comments){
+  const el = document.getElementById('vd-comments-list');
+  if(!el) return;
+  if(!comments.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">No comments on this draft yet.</div>';
+    return;
+  }
+  // Sort by timestamp then by date
+  const sorted = [...comments].sort((a,b)=>{
+    if(a.videoTimestamp!=null && b.videoTimestamp!=null) return a.videoTimestamp-b.videoTimestamp;
+    if(a.videoTimestamp!=null) return -1;
+    if(b.videoTimestamp!=null) return 1;
+    return new Date(a.at)-new Date(b.at);
+  });
+  el.innerHTML = sorted.map(c=>{
+    const isClient = c.from==='client';
+    const col = isClient ? 'var(--amber)' : 'var(--blue-bright)';
+    const bg  = isClient ? 'rgba(245,200,66,.06)' : 'rgba(91,141,239,.06)';
+    const bdr = isClient ? 'rgba(245,200,66,.25)' : 'rgba(91,141,239,.25)';
+    const tsChip = c.videoTimestamp!=null
+      ? `<span style="font-size:10px;font-weight:700;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.35);color:var(--blue-bright);border-radius:10px;padding:1px 8px;margin-right:6px">🕐 ${vdFmtTime(c.videoTimestamp)}</span>`
+      : '';
+    const resolvedStyle = c.resolved ? 'opacity:.45;' : '';
+    return `<div style="${resolvedStyle}padding:10px 12px;border-radius:10px;border:1px solid ${bdr};background:${bg}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+          ${tsChip}
+          <span style="font-size:11px;font-weight:700;color:${col}">${c.by}</span>
+          <span style="font-size:10px;color:var(--muted)">${new Date(c.at).toLocaleDateString()}</span>
+        </div>
+        ${c.resolved ? '<span style="font-size:10px;color:var(--green)">✓ Resolved</span>' : ''}
+      </div>
+      <div style="font-size:12px;color:var(--offwhite);line-height:1.5">${escSalesHtml(c.text)}</div>
+    </div>`;
+  }).join('');
+}
+
+function vdUploadDraft(){
+  const url   = document.getElementById('vd-upload-url')?.value.trim();
+  const notes = document.getElementById('vd-upload-notes')?.value.trim();
+  if(!url){ alert('Please paste a video URL first.'); return; }
+  if(!_vdActiveJobId){ alert('No job selected.'); return; }
+
+  const all = videoDraftsLoad();
+  let vd = all.find(d=>d.jobId===_vdActiveJobId);
+  if(!vd){ vd = vdCreateShell(_vdActiveJobId); all.push(vd); }
+
+  const newDraftNum = (vd.drafts.length||0) + 1;
+  const draftId = 'vdr_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  vd.drafts.push({
+    id:          draftId,
+    draftNumber: newDraftNum,
+    videoUrl:    url,
+    notesForClient: notes||'',
+    status:      'awaiting_review',
+    uploadedAt:  new Date().toISOString(),
+    uploadedBy:  'team',
+  });
+  vd.status      = 'awaiting_review';
+  _vdActiveDraftId = draftId;
+
+  // Add a system comment
+  if(!vd.comments) vd.comments = [];
+  vd.comments.push({
+    id:             'vc_'+Date.now()+'_sys',
+    draftId,
+    videoTimestamp: null,
+    text:           `Draft ${newDraftNum} uploaded by DroneHub.${notes?' Notes: '+notes:''}`,
+    from:           'team',
+    by:             'DroneHub',
+    at:             new Date().toISOString(),
+    resolved:       true,
+    isSystem:       true,
+  });
+
+  videoDraftsSave(all);
+  document.getElementById('vd-upload-url').value   = '';
+  document.getElementById('vd-upload-notes').value = '';
+  vdRenderProfile(vd);
+
+  addSocialNotification && addSocialNotification(
+    _vdActiveJobId,
+    `Draft ${newDraftNum} uploaded — awaiting client review`,
+    'video_upload'
+  );
+  alert(`✅ Draft ${newDraftNum} sent to client for review.`);
+}
+
+function vdClientDecision(decision){
+  if(!_vdActiveJobId || !_vdActiveDraftId) return;
+  const all = videoDraftsLoad();
+  const vd  = all.find(d=>d.jobId===_vdActiveJobId);
+  if(!vd) return;
+  const draft = vd.drafts.find(d=>d.id===_vdActiveDraftId);
+  if(!draft) return;
+
+  draft.status         = decision;
+  draft.clientDecision = decision;
+  draft.clientDecisionAt = new Date().toISOString();
+  vd.status = decision;
+
+  // Add system comment
+  if(!vd.comments) vd.comments = [];
+  const decisionLabel = decision==='approved' ? '✅ Approved by client' : '↩ Changes requested by client';
+  vd.comments.push({
+    id:             'vc_'+Date.now()+'_dec',
+    draftId:        _vdActiveDraftId,
+    videoTimestamp: null,
+    text:           decisionLabel,
+    from:           'client',
+    by:             'Client',
+    at:             new Date().toISOString(),
+    resolved:       true,
+    isSystem:       true,
+  });
+
+  videoDraftsSave(all);
+  vdRenderProfile(vd);
+
+  addSocialNotification && addSocialNotification(
+    _vdActiveJobId,
+    decisionLabel,
+    decision==='approved' ? 'video_approved' : 'video_changes'
+  );
+
+  if(decision==='approved'){
+    alert('✅ Video approved! The production team has been notified.');
+  } else {
+    alert('↩ Changes requested. The editor will be notified with your comments.');
+  }
+}
+
+function vdCreateShell(jobId){
+  return {
+    id:       'vd_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    jobId,
+    status:   'awaiting_upload',
+    drafts:   [],
+    comments: [],
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// ── END VIDEO DRAFT REVIEW SYSTEM ─────────────
+
 function refreshNotificationBadge(){
   const count=notificationsLoad().filter(n=>!n.read).length;
   const badge=document.getElementById('notif-badge');
@@ -18575,6 +19018,108 @@ function initGoogleMaps(){
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sign out
     </button>
+  </div>
+</div>
+
+<!-- ── VIDEO DRAFT: Project Profile Modal ── -->
+<div id="vd-profile-modal" onclick="if(event.target===this)closeVdProfile()" style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:4000;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+  <div onclick="event.stopPropagation()" style="width:100%;max-width:900px;background:var(--navy-card);border-radius:16px;border:1px solid var(--border);overflow:hidden;margin:auto">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--navy-mid)">
+      <div>
+        <div id="vd-profile-title" style="font-size:15px;font-weight:700;color:var(--white)">Project Review</div>
+        <div id="vd-profile-subtitle" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="vd-profile-status-badge" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted)">No Draft</span>
+        <button onclick="closeVdProfile()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1">✕</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;min-height:500px">
+      <!-- Left: Video + Comments -->
+      <div style="padding:20px;border-right:1px solid var(--border)">
+        <!-- Draft selector -->
+        <div id="vd-draft-selector" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+        <!-- Video player area -->
+        <div id="vd-video-area" style="background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;position:relative;margin-bottom:14px">
+          <div id="vd-no-video" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:8px">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            <div style="font-size:12px">No video uploaded yet</div>
+          </div>
+          <iframe id="vd-iframe" style="width:100%;height:100%;border:none;display:none" allowfullscreen allow="autoplay"></iframe>
+          <video id="vd-video-el" style="width:100%;height:100%;display:none" controls></video>
+        </div>
+
+        <!-- Timestamp comment bar -->
+        <div id="vd-comment-bar" style="display:none;margin-bottom:14px;background:var(--navy-mid);border-radius:10px;padding:12px;border:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.05em">Leave a Comment</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span id="vd-comment-ts-badge" style="font-size:11px;font-weight:700;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.4);color:var(--blue-bright);border-radius:20px;padding:2px 10px;white-space:nowrap">🕐 0:00</span>
+            <span style="font-size:11px;color:var(--muted)">Timestamp captured — add your note below</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <input id="vd-comment-text" type="text" placeholder="Describe the change needed at this moment…" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px" onkeydown="if(event.key==='Enter')vdSubmitComment()">
+            <button onclick="vdSubmitComment()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--blue-bright);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Post</button>
+            <button onclick="vdCloseCommentBar()" style="padding:8px 12px;border-radius:8px;border:none;background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">✕</button>
+          </div>
+        </div>
+
+        <!-- Free-form comment (no timestamp) -->
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input id="vd-free-comment" type="text" placeholder="General comment (no timestamp)…" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px" onkeydown="if(event.key==='Enter')vdSubmitFreeComment()">
+          <button onclick="vdSubmitFreeComment()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;cursor:pointer">Send</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <button onclick="vdCaptureManualTs()" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">📍 Add Timestamp Comment</button>
+          <span style="font-size:10px;color:var(--muted)">Direct video files auto-capture on pause · YouTube/Vimeo use the button</span>
+        </div>
+
+        <!-- Comments list for current draft -->
+        <div id="vd-comments-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:4px"></div>
+      </div>
+
+      <!-- Right: Sidebar -->
+      <div style="padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto">
+        <!-- Team: Upload new draft -->
+        <div id="vd-upload-section">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Upload Draft</div>
+          <input id="vd-upload-url" type="text" placeholder="YouTube, Vimeo, or direct video URL…" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;box-sizing:border-box;margin-bottom:6px">
+          <textarea id="vd-upload-notes" placeholder="Notes for client (optional)…" rows="2" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;box-sizing:border-box;resize:vertical;margin-bottom:8px"></textarea>
+          <button onclick="vdUploadDraft()" style="width:100%;padding:9px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">
+            ↑ Send Draft to Client
+          </button>
+        </div>
+
+        <div style="border-top:1px solid var(--border)"></div>
+
+        <!-- Client approval actions -->
+        <div id="vd-approval-section">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Client Decision</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="vdClientDecision('approved')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">✓ Approve</button>
+            <button onclick="vdClientDecision('changes_requested')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--amber);background:rgba(245,200,66,.1);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">↩ Request Changes</button>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border)"></div>
+
+        <!-- Draft history -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Draft History</div>
+          <div id="vd-draft-history" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
+        <div style="border-top:1px solid var(--border)"></div>
+
+        <!-- Unresolved edit requests -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Open Edit Requests</div>
+          <div id="vd-edit-requests" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
