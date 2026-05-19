@@ -999,6 +999,13 @@ button{font-family:var(--font);}
   <div id="header-right" style="margin-left:auto;display:flex;align-items:center;gap:20px">
     <div id="header-user-wrap" style="display:flex;align-items:center;gap:10px">
       <span id="app-user-display" style="font-size:12px;color:var(--muted)"></span>
+      <div style="position:relative">
+        <button id="notif-bell-btn" onclick="toggleNotificationPanel()" style="position:relative;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--navy-mid)"></span>
+        </button>
+        <div id="notif-panel" style="display:none;position:absolute;top:42px;right:0;width:320px;background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:1000;overflow:hidden"></div>
+      </div>
       <button id="header-client-portal-btn" onclick="openClientPortal()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Client Portal</button>
       <button id="header-platform-btn" onclick="showPane('platform')" title="Platform Dashboard" style="display:none;padding:5px 10px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Platform</button>
       <button id="header-signout-btn" onclick="gateLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Sign out</button>
@@ -9584,6 +9591,10 @@ function cpSetSidebarTab(tab){
         ${p.address?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;margin-bottom:10px">${p.address}</div>`:''}
         ${row('Status',`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color}">${st.label}</span>`)}
         ${row('Post date', p.scheduledAt?new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric',year:'numeric'})+' · '+(p.scheduledTime||'8:00 am'):'')}
+        ${p.status==='scheduled'?`<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;color:var(--muted)">Move post date</span>
+          <button onclick="cpOpenMoveDate('${p.id}')" style="padding:4px 12px;border-radius:10px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:var(--blue-bright);font-size:11px;cursor:pointer">Change Date</button>
+        </div>`:''}
         ${row('Channel type','Instagram mockup channel')}
         ${row('Post type', p.format?SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format:'')}
         ${row('Platforms',(p.platforms||[]).map(pid=>platIcon(pid)+' '+platLabel(pid)).join(', '))}
@@ -9606,28 +9617,15 @@ function cpSetSidebarTab(tab){
       </div>`:''}
     `;
   } else if(tab==='activity'){
-    const history = p.history||[];
-    const comments = p.clientComments||[];
-    // Merge history + comments into one timeline
-    const allEvents = [
-      ...history.map(h=>({at:h.at, text:h.action, from:'team'})),
-      ...comments.map(c=>({at:c.at, text:(c.from==='client'?'You: ':'DroneHub: ')+c.text, from:c.from}))
-    ].sort((a,b)=>new Date(a.at)-new Date(b.at));
-
-    content.innerHTML = allEvents.length ? `
-      <div style="display:flex;flex-direction:column;gap:2px">
-        ${allEvents.map(e=>`
-          <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div style="width:28px;height:28px;border-radius:50%;background:${e.from==='client'?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;color:${e.from==='client'?'#fff':'var(--muted)'}">
-              ${e.from==='client'?'You':'BP'}
-            </div>
-            <div>
-              <div style="font-size:11px;color:var(--offwhite);line-height:1.5">${e.text}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmtDt(e.at)}</div>
-            </div>
-          </div>`).join('')}
-      </div>
-    ` : `<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:12px">No activity yet.</div>`;
+    const chatLog = p.chatLog||[];
+    const logHtml = renderChatLog(chatLog, 'client', p.id);
+    content.innerHTML = `
+      <div id="cp-chat-log" style="margin-bottom:12px">${logHtml}</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;border-top:1px solid var(--border);padding-top:12px">
+        <textarea id="cp-chat-input" placeholder="Send a message to DroneHub…" rows="2" style="flex:1;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:12px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:none;min-height:40px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpSendChatMessage('${p.id}');}"></textarea>
+        <button onclick="cpSendChatMessage('${p.id}')" style="padding:9px 14px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;height:40px">Send</button>
+      </div>`;
+    setTimeout(()=>{const el=document.getElementById('cp-chat-log');if(el)el.scrollTop=el.scrollHeight;},50);
 
   } else if(tab==='approval'){
     const comments = p.clientComments||[];
@@ -9646,8 +9644,10 @@ function cpSetSidebarTab(tab){
         </div>
       </div>` : '';
 
+    const roundLabel = p.approvalRound ? `Round ${p.approvalRound} of Approval` : 'Approval';
     const actionHtml = isPending?`
       <div>
+        <div style="margin-bottom:12px"><span style="font-size:10px;font-weight:700;color:#F5C842;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:20px;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.25);display:inline-block">${roundLabel}</span></div>
         <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">Your Review</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Approve this post or request changes with a note for our team.</div>
         <textarea id="cp-feedback-text" placeholder="Leave a note (optional for approval, required for revisions)…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:12px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:vertical;min-height:80px;margin-bottom:10px"></textarea>
@@ -9701,12 +9701,17 @@ function cpClientApproveWithNote(postId, note){
   posts[idx].clientComments=posts[idx].clientComments||[];
   if(note) posts[idx].clientComments.push({from:'client',text:note,at:new Date().toISOString()});
   posts[idx].clientComments.push({from:'client',text:'✓ Approved this post.',at:new Date().toISOString()});
+  if(note) chatLogAppend(posts,idx,{type:'message',from:'client',by:'Client',text:note});
+  chatLogAppend(posts,idx,{type:'approval',from:'client',by:'client',text:'Approved this post.'});
   const round=posts[idx].approvalRound||1;
   if(round===2){ posts[idx].status='scheduled'; posts[idx].approvedAt=new Date().toISOString().slice(0,10); }
   else { posts[idx].status='approved'; posts[idx].approvalRound=1; }
   posts[idx].history=posts[idx].history||[];
   posts[idx].history.push({action:'Client approved',by:'client',at:new Date().toISOString()});
+  chatLogAppend(posts,idx,{type:'system',from:'team',by:'system',text:'Client approved'});
+  const label=posts[idx].address||posts[idx].reelNumber||'Post';
   socialPostsSave(posts);
+  addSocialNotification(postId,'Client approved "'+label+'"','approval');
   cpClosePost();
   cpShowTab('social');
 }
@@ -9721,7 +9726,10 @@ function cpClientRevisionWithNote(postId, note){
   // approvalRound stays unchanged
   posts[idx].history=posts[idx].history||[];
   posts[idx].history.push({action:'Client requested revision: '+note,by:'client',at:new Date().toISOString()});
+  chatLogAppend(posts,idx,{type:'revision',from:'client',by:'Client',text:note});
+  const label=posts[idx].address||posts[idx].reelNumber||'Post';
   socialPostsSave(posts);
+  addSocialNotification(postId,'Revision requested on "'+label+'": '+note,'revision');
   cpClosePost();
   cpShowTab('social');
 }
@@ -16276,11 +16284,16 @@ function socialPostsLoad(){
   try{
     const posts=JSON.parse(localStorage.getItem('dronehub_social_posts')||'[]');
     return posts.map(p=>{
-      if(p.status==='pending_r1') return {...p,status:'pending',approvalRound:1};
-      if(p.status==='pending_r2') return {...p,status:'pending',approvalRound:2};
-      if(p.status==='revision_r1') return {...p,status:'revision',approvalRound:1};
-      if(p.status==='revision_r2') return {...p,status:'revision',approvalRound:2};
-      if(p.status==='approved_r1') return {...p,status:'approved',approvalRound:1};
+      if(p.status==='pending_r1') p={...p,status:'pending',approvalRound:1};
+      else if(p.status==='pending_r2') p={...p,status:'pending',approvalRound:2};
+      else if(p.status==='revision_r1') p={...p,status:'revision',approvalRound:1};
+      else if(p.status==='revision_r2') p={...p,status:'revision',approvalRound:2};
+      else if(p.status==='approved_r1') p={...p,status:'approved',approvalRound:1};
+      if(!p.chatLog){
+        const h=(p.history||[]).map(e=>({id:'h_'+(e.at||Date.now()),type:'system',from:'team',by:e.by||'team',text:e.action,at:e.at||new Date().toISOString()}));
+        const c=(p.clientComments||[]).map(e=>({id:'cc_'+(e.at||Date.now()),type:e.text?.startsWith('✓')?'approval':'message',from:e.from||'client',by:e.from==='client'?'Client':'DroneHub',text:e.text,at:e.at||new Date().toISOString()}));
+        p.chatLog=[...h,...c].sort((a,b)=>new Date(a.at)-new Date(b.at));
+      }
       return p;
     });
   }catch(e){ return []; }
@@ -16288,6 +16301,14 @@ function socialPostsLoad(){
 function socialPostsSave(arr){
   localStorage.setItem('dronehub_social_posts', JSON.stringify(arr));
   if(db) fbSet('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+}
+function chatLogAppend(posts,idx,entry){
+  if(!posts[idx].chatLog) posts[idx].chatLog=[];
+  posts[idx].chatLog.push({
+    id:'cl_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    at:new Date().toISOString(),
+    ...entry
+  });
 }
 function socialLabelsLoad(wsId){
   const ws = socialWorkspacesLoad().find(w=>w.id===wsId);
@@ -16311,11 +16332,243 @@ async function socialSyncFirebase(){
   }catch(e){}
 }
 
+// ── Notifications ─────────────────────────────────────────────────────────────────────────
+function notificationsLoad(){
+  try{ return JSON.parse(localStorage.getItem('dh_social_notifs')||'[]'); }catch(e){ return []; }
+}
+function notificationsSave(arr){
+  localStorage.setItem('dh_social_notifs',JSON.stringify(arr));
+  if(db) fbSet('orgs',ORG_ID+':social_notifs',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+}
+function addSocialNotification(postId,text,type){
+  const notifs=notificationsLoad();
+  notifs.unshift({id:'n_'+Date.now(),postId,text,type:type||'message',at:new Date().toISOString(),read:false});
+  if(notifs.length>50) notifs.splice(50);
+  notificationsSave(notifs);
+  refreshNotificationBadge();
+}
+function refreshNotificationBadge(){
+  const count=notificationsLoad().filter(n=>!n.read).length;
+  const badge=document.getElementById('notif-badge');
+  const btn=document.getElementById('notif-bell-btn');
+  if(badge){ badge.textContent=count>9?'9+':String(count); badge.style.display=count>0?'flex':'none'; }
+  if(btn) btn.style.color = count>0?'var(--blue-bright)':'var(--muted)';
+}
+function toggleNotificationPanel(){
+  const panel=document.getElementById('notif-panel');
+  if(!panel) return;
+  const isOpen=panel.style.display!=='none';
+  panel.style.display=isOpen?'none':'block';
+  if(!isOpen) renderNotificationPanel();
+}
+function renderNotificationPanel(){
+  const panel=document.getElementById('notif-panel');
+  if(!panel) return;
+  const notifs=notificationsLoad();
+  notifs.forEach(n=>n.read=true);
+  notificationsSave(notifs);
+  refreshNotificationBadge();
+  const fmtDt=iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const typeIcon={approval:'✓',revision:'✏',message:'💬',date_change:'📅'};
+  panel.innerHTML=`
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:700;color:var(--white)">Notifications</span>
+      <button onclick="notificationsClear()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer">Clear all</button>
+    </div>
+    <div style="overflow-y:auto;max-height:320px">
+      ${notifs.length?notifs.map(n=>`
+        <div onclick="document.getElementById('notif-panel').style.display='none';showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)" style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--navy-card)" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='var(--navy-card)'">
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <span style="font-size:14px;flex-shrink:0">${typeIcon[n.type]||'•'}</span>
+            <div>
+              <div style="font-size:12px;color:var(--white);line-height:1.4">${n.text}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmtDt(n.at)}</div>
+            </div>
+          </div>
+        </div>`).join('')
+      :'<div style="padding:32px;text-align:center;color:var(--muted);font-size:12px">No notifications</div>'}
+    </div>`;
+}
+function notificationsClear(){
+  notificationsSave([]);
+  renderNotificationPanel();
+}
+
+// ── Chat log renderer ─────────────────────────────────────────────────────────────────────
+function renderChatLog(chatLog, viewerRole, postId){
+  const fmtDt=iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  if(!chatLog||!chatLog.length) return `<div style="text-align:center;padding:28px 0;color:var(--muted);font-size:12px;font-style:italic">Chat starts once the post is sent for approval.</div>`;
+  const entries = chatLog.map(e=>{
+    const isMe = (viewerRole==='client' && e.from==='client') || (viewerRole==='team' && e.from==='team');
+    if(e.type==='system'){
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <div style="font-size:10px;color:var(--muted);white-space:nowrap;padding:2px 8px;border-radius:10px;background:var(--navy-lift);border:1px solid var(--border)">${e.text}</div>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>`;
+    }
+    if(e.type==='approval'){
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+        <div style="flex:1;height:1px;background:rgba(34,217,122,.2)"></div>
+        <div style="font-size:10px;color:#22D97A;white-space:nowrap;padding:2px 10px;border-radius:10px;background:rgba(34,217,122,.1);border:1px solid rgba(34,217,122,.25)">✓ ${e.from==='client'?'Client':'Team'} approved · ${fmtDt(e.at)}</div>
+        <div style="flex:1;height:1px;background:rgba(34,217,122,.2)"></div>
+      </div>`;
+    }
+    if(e.type==='revision'){
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+        <div style="flex:1;height:1px;background:rgba(251,146,60,.2)"></div>
+        <div style="font-size:10px;color:#FB923C;white-space:nowrap;padding:2px 10px;border-radius:10px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.25)">${e.from==='client'?'Client':'Team'} requested revision · ${fmtDt(e.at)}</div>
+        <div style="flex:1;height:1px;background:rgba(251,146,60,.2)"></div>
+      </div>
+      ${e.text&&e.text!=='Revision requested'?`<div style="display:flex;justify-content:${isMe?'flex-end':'flex-start'};padding:2px 0 6px">
+        <div style="max-width:88%;padding:8px 12px;border-radius:${isMe?'12px 12px 3px 12px':'12px 12px 12px 3px'};background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25)">
+          <div style="font-size:10px;font-weight:700;color:#FB923C;margin-bottom:3px">${e.from==='client'?'Client':'DroneHub Media'}</div>
+          <div style="font-size:12px;color:var(--white);line-height:1.5">${e.text}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;text-align:right">${fmtDt(e.at)}</div>
+        </div>
+      </div>`:''}`;
+    }
+    if(e.type==='date_change'){
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+        <div style="flex:1;height:1px;background:rgba(122,171,255,.2)"></div>
+        <div style="font-size:10px;color:var(--blue-bright);white-space:nowrap;padding:2px 10px;border-radius:10px;background:rgba(122,171,255,.08);border:1px solid rgba(122,171,255,.25)">📅 ${e.text} · ${fmtDt(e.at)}</div>
+        <div style="flex:1;height:1px;background:rgba(122,171,255,.2)"></div>
+      </div>`;
+    }
+    return `<div style="display:flex;justify-content:${isMe?'flex-end':'flex-start'};padding:3px 0">
+      <div style="max-width:88%">
+        <div style="padding:8px 12px;border-radius:${isMe?'12px 12px 3px 12px':'12px 12px 12px 3px'};background:${isMe?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};border:${isMe?'none':'1px solid var(--border)'}">
+          <div style="font-size:10px;font-weight:700;opacity:.75;margin-bottom:3px;color:${isMe?'rgba(255,255,255,.8)':'var(--muted)'}">${e.from==='client'?'Client':'DroneHub Media'}</div>
+          <div style="font-size:12px;color:#fff;line-height:1.5">${e.text}</div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:${isMe?'right':'left'}">${fmtDt(e.at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div style="display:flex;flex-direction:column;gap:2px;padding-bottom:8px">${entries}</div>`;
+}
+
+// ── Chat send functions ────────────────────────────────────────────────────────────────────
+function cpSendChatMessage(postId){
+  const input=document.getElementById('cp-chat-input');
+  const text=input?.value.trim();
+  if(!text) return;
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  chatLogAppend(posts,idx,{type:'message',from:'client',by:'Client',text});
+  posts[idx].clientComments=posts[idx].clientComments||[];
+  posts[idx].clientComments.push({from:'client',text,at:posts[idx].chatLog[posts[idx].chatLog.length-1].at});
+  socialPostsSave(posts);
+  if(input) input.value='';
+  addSocialNotification(postId,'Client message on "'+(posts[idx].address||posts[idx].reelNumber||'Post')+'": '+text.substring(0,80),'message');
+  cpSetSidebarTab('activity');
+}
+
+function teamSendChatMessage(postId){
+  const input=document.getElementById('team-chat-input-'+postId);
+  const text=input?.value.trim();
+  if(!text) return;
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  chatLogAppend(posts,idx,{type:'message',from:'team',by:_activeSessionEmail||'DroneHub',text});
+  posts[idx].clientComments=posts[idx].clientComments||[];
+  posts[idx].clientComments.push({from:'team',text,at:posts[idx].chatLog[posts[idx].chatLog.length-1].at});
+  socialPostsSave(posts);
+  if(input) input.value='';
+  const preview=document.getElementById('social-post-preview-modal');
+  if(preview) openSocialPostPreview(postId);
+  if(document.getElementById('social-sub-approvals')?.style.display!=='none') renderSocialApprovals();
+}
+
+// ── Date movement ─────────────────────────────────────────────────────────────────────────
+function cpOpenMoveDate(postId){
+  const post=socialPostsLoad().find(p=>p.id===postId);
+  if(!post) return;
+  const existing=document.getElementById('cp-move-date-modal');
+  if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='cp-move-date-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10100;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;padding:28px;width:340px;max-width:95vw;border:1px solid var(--border)" onclick="event.stopPropagation()">
+    <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Move Post Date</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Current: ${post.scheduledAt||'Not set'}</div>
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">New Date</label>
+    <input type="date" id="cp-move-date-input" value="${post.scheduledAt||''}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box;margin-bottom:8px">
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Note (optional)</label>
+    <input type="text" id="cp-move-date-note" placeholder="Reason for change…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box;margin-bottom:20px">
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('cp-move-date-modal').remove()" style="flex:1;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="cpConfirmMoveDate('${postId}')" style="flex:2;padding:10px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Save New Date</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+function cpConfirmMoveDate(postId){
+  const newDate=document.getElementById('cp-move-date-input')?.value;
+  const note=document.getElementById('cp-move-date-note')?.value.trim();
+  if(!newDate){alert('Please select a date.');return;}
+  document.getElementById('cp-move-date-modal')?.remove();
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  const oldDate=posts[idx].scheduledAt||'not set';
+  posts[idx].scheduledAt=newDate;
+  const text='Post date moved from '+oldDate+' to '+newDate+(note?' — '+note:'');
+  chatLogAppend(posts,idx,{type:'date_change',from:'client',by:'Client',text});
+  socialPostsSave(posts);
+  addSocialNotification(postId,text,'date_change');
+  cpOpenPost(postId);
+}
+
+function teamOpenMoveDate(postId){
+  const post=socialPostsLoad().find(p=>p.id===postId);
+  if(!post) return;
+  const existing=document.getElementById('team-move-date-modal');
+  if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='team-move-date-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;padding:28px;width:340px;max-width:95vw;border:1px solid var(--border)" onclick="event.stopPropagation()">
+    <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">Move Post Date</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Current: ${post.scheduledAt||'Not set'}</div>
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">New Date</label>
+    <input type="date" id="team-move-date-input" value="${post.scheduledAt||''}" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box;margin-bottom:8px">
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Note (optional)</label>
+    <input type="text" id="team-move-date-note" placeholder="Reason for change…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box;margin-bottom:20px">
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('team-move-date-modal').remove()" style="flex:1;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="teamConfirmMoveDate('${postId}')" style="flex:2;padding:10px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Save New Date</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+function teamConfirmMoveDate(postId){
+  const newDate=document.getElementById('team-move-date-input')?.value;
+  const note=document.getElementById('team-move-date-note')?.value.trim();
+  if(!newDate){alert('Please select a date.');return;}
+  document.getElementById('team-move-date-modal')?.remove();
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  const oldDate=posts[idx].scheduledAt||'not set';
+  posts[idx].scheduledAt=newDate;
+  const text='Post date moved from '+oldDate+' to '+newDate+(note?' — '+note:'');
+  chatLogAppend(posts,idx,{type:'date_change',from:'team',by:_activeSessionEmail||'team',text});
+  socialPostsSave(posts);
+  renderSocialPostsArea();
+  if(typeof renderSocialCalendar==='function') renderSocialCalendar();
+}
+
 // ── Entry point ────────────────────────────────────────────────────────────────────────────
 function renderSocial(){
-  socialSyncFirebase().then(()=>{ setSocialSubTab(_socialSubTab); refreshSocialApprovalBadge(); });
+  socialSyncFirebase().then(()=>{ setSocialSubTab(_socialSubTab); refreshSocialApprovalBadge(); refreshNotificationBadge(); });
   setSocialSubTab(_socialSubTab);
   refreshSocialApprovalBadge();
+  refreshNotificationBadge();
 }
 
 function refreshSocialApprovalBadge(){
@@ -16486,8 +16739,10 @@ function getSocialPostActions(p){
   if(p.status==='approved' && p.approvalRound===1)
     btns.push(`<button onclick="openSendForApproval('${p.id}',2)" style="padding:5px 11px;border-radius:14px;border:none;background:linear-gradient(135deg,rgba(34,217,122,.18),rgba(34,217,122,.08));border:1px solid rgba(34,217,122,.4);color:#22D97A;font-size:11px;font-weight:600;cursor:pointer">Send for R2</button>`);
 
-  if(p.status==='scheduled')
+  if(p.status==='scheduled'){
     btns.push(`<button onclick="setSocialPostStatus('${p.id}','published')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#A78BFA;font-size:11px;cursor:pointer">Mark Published</button>`);
+    btns.push(`<button onclick="teamOpenMoveDate('${p.id}')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:var(--blue-bright);font-size:11px;cursor:pointer">Move Date</button>`);
+  }
 
   btns.push(`<button onclick="deleteSocialPost('${p.id}')" style="padding:5px 9px;border-radius:14px;border:1px solid rgba(255,112,112,.2);background:transparent;color:#FF7070;font-size:11px;cursor:pointer">✕</button>`);
   return btns.join('');
@@ -16505,7 +16760,9 @@ function setSocialPostStatus(postId,newStatus,opts={}){
   if(newStatus==='pending') delete posts[idx].revisionNote;
   if(!posts[idx].history) posts[idx].history=[];
   const roundLabel=posts[idx].approvalRound?` (R${posts[idx].approvalRound})`:'';
-  posts[idx].history.push({action:`Status: ${prev} → ${newStatus}${roundLabel}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  const histAction=`Status: ${prev} → ${newStatus}${roundLabel}`;
+  posts[idx].history.push({action:histAction, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  chatLogAppend(posts,idx,{type:'system',from:'team',by:_activeSessionEmail||'team',text:histAction});
   socialPostsSave(posts);
   refreshSocialApprovalBadge();
   renderSocialPostsArea();
@@ -16523,6 +16780,7 @@ function promptSocialRevision(postId, round){
   posts[idx].revisionNote=note||'';
   if(!posts[idx].history) posts[idx].history=[];
   posts[idx].history.push({action:`Revision requested (R${round}): ${note}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  chatLogAppend(posts,idx,{type:'revision',from:'team',by:_activeSessionEmail||'team',text:note||'Revision requested'});
   socialPostsSave(posts);
   refreshSocialApprovalBadge();
   renderSocialPostsArea();
@@ -16538,6 +16796,7 @@ function resubmitSocialPost(postId){
   delete posts[idx].revisionNote;
   if(!posts[idx].history) posts[idx].history=[];
   posts[idx].history.push({action:`Re-submitted for R${round} approval`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  chatLogAppend(posts,idx,{type:'system',from:'team',by:_activeSessionEmail||'team',text:`Re-submitted for R${round} approval`});
   socialPostsSave(posts);
   refreshSocialApprovalBadge();
   renderSocialPostsArea();
@@ -16595,6 +16854,7 @@ function confirmSendForApproval(postId, round){
   delete posts[idx].revisionNote;
   if(!posts[idx].history) posts[idx].history=[];
   posts[idx].history.push({action:`Sent for R${round} approval`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  chatLogAppend(posts,idx,{type:'system',from:'team',by:_activeSessionEmail||'team',text:`Sent for R${round} approval`});
   socialPostsSave(posts);
   refreshSocialApprovalBadge();
   renderSocialPostsArea();
@@ -16790,7 +17050,14 @@ function openSocialPostPreview(postId){
     ${contentDesc?`<div style="margin-bottom:14px"><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Content Details</div><div style="font-size:12px;color:var(--white)">${contentDesc}</div><div style="margin-top:6px"><span style="padding:2px 10px;border-radius:12px;background:rgba(122,171,255,.12);color:var(--blue-bright);font-size:11px">${post.address||''}</span></div></div>`:''}
     ${post.overlayText?`<div style="margin-bottom:14px"><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Overlay (${post.overlayType||'description'})</div><div style="font-size:13px;color:#A78BFA;font-style:italic">"${post.overlayText}"</div></div>`:''}
     ${post.songName?`<div style="margin-bottom:14px"><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Music</div><div style="font-size:12px;color:var(--white)">🎵 ${post.songName}${post.songTimestamps?' · '+post.songTimestamps:''}</div></div>`:''}
-    ${(post.clientComments&&post.clientComments.length)?`<div style="margin-bottom:14px"><div style="font-size:10px;color:#F5C842;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Client Feedback</div><div style="display:flex;flex-direction:column;gap:6px">${post.clientComments.map(c=>`<div style="background:${c.from==='client'?'rgba(91,141,239,.1)':'rgba(34,217,122,.08)'};border-radius:8px;padding:8px 10px;border-left:2px solid ${c.from==='client'?'#7AABFF':'#22D97A'}"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">${c.from==='client'?'👤 Client':'🏢 DroneHub'} · ${c.at?new Date(c.at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}</div><div style="font-size:12px;color:var(--white)">${c.text}</div></div>`).join('')}</div></div>`:''}
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;color:var(--blue-bright);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Chat Log</div>
+      <div style="max-height:200px;overflow-y:auto;margin-bottom:10px">${renderChatLog(post.chatLog||[],'team',post.id)}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="team-chat-input-${post.id}" placeholder="Send a message to the client…" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:12px" onkeydown="if(event.key==='Enter'){teamSendChatMessage('${post.id}');}">
+        <button onclick="teamSendChatMessage('${post.id}')" style="padding:8px 14px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer">Send</button>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button onclick="document.getElementById('social-post-preview-modal').remove();openSocialPostModal('${postId}')" style="flex:1;padding:9px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;cursor:pointer">Edit Post</button>
       <button onclick="document.getElementById('social-post-preview-modal').remove()" style="padding:9px 18px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Close</button>
@@ -17089,7 +17356,11 @@ function saveSocialPost(forceStatus){
       Object.assign(posts[idx],postData);
       posts[idx].updatedAt=new Date().toISOString().slice(0,10);
       if(!posts[idx].history) posts[idx].history=[];
-      if(prev!==status) posts[idx].history.push({action:`Status: ${prev} → ${status}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+      if(prev!==status){
+        const histAct=`Status: ${prev} → ${status}`;
+        posts[idx].history.push({action:histAct, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+        chatLogAppend(posts,idx,{type:'system',from:'team',by:_activeSessionEmail||'team',text:histAct});
+      }
     }
   } else {
     posts.push({id:'post_'+Date.now(),...postData,history:[{action:'Created',by:_activeSessionEmail||'team',at:new Date().toISOString()}],createdAt:new Date().toISOString().slice(0,10)});
@@ -17886,6 +18157,15 @@ function showToast(msg, duration=4000){
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),duration);
 }
+
+// Close notification panel when clicking outside
+document.addEventListener('click',function(e){
+  const panel=document.getElementById('notif-panel');
+  const btn=document.getElementById('notif-bell-btn');
+  if(panel&&panel.style.display!=='none'&&!panel.contains(e.target)&&e.target!==btn&&!btn?.contains(e.target)){
+    panel.style.display='none';
+  }
+});
 
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA28gkUrGxyC-WfZN29pSpQV9IsDXzti90&libraries=geocoding&callback=initGoogleMaps&loading=async" async defer></script>
