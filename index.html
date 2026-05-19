@@ -2624,6 +2624,9 @@ button{font-family:var(--font);}
     <!-- Stats bar -->
     <div id="sales-stats-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
 
+    <!-- Client sub-filter (active / past) — only visible on Existing Clients tab -->
+    <div id="clients-sub-filter" style="display:none;margin-bottom:10px"></div>
+
     <!-- Contact table -->
     <div class="card" style="padding:0;overflow:hidden">
       <div>
@@ -2781,6 +2784,20 @@ button{font-family:var(--font);}
           <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Field / Industry</div>
           <input id="sc-field" type="text" placeholder="e.g. Architecture, Legal, Healthcare…" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
         </div>
+        <div id="sc-clienttype-row" style="display:none;grid-column:1/-1">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Client Type</div>
+          <div style="display:flex;gap:8px">
+            <label id="sc-ct-active-lbl" style="flex:1;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;border:2px solid var(--green);background:rgba(34,217,122,.08);cursor:pointer;font-size:12px;font-weight:700;color:var(--green)">
+              <input type="radio" name="sc-clienttype" id="sc-ct-active" value="active" checked style="accent-color:var(--green)">
+              ✅ Active Client
+            </label>
+            <label id="sc-ct-past-lbl" style="flex:1;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)">
+              <input type="radio" name="sc-clienttype" id="sc-ct-past" value="past" style="accent-color:var(--blue-bright)">
+              📁 Past Client
+            </label>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:5px">Active clients are auto-detected by recent job activity — you can always override here.</div>
+        </div>
         <div style="grid-column:1/-1">
           <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Notes</div>
           <textarea id="sc-notes" placeholder="Add any context…" rows="3" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
@@ -2842,10 +2859,15 @@ button{font-family:var(--font);}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             Warm Leads
           </label>
-          <label id="import-pick-clients" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
-            <input type="radio" name="import-list" value="clients" style="accent-color:var(--blue-bright)">
+          <label id="import-pick-clients-active" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="clients-active" style="accent-color:var(--green)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Existing Clients
+            Active Clients
+          </label>
+          <label id="import-pick-clients-past" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)">
+            <input type="radio" name="import-list" value="clients-past" style="accent-color:var(--blue-bright)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Past Clients
           </label>
         </div>
       </div>
@@ -15191,10 +15213,11 @@ const SALES_LISTS = [
   {id:'clients',    label:'✅ Existing Clients'},
 ];
 
-let salesActiveList = 'realestate';
-let salesEditingId  = null;
-let salesSortCol    = 'name';   // default sort column
-let salesSortDir    = 'asc';    // 'asc' | 'desc'
+let salesActiveList  = 'realestate';
+let _salesClientSub  = 'all';  // 'all' | 'active' | 'past' — sub-filter for clients tab
+let salesEditingId   = null;
+let salesSortCol     = 'name';  // default sort column
+let salesSortDir     = 'asc';   // 'asc' | 'desc'
 
 function setSalesSort(col){
   if(salesSortCol === col){
@@ -15244,12 +15267,18 @@ async function salesSyncFirebase(){
 
 function setSalesList(listId){
   salesActiveList = listId;
+  if(listId !== 'clients') _salesClientSub = 'all';
   document.querySelectorAll('.sales-list-tab').forEach(b=>{
     b.classList.toggle('active', b.id === 'sltab-'+listId);
   });
   // Reset select-all checkbox
   const sa = document.getElementById('sales-select-all');
   if(sa) sa.checked = false;
+  // Auto-detect client types when entering clients tab
+  if(listId === 'clients'){
+    const allContacts = salesLoad();
+    if(salesAutoDetectClientTypes(allContacts)) salesSave(allContacts);
+  }
   renderSalesTable();
 }
 
@@ -15260,30 +15289,83 @@ function renderSales(){
   if(salesView==='pipeline') renderDealsTable();
 }
 
+function salesAutoDetectClientTypes(allContacts){
+  // Returns true if any record was changed (so caller can save)
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  let changed = false;
+  allContacts.forEach(c=>{
+    if(c.list !== 'clients' || c._deleted) return;
+    if(c._clientTypeManual) return; // user manually set — don't overwrite
+    const hasRecentJob = (savedJobs||[]).some(j=>{
+      if(j.clientId !== c.id) return false;
+      const d = new Date(j.completedAt||j.createdAt||j.date||0);
+      return d >= oneYearAgo;
+    });
+    const detected = hasRecentJob ? 'active' : (c.clientType || 'active');
+    if(c.clientType !== detected){ c.clientType = detected; changed = true; }
+  });
+  return changed;
+}
+
 function renderSalesTable(){
   const all = salesLoad();
   const q   = (document.getElementById('sales-search')?.value||'').toLowerCase().trim();
   const list= all.filter(c=> c.list === salesActiveList && !c._deleted);
-  const filtered = q ? list.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.notes].join(' ').toLowerCase().includes(q)) : list;
+
+  // Client sub-filter bar
+  const subFilterEl = document.getElementById('clients-sub-filter');
+  if(salesActiveList === 'clients' && subFilterEl){
+    const activeCount = list.filter(c=>(c.clientType||'active')==='active').length;
+    const pastCount   = list.filter(c=>c.clientType==='past').length;
+    subFilterEl.style.display = '';
+    subFilterEl.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px">Filter:</span>
+      ${[['all','All Clients',list.length,'var(--green)'],['active','Active Clients',activeCount,'var(--green)'],['past','Past Clients',pastCount,'var(--blue-bright)']].map(([v,lbl,cnt,col])=>`
+        <button onclick="_salesClientSub='${v}';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesClientSub===v?col:'var(--border)'};background:${_salesClientSub===v?'rgba(34,217,122,.1)':'var(--navy-lift)'};color:${_salesClientSub===v?col:'var(--muted)'}">
+          ${lbl} <span style="opacity:.65">(${cnt})</span>
+        </button>`).join('')}
+    </div>`;
+  } else if(subFilterEl){
+    subFilterEl.style.display = 'none';
+  }
+
+  // Apply client sub-filter
+  const subList = (salesActiveList==='clients' && _salesClientSub!=='all')
+    ? list.filter(c=>(c.clientType||'active')===_salesClientSub)
+    : list;
+
+  const filtered = q ? subList.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.notes].join(' ').toLowerCase().includes(q)) : subList;
 
   // Stats bar
   const statsBar = document.getElementById('sales-stats-bar');
   if(statsBar){
-    const total = all.filter(c=>!c._deleted).length;
-    const warm  = all.filter(c=>c.list==='warm'&&!c._deleted).length;
-    const unsub = all.filter(c=>c.unsubscribed&&!c._deleted).length;
-    const dne   = all.filter(c=>c.doNotEmail&&!c._deleted).length;
+    const total  = all.filter(c=>!c._deleted).length;
+    const warm   = all.filter(c=>c.list==='warm'&&!c._deleted).length;
+    const unsub  = all.filter(c=>c.unsubscribed&&!c._deleted).length;
+    const dne    = all.filter(c=>c.doNotEmail&&!c._deleted).length;
+    const clients = all.filter(c=>c.list==='clients'&&!c._deleted);
+    const activeClients = clients.filter(c=>(c.clientType||'active')==='active').length;
+    const pastClients   = clients.filter(c=>c.clientType==='past').length;
+    const isClientsView = salesActiveList === 'clients';
     statsBar.innerHTML = [
       `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>Total Contacts</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
-      dne>0?`<div style="background:rgba(240,82,82,.07);border:1px solid rgba(240,82,82,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--red);display:block">${dne}</span>Do Not Email</div>`:'',
+      isClientsView
+        ? `<div style="background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--green);display:block">${activeClients}</span>Active Clients</div>`
+        : `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
+      isClientsView
+        ? `<div style="background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--blue-bright);display:block">${pastClients}</span>Past Clients</div>`
+        : `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
+      !isClientsView && dne>0 ? `<div style="background:rgba(240,82,82,.07);border:1px solid rgba(240,82,82,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--red);display:block">${dne}</span>Do Not Email</div>` : '',
     ].join('');
   }
 
   // Count label
   const cl = document.getElementById('sales-count-label');
-  if(cl) cl.textContent = `Showing ${filtered.length} of ${list.length} contacts in this list`;
+  if(cl){
+    const subNote = (salesActiveList==='clients' && _salesClientSub!=='all') ? ` (${_salesClientSub} clients)` : '';
+    cl.textContent = `Showing ${filtered.length} of ${subList.length} contacts in this list${subNote}`;
+  }
 
   // Show/hide Field column for Other tab
   const isOtherTab = salesActiveList === 'other';
@@ -15297,20 +15379,30 @@ function renderSalesTable(){
     return;
   }
 
+  const isClientsTab = salesActiveList === 'clients';
   tbody.innerHTML = filtered.map(c=>{
     const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
     const statusClass = {new:'sales-status-new',contacted:'sales-status-contacted',warm:'sales-status-warm',unsubscribed:'sales-status-unsubscribed',client:'sales-status-client'}[c.unsubscribed?'unsubscribed':(c.status||'new')] || 'sales-status-new';
     const statusLabel = c.unsubscribed ? 'Unsubscribed' : ({new:'New',contacted:'Contacted',warm:'Warm',client:'Client'}[c.status]||'New');
     const dneBadge = c.doNotEmail ? `<span title="Do Not Email" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:var(--red);background:rgba(240,82,82,.1);border:1px solid rgba(240,82,82,.3);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle">⊘ DNE</span>` : '';
+    const ctType = c.clientType || 'active';
+    const ctBadge = isClientsTab
+      ? (ctType === 'active'
+          ? `<span title="Active Client" style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--green);background:rgba(34,217,122,.1);border:1px solid rgba(34,217,122,.3);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle">● Active</span>`
+          : `<span title="Past Client" style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--blue-bright);background:rgba(91,141,239,.1);border:1px solid rgba(91,141,239,.3);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle">◌ Past</span>`)
+      : '';
     const emailCell = c.email
       ? (c.doNotEmail
           ? `<span style="color:var(--muted);font-size:12px;text-decoration:line-through" title="Do Not Email — cannot send">${escSalesHtml(c.email)}</span>`
           : `<a class="sales-email-link" onclick="openSalesIndivEmail('${escSalesAttr(c.id)}')" href="javascript:void(0)">${escSalesHtml(c.email)}</a>`)
       : '—';
     const fieldCell = isOtherTab ? `<td style="font-size:12px;color:var(--muted)">${escSalesHtml(c.field||'—')}</td>` : '';
+    const ctToggleBtn = isClientsTab
+      ? `<button class="sales-action-btn" onclick="salesToggleClientType('${escSalesAttr(c.id)}')" title="${ctType==='active'?'Mark as Past Client':'Mark as Active Client'}" style="${ctType==='active'?'color:var(--green);border-color:rgba(34,217,122,.4)':'color:var(--blue-bright);border-color:rgba(91,141,239,.4)'}">${ctType==='active'?'●◌':'◌●'}</button>`
+      : '';
     return `<tr>
       <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
-      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}</td>
+      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}${ctBadge}</td>
       <td>${escSalesHtml(c.company||'—')}</td>
       ${fieldCell}
       <td style="white-space:nowrap">${escSalesHtml(c.phone||'—')}</td>
@@ -15319,6 +15411,7 @@ function renderSalesTable(){
       <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(c.notes||'')}">${escSalesHtml((c.notes||'').slice(0,40))||'—'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="sales-action-btn" onclick="salesEditContact('${escSalesAttr(c.id)}')" title="Edit">✏</button>
+        ${ctToggleBtn}
         <button class="sales-action-btn" onclick="salesToggleUnsub('${escSalesAttr(c.id)}')" title="${c.unsubscribed?'Re-subscribe':'Unsubscribe'}">${c.unsubscribed?'↩':'🚫'}</button>
         <button class="sales-action-btn" onclick="salesToggleDNE('${escSalesAttr(c.id)}')" title="${c.doNotEmail?'Remove Do Not Email':'Mark Do Not Email'}" style="${c.doNotEmail?'color:var(--red);border-color:rgba(240,82,82,.4)':''}">⊘</button>
         <button class="sales-action-btn" onclick="salesQuickMove('${escSalesAttr(c.id)}')" title="Move to list">↗</button>
@@ -15398,6 +15491,16 @@ function salesToggleDNE(id){
   renderSalesTable();
 }
 
+function salesToggleClientType(id){
+  const all = salesLoad();
+  const c   = all.find(x=>x.id===id);
+  if(!c) return;
+  c.clientType = (c.clientType||'active') === 'active' ? 'past' : 'active';
+  c._clientTypeManual = true; // prevent auto-detect from overwriting
+  salesSave(all);
+  renderSalesTable();
+}
+
 function salesQuickMove(id){
   const dest = prompt('Move to list:\n1=Real Estate, 2=Resorts, 3=Golf, 4=Other, 5=Warm Leads, 6=Existing Clients\nType the list name:');
   if(!dest) return;
@@ -15443,7 +15546,27 @@ function openSalesAddModal(editId){
     const listVal = document.getElementById('sc-list')?.value;
     const row = document.getElementById('sc-field-row');
     if(row) row.style.display = listVal==='other' ? '' : 'none';
+    const ctRow = document.getElementById('sc-clienttype-row');
+    if(ctRow) ctRow.style.display = listVal==='clients' ? '' : 'none';
+    // Update client type radio label styles
+    scRefreshClientTypeStyles();
   }
+  function scRefreshClientTypeStyles(){
+    const activeRadio = document.getElementById('sc-ct-active');
+    const pastRadio   = document.getElementById('sc-ct-past');
+    const activeLbl   = document.getElementById('sc-ct-active-lbl');
+    const pastLbl     = document.getElementById('sc-ct-past-lbl');
+    if(!activeRadio||!pastRadio) return;
+    if(activeRadio.checked){
+      if(activeLbl){ activeLbl.style.borderColor='var(--green)'; activeLbl.style.background='rgba(34,217,122,.08)'; activeLbl.style.color='var(--green)'; }
+      if(pastLbl)  { pastLbl.style.borderColor='var(--border)';  pastLbl.style.background='var(--navy-lift)';       pastLbl.style.color='var(--muted)'; }
+    } else {
+      if(pastLbl)  { pastLbl.style.borderColor='var(--blue-bright)'; pastLbl.style.background='rgba(91,141,239,.08)'; pastLbl.style.color='var(--blue-bright)'; }
+      if(activeLbl){ activeLbl.style.borderColor='var(--border)';    activeLbl.style.background='var(--navy-lift)';    activeLbl.style.color='var(--muted)'; }
+    }
+  }
+  document.getElementById('sc-ct-active')?.addEventListener('change', scRefreshClientTypeStyles);
+  document.getElementById('sc-ct-past')?.addEventListener('change',   scRefreshClientTypeStyles);
   document.getElementById('sc-list')?.addEventListener('change', scUpdateFieldRow);
 
   if(editId){
@@ -15458,6 +15581,10 @@ function openSalesAddModal(editId){
       document.getElementById('sc-status').value  = c.status||'new';
       document.getElementById('sc-notes').value   = c.notes||'';
       const fieldEl = document.getElementById('sc-field'); if(fieldEl) fieldEl.value = c.field||'';
+      // Client type
+      const ctVal = c.clientType||'active';
+      const ctA = document.getElementById('sc-ct-active'); if(ctA) ctA.checked = ctVal==='active';
+      const ctP = document.getElementById('sc-ct-past');   if(ctP) ctP.checked = ctVal==='past';
       _scDNE = !!c.doNotEmail;
       const btn = document.getElementById('sc-dne-btn');
       const lbl = document.getElementById('sc-dne-label');
@@ -15471,6 +15598,9 @@ function openSalesAddModal(editId){
     });
     document.getElementById('sc-list').value   = salesActiveList;
     document.getElementById('sc-status').value = 'new';
+    // Default client type to active for new contacts
+    const ctA = document.getElementById('sc-ct-active'); if(ctA) ctA.checked = true;
+    const ctP = document.getElementById('sc-ct-past');   if(ctP) ctP.checked = false;
     _scDNE = false;
     const btn = document.getElementById('sc-dne-btn'); const lbl = document.getElementById('sc-dne-label');
     if(btn){ btn.style.background='var(--navy-lift)'; btn.style.borderColor='var(--border)'; btn.style.color='var(--muted)'; }
@@ -15478,6 +15608,7 @@ function openSalesAddModal(editId){
     modal.querySelector('.sales-modal-header div').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Contact';
   }
   scUpdateFieldRow();
+  scRefreshClientTypeStyles();
   modal.classList.add('open');
 }
 function closeSalesAddModal(){ document.getElementById('sales-add-modal')?.classList.remove('open'); salesEditingId=null; }
@@ -15503,6 +15634,11 @@ function saveSalesContact(){
       all[idx].notes      = document.getElementById('sc-notes').value.trim();
       all[idx].field      = (document.getElementById('sc-field')?.value||'').trim()||undefined;
       all[idx].doNotEmail = typeof _scDNE !== 'undefined' ? !!_scDNE : !!all[idx].doNotEmail;
+      if(all[idx].list === 'clients'){
+        const ctChecked = document.querySelector('input[name="sc-clienttype"]:checked')?.value || 'active';
+        all[idx].clientType = ctChecked;
+        all[idx]._clientTypeManual = true;
+      }
       all[idx].updatedAt  = new Date().toISOString();
     }
     salesSave(all);
@@ -15511,6 +15647,8 @@ function saveSalesContact(){
     return;
   }
 
+  const _newList = document.getElementById('sc-list').value;
+  const _newCt   = _newList==='clients' ? (document.querySelector('input[name="sc-clienttype"]:checked')?.value||'active') : undefined;
   const contact = {
     id:        'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
     firstName: document.getElementById('sc-fname').value.trim(),
@@ -15518,10 +15656,12 @@ function saveSalesContact(){
     company:   document.getElementById('sc-company').value.trim(),
     phone:     document.getElementById('sc-phone').value.trim(),
     email:     email,
-    list:      document.getElementById('sc-list').value,
+    list:      _newList,
     status:    document.getElementById('sc-status').value,
     notes:     document.getElementById('sc-notes').value.trim(),
     field:     (document.getElementById('sc-field')?.value||'').trim()||undefined,
+    clientType: _newCt,
+    _clientTypeManual: _newList==='clients' ? true : undefined,
     doNotEmail: typeof _scDNE !== 'undefined' ? !!_scDNE : false,
     unsubscribed: false,
     createdAt: new Date().toISOString(),
@@ -15671,8 +15811,10 @@ function openImportModal(){
   const modal = document.getElementById('sales-import-modal');
   if(!modal) return;
   // Pre-select the currently active list
+  // For 'clients' tab, pre-select 'clients-active' by default
+  const preselect = salesActiveList === 'clients' ? 'clients-active' : salesActiveList;
   const radios = modal.querySelectorAll('input[name="import-list"]');
-  radios.forEach(r => r.checked = r.value === salesActiveList);
+  radios.forEach(r => r.checked = r.value === preselect);
   updateImportPickerStyles();
   // Wire up radio change to update styles
   radios.forEach(r => r.onchange = updateImportPickerStyles);
@@ -15688,15 +15830,18 @@ function closeSalesImportModal(){
 }
 
 function updateImportPickerStyles(){
-  const LIST_IDS = ['realestate','resorts','golf','other','warm','clients'];
+  const LIST_IDS = ['realestate','resorts','golf','other','warm','clients-active','clients-past'];
   LIST_IDS.forEach(id => {
     const lbl = document.getElementById('import-pick-'+id);
     const radio = lbl?.querySelector('input[type=radio]');
     if(!lbl || !radio) return;
+    const isActive = id === 'clients-active';
+    const activeCol = isActive ? 'var(--green)' : 'var(--blue-bright)';
+    const activeBg  = isActive ? 'rgba(34,217,122,.1)' : 'rgba(91,141,239,.12)';
     if(radio.checked){
-      lbl.style.borderColor = 'var(--blue-bright)';
-      lbl.style.background  = 'rgba(91,141,239,.12)';
-      lbl.style.color       = 'var(--blue-bright)';
+      lbl.style.borderColor = activeCol;
+      lbl.style.background  = activeBg;
+      lbl.style.color       = activeCol;
     } else {
       lbl.style.borderColor = 'var(--border)';
       lbl.style.background  = 'var(--navy-lift)';
@@ -15729,6 +15874,10 @@ function runSalesImport(input){
 }
 
 function processSalesImportFile(file, listId){
+  // Resolve clients-active / clients-past into list='clients' + clientType
+  let importClientType = undefined;
+  if(listId === 'clients-active'){ importClientType = 'active'; listId = 'clients'; }
+  if(listId === 'clients-past'){   importClientType = 'past';   listId = 'clients'; }
   const LIST_LABELS = {realestate:'Real Estate',resorts:'Resorts',golf:'Golf Courses',other:'Other',warm:'Warm Leads',clients:'Existing Clients'};
   const reader = new FileReader();
   reader.onload = function(e){
@@ -15752,6 +15901,14 @@ function processSalesImportFile(file, listId){
         const status    = String(r.status||'new').toLowerCase();
         const field     = listId==='other' ? String(r.field||r.industry||r.category||r.sector||r.type||'').trim() : '';
         const doNotEmail= String(r.donotemail||r['do not email']||r.optout||r['opt out']||'').trim().toLowerCase();
+        // Client type: use import-level default, allow row override via 'clienttype'/'type' column
+        let rowClientType = undefined;
+        if(listId === 'clients'){
+          const ctCol = String(r.clienttype||r.type||r.clientstatus||'').trim().toLowerCase();
+          if(['active','current'].includes(ctCol)) rowClientType = 'active';
+          else if(['past','previous','former','inactive'].includes(ctCol)) rowClientType = 'past';
+          else rowClientType = importClientType || 'active';
+        }
         if(!firstName && !lastName && !email){ skipped++; return; }
         if(email && all.some(c=>c.email && c.email.toLowerCase()===email)){ skipped++; return; }
         all.push({
@@ -15759,6 +15916,8 @@ function processSalesImportFile(file, listId){
           firstName, lastName, company, phone, email, city, notes,
           field: field||undefined,
           list: listId,
+          clientType: rowClientType,
+          _clientTypeManual: listId==='clients' ? true : undefined,
           status: ['new','contacted','warm','client'].includes(status) ? status : 'new',
           doNotEmail: ['yes','true','1','y'].includes(doNotEmail),
           unsubscribed: false,
@@ -15771,7 +15930,8 @@ function processSalesImportFile(file, listId){
       setSalesList(listId);
       renderSalesTable();
       const label = LIST_LABELS[listId] || listId;
-      alert(`✅ Imported ${added} contact${added!==1?'s':''} into ${label}.\n${skipped?`(${skipped} row${skipped!==1?'s':''} skipped — blank or duplicate email)`:'All rows were new.'}`);
+      const ctNote = importClientType ? ` (${importClientType} clients)` : '';
+      alert(`✅ Imported ${added} contact${added!==1?'s':''} into ${label}${ctNote}.\n${skipped?`(${skipped} row${skipped!==1?'s':''} skipped — blank or duplicate email)`:'All rows were new.'}`);
     } catch(err){ alert('Error reading file: ' + err.message); }
   };
   reader.readAsBinaryString(file);
