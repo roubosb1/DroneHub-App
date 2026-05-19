@@ -3534,11 +3534,15 @@ button{font-family:var(--font);}
     </div>
     <div id="social-label-list" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div>
     <div style="margin-bottom:16px">
-      <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <input id="social-label-new-name" type="text" placeholder="Label name (e.g. property address)" style="flex:1;min-width:0;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px">
         <button onclick="addSocialLabel()" style="flex-shrink:0;padding:8px 16px;border-radius:14px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;cursor:pointer">Add</button>
       </div>
-      <div id="social-label-new-color-pick" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0"></div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">Assign to calendar date <span style="opacity:.6">(optional)</span></label>
+        <input id="social-label-new-date" type="date" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;box-sizing:border-box">
+      </div>
+      <div id="social-label-new-color-pick" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0"></div>
     </div>
     <button onclick="closeSocialLabelModal()" style="width:100%;padding:9px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Done</button>
   </div>
@@ -16240,9 +16244,8 @@ const SOCIAL_STATUSES = [
 
 // Distinctly different, non-pastel label colors for properties
 const SOCIAL_LABEL_COLORS = [
-  '#FF3B30','#FF6B00','#FFCC00','#34C759','#00C7BE',
-  '#007AFF','#5856D6','#FF2D55','#AF52DE','#00B4D8',
-  '#E63946','#2DC653','#F4A261','#4CC9F0','#7209B7',
+  '#FF3B30','#FF9500','#FFCC00','#34C759',
+  '#00C7BE','#007AFF','#AF52DE','#FF2D55',
 ];
 
 const PLATFORM_SPECS = {
@@ -16676,7 +16679,6 @@ function renderSocialPostsArea(){
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="openSocialPostModal()" style="padding:8px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Post</button>
-        <button onclick="openSocialLabelModal()" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">🏷 Labels</button>
         <button onclick="openSocialWorkspaceModal('${ws.id}')" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Edit</button>
         <button onclick="deleteSocialWorkspace('${ws.id}')" style="padding:7px 14px;border-radius:20px;border:1px solid rgba(255,112,112,.3);background:rgba(255,112,112,.07);color:#FF7070;font-size:12px;cursor:pointer">Delete</button>
       </div>
@@ -16929,9 +16931,11 @@ function renderSocialCalendar(){
     return `<button onclick="_socialCalFilter='${f.id}';renderSocialCalendar()" style="padding:4px 12px;border-radius:14px;border:1px solid ${on?f.color:'var(--border)'};background:${on?f.color+'22':'transparent'};color:${on?f.color:'var(--muted)'};font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em">${f.label}</button>`;
   }).join('');
 
-  // Gather all labels across workspaces for legend
+  // Gather all labels across workspaces (for legend + dated label entries)
   const allLabels=[];
   workspaces.forEach(ws=>{ (ws.labels||[]).forEach(l=>{ if(!allLabels.find(x=>x.color===l.color&&x.name===l.name)) allLabels.push(l); }); });
+  // Dated labels — labels with a specific calendar date set
+  const datedLabels=allLabels.filter(l=>l.date);
 
   // Build list of unique property banners (by labelColor+address) for this month
   const propertyBanners=[];
@@ -16963,9 +16967,14 @@ function renderSocialCalendar(){
   for(let d=1;d<=days;d++){
     const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dp=posts.filter(p=>p.scheduledAt===ds);
+    const dl=datedLabels.filter(l=>l.date===ds);
     const isToday=ds===todayStr;
+    const labelChips=dl.map(l=>`<div style="margin-bottom:3px;border-radius:4px;overflow:hidden;background:${l.color}18;border:1px solid ${l.color}44;border-left:3px solid ${l.color}">
+      <div style="padding:3px 5px;font-size:9px;font-weight:700;color:${l.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em">${l.name}</div>
+    </div>`).join('');
     cellsHtml+=`<div style="min-height:100px;padding:6px 5px 5px;border-radius:8px;border:1px solid ${isToday?'var(--blue)':'var(--border)'};background:${isToday?'rgba(91,141,239,.06)':'var(--navy-card)'};overflow:hidden;box-sizing:border-box">
       <div style="font-size:12px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--border-bright)'};margin-bottom:5px;text-align:right;line-height:1;letter-spacing:-.01em">${d}</div>
+      ${labelChips}
       ${dp.map(p=>{
         const st=SOCIAL_STATUSES.find(s=>s.id===p.status);
         const statusColor=st?.color||'#7AABFF';
@@ -17001,7 +17010,10 @@ function renderSocialCalendar(){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
       <button onclick="_socialCalMonth--;if(_socialCalMonth<0){_socialCalMonth=11;_socialCalYear--;}renderSocialCalendar()" style="padding:6px 16px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">‹ Prev</button>
       <div style="font-size:16px;font-weight:700;color:var(--white)">${monthNames[mo]} ${yr}</div>
-      <button onclick="_socialCalMonth++;if(_socialCalMonth>11){_socialCalMonth=0;_socialCalYear++;}renderSocialCalendar()" style="padding:6px 16px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Next ›</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="openSocialLabelModal()" style="padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Labels</button>
+        <button onclick="_socialCalMonth++;if(_socialCalMonth>11){_socialCalMonth=0;_socialCalYear++;}renderSocialCalendar()" style="padding:6px 16px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Next ›</button>
+      </div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${filterPillsHtml}</div>
     ${legendHtml}
@@ -17661,23 +17673,29 @@ function renderSocialLabelList(){
   list.innerHTML=labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy);margin-bottom:6px">
     <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${l.color};flex-shrink:0"></span>
     <span style="flex:1;font-size:12px;color:var(--white)">${l.name}</span>
+    ${l.date?`<span style="font-size:10px;color:var(--muted);background:var(--navy-lift);border:1px solid var(--border);border-radius:8px;padding:2px 7px;flex-shrink:0">📅 ${l.date}</span>`:''}
     <button onclick="deleteSocialLabel(${i})" style="background:none;border:none;color:#FF7070;font-size:14px;cursor:pointer;padding:0 4px">×</button>
   </div>`).join('');
 }
 function addSocialLabel(){
   const name=document.getElementById('social-label-new-name')?.value.trim();
   if(!name){ alert('Label name required'); return; }
+  const date=document.getElementById('social-label-new-date')?.value||'';
   const labels=socialLabelsLoad(_socialActiveWorkspace);
-  labels.push({id:'lbl_'+Date.now(),name,color:_socialLabelNewColor});
+  labels.push({id:'lbl_'+Date.now(),name,color:_socialLabelNewColor,date:date||undefined});
   socialLabelsSave(_socialActiveWorkspace,labels);
   document.getElementById('social-label-new-name').value='';
+  const dateEl=document.getElementById('social-label-new-date');
+  if(dateEl) dateEl.value='';
   renderSocialLabelList();
+  if(document.getElementById('social-sub-calendar')?.style.display!=='none') renderSocialCalendar();
 }
 function deleteSocialLabel(idx){
   const labels=socialLabelsLoad(_socialActiveWorkspace);
   labels.splice(idx,1);
   socialLabelsSave(_socialActiveWorkspace,labels);
   renderSocialLabelList();
+  if(document.getElementById('social-sub-calendar')?.style.display!=='none') renderSocialCalendar();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
