@@ -15219,6 +15219,20 @@ let salesEditingId   = null;
 let salesSortCol     = 'name';  // default sort column
 let salesSortDir     = 'asc';   // 'asc' | 'desc'
 
+// Split a full name typed into the first-name field when last name is blank.
+// 2 words  → "John Smith"       → {firstName:'John', lastName:'Smith'}
+// 3+ words → "Mary Jane Smith"  → {firstName:'Mary Jane', lastName:'Smith'}
+// 1 word   → unchanged
+function splitSalesName(fn, ln){
+  fn = (fn||'').trim();
+  ln = (ln||'').trim();
+  if(ln || !fn.includes(' ')) return {firstName:fn, lastName:ln};
+  const parts = fn.split(/\s+/);
+  if(parts.length === 2) return {firstName:parts[0], lastName:parts[1]};
+  // 3+ words: first two = firstName, rest = lastName
+  return {firstName:parts.slice(0,2).join(' '), lastName:parts.slice(2).join(' ')};
+}
+
 function setSalesSort(col){
   if(salesSortCol === col){
     salesSortDir = salesSortDir === 'asc' ? 'desc' : 'asc';
@@ -15624,8 +15638,9 @@ function saveSalesContact(){
   if(salesEditingId){
     const idx = all.findIndex(c=>c.id===salesEditingId);
     if(idx>=0){
-      all[idx].firstName  = document.getElementById('sc-fname').value.trim();
-      all[idx].lastName   = document.getElementById('sc-lname').value.trim();
+      const _editName = splitSalesName(document.getElementById('sc-fname').value, document.getElementById('sc-lname').value);
+      all[idx].firstName  = _editName.firstName;
+      all[idx].lastName   = _editName.lastName;
       all[idx].company    = document.getElementById('sc-company').value.trim();
       all[idx].phone      = document.getElementById('sc-phone').value.trim();
       all[idx].email      = email;
@@ -15649,10 +15664,11 @@ function saveSalesContact(){
 
   const _newList = document.getElementById('sc-list').value;
   const _newCt   = _newList==='clients' ? (document.querySelector('input[name="sc-clienttype"]:checked')?.value||'active') : undefined;
+  const _newName = splitSalesName(document.getElementById('sc-fname').value, document.getElementById('sc-lname').value);
   const contact = {
     id:        'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-    firstName: document.getElementById('sc-fname').value.trim(),
-    lastName:  document.getElementById('sc-lname').value.trim(),
+    firstName: _newName.firstName,
+    lastName:  _newName.lastName,
     company:   document.getElementById('sc-company').value.trim(),
     phone:     document.getElementById('sc-phone').value.trim(),
     email:     email,
@@ -15891,8 +15907,10 @@ function processSalesImportFile(file, listId){
       rows.forEach(row=>{
         const r = {};
         Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_\-\/]/g,'')] = row[k]; });
-        const firstName = String(r.firstname||r.fname||r.name||'').trim();
-        const lastName  = String(r.lastname||r.lname||'').trim();
+        const {firstName, lastName} = splitSalesName(
+          String(r.firstname||r.fname||r.name||'').trim(),
+          String(r.lastname||r.lname||'').trim()
+        );
         const company   = String(r.company||r.organisation||r.organization||r.brokerage||'').trim();
         const email     = String(r.email||r['e-mail']||r.emailaddress||'').trim().toLowerCase();
         const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
