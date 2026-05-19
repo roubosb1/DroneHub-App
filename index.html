@@ -2872,6 +2872,17 @@ button{font-family:var(--font);}
         </div>
       </div>
 
+      <!-- Update existing toggle -->
+      <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:var(--navy-mid);border:1px solid var(--border)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
+          <input type="checkbox" id="import-overwrite-dupes" style="accent-color:var(--blue-bright);width:15px;height:15px;cursor:pointer">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--offwhite)">Update existing contacts</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">If an email already exists in the system, update their info with this file's data instead of skipping them</div>
+          </div>
+        </label>
+      </div>
+
       <!-- File drop zone -->
       <div id="import-dropzone" ondragover="event.preventDefault();this.style.borderColor='var(--blue-bright)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="onImportDrop(event)" style="border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s" onclick="document.getElementById('import-file-input').click()">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -15834,10 +15845,12 @@ function openImportModal(){
   updateImportPickerStyles();
   // Wire up radio change to update styles
   radios.forEach(r => r.onchange = updateImportPickerStyles);
-  // Clear previous file selection
+  // Clear previous file selection and reset overwrite toggle
   const fi = document.getElementById('import-file-input');
   if(fi) fi.value = '';
   document.getElementById('import-filename').textContent = '';
+  const ow = document.getElementById('import-overwrite-dupes');
+  if(ow) ow.checked = false;
   modal.style.display = 'flex';
 }
 
@@ -15878,7 +15891,8 @@ function onImportDrop(e){
   if(!file) return;
   const fn = document.getElementById('import-filename');
   if(fn) fn.textContent = '📄 ' + file.name;
-  processSalesImportFile(file, getImportSelectedList());
+  const overwrite = !!document.getElementById('import-overwrite-dupes')?.checked;
+  processSalesImportFile(file, getImportSelectedList(), overwrite);
 }
 
 function runSalesImport(input){
@@ -15886,10 +15900,11 @@ function runSalesImport(input){
   if(!file) return;
   const fn = document.getElementById('import-filename');
   if(fn) fn.textContent = '📄 ' + file.name;
-  processSalesImportFile(file, getImportSelectedList());
+  const overwrite = !!document.getElementById('import-overwrite-dupes')?.checked;
+  processSalesImportFile(file, getImportSelectedList(), overwrite);
 }
 
-function processSalesImportFile(file, listId){
+function processSalesImportFile(file, listId, overwriteDupes){
   // Resolve clients-active / clients-past into list='clients' + clientType
   let importClientType = undefined;
   if(listId === 'clients-active'){ importClientType = 'active'; listId = 'clients'; }
@@ -15903,7 +15918,7 @@ function processSalesImportFile(file, listId){
       const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
       if(!rows.length){ alert('No data found in the file.'); return; }
       const all = salesLoad();
-      let added = 0, skipped = 0;
+      let added = 0, updated = 0, blankRows = 0, dupSkipped = 0;
       rows.forEach(row=>{
         const r = {};
         Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_\-\/]/g,'')] = row[k]; });
@@ -15927,8 +15942,28 @@ function processSalesImportFile(file, listId){
           else if(['past','previous','former','inactive'].includes(ctCol)) rowClientType = 'past';
           else rowClientType = importClientType || 'active';
         }
-        if(!firstName && !lastName && !email){ skipped++; return; }
-        if(email && all.some(c=>c.email && c.email.toLowerCase()===email)){ skipped++; return; }
+        // Skip truly blank rows
+        if(!firstName && !lastName && !email){ blankRows++; return; }
+        // Handle email duplicates
+        const existingIdx = email ? all.findIndex(c=>c.email && c.email.toLowerCase()===email) : -1;
+        if(existingIdx >= 0){
+          if(overwriteDupes){
+            // Update existing record with fresh data from the file
+            const ex = all[existingIdx];
+            if(firstName) ex.firstName = firstName;
+            if(lastName)  ex.lastName  = lastName;
+            if(company)   ex.company   = company;
+            if(phone)     ex.phone     = phone;
+            if(city)      ex.city      = city;
+            if(notes)     ex.notes     = notes;
+            if(field)     ex.field     = field;
+            ex.updatedAt = new Date().toISOString();
+            updated++;
+          } else {
+            dupSkipped++;
+          }
+          return;
+        }
         all.push({
           id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
           firstName, lastName, company, phone, email, city, notes,
@@ -15943,13 +15978,26 @@ function processSalesImportFile(file, listId){
         });
         added++;
       });
-      salesSave(all);
+      // Save with explicit quota-exceeded handling
+      try{
+        salesSave(all);
+      } catch(qe){
+        if(qe.name==='QuotaExceededError'||String(qe).includes('quota')){
+          alert('⚠️ Storage limit reached — the contacts could not be saved.\nTry deleting unused data or splitting the import into smaller batches.');
+        } else { throw qe; }
+        return;
+      }
       closeSalesImportModal();
       setSalesList(listId);
       renderSalesTable();
       const label = LIST_LABELS[listId] || listId;
       const ctNote = importClientType ? ` (${importClientType} clients)` : '';
-      alert(`✅ Imported ${added} contact${added!==1?'s':''} into ${label}${ctNote}.\n${skipped?`(${skipped} row${skipped!==1?'s':''} skipped — blank or duplicate email)`:'All rows were new.'}`);
+      const parts = [];
+      if(added)      parts.push(`${added} new contact${added!==1?'s':''} added`);
+      if(updated)    parts.push(`${updated} existing contact${updated!==1?'s':''} updated`);
+      if(dupSkipped) parts.push(`${dupSkipped} skipped — already in system (upload with "Update existing" checked to overwrite)`);
+      if(blankRows)  parts.push(`${blankRows} empty row${blankRows!==1?'s':''} ignored`);
+      alert(`${added||updated?'✅':'⚠️'} Import into ${label}${ctNote}:\n${parts.join('\n')}`);
     } catch(err){ alert('Error reading file: ' + err.message); }
   };
   reader.readAsBinaryString(file);
