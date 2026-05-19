@@ -16635,49 +16635,40 @@ function renderSocialCalendar(){
   }
   if(week.length) { while(week.length<7) week.push(null); weeks.push(week); }
 
-  // Render week-by-week with banner rows above post rows
-  let weeksHtml='';
-  weeks.forEach(wk=>{
-    // Banner row: for each property that has a post on any day this week, span across those days
-    let bannerRowHtml='';
-    propertyBanners.forEach(banner=>{
-      // find which columns (0-6) this banner occupies this week
-      const activeCols=wk.map((ds,col)=>ds&&posts.some(p=>p.scheduledAt===ds&&(p.labelColor===banner.color||(!p.labelColor&&p.address===banner.label))&&p.workspaceId===banner.workspaceId)?col:-1).filter(c=>c>=0);
-      if(!activeCols.length) return;
-      // Span from first to last active column
-      const firstCol=activeCols[0], lastCol=activeCols[activeCols.length-1];
-      const span=lastCol-firstCol+1;
-      const colStart=firstCol+1;
-      bannerRowHtml+=`<div onclick="selectSocialWorkspace('${banner.workspaceId}');setSocialSubTab('workspaces')" title="${banner.label}" style="grid-column:${colStart}/span ${span};background:${banner.color};border-radius:3px;padding:2px 6px;font-size:10px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;margin-bottom:1px">${banner.label}</div>`;
-    });
-
-    // Post cells row
-    let cellsHtml='';
-    wk.forEach((ds,col)=>{
-      if(!ds){ cellsHtml+='<div style="min-height:80px;border-radius:6px;background:var(--navy-lift);border:1px solid var(--border);opacity:.3"></div>'; return; }
-      const dp=posts.filter(p=>p.scheduledAt===ds);
-      const isToday=ds===todayStr;
-      const dayNum=parseInt(ds.split('-')[2]);
-      cellsHtml+=`<div style="min-height:80px;padding:4px;border-radius:6px;border:1px solid ${isToday?'var(--blue)':'var(--border)'};background:var(--navy-lift)">
-        <div style="font-size:11px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--muted)'};margin-bottom:3px;text-align:right">${dayNum}</div>
-        ${dp.map(p=>{
-          const st=SOCIAL_STATUSES.find(s=>s.id===p.status);
-          const dotColor=st?.color||'#7AABFF';
-          const timeStr=p.scheduledTime||'';
-          return `<div onclick="openSocialPostPreview('${p.id}')" title="${p.address||p.title||''}" style="margin-bottom:3px;cursor:pointer;border-radius:4px;overflow:hidden;background:var(--navy)">
-            ${timeStr?`<div style="font-size:9px;color:${dotColor};padding:1px 4px;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>${timeStr}</div>`:''}
-            ${p.content?`<div style="font-size:10px;color:var(--muted);padding:2px 4px 3px;line-height:1.3;max-height:32px;overflow:hidden">${p.content.substring(0,55)}${p.content.length>55?'…':''}</div>`:`<div style="font-size:10px;color:var(--muted);padding:2px 4px">${p.address||p.reelNumber||'Post'}</div>`}
-          </div>`;
-        }).join('')}
-      </div>`;
-    });
-
-    // 2-row structure: banner row + cells row
-    weeksHtml+=`<div style="display:contents">
-      <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;min-height:${bannerRowHtml?'18':'0'}px;margin-bottom:${bannerRowHtml?'2':'0'}px">${bannerRowHtml||''}</div>
-      <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">${cellsHtml}</div>
+  // Build flat cell list — padding + real days + trailing padding
+  let cellsHtml='';
+  // Leading empty cells
+  for(let i=0;i<firstDow;i++){
+    cellsHtml+=`<div style="min-height:90px;border-radius:6px;background:var(--navy-lift);border:1px solid var(--border);opacity:.25"></div>`;
+  }
+  // Real day cells
+  for(let d=1;d<=days;d++){
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dp=posts.filter(p=>p.scheduledAt===ds);
+    const isToday=ds===todayStr;
+    cellsHtml+=`<div style="min-height:90px;padding:5px 4px 4px;border-radius:6px;border:1px solid ${isToday?'var(--blue)':'var(--border)'};background:var(--navy-lift);overflow:hidden;box-sizing:border-box">
+      <div style="font-size:11px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--muted)'};margin-bottom:4px;text-align:right;line-height:1">${d}</div>
+      ${dp.map(p=>{
+        const st=SOCIAL_STATUSES.find(s=>s.id===p.status);
+        const dotColor=st?.color||'#7AABFF';
+        const timeStr=p.scheduledTime||'';
+        const labelColor=p.labelColor||dotColor;
+        const label=p.address||p.title||p.reelNumber||'Post';
+        return `<div onclick="openSocialPostPreview('${p.id}')" title="${label}" style="margin-bottom:3px;cursor:pointer;border-radius:4px;overflow:hidden;background:var(--navy);border-left:3px solid ${labelColor}">
+          <div style="padding:2px 5px 1px;display:flex;align-items:center;gap:4px;min-width:0">
+            <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>
+            <span style="font-size:9px;color:${dotColor};font-weight:700;flex-shrink:0">${timeStr||st?.label||''}</span>
+          </div>
+          <div style="font-size:10px;color:var(--white);padding:1px 5px 3px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
+        </div>`;
+      }).join('')}
     </div>`;
-  });
+  }
+  // Trailing empty cells to complete last row
+  const totalCells=Math.ceil((firstDow+days)/7)*7;
+  for(let i=firstDow+days;i<totalCells;i++){
+    cellsHtml+=`<div style="min-height:90px;border-radius:6px;background:var(--navy-lift);border:1px solid var(--border);opacity:.25"></div>`;
+  }
 
   const legendHtml=allLabels.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:8px 14px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
     <span style="font-size:11px;color:var(--muted);font-weight:600;align-self:center">Labels:</span>
@@ -16692,10 +16683,10 @@ function renderSocialCalendar(){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${filterPillsHtml}</div>
     ${legendHtml}
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
       ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;padding:4px">${d}</div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:1fr;gap:0">${weeksHtml}</div>`;
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cellsHtml}</div>`;
 }
 
 // Quick preview modal for calendar post clicks
