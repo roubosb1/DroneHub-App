@@ -3533,10 +3533,12 @@ button{font-family:var(--font);}
       <button onclick="closeSocialLabelModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&#215;</button>
     </div>
     <div id="social-label-list" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="social-label-new-name" type="text" placeholder="Label name (e.g. property address)" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px">
-      <div id="social-label-new-color-pick" style="display:flex;gap:4px;align-items:center"></div>
-      <button onclick="addSocialLabel()" style="padding:8px 16px;border-radius:14px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;cursor:pointer">Add</button>
+    <div style="margin-bottom:16px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="social-label-new-name" type="text" placeholder="Label name (e.g. property address)" style="flex:1;min-width:0;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px">
+        <button onclick="addSocialLabel()" style="flex-shrink:0;padding:8px 16px;border-radius:14px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;cursor:pointer">Add</button>
+      </div>
+      <div id="social-label-new-color-pick" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0"></div>
     </div>
     <button onclick="closeSocialLabelModal()" style="width:100%;padding:9px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Done</button>
   </div>
@@ -17644,7 +17646,7 @@ function openSocialLabelModal(){
   renderSocialLabelList();
   // build new-label color picker
   const pick=document.getElementById('social-label-new-color-pick');
-  if(pick) pick.innerHTML=SOCIAL_LABEL_COLORS.map(c=>`<span onclick="_socialLabelNewColor='${c}';openSocialLabelModal()" title="${c}" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${_socialLabelNewColor===c?'white':'transparent'}"></span>`).join('');
+  if(pick) pick.innerHTML=SOCIAL_LABEL_COLORS.map(c=>`<span onclick="_socialLabelNewColor='${c}';openSocialLabelModal()" title="${c}" style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${c};cursor:pointer;flex-shrink:0;border:2px solid ${_socialLabelNewColor===c?'#fff':'transparent'};box-shadow:${_socialLabelNewColor===c?'0 0 0 1px '+c:'none'};transition:transform .1s" onmouseenter="this.style.transform='scale(1.2)'" onmouseleave="this.style.transform='scale(1)'"></span>`).join('');
   document.getElementById('social-label-modal').style.display='flex';
 }
 function closeSocialLabelModal(){
