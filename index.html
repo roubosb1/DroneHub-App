@@ -3213,23 +3213,6 @@ button{font-family:var(--font);}
       <div id="social-first-comment-preview" style="font-size:12px;color:var(--muted);line-height:1.75;white-space:pre-line;background:var(--navy);border-radius:8px;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--blue)"></div>
     </div>
 
-    <!-- Section: Overlay -->
-    <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Overlay</div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px">
-      <div>
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Overlay Text</label>
-        <input id="social-post-overlay" type="text" oninput="updateSocialFirstCommentPreview();updateInstagramPreview()" placeholder="e.g. Stunning lake views in Muskoka&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
-      </div>
-      <div>
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Overlay Style</label>
-        <select id="social-post-overlay-type" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
-          <option value="description">~ Description</option>
-          <option value="question">~ Question</option>
-          <option value="title">~ Title</option>
-        </select>
-      </div>
-    </div>
-
     <!-- Section: Platforms -->
     <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Platforms</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
@@ -3326,13 +3309,11 @@ button{font-family:var(--font);}
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Status</label>
         <select id="social-post-status" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
-          <option value="draft">Draft (in progress)</option>
-          <option value="pending_r1">Pending Round 1 Approval</option>
-          <option value="revision_r1">Revision Needed (R1)</option>
-          <option value="approved_r1">Round 1 Approved</option>
-          <option value="pending_r2">Pending Round 2 (Schedule)</option>
-          <option value="revision_r2">Revision Needed (R2)</option>
-          <option value="scheduled">Scheduled &#10003;</option>
+          <option value="draft">Draft</option>
+          <option value="pending">Pending Approval</option>
+          <option value="revision">Revision Needed</option>
+          <option value="approved">Approved</option>
+          <option value="scheduled">Scheduled</option>
           <option value="published">Published</option>
         </select>
       </div>
@@ -9263,13 +9244,13 @@ function cpShowTab(tab){
       if(!window._cpSocialFilter) window._cpSocialFilter='all';
       const filter=window._cpSocialFilter;
       const filtered=filter==='all'?myPosts:myPosts.filter(p=>{
-        if(filter==='needs_approval') return p.status==='pending_r1'||p.status==='pending_r2';
-        if(filter==='revision') return p.status==='revision_r1'||p.status==='revision_r2';
-        if(filter==='approved') return p.status==='approved_r1'||p.status==='scheduled';
+        if(filter==='needs_approval') return p.status==='pending';
+        if(filter==='revision') return p.status==='revision';
+        if(filter==='approved') return p.status==='approved'||p.status==='scheduled';
         if(filter==='published') return p.status==='published';
         return true;
       });
-      const needsApproval=myPosts.filter(p=>p.status==='pending_r1'||p.status==='pending_r2').length;
+      const needsApproval=myPosts.filter(p=>p.status==='pending').length;
 
       // Platform icon helper
       const platIcon=id=>({instagram:'📸',facebook:'👍',tiktok:'🎵',linkedin:'💼',twitter:'🐦'}[id]||'📱');
@@ -9297,8 +9278,8 @@ function cpShowTab(tab){
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
           ${filterBtn('all','All',myPosts.length)}
           ${filterBtn('needs_approval','Needs Approval',needsApproval)}
-          ${filterBtn('revision','In Revision',myPosts.filter(p=>p.status==='revision_r1'||p.status==='revision_r2').length)}
-          ${filterBtn('approved','Approved / Scheduled',myPosts.filter(p=>p.status==='approved_r1'||p.status==='scheduled').length)}
+          ${filterBtn('revision','In Revision',myPosts.filter(p=>p.status==='revision').length)}
+          ${filterBtn('approved','Approved / Scheduled',myPosts.filter(p=>p.status==='approved'||p.status==='scheduled').length)}
           ${filterBtn('published','Published',myPosts.filter(p=>p.status==='published').length)}
         </div>
         ${filtered.length===0?`<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px">No posts in this category.</div>`:''}
@@ -9309,8 +9290,8 @@ function cpShowTab(tab){
             ${byMonth[monthKey].map(p=>{
               const st=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
               const plats=(p.platforms||[]).slice(0,3).map(pid=>platIcon(pid)).join(' ');
-              const isPending=p.status==='pending_r1'||p.status==='pending_r2';
-              const isRevision=p.status==='revision_r1'||p.status==='revision_r2';
+              const isPending=p.status==='pending';
+              const isRevision=p.status==='revision';
               const comments=(p.clientComments||[]);
               const lastComment=comments[comments.length-1];
               const dateStr=p.scheduledAt?new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'}):'No date';
@@ -9515,7 +9496,7 @@ function cpOpenPost(postId){
   if(!p) return;
 
   const st = SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
-  const isPending = p.status==='pending_r1'||p.status==='pending_r2';
+  const isPending = p.status==='pending';
 
   // Show overlay
   const overlay = document.getElementById('cp-post-overlay');
@@ -9586,8 +9567,8 @@ function cpSetSidebarTab(tab){
   if(!p){ content.innerHTML=''; return; }
 
   const st = SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
-  const isPending = p.status==='pending_r1'||p.status==='pending_r2';
-  const isRevision = p.status==='revision_r1'||p.status==='revision_r2';
+  const isPending = p.status==='pending';
+  const isRevision = p.status==='revision';
   const fmtDt = iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
   const platLabel = id=>SOCIAL_PLATFORMS.find(pl=>pl.id===id)?.label||id;
   const platIcon = id=>({instagram:'📸',facebook:'👍',tiktok:'🎵',linkedin:'💼',twitter:'🐦'}[id]||'📱');
@@ -9720,8 +9701,9 @@ function cpClientApproveWithNote(postId, note){
   posts[idx].clientComments=posts[idx].clientComments||[];
   if(note) posts[idx].clientComments.push({from:'client',text:note,at:new Date().toISOString()});
   posts[idx].clientComments.push({from:'client',text:'✓ Approved this post.',at:new Date().toISOString()});
-  if(posts[idx].status==='pending_r1') posts[idx].status='approved_r1';
-  else if(posts[idx].status==='pending_r2') posts[idx].status='scheduled';
+  const round=posts[idx].approvalRound||1;
+  if(round===2){ posts[idx].status='scheduled'; posts[idx].approvedAt=new Date().toISOString().slice(0,10); }
+  else { posts[idx].status='approved'; posts[idx].approvalRound=1; }
   posts[idx].history=posts[idx].history||[];
   posts[idx].history.push({action:'Client approved',by:'client',at:new Date().toISOString()});
   socialPostsSave(posts);
@@ -9735,8 +9717,8 @@ function cpClientRevisionWithNote(postId, note){
   if(idx<0) return;
   posts[idx].clientComments=posts[idx].clientComments||[];
   posts[idx].clientComments.push({from:'client',text:note,at:new Date().toISOString()});
-  if(posts[idx].status==='pending_r1') posts[idx].status='revision_r1';
-  else if(posts[idx].status==='pending_r2') posts[idx].status='revision_r2';
+  posts[idx].status='revision';
+  // approvalRound stays unchanged
   posts[idx].history=posts[idx].history||[];
   posts[idx].history.push({action:'Client requested revision: '+note,by:'client',at:new Date().toISOString()});
   socialPostsSave(posts);
@@ -16236,16 +16218,14 @@ const SOCIAL_FORMATS = [
   {id:'ad_mockup', label:'Ad Mock-up'},
 ];
 
-// Gain-style statuses: yellow=pending, orange=revision, green=approved/scheduled
+// Unified statuses — round tracked via approvalRound field
 const SOCIAL_STATUSES = [
-  {id:'draft',       label:'Draft',              color:'#A8B4D0', gain:'gray'},
-  {id:'pending_r1',  label:'Pending Approval',   color:'#F5C842', gain:'yellow'},
-  {id:'revision_r1', label:'Revision Needed',    color:'#FB923C', gain:'orange'},
-  {id:'approved_r1', label:'R1 Approved',        color:'#7AABFF', gain:'blue'},
-  {id:'pending_r2',  label:'Pending Schedule',   color:'#F5C842', gain:'yellow'},
-  {id:'revision_r2', label:'Revision (R2)',      color:'#FB923C', gain:'orange'},
-  {id:'scheduled',   label:'Scheduled ✓',   color:'#22D97A', gain:'green'},
-  {id:'published',   label:'Published',          color:'#A78BFA', gain:'purple'},
+  {id:'draft',    label:'Draft',    color:'#A8B4D0'},
+  {id:'pending',  label:'Pending',  color:'#F5C842'},
+  {id:'revision', label:'Revision', color:'#FB923C'},
+  {id:'approved', label:'Approved', color:'#7AABFF'},
+  {id:'scheduled',label:'Scheduled',color:'#22D97A'},
+  {id:'published',label:'Published',color:'#A78BFA'},
 ];
 
 // Distinctly different, non-pastel label colors for properties
@@ -16293,7 +16273,17 @@ function socialWorkspacesSave(arr){
   if(db) fbSet('orgs', ORG_ID+':social_workspaces', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
 }
 function socialPostsLoad(){
-  try{ return JSON.parse(localStorage.getItem('dronehub_social_posts')||'[]'); }catch(e){ return []; }
+  try{
+    const posts=JSON.parse(localStorage.getItem('dronehub_social_posts')||'[]');
+    return posts.map(p=>{
+      if(p.status==='pending_r1') return {...p,status:'pending',approvalRound:1};
+      if(p.status==='pending_r2') return {...p,status:'pending',approvalRound:2};
+      if(p.status==='revision_r1') return {...p,status:'revision',approvalRound:1};
+      if(p.status==='revision_r2') return {...p,status:'revision',approvalRound:2};
+      if(p.status==='approved_r1') return {...p,status:'approved',approvalRound:1};
+      return p;
+    });
+  }catch(e){ return []; }
 }
 function socialPostsSave(arr){
   localStorage.setItem('dronehub_social_posts', JSON.stringify(arr));
@@ -16329,7 +16319,7 @@ function renderSocial(){
 }
 
 function refreshSocialApprovalBadge(){
-  const count = socialPostsLoad().filter(p=>p.status==='pending_r1'||p.status==='pending_r2'||p.status==='revision_r1'||p.status==='revision_r2').length;
+  const count = socialPostsLoad().filter(p=>p.status==='pending'||p.status==='revision').length;
   const badge = document.getElementById('social-approval-badge');
   if(!badge) return;
   if(count>0){ badge.textContent=count; badge.style.display='inline'; }
@@ -16371,7 +16361,7 @@ function renderSocialWorkspaces(){
 
   sidebar.innerHTML=workspaces.map(ws=>{
     const wsp=posts.filter(p=>p.workspaceId===ws.id);
-    const pending=wsp.filter(p=>p.status==='pending_r1'||p.status==='pending_r2'||p.status==='revision_r1'||p.status==='revision_r2').length;
+    const pending=wsp.filter(p=>p.status==='pending'||p.status==='revision').length;
     const on=_socialActiveWorkspace===ws.id;
     const chLabels=(ws.channels||[]).map(c=>SOCIAL_PLATFORMS.find(p=>p.id===c)?.label||c).join(', ');
     return `<div onclick="selectSocialWorkspace('${ws.id}')" style="padding:11px 14px;border-radius:10px;cursor:pointer;border:1px solid ${on?'var(--blue)':'transparent'};background:${on?'rgba(91,141,239,.1)':'var(--navy-lift)'};margin-bottom:8px;transition:all .18s">
@@ -16401,12 +16391,10 @@ function renderSocialPostsArea(){
   const allPosts=socialPostsLoad().filter(p=>p.workspaceId===_socialActiveWorkspace);
 
   const filters=[
-    {id:'all',label:'All'},
-    {id:'draft',label:'Draft'},
-    {id:'pending_r1',label:'Pending R1'},
-    {id:'revision_r1',label:'Revision R1'},
-    {id:'approved_r1',label:'R1 Approved'},
-    {id:'pending_r2',label:'Pending R2'},
+    {id:'all',      label:'All'},
+    {id:'revision', label:'Revision'},
+    {id:'pending',  label:'Pending'},
+    {id:'approved', label:'Approved'},
     {id:'scheduled',label:'Scheduled'},
     {id:'published',label:'Published'},
   ];
@@ -16453,7 +16441,7 @@ function renderSocialPostCard(p){
   const schedLine=p.scheduledAt?`<div style="font-size:11px;color:var(--muted);margin-top:4px">📅 ${p.scheduledAt}</div>`:'';
   const songLine=p.songName?`<div style="font-size:11px;color:var(--muted);margin-top:3px">🎵 ${p.songName}${p.songTimestamps?' · '+p.songTimestamps:''}</div>`:'';
   const overlayLine=p.overlayText?`<div style="font-size:11px;color:#A78BFA;margin-top:4px;font-style:italic">"${p.overlayText.substring(0,60)}${p.overlayText.length>60?'…':''}"</div>`:'';
-  const revLine=(p.status==='revision_r1'||p.status==='revision_r2')&&p.revisionNote?`<div style="font-size:11px;color:#FB923C;margin-top:5px;padding:5px 8px;border-radius:5px;background:rgba(251,146,60,.08);border-left:2px solid #FB923C">${p.revisionNote}</div>`:'';
+  const revLine=(p.status==='revision')&&p.revisionNote?`<div style="font-size:11px;color:#FB923C;margin-top:5px;padding:5px 8px;border-radius:5px;background:rgba(251,146,60,.08);border-left:2px solid #FB923C">${p.revisionNote}</div>`:'';
   const addressLine=p.address?`<div style="font-size:11px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center">${labelDot}${p.address.substring(0,50)}${p.address.length>50?'…':''}</div>`:'';
 
   return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid var(--border);overflow:hidden">
@@ -16463,7 +16451,10 @@ function renderSocialPostCard(p){
       ${addressLine}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
         <div style="font-weight:600;font-size:13px;color:var(--white);flex:1;margin-right:8px;line-height:1.35">${p.reelNumber||p.title||'Untitled'}${p.reelNumber&&p.title?`<span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:5px">${p.title}</span>`:''}</div>
-        <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${status.color}22;color:${status.color};white-space:nowrap;flex-shrink:0">${status.label}</span>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;flex-wrap:wrap">
+          <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${status.color}22;color:${status.color};white-space:nowrap">${status.label}</span>
+          ${p.approvalRound?`<span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--border)">R${p.approvalRound}</span>`:''}
+        </div>
       </div>
       ${p.content?`<div style="font-size:12px;color:var(--muted);margin-bottom:6px;line-height:1.5;max-height:40px;overflow:hidden">${p.content.substring(0,100)}${p.content.length>100?'…':''}</div>`:''}
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px">${plats}</div>
@@ -16479,24 +16470,21 @@ function getSocialPostActions(p){
   btns.push(`<button onclick="openSocialPostModal('${p.id}')" style="padding:5px 11px;border-radius:14px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:11px;cursor:pointer">Edit</button>`);
 
   if(p.status==='draft')
-    btns.push(`<button onclick="setSocialPostStatus('${p.id}','pending_r1')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Submit R1</button>`);
+    btns.push(`<button onclick="openSendForApproval('${p.id}')" style="padding:5px 11px;border-radius:14px;border:none;background:linear-gradient(135deg,rgba(245,200,66,.18),rgba(245,200,66,.08));border:1px solid rgba(245,200,66,.4);color:#F5C842;font-size:11px;font-weight:600;cursor:pointer">Send for Approval</button>`);
 
-  if(p.status==='pending_r1'){
-    btns.push(`<button onclick="setSocialPostStatus('${p.id}','approved_r1')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:#7AABFF;font-size:11px;cursor:pointer">Approve R1</button>`);
-    btns.push(`<button onclick="promptSocialRevision('${p.id}','r1')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:11px;cursor:pointer">Revise</button>`);
+  if(p.status==='pending' && p.approvalRound===1){
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','approved',{round:1})" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:#7AABFF;font-size:11px;cursor:pointer">Approve R1</button>`);
+    btns.push(`<button onclick="promptSocialRevision('${p.id}',1)" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:11px;cursor:pointer">Revise</button>`);
   }
-  if(p.status==='revision_r1')
-    btns.push(`<button onclick="setSocialPostStatus('${p.id}','pending_r1')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Re-submit</button>`);
-
-  if(p.status==='approved_r1')
-    btns.push(`<button onclick="setSocialPostStatus('${p.id}','pending_r2')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Send R2</button>`);
-
-  if(p.status==='pending_r2'){
-    btns.push(`<button onclick="setSocialPostStatus('${p.id}','scheduled')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:11px;cursor:pointer">Approve+Schedule</button>`);
-    btns.push(`<button onclick="promptSocialRevision('${p.id}','r2')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:11px;cursor:pointer">Revise</button>`);
+  if(p.status==='pending' && p.approvalRound===2){
+    btns.push(`<button onclick="setSocialPostStatus('${p.id}','scheduled',{round:2})" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:11px;font-weight:600;cursor:pointer">Approve+Schedule</button>`);
+    btns.push(`<button onclick="promptSocialRevision('${p.id}',2)" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:11px;cursor:pointer">Revise</button>`);
   }
-  if(p.status==='revision_r2')
-    btns.push(`<button onclick="setSocialPostStatus('${p.id}','pending_r2')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Re-submit</button>`);
+  if(p.status==='revision')
+    btns.push(`<button onclick="resubmitSocialPost('${p.id}')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:11px;cursor:pointer">Re-submit R${p.approvalRound||1}</button>`);
+
+  if(p.status==='approved' && p.approvalRound===1)
+    btns.push(`<button onclick="openSendForApproval('${p.id}',2)" style="padding:5px 11px;border-radius:14px;border:none;background:linear-gradient(135deg,rgba(34,217,122,.18),rgba(34,217,122,.08));border:1px solid rgba(34,217,122,.4);color:#22D97A;font-size:11px;font-weight:600;cursor:pointer">Send for R2</button>`);
 
   if(p.status==='scheduled')
     btns.push(`<button onclick="setSocialPostStatus('${p.id}','published')" style="padding:5px 11px;border-radius:14px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#A78BFA;font-size:11px;cursor:pointer">Mark Published</button>`);
@@ -16505,18 +16493,19 @@ function getSocialPostActions(p){
   return btns.join('');
 }
 
-function setSocialPostStatus(postId,newStatus){
+function setSocialPostStatus(postId,newStatus,opts={}){
   const posts=socialPostsLoad();
   const idx=posts.findIndex(p=>p.id===postId);
   if(idx<0) return;
   const prev=posts[idx].status;
   posts[idx].status=newStatus;
+  if(opts.round!=null) posts[idx].approvalRound=opts.round;
   if(newStatus==='published') posts[idx].publishedAt=new Date().toISOString().slice(0,10);
   if(newStatus==='scheduled') posts[idx].approvedAt=new Date().toISOString().slice(0,10);
-  if(newStatus==='pending_r1'||newStatus==='pending_r2') delete posts[idx].revisionNote;
-  // Edit history
+  if(newStatus==='pending') delete posts[idx].revisionNote;
   if(!posts[idx].history) posts[idx].history=[];
-  posts[idx].history.push({action:`Status: ${prev} → ${newStatus}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  const roundLabel=posts[idx].approvalRound?` (R${posts[idx].approvalRound})`:'';
+  posts[idx].history.push({action:`Status: ${prev} → ${newStatus}${roundLabel}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
   socialPostsSave(posts);
   refreshSocialApprovalBadge();
   renderSocialPostsArea();
@@ -16524,15 +16513,88 @@ function setSocialPostStatus(postId,newStatus){
 }
 
 function promptSocialRevision(postId, round){
-  const note=prompt(`Revision note for round ${round==='r1'?'1':'2'} (describe what needs to change):`);
+  const note=prompt(`Revision note for Round ${round} (describe what needs to change):`);
   if(note===null) return;
   const posts=socialPostsLoad();
   const idx=posts.findIndex(p=>p.id===postId);
   if(idx<0) return;
-  posts[idx].status=`revision_${round}`;
+  posts[idx].status='revision';
+  posts[idx].approvalRound=round;
   posts[idx].revisionNote=note||'';
   if(!posts[idx].history) posts[idx].history=[];
-  posts[idx].history.push({action:`Revision requested (R${round==='r1'?1:2}): ${note}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  posts[idx].history.push({action:`Revision requested (R${round}): ${note}`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  socialPostsSave(posts);
+  refreshSocialApprovalBadge();
+  renderSocialPostsArea();
+  if(document.getElementById('social-sub-approvals')?.style.display!=='none') renderSocialApprovals();
+}
+
+function resubmitSocialPost(postId){
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  const round=posts[idx].approvalRound||1;
+  posts[idx].status='pending';
+  delete posts[idx].revisionNote;
+  if(!posts[idx].history) posts[idx].history=[];
+  posts[idx].history.push({action:`Re-submitted for R${round} approval`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
+  socialPostsSave(posts);
+  refreshSocialApprovalBadge();
+  renderSocialPostsArea();
+  if(document.getElementById('social-sub-approvals')?.style.display!=='none') renderSocialApprovals();
+}
+
+function openSendForApproval(postId, forceRound){
+  const posts=socialPostsLoad();
+  const post=posts.find(p=>p.id===postId);
+  if(!post) return;
+  const ws=socialWorkspacesLoad().find(w=>w.id===post.workspaceId);
+
+  // Determine which round is valid
+  let round = forceRound || 1;
+  if(!forceRound){
+    // R2 only available after R1 is approved
+    if(post.status==='approved' && post.approvalRound===1) round=2;
+    else if(post.status==='revision') round=post.approvalRound||1;
+    else round=1;
+  }
+  const approvers=round===1?(ws?.approvers1||''):(ws?.approvers2||'');
+
+  const existing=document.getElementById('send-approval-modal');
+  if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='send-approval-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;padding:28px;width:460px;max-width:95vw;border:1px solid var(--border);box-shadow:0 8px 48px rgba(0,0,0,.6)" onclick="event.stopPropagation()">
+    <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px">Send for Approval — Round ${round}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">${post.address||post.reelNumber||post.title||'Post'} · ${ws?.name||'Workspace'}</div>
+    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Round ${round} Approvers</div>
+      ${approvers
+        ? approvers.split(',').map(e=>e.trim()).filter(Boolean).map(e=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="width:28px;height:28px;border-radius:50%;background:rgba(91,141,239,.15);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--blue-bright);flex-shrink:0">${e[0]?.toUpperCase()||'?'}</span><span style="font-size:12px;color:var(--white)">${e}</span></div>`).join('')
+        : `<div style="font-size:12px;color:var(--muted);font-style:italic">No approvers configured for Round ${round}. <button onclick="openSocialWorkspaceModal('${ws?.id||''}');document.getElementById('send-approval-modal')?.remove()" style="background:none;border:none;color:var(--blue-bright);cursor:pointer;font-size:12px;text-decoration:underline">Configure in workspace settings</button></div>`
+      }
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:20px">${round===2?'Round 2 approval confirms the post is scheduled for publishing.':'Round 1 approval is required before the post can be sent for scheduling approval.'}</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('send-approval-modal').remove()" style="flex:1;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+      <button onclick="confirmSendForApproval('${postId}',${round})" style="flex:2;padding:10px;border-radius:12px;border:none;background:linear-gradient(135deg,#F5C842,#E5B022);color:#0D1117;font-size:13px;font-weight:700;cursor:pointer">Send for R${round} Approval</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function confirmSendForApproval(postId, round){
+  document.getElementById('send-approval-modal')?.remove();
+  const posts=socialPostsLoad();
+  const idx=posts.findIndex(p=>p.id===postId);
+  if(idx<0) return;
+  posts[idx].status='pending';
+  posts[idx].approvalRound=round;
+  delete posts[idx].revisionNote;
+  if(!posts[idx].history) posts[idx].history=[];
+  posts[idx].history.push({action:`Sent for R${round} approval`, by:_activeSessionEmail||'team', at:new Date().toISOString()});
   socialPostsSave(posts);
   refreshSocialApprovalBadge();
   renderSocialPostsArea();
@@ -16575,33 +16637,27 @@ function renderSocialCalendar(){
   const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const todayStr=new Date().toISOString().slice(0,10);
 
-  // Status filter map matching Gain's pill labels
   const CAL_FILTERS=[
-    {id:'all',    label:'All',  color:'var(--muted)'},
-    {id:'draft',       label:'DRFT', color:'#A8B4D0'},
-    {id:'pending_r1',  label:'PEND', color:'#F5C842'},
-    {id:'revision_r1', label:'REV',  color:'#FB923C'},
-    {id:'revision_r2', label:'REV',  color:'#FB923C'},
-    {id:'approved_r1', label:'APPR', color:'#7AABFF'},
-    {id:'scheduled',   label:'SCHD', color:'#22D97A'},
-    {id:'published',   label:'PUB',  color:'#A78BFA'},
+    {id:'all',      label:'All',  color:'var(--muted)'},
+    {id:'draft',    label:'DRFT', color:'#A8B4D0'},
+    {id:'pending',  label:'PEND', color:'#F5C842'},
+    {id:'revision', label:'REV',  color:'#FB923C'},
+    {id:'approved', label:'APPR', color:'#7AABFF'},
+    {id:'scheduled',label:'SCHD', color:'#22D97A'},
+    {id:'published',label:'PUB',  color:'#A78BFA'},
   ];
-  // Deduplicate filter pills
   const filterPills=[
-    {id:'all',   label:'All',  color:'var(--muted)'},
-    {id:'draft', label:'DRFT', color:'#A8B4D0'},
-    {id:'pending',label:'PEND',color:'#F5C842'},
-    {id:'revision',label:'REV',color:'#FB923C'},
-    {id:'approved',label:'APPR',color:'#7AABFF'},
-    {id:'scheduled',label:'SCHD',color:'#22D97A'},
-    {id:'published',label:'PUB',color:'#A78BFA'},
+    {id:'all',      label:'All',  color:'var(--muted)'},
+    {id:'draft',    label:'DRFT', color:'#A8B4D0'},
+    {id:'pending',  label:'PEND', color:'#F5C842'},
+    {id:'revision', label:'REV',  color:'#FB923C'},
+    {id:'approved', label:'APPR', color:'#7AABFF'},
+    {id:'scheduled',label:'SCHD', color:'#22D97A'},
+    {id:'published',label:'PUB',  color:'#A78BFA'},
   ];
-  const filterStatusMap={pending:['pending_r1','pending_r2'],revision:['revision_r1','revision_r2'],approved:['approved_r1']};
 
   function postMatchesFilter(p){
     if(_socialCalFilter==='all') return true;
-    const mapped=filterStatusMap[_socialCalFilter];
-    if(mapped) return mapped.includes(p.status);
     return p.status===_socialCalFilter;
   }
   const posts=allPostsRaw.filter(postMatchesFilter);
@@ -16747,7 +16803,7 @@ function openSocialPostPreview(postId){
 function renderSocialApprovals(){
   const appr=document.getElementById('social-sub-approvals');
   if(!appr) return;
-  const pending=socialPostsLoad().filter(p=>['pending_r1','revision_r1','pending_r2','revision_r2'].includes(p.status));
+  const pending=socialPostsLoad().filter(p=>p.status==='pending'||p.status==='revision');
   const workspaces=socialWorkspacesLoad();
 
   if(pending.length===0){
@@ -16756,8 +16812,8 @@ function renderSocialApprovals(){
   }
 
   // Group by round
-  const r1=pending.filter(p=>p.status==='pending_r1'||p.status==='revision_r1');
-  const r2=pending.filter(p=>p.status==='pending_r2'||p.status==='revision_r2');
+  const r1=pending.filter(p=>p.approvalRound===1||(p.approvalRound==null));
+  const r2=pending.filter(p=>p.approvalRound===2);
 
   const renderGroup=(title,color,items)=>`
     <div style="font-size:11px;font-weight:700;color:${color};letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">${title}</div>
@@ -16767,7 +16823,7 @@ function renderSocialApprovals(){
       const status=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
       const format=SOCIAL_FORMATS.find(f=>f.id===p.format);
       const plats=(p.platforms||[]).map(pid=>SOCIAL_PLATFORMS.find(x=>x.id===pid)?.label||pid).join(', ');
-      const approvers=p.status.includes('r1')?(ws?.approvers1||''):(ws?.approvers2||'');
+      const approvers=(p.approvalRound||1)===1?(ws?.approvers1||''):(ws?.approvers2||'');
       return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid ${status.color}33;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
         ${p.coverPhotoData?`<img src="${p.coverPhotoData}" style="width:36px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0">`:''}
         <div style="flex:1;min-width:200px">
@@ -16775,19 +16831,19 @@ function renderSocialApprovals(){
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${ws?.name||'—'} · ${format?.label||'Reel'}${plats?' · '+plats:''}</div>
           ${p.content?`<div style="font-size:12px;color:var(--muted);line-height:1.5;border-left:2px solid var(--border);padding-left:10px;margin-bottom:8px">${p.content.substring(0,200)}${p.content.length>200?'…':''}</div>`:''}
           ${p.overlayText?`<div style="font-size:12px;color:#A78BFA;margin-bottom:6px;font-style:italic">Overlay: "${p.overlayText}" <span style="font-style:normal;color:var(--muted)">(${p.overlayType||'description'})</span></div>`:''}
-          ${(p.status==='revision_r1'||p.status==='revision_r2')&&p.revisionNote?`<div style="font-size:12px;color:#FB923C;background:rgba(251,146,60,.08);padding:8px;border-radius:6px;border-left:3px solid #FB923C;margin-bottom:6px">Revision: ${p.revisionNote}</div>`:''}
+          ${p.status==='revision'&&p.revisionNote?`<div style="font-size:12px;color:#FB923C;background:rgba(251,146,60,.08);padding:8px;border-radius:6px;border-left:3px solid #FB923C;margin-bottom:6px">Revision: ${p.revisionNote}</div>`:''}
           ${(p.clientComments&&p.clientComments.length)?`<div style="margin-top:8px"><div style="font-size:10px;color:#F5C842;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Client Feedback</div>${p.clientComments.slice(-3).map(c=>`<div style="font-size:11px;padding:5px 8px;border-radius:5px;background:rgba(91,141,239,.07);border-left:2px solid #7AABFF;margin-bottom:4px;color:var(--white)">${c.text}</div>`).join('')}${p.clientComments.length>3?`<div style="font-size:10px;color:var(--muted)">(+${p.clientComments.length-3} more — open post to see all)</div>`:''}</div>`:''}
           ${p.scheduledAt?`<div style="font-size:11px;color:var(--muted)">📅 Scheduled: ${p.scheduledAt}</div>`:''}
           ${approvers?`<div style="font-size:11px;color:var(--muted);margin-top:6px">📧 Approvers: ${approvers}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:7px;min-width:148px">
           <span style="padding:4px 10px;border-radius:10px;font-size:11px;font-weight:700;background:${status.color}22;color:${status.color};text-align:center">${status.label}</span>
-          ${p.status==='pending_r1'?`<button onclick="setSocialPostStatus('${p.id}','approved_r1');renderSocialApprovals()" style="padding:8px;border-radius:12px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:#7AABFF;font-size:12px;font-weight:600;cursor:pointer">✓ Approve R1</button>`:''}
-          ${p.status==='pending_r1'?`<button onclick="promptSocialRevision('${p.id}','r1')" style="padding:8px;border-radius:12px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Revision</button>`:''}
-          ${p.status==='revision_r1'?`<button onclick="setSocialPostStatus('${p.id}','pending_r1');renderSocialApprovals()" style="padding:8px;border-radius:12px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:12px;cursor:pointer">Re-submit R1</button>`:''}
-          ${p.status==='pending_r2'?`<button onclick="setSocialPostStatus('${p.id}','scheduled');renderSocialApprovals()" style="padding:8px;border-radius:12px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:600;cursor:pointer">✓ Approve + Schedule</button>`:''}
-          ${p.status==='pending_r2'?`<button onclick="promptSocialRevision('${p.id}','r2')" style="padding:8px;border-radius:12px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Revision</button>`:''}
-          ${p.status==='revision_r2'?`<button onclick="setSocialPostStatus('${p.id}','pending_r2');renderSocialApprovals()" style="padding:8px;border-radius:12px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:12px;cursor:pointer">Re-submit R2</button>`:''}
+          ${p.status==='pending'&&(p.approvalRound||1)===1?`<button onclick="setSocialPostStatus('${p.id}','approved',{round:1});renderSocialApprovals()" style="padding:8px;border-radius:12px;border:1px solid rgba(122,171,255,.3);background:rgba(122,171,255,.08);color:#7AABFF;font-size:12px;font-weight:600;cursor:pointer">✓ Approve R1</button>`:''}
+          ${p.status==='pending'&&(p.approvalRound||1)===1?`<button onclick="promptSocialRevision('${p.id}',1)" style="padding:8px;border-radius:12px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Revision</button>`:''}
+          ${p.status==='revision'&&(p.approvalRound||1)===1?`<button onclick="resubmitSocialPost('${p.id}')" style="padding:8px;border-radius:12px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:12px;cursor:pointer">Re-submit R1</button>`:''}
+          ${p.status==='pending'&&p.approvalRound===2?`<button onclick="setSocialPostStatus('${p.id}','scheduled',{round:2});renderSocialApprovals()" style="padding:8px;border-radius:12px;border:1px solid rgba(34,217,122,.3);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:600;cursor:pointer">✓ Approve + Schedule</button>`:''}
+          ${p.status==='pending'&&p.approvalRound===2?`<button onclick="promptSocialRevision('${p.id}',2)" style="padding:8px;border-radius:12px;border:1px solid rgba(251,146,60,.3);background:rgba(251,146,60,.08);color:#FB923C;font-size:12px;cursor:pointer">Request Revision</button>`:''}
+          ${p.status==='revision'&&p.approvalRound===2?`<button onclick="resubmitSocialPost('${p.id}')" style="padding:8px;border-radius:12px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.08);color:#F5C842;font-size:12px;cursor:pointer">Re-submit R2</button>`:''}
           <button onclick="openSocialPostModal('${p.id}')" style="padding:8px;border-radius:12px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:12px;cursor:pointer">Edit Post</button>
         </div>
       </div>`;
@@ -16890,8 +16946,8 @@ function openSocialPostModal(id){
   document.getElementById('social-post-format').value=post?.format||'reel';
   document.getElementById('social-post-content').value=post?.content||'';
   document.getElementById('social-post-hashtags').value=post?.hashtags||'';
-  document.getElementById('social-post-overlay').value=post?.overlayText||'';
-  document.getElementById('social-post-overlay-type').value=post?.overlayType||'description';
+  if(document.getElementById('social-post-overlay')) document.getElementById('social-post-overlay').value=post?.overlayText||'';
+  if(document.getElementById('social-post-overlay-type')) document.getElementById('social-post-overlay-type').value=post?.overlayType||'description';
   document.getElementById('social-post-asset').value=post?.assetName||'';
   document.getElementById('social-post-final-link').value=post?.finalDriveLink||'';
   document.getElementById('social-post-cover').value=post?.coverPhoto||'';
@@ -17006,8 +17062,8 @@ function saveSocialPost(forceStatus){
     format:      document.getElementById('social-post-format').value,
     content:     document.getElementById('social-post-content').value,
     hashtags:    document.getElementById('social-post-hashtags').value,
-    overlayText: document.getElementById('social-post-overlay').value,
-    overlayType: document.getElementById('social-post-overlay-type').value,
+    overlayText: document.getElementById('social-post-overlay')?.value||null,
+    overlayType: document.getElementById('social-post-overlay-type')?.value||null,
     platforms,
     assetName:   document.getElementById('social-post-asset').value||null,
     finalDriveLink:document.getElementById('social-post-final-link').value||null,
