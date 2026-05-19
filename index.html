@@ -490,6 +490,31 @@ button{font-family:var(--font);}
   .sales-table th:nth-child(4),.sales-table td:nth-child(4){display:none;}
   .sales-list-tab{font-size:11px;padding:6px 12px;}
 }
+/* ── Instagram phone mockup ── */
+#ig-phone-frame{width:280px;background:#000;border-radius:44px;padding:10px;box-shadow:0 0 0 10px #111,0 0 0 11px #2a2a2a,0 8px 48px rgba(0,0,0,.6);position:sticky;top:20px;flex-shrink:0}
+#ig-screen{background:#000;border-radius:36px;overflow:hidden}
+#ig-preview-video-wrap{position:relative;aspect-ratio:9/16;background:#0a0a0a;overflow:hidden}
+#ig-preview-placeholder{width:100%;height:100%;background:linear-gradient(160deg,#833ab4,#fd1d1d,#fcb045);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+#ig-preview-video,#ig-preview-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ig-action-btn{display:flex;flex-direction:column;align-items:center;gap:2px;color:#fff;font-size:10px}
+/* Frame strip */
+#frame-strip canvas{border-radius:4px;cursor:pointer;border:2px solid transparent;transition:border-color .15s;flex-shrink:0}
+#frame-strip canvas:hover{border-color:rgba(225,48,108,.5)}
+#frame-strip canvas.selected-frame{border-color:#E1306C}
+/* Social post modal two-column responsive */
+@media(max-width:700px){
+  #social-post-modal-inner{flex-direction:column!important}
+  #ig-phone-frame{display:none!important}
+}
+/* Client portal post detail — mobile responsive */
+@media(max-width:640px){
+  #cp-post-overlay > div:last-child { flex-direction:column !important; }
+  #cp-post-sidebar { width:100% !important; border-left:none !important; border-top:1px solid var(--border); max-height:50vh; }
+  #cp-ig-phone { width:220px !important; }
+}
+/* Spinning music disc */
+@keyframes spin-disc{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.ig-disc-spin{animation:spin-disc 3s linear infinite}
 </style>
 </head>
 <body>
@@ -762,15 +787,114 @@ button{font-family:var(--font);}
     <div style="max-width:800px;margin:0 auto;padding:24px 20px 60px" id="cp-content"></div>
 
     <!-- Social post detail overlay -->
-    <div id="cp-post-overlay" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(13,17,23,.97);overflow-y:auto;padding:24px 16px 60px">
-      <div style="max-width:680px;margin:0 auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <button onclick="cpClosePost()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back to calendar
-          </button>
-          <div id="cp-post-overlay-status" style="font-size:11px;padding:3px 12px;border-radius:20px;font-weight:700"></div>
+    <div id="cp-post-overlay" style="display:none;position:fixed;inset:0;z-index:10001;background:var(--navy);overflow:hidden;flex-direction:column">
+
+      <!-- Top bar -->
+      <div id="cp-post-overlay-topbar" style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--navy-card);flex-shrink:0;flex-wrap:wrap">
+        <button onclick="cpClosePost()" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Back
+        </button>
+        <div style="flex:1;min-width:0">
+          <div id="cp-post-overlay-title" style="font-size:14px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="cp-post-overlay-subtitle" style="font-size:11px;color:var(--muted);margin-top:1px"></div>
         </div>
-        <div id="cp-post-overlay-body" style="display:flex;flex-direction:column;gap:14px"></div>
+        <div id="cp-post-overlay-status" style="font-size:11px;padding:3px 12px;border-radius:20px;font-weight:700;flex-shrink:0"></div>
+        <!-- Action buttons - shown when pending -->
+        <div id="cp-post-action-btns" style="display:none;gap:8px;flex-shrink:0">
+          <button id="cp-btn-request-changes" onclick="cpShowReviewPanel()" style="padding:8px 16px;border-radius:10px;border:2px solid #FB923C;background:rgba(251,146,60,.1);color:#FB923C;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Request Changes
+          </button>
+          <button id="cp-btn-approve" onclick="cpClientApproveQuick()" style="padding:8px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#22D97A,#0E7A4C);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Approve
+          </button>
+        </div>
+      </div>
+
+      <!-- Body: two columns -->
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+
+        <!-- Left: Instagram mockup -->
+        <div id="cp-post-mockup-panel" style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:var(--navy)">
+          <div id="cp-ig-phone" style="width:300px;flex-shrink:0">
+            <!-- Phone frame -->
+            <div style="background:#000;border-radius:44px;padding:10px;box-shadow:0 0 0 10px #111,0 0 0 11px #2a2a2a,0 16px 64px rgba(0,0,0,.7)">
+              <div style="background:#000;border-radius:36px;overflow:hidden">
+                <!-- Status bar -->
+                <div style="background:#000;padding:6px 16px 2px;display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:9px;font-weight:700;color:#fff" id="cp-ig-time">9:41</span>
+                  <div style="display:flex;gap:4px;align-items:center">
+                    <svg width="10" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M1 6l5.5 5.5L12 6l5.5 5.5L23 6"/></svg>
+                    <svg width="10" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><line x1="22" y1="11" x2="22" y2="13"/></svg>
+                  </div>
+                </div>
+                <!-- IG Header -->
+                <div style="background:#000;padding:6px 10px;display:flex;align-items:center;justify-content:space-between">
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0">DH</div>
+                    <div>
+                      <div style="font-size:10px;font-weight:700;color:#fff">dronehubmedia</div>
+                      <div id="cp-ig-location" style="font-size:8px;color:#aaa;display:none"></div>
+                    </div>
+                  </div>
+                  <span style="font-size:8px;color:#aaa">•••</span>
+                </div>
+                <!-- Video / cover area 9:16 -->
+                <div style="position:relative;aspect-ratio:9/16;background:#111;overflow:hidden">
+                  <div id="cp-ig-placeholder" style="position:absolute;inset:0;background:linear-gradient(160deg,#833ab4,#fd1d1d,#fcb045);display:flex;align-items:center;justify-content:center">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  </div>
+                  <img id="cp-ig-cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none" src="" alt="">
+                  <!-- Overlay text -->
+                  <div id="cp-ig-overlay-text" style="display:none;position:absolute;bottom:64px;left:0;right:0;text-align:center;padding:4px 8px;font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9)"></div>
+                  <!-- Action icons -->
+                  <div style="position:absolute;right:6px;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:10px">
+                    <div style="text-align:center"><div style="font-size:18px">🤍</div><div style="font-size:7px;color:#fff;font-weight:600">847</div></div>
+                    <div style="text-align:center"><div style="font-size:16px">💬</div><div style="font-size:7px;color:#fff;font-weight:600">23</div></div>
+                    <div style="font-size:15px">➤</div>
+                    <div style="font-size:15px">🔖</div>
+                    <div style="width:20px;height:20px;border-radius:4px;border:2px solid #fff;overflow:hidden;flex-shrink:0">
+                      <div style="width:100%;height:100%;background:linear-gradient(45deg,#f09433,#dc2743)"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Caption row -->
+                <div style="background:#000;padding:6px 10px">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="1"/><path d="M5.5 5.5A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2"/></svg>
+                    <span style="font-size:8px;color:#fff">Instagram · Original Audio</span>
+                  </div>
+                  <div id="cp-ig-caption" style="font-size:8px;color:#fff;line-height:1.4;max-height:32px;overflow:hidden"></div>
+                  <div id="cp-ig-hashtags" style="font-size:7px;color:#aaa;margin-top:2px;max-height:20px;overflow:hidden;line-height:1.4"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Preview label -->
+            <div style="text-align:center;margin-top:10px">
+              <span style="font-size:10px;color:var(--muted)">Preview</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right sidebar -->
+        <div id="cp-post-sidebar" style="width:340px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--navy-card)">
+          <!-- Sidebar tabs -->
+          <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
+            <button id="cp-sidebar-tab-info" onclick="cpSetSidebarTab('info')" style="flex:1;padding:10px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Info
+            </button>
+            <button id="cp-sidebar-tab-activity" onclick="cpSetSidebarTab('activity')" style="flex:1;padding:10px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Activity
+            </button>
+            <button id="cp-sidebar-tab-approval" onclick="cpSetSidebarTab('approval')" style="flex:1;padding:10px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Approval
+            </button>
+          </div>
+          <!-- Sidebar content -->
+          <div id="cp-sidebar-content" style="flex:1;overflow-y:auto;padding:16px"></div>
+        </div>
+
       </div>
     </div>
 
@@ -2964,7 +3088,75 @@ button{font-family:var(--font);}
 
 <!-- SOCIAL: Post Modal -->
 <div id="social-post-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0" onclick="if(event.target===this)closeSocialPostModal()">
-  <div style="background:#1C2333;border-radius:16px;padding:28px;width:640px;max-width:95vw;border:1px solid #3A4890;box-shadow:0 8px 48px rgba(0,0,0,.6);margin:0 auto" onclick="event.stopPropagation()">
+  <div id="social-post-modal-inner" style="display:flex;gap:24px;align-items:flex-start;background:#1C2333;border-radius:16px;padding:28px;width:min(960px,95vw);border:1px solid #3A4890;box-shadow:0 8px 48px rgba(0,0,0,.6);margin:0 auto" onclick="event.stopPropagation()">
+
+    <!-- ── Left column: Instagram phone mockup ── -->
+    <div id="ig-phone-frame">
+      <div id="ig-screen">
+        <!-- Status bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px 4px;background:#000">
+          <span style="font-size:10px;font-weight:700;color:#fff">9:41</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <svg width="12" height="8" viewBox="0 0 12 8" fill="#fff"><rect x="0" y="2" width="2" height="6" rx="1"/><rect x="3" y="1" width="2" height="7" rx="1"/><rect x="6" y="0" width="2" height="8" rx="1"/><rect x="9" y="2" width="2" height="6" rx="1" opacity=".4"/></svg>
+            <svg width="12" height="8" viewBox="0 0 24 16" fill="none" stroke="#fff" stroke-width="2"><rect x="1" y="3" width="18" height="10" rx="2"/><path d="M19 7.5h3v1H19"/></svg>
+          </div>
+        </div>
+        <!-- IG header row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#000">
+          <div style="display:flex;align-items:center;gap:7px">
+            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">DH</div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#fff;line-height:1.2">dronehubmedia</div>
+              <div id="ig-header-address" style="font-size:9px;color:#aaa;line-height:1.2"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;align-items:center">
+            <span style="font-size:11px;font-weight:700;color:#fff;border:1.5px solid #fff;border-radius:6px;padding:1px 8px;font-size:10px">Follow</span>
+            <span style="color:#fff;font-size:16px;line-height:1">···</span>
+          </div>
+        </div>
+        <!-- Video/cover area -->
+        <div id="ig-preview-video-wrap">
+          <!-- Placeholder gradient shown when no video/cover -->
+          <div id="ig-preview-placeholder" style="width:100%;height:100%;background:linear-gradient(160deg,#833ab4,#fd1d1d,#fcb045);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.899L15 14"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg>
+            <div style="font-size:10px;color:rgba(255,255,255,.6)">Upload a reel</div>
+          </div>
+          <!-- Cover image (shown when frame selected) -->
+          <img id="ig-preview-cover" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover" src="" alt="">
+          <!-- Video element (shown when video uploaded, hidden when cover selected) -->
+          <video id="ig-preview-video" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover" muted loop playsinline></video>
+          <!-- Play button overlay -->
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+            <div style="width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21"/></svg>
+            </div>
+          </div>
+          <!-- Overlay text -->
+          <div id="ig-overlay-text-preview" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;padding:4px 8px;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);display:none"></div>
+          <!-- Right-side action icons -->
+          <div style="position:absolute;right:6px;bottom:80px;display:flex;flex-direction:column;gap:12px;align-items:center">
+            <div class="ig-action-btn"><div style="font-size:18px">🤍</div><div>847</div></div>
+            <div class="ig-action-btn"><div style="font-size:16px">💬</div><div>23</div></div>
+            <div class="ig-action-btn"><div style="font-size:16px">➤</div></div>
+            <div class="ig-action-btn"><div style="font-size:16px">🔖</div></div>
+            <div class="ig-disc-spin" style="width:22px;height:22px;border-radius:50%;background:linear-gradient(45deg,#333,#666);border:2px solid #aaa;display:flex;align-items:center;justify-content:center;font-size:10px">♪</div>
+          </div>
+        </div>
+        <!-- Caption row -->
+        <div style="background:#000;padding:8px 10px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <div style="font-size:10px;color:#aaa">♪</div>
+            <div id="ig-song-preview" style="font-size:10px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">Song name</div>
+          </div>
+          <div id="ig-caption-preview" style="font-size:10px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;margin-bottom:3px">Caption will appear here…</div>
+          <div id="ig-hashtag-preview" style="font-size:9px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right column: form (scrollable) ── -->
+    <div style="flex:1;min-width:0">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
       <h3 id="social-post-modal-title" style="margin:0;font-size:16px;font-weight:700;color:var(--white)">New Post Mockup</h3>
       <button onclick="closeSocialPostModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&#215;</button>
@@ -2975,7 +3167,7 @@ button{font-family:var(--font);}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div style="grid-column:1/-1">
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Property Address <span style="font-weight:400">(used as content tag)</span></label>
-        <input id="social-post-address" type="text" placeholder="e.g. 123 Lakeshore Blvd, Toronto, ON" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        <input id="social-post-address" type="text" placeholder="e.g. 123 Lakeshore Blvd, Toronto, ON" oninput="updateInstagramPreview()" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Reel # / Content ID</label>
@@ -3005,12 +3197,12 @@ button{font-family:var(--font);}
     <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Caption</div>
     <div style="margin-bottom:12px">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Caption / Description</label>
-      <textarea id="social-post-content" rows="4" oninput="updateSocialPlatformSpecs()" placeholder="Write the Instagram caption here&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <textarea id="social-post-content" rows="4" oninput="updateSocialPlatformSpecs();updateInstagramPreview()" placeholder="Write the Instagram caption here&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
       <div id="social-platform-specs"></div>
     </div>
     <div style="margin-bottom:12px">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Hashtags <span style="font-weight:400">(goes in first comment)</span></label>
-      <textarea id="social-post-hashtags" rows="3" oninput="updateSocialFirstCommentPreview()" placeholder="#realestate #torontorealestate #dronehubmedia &#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+      <textarea id="social-post-hashtags" rows="3" oninput="updateSocialFirstCommentPreview();updateInstagramPreview()" placeholder="#realestate #torontorealestate #dronehubmedia &#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
     </div>
     <!-- Live First Comment Preview -->
     <div id="social-first-comment-preview-wrap" style="display:none;margin-bottom:16px">
@@ -3026,7 +3218,7 @@ button{font-family:var(--font);}
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Overlay Text</label>
-        <input id="social-post-overlay" type="text" oninput="updateSocialFirstCommentPreview()" placeholder="e.g. Stunning lake views in Muskoka&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        <input id="social-post-overlay" type="text" oninput="updateSocialFirstCommentPreview();updateInstagramPreview()" placeholder="e.g. Stunning lake views in Muskoka&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Overlay Style</label>
@@ -3050,18 +3242,58 @@ button{font-family:var(--font);}
 
     <!-- Section: Files & Assets -->
     <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Files &amp; Assets</div>
+
+    <!-- Reel Upload -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:#E1306C;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Reel Video</div>
+
+      <!-- Upload zone (shown when no video loaded) -->
+      <div id="reel-upload-zone" onclick="document.getElementById('reel-file-input').click()" style="border:2px dashed #3A4890;border-radius:12px;padding:28px;text-align:center;cursor:pointer;background:rgba(91,141,239,.04);transition:border-color .2s" onmouseenter="this.style.borderColor='#E1306C'" onmouseleave="this.style.borderColor='#3A4890'">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E1306C" stroke-width="1.5" style="margin-bottom:8px"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.899L15 14"/><rect x="1" y="6" width="15" height="12" rx="2"/></svg>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">Upload Reel</div>
+        <div style="font-size:11px;color:var(--muted)">Click to choose video from your computer</div>
+      </div>
+      <input type="file" id="reel-file-input" accept="video/*" style="display:none" onchange="handleReelFileUpload(this)">
+
+      <!-- Video preview (hidden until upload) -->
+      <div id="reel-video-wrap" style="display:none;margin-top:12px">
+        <video id="reel-preview-video" style="width:100%;border-radius:10px;background:#000;max-height:180px;object-fit:contain" controls playsinline></video>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <span id="reel-file-name" style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <button onclick="clearReelUpload()" style="padding:3px 10px;border-radius:10px;border:1px solid var(--border);background:var(--navy);color:var(--muted);font-size:11px;cursor:pointer">Remove</button>
+        </div>
+      </div>
+
+      <!-- Frame scrubber (hidden until video loaded) -->
+      <div id="frame-scrubber-wrap" style="display:none;margin-top:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--offwhite);margin-bottom:8px">Select Cover Frame <span style="font-weight:400;color:var(--muted)">(slide to pick the best thumbnail)</span></div>
+        <!-- Thumbnail strip -->
+        <div id="frame-strip" style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px"></div>
+        <!-- Scrubber slider -->
+        <input type="range" id="frame-scrubber-slider" min="0" max="1000" value="0" step="1" oninput="scrubToFrame(this.value)" style="width:100%;accent-color:#E1306C;cursor:pointer">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px">
+          <span>0:00</span>
+          <span id="frame-current-time" style="color:#E1306C;font-weight:600">0:00</span>
+          <span id="frame-duration">0:00</span>
+        </div>
+        <!-- Hidden canvas for frame capture -->
+        <canvas id="frame-canvas" style="display:none"></canvas>
+        <!-- Cover preview -->
+        <div id="cover-preview-wrap" style="display:none;margin-top:10px;align-items:center;gap:10px">
+          <img id="cover-preview-img" style="width:48px;height:85px;object-fit:cover;border-radius:6px;border:2px solid #E1306C" src="" alt="cover">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#E1306C">Cover Frame Selected</div>
+            <div id="cover-preview-time" style="font-size:11px;color:var(--muted)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drive links & label -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Editor Draft <span style="font-weight:400">(Drive link)</span></label>
-        <input id="social-post-asset" type="text" placeholder="https://drive.google.com/&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;box-sizing:border-box">
-      </div>
-      <div>
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Final Version <span style="font-weight:400">(Drive link &#8212; after R1)</span></label>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Final Drive Link <span style="font-weight:400">(after R1)</span></label>
         <input id="social-post-final-link" type="text" placeholder="https://drive.google.com/&#8230;" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;box-sizing:border-box">
-      </div>
-      <div>
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Cover Photo <span style="font-weight:400">(reference)</span></label>
-        <input id="social-post-cover" type="text" placeholder="Frame 00:04 or filename" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:12px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Calendar Label Color</label>
@@ -3071,13 +3303,16 @@ button{font-family:var(--font);}
         <input type="hidden" id="social-post-label-color" value="">
       </div>
     </div>
+    <!-- hidden fields auto-filled programmatically -->
+    <input type="hidden" id="social-post-cover" value="">
+    <input type="hidden" id="social-post-asset" value="">
 
     <!-- Section: Music -->
     <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Music</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Song Name</label>
-        <input id="social-post-song" type="text" placeholder="e.g. Golden Hour &#8211; JVKE" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        <input id="social-post-song" type="text" oninput="updateInstagramPreview()" placeholder="e.g. Golden Hour &#8211; JVKE" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Timestamps</label>
@@ -3119,8 +3354,9 @@ button{font-family:var(--font);}
       <button onclick="saveSocialPost('draft')" style="padding:9px 20px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Save Draft</button>
       <button onclick="saveSocialPost()" style="padding:9px 28px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Save Post</button>
     </div>
-  </div>
-</div>
+    </div><!-- end right column -->
+  </div><!-- end modal inner -->
+</div><!-- end social-post-modal -->
 
 <!-- ═══════════════════════════════════════════════════════
      PLATFORM OWNER DASHBOARD — visible only to roubosb1@gmail.com
@@ -9079,23 +9315,28 @@ function cpShowTab(tab){
               const lastComment=comments[comments.length-1];
               const dateStr=p.scheduledAt?new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'}):'No date';
               return `<div style="background:var(--navy-card);border-radius:14px;border:1px solid ${isPending?'rgba(245,200,66,.3)':isRevision?'rgba(251,146,60,.3)':'var(--border)'};padding:16px;margin-bottom:10px;cursor:pointer" onclick="cpOpenPost('${p.id}')">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">
-                  <div style="flex:1">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
-                      <span style="font-size:13px">${plats||'📱'}</span>
-                      <span style="font-size:11px;color:var(--muted)">${dateStr}</span>
-                      ${p.format?`<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:var(--navy-lift);color:var(--muted)">${SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format}</span>`:''}
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  ${p.coverPhotoData?`<img src="${p.coverPhotoData}" style="width:52px;height:92px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border)">`:'<div style="width:52px;height:92px;border-radius:8px;background:linear-gradient(160deg,#833ab4,#fd1d1d,#fcb045);flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>'}
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">
+                      <div style="flex:1">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                          <span style="font-size:13px">${plats||'📱'}</span>
+                          <span style="font-size:11px;color:var(--muted)">${dateStr}</span>
+                          ${p.format?`<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:var(--navy-lift);color:var(--muted)">${SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format}</span>`:''}
+                        </div>
+                        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">${p.address||p.title||'Post'}</div>
+                        <div style="font-size:12px;color:var(--muted);line-height:1.5">${p.content?p.content.substring(0,140)+(p.content.length>140?'…':''):''}</div>
+                        ${lastComment?`<div style="font-size:11px;color:var(--muted);margin-top:8px;padding:8px 10px;background:var(--navy-lift);border-radius:8px;border-left:3px solid ${lastComment.from==='client'?'var(--blue)':'var(--border-bright)'}">
+                          <span style="font-weight:700;color:${lastComment.from==='client'?'var(--blue-bright)':'var(--muted)'}">${lastComment.from==='client'?'You':'DroneHub'}</span>: ${lastComment.text.substring(0,80)}${lastComment.text.length>80?'…':''}
+                        </div>`:''}
+                      </div>
+                      <div style="flex-shrink:0;text-align:right">
+                        <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color};display:block;margin-bottom:6px">${st.label}</span>
+                        ${isPending?`<span style="font-size:10px;color:#F5C842;font-weight:600">Tap to review →</span>`:''}
+                        ${isRevision?`<span style="font-size:10px;color:#FB923C;font-weight:600">In revision</span>`:''}
+                      </div>
                     </div>
-                    <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">${p.address||p.title||'Post'}</div>
-                    <div style="font-size:12px;color:var(--muted);line-height:1.5">${p.content?p.content.substring(0,140)+(p.content.length>140?'…':''):''}</div>
-                    ${lastComment?`<div style="font-size:11px;color:var(--muted);margin-top:8px;padding:8px 10px;background:var(--navy-lift);border-radius:8px;border-left:3px solid ${lastComment.from==='client'?'var(--blue)':'var(--border-bright)'}">
-                      <span style="font-weight:700;color:${lastComment.from==='client'?'var(--blue-bright)':'var(--muted)'}">${lastComment.from==='client'?'You':'DroneHub'}</span>: ${lastComment.text.substring(0,80)}${lastComment.text.length>80?'…':''}
-                    </div>`:''}
-                  </div>
-                  <div style="flex-shrink:0;text-align:right">
-                    <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color};display:block;margin-bottom:6px">${st.label}</span>
-                    ${isPending?`<span style="font-size:10px;color:#F5C842;font-weight:600">Tap to review →</span>`:''}
-                    ${isRevision?`<span style="font-size:10px;color:#FB923C;font-weight:600">In revision</span>`:''}
                   </div>
                 </div>
               </div>`;
@@ -9259,97 +9500,223 @@ function cpViewInvoice(jobId){
 }
 
 function cpClosePost(){
-  document.getElementById('cp-post-overlay').style.display='none';
+  const el = document.getElementById('cp-post-overlay');
+  if(el){ el.style.display='none'; el.style.flexDirection=''; }
 }
+
+let _cpOpenPostId = null;
+let _cpSidebarTab = 'info';
 
 function cpOpenPost(postId){
-  const posts=socialPostsLoad();
-  const p=posts.find(x=>x.id===postId);
-  if(!p){return;}
-  const st=SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
-  const isPending=p.status==='pending_r1'||p.status==='pending_r2';
-  const isRevision=p.status==='revision_r1'||p.status==='revision_r2';
-  const fmtDt=iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-  const platLabel=id=>SOCIAL_PLATFORMS.find(pl=>pl.id===id)?.label||id;
-  const platIcon=id=>({instagram:'📸',facebook:'👍',tiktok:'🎵',linkedin:'💼',twitter:'🐦'}[id]||'📱');
-  const comments=p.clientComments||[];
+  _cpOpenPostId = postId;
+  _cpSidebarTab = 'info';
+  const posts = socialPostsLoad();
+  const p = posts.find(x=>x.id===postId);
+  if(!p) return;
 
-  // Status bar
-  const statusEl=document.getElementById('cp-post-overlay-status');
-  if(statusEl){statusEl.textContent=st.label;statusEl.style.background=st.color+'22';statusEl.style.color=st.color;}
+  const st = SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+  const isPending = p.status==='pending_r1'||p.status==='pending_r2';
 
-  const commentThread=comments.length?`
-    <div class="card">
-      <div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Feedback Thread</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${comments.map(cm=>`
-          <div style="display:flex;flex-direction:column;align-items:${cm.from==='client'?'flex-end':'flex-start'}">
-            <div style="max-width:85%;padding:10px 14px;border-radius:12px;background:${cm.from==='client'?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};color:#fff">
-              <div style="font-size:11px;font-weight:700;opacity:.7;margin-bottom:4px">${cm.from==='client'?'You':'DroneHub Media'}</div>
-              <div style="font-size:13px;line-height:1.5">${cm.text}</div>
-            </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">${fmtDt(cm.at)}</div>
-          </div>`).join('')}
-      </div>
-    </div>`:'';
+  // Show overlay
+  const overlay = document.getElementById('cp-post-overlay');
+  overlay.style.display='flex';
+  overlay.style.flexDirection='column';
+  overlay.scrollTop=0;
 
-  const actionArea=isPending?`
-    <div class="card" style="border:1px solid rgba(245,200,66,.25)">
-      <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:6px">Your Review</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Approve this post to add it to your calendar, or request changes with a note for our team.</div>
-      <textarea id="cp-feedback-text" placeholder="Leave a note for our team (optional for approval, required for revisions)…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:vertical;min-height:80px;margin-bottom:12px"></textarea>
-      <div style="display:flex;gap:10px">
-        <button onclick="cpClientRevision('${p.id}')" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(251,146,60,.4);background:rgba(251,146,60,.08);color:#FB923C;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
-          ✏ Request Changes
-        </button>
-        <button onclick="cpClientApprove('${p.id}')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22D97A,#0E7A4C);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
-          ✓ Approve Post
-        </button>
-      </div>
-    </div>`
-  :isRevision?`
-    <div class="card" style="border:1px solid rgba(251,146,60,.25)">
-      <div style="font-size:13px;font-weight:700;color:#FB923C;margin-bottom:4px">In Revision</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.7">Our team is working on the changes you requested. You'll be notified when it's ready for your next review.</div>
-    </div>`
-  :`<div class="card" style="background:var(--navy-lift)">
-    <div style="font-size:12px;color:var(--muted)">Status: <strong style="color:var(--offwhite)">${st.label}</strong> — no action needed from you right now.</div>
-  </div>`;
+  // Top bar
+  const titleEl = document.getElementById('cp-post-overlay-title');
+  const subtitleEl = document.getElementById('cp-post-overlay-subtitle');
+  const statusEl = document.getElementById('cp-post-overlay-status');
+  const actionBtns = document.getElementById('cp-post-action-btns');
 
-  document.getElementById('cp-post-overlay-body').innerHTML=`
-    <div class="card">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        ${(p.platforms||[]).map(pid=>`<span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(91,141,239,.1);color:var(--blue-bright)">${platIcon(pid)} ${platLabel(pid)}</span>`).join('')}
-        ${p.format?`<span style="padding:4px 12px;border-radius:20px;font-size:12px;background:var(--navy-lift);color:var(--muted)">${SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format}</span>`:''}
-      </div>
-      ${p.address?`<div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">${p.address}</div>`:''}
-      ${p.scheduledAt?`<div style="font-size:12px;color:var(--muted)">📅 Planned for ${new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</div>`:''}
-    </div>
-    ${p.content?`<div class="card">
-      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Caption</div>
-      <div style="font-size:13px;color:var(--offwhite);line-height:1.75;white-space:pre-line">${p.content}</div>
-    </div>`:''}
-    ${p.overlayText?`<div class="card">
-      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Video Overlay Text</div>
-      <div style="font-size:13px;color:#A78BFA;font-style:italic">"${p.overlayText}"</div>
-    </div>`:''}
-    ${p.hashtags?`<div class="card">
-      <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">First Comment (Hashtags)</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-line">${p.hashtags}</div>
-    </div>`:''}
-    ${commentThread}
-    ${actionArea}
-  `;
+  if(titleEl) titleEl.textContent = p.address||p.title||'Post';
+  if(subtitleEl) subtitleEl.textContent = p.reelNumber ? `Reel ${p.reelNumber}` : (p.format ? (SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format) : '');
+  if(statusEl){ statusEl.textContent=st.label; statusEl.style.background=st.color+'22'; statusEl.style.color=st.color; }
+  if(actionBtns) actionBtns.style.display = isPending ? 'flex' : 'none';
 
-  document.getElementById('cp-post-overlay').style.display='block';
-  document.getElementById('cp-post-overlay').scrollTop=0;
+  // Instagram phone mockup
+  const coverImg = document.getElementById('cp-ig-cover');
+  const placeholder = document.getElementById('cp-ig-placeholder');
+  const locationEl = document.getElementById('cp-ig-location');
+  const captionEl = document.getElementById('cp-ig-caption');
+  const hashtagsEl = document.getElementById('cp-ig-hashtags');
+  const overlayTextEl = document.getElementById('cp-ig-overlay-text');
+
+  if(p.coverPhotoData){
+    if(coverImg){ coverImg.src=p.coverPhotoData; coverImg.style.display='block'; }
+    if(placeholder) placeholder.style.display='none';
+  } else {
+    if(coverImg) coverImg.style.display='none';
+    if(placeholder) placeholder.style.display='flex';
+  }
+
+  if(locationEl){
+    if(p.address){ locationEl.textContent='📍 '+p.address.substring(0,28)+(p.address.length>28?'…':''); locationEl.style.display='block'; }
+    else locationEl.style.display='none';
+  }
+  if(captionEl) captionEl.textContent = p.content ? p.content.substring(0,80)+(p.content.length>80?'…':'') : '';
+  if(hashtagsEl) hashtagsEl.textContent = p.hashtags ? p.hashtags.replace(/\n/g,' ').substring(0,80) : '';
+  if(overlayTextEl){
+    if(p.overlayText){ overlayTextEl.textContent=p.overlayText; overlayTextEl.style.display='block'; }
+    else overlayTextEl.style.display='none';
+  }
+
+  // Set time on status bar
+  const igTime = document.getElementById('cp-ig-time');
+  if(igTime){ const now=new Date(); igTime.textContent=now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes(); }
+
+  // Render sidebar
+  cpSetSidebarTab('info');
 }
 
-function cpClientApprove(postId){
+function cpSetSidebarTab(tab){
+  _cpSidebarTab = tab;
+  ['info','activity','approval'].forEach(t=>{
+    const btn = document.getElementById('cp-sidebar-tab-'+t);
+    if(btn){
+      btn.style.borderBottomColor = t===tab ? 'var(--blue-bright)' : 'transparent';
+      btn.style.color = t===tab ? 'var(--blue-bright)' : 'var(--muted)';
+    }
+  });
+  const content = document.getElementById('cp-sidebar-content');
+  if(!content||!_cpOpenPostId) return;
+
+  const posts = socialPostsLoad();
+  const p = posts.find(x=>x.id===_cpOpenPostId);
+  if(!p){ content.innerHTML=''; return; }
+
+  const st = SOCIAL_STATUSES.find(s=>s.id===p.status)||{label:p.status,color:'#A8B4D0'};
+  const isPending = p.status==='pending_r1'||p.status==='pending_r2';
+  const isRevision = p.status==='revision_r1'||p.status==='revision_r2';
+  const fmtDt = iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const platLabel = id=>SOCIAL_PLATFORMS.find(pl=>pl.id===id)?.label||id;
+  const platIcon = id=>({instagram:'📸',facebook:'👍',tiktok:'🎵',linkedin:'💼',twitter:'🐦'}[id]||'📱');
+
+  const row = (label,val)=>val?`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:11px;color:var(--muted);flex-shrink:0;margin-right:12px">${label}</span>
+    <span style="font-size:12px;color:var(--offwhite);text-align:right;font-weight:600">${val}</span>
+  </div>`:'';
+
+  if(tab==='info'){
+    content.innerHTML=`
+      <div style="margin-bottom:12px">
+        ${p.address?`<div style="display:inline-block;padding:3px 10px;border-radius:20px;background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;margin-bottom:10px">${p.address}</div>`:''}
+        ${row('Status',`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color}">${st.label}</span>`)}
+        ${row('Post date', p.scheduledAt?new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric',year:'numeric'})+' · '+(p.scheduledTime||'8:00 am'):'')}
+        ${row('Channel type','Instagram mockup channel')}
+        ${row('Post type', p.format?SOCIAL_FORMATS.find(f=>f.id===p.format)?.label||p.format:'')}
+        ${row('Platforms',(p.platforms||[]).map(pid=>platIcon(pid)+' '+platLabel(pid)).join(', '))}
+        ${row('Reel', p.reelNumber||'')}
+        ${row('Content owner','Bailey Roubos')}
+        ${p.songName?row('Song',p.songName):''}
+        ${p.songTimestamps?row('Timestamps',p.songTimestamps):''}
+      </div>
+      ${p.content?`<div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Caption</div>
+        <div style="font-size:12px;color:var(--offwhite);line-height:1.75;white-space:pre-line">${p.content}</div>
+      </div>`:''}
+      ${p.hashtags?`<div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Hashtags</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;white-space:pre-line">${p.hashtags}</div>
+      </div>`:''}
+      ${p.overlayText?`<div>
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Overlay Text</div>
+        <div style="font-size:12px;color:#A78BFA;font-style:italic">"${p.overlayText}"</div>
+      </div>`:''}
+    `;
+  } else if(tab==='activity'){
+    const history = p.history||[];
+    const comments = p.clientComments||[];
+    // Merge history + comments into one timeline
+    const allEvents = [
+      ...history.map(h=>({at:h.at, text:h.action, from:'team'})),
+      ...comments.map(c=>({at:c.at, text:(c.from==='client'?'You: ':'DroneHub: ')+c.text, from:c.from}))
+    ].sort((a,b)=>new Date(a.at)-new Date(b.at));
+
+    content.innerHTML = allEvents.length ? `
+      <div style="display:flex;flex-direction:column;gap:2px">
+        ${allEvents.map(e=>`
+          <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="width:28px;height:28px;border-radius:50%;background:${e.from==='client'?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;color:${e.from==='client'?'#fff':'var(--muted)'}">
+              ${e.from==='client'?'You':'BP'}
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--offwhite);line-height:1.5">${e.text}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmtDt(e.at)}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    ` : `<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:12px">No activity yet.</div>`;
+
+  } else if(tab==='approval'){
+    const comments = p.clientComments||[];
+    const commentThread = comments.length?`
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Feedback Thread</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${comments.map(cm=>`
+            <div style="display:flex;flex-direction:column;align-items:${cm.from==='client'?'flex-end':'flex-start'}">
+              <div style="max-width:90%;padding:8px 12px;border-radius:10px;background:${cm.from==='client'?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};color:#fff">
+                <div style="font-size:10px;font-weight:700;opacity:.7;margin-bottom:3px">${cm.from==='client'?'You':'DroneHub Media'}</div>
+                <div style="font-size:12px;line-height:1.5">${cm.text}</div>
+              </div>
+              <div style="font-size:9px;color:var(--muted);margin-top:2px">${fmtDt(cm.at)}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    const actionHtml = isPending?`
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">Your Review</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Approve this post or request changes with a note for our team.</div>
+        <textarea id="cp-feedback-text" placeholder="Leave a note (optional for approval, required for revisions)…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:12px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:vertical;min-height:80px;margin-bottom:10px"></textarea>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="cpClientApproveQuick()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22D97A,#0E7A4C);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approve Post
+          </button>
+          <button onclick="cpClientRevisionQuick()" style="width:100%;padding:12px;border-radius:12px;border:2px solid #FB923C;background:rgba(251,146,60,.08);color:#FB923C;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Request Changes
+          </button>
+        </div>
+      </div>`
+    :isRevision?`<div style="padding:16px;border-radius:12px;border:1px solid rgba(251,146,60,.25);background:rgba(251,146,60,.05)">
+        <div style="font-size:13px;font-weight:700;color:#FB923C;margin-bottom:4px">In Revision</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.7">Our team is working on your requested changes.</div>
+      </div>`
+    :`<div style="padding:16px;border-radius:12px;background:var(--navy-lift)">
+        <div style="font-size:12px;color:var(--muted)">Status: <strong style="color:var(--offwhite)">${st.label}</strong> — no action needed right now.</div>
+      </div>`;
+
+    content.innerHTML = commentThread + actionHtml;
+  }
+}
+
+// Quick approve from top bar or approval tab
+function cpClientApproveQuick(){
+  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
+  cpClientApproveWithNote(_cpOpenPostId, note);
+}
+function cpClientRevisionQuick(){
+  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
+  if(!note){
+    const el=document.getElementById('cp-feedback-text');
+    if(el){el.style.borderColor='var(--red)';el.placeholder='Please describe what changes you need…';el.focus();}
+    return;
+  }
+  cpClientRevisionWithNote(_cpOpenPostId, note);
+}
+function cpShowReviewPanel(){
+  cpSetSidebarTab('approval');
+  // Scroll sidebar to bottom where the textarea is
+  const content = document.getElementById('cp-sidebar-content');
+  if(content) setTimeout(()=>{content.scrollTop=content.scrollHeight;document.getElementById('cp-feedback-text')?.focus();},100);
+}
+
+// Core approve/revision logic — accept note as parameter
+function cpClientApproveWithNote(postId, note){
   const posts=socialPostsLoad();
   const idx=posts.findIndex(p=>p.id===postId);
   if(idx<0) return;
-  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
   posts[idx].clientComments=posts[idx].clientComments||[];
   if(note) posts[idx].clientComments.push({from:'client',text:note,at:new Date().toISOString()});
   posts[idx].clientComments.push({from:'client',text:'✓ Approved this post.',at:new Date().toISOString()});
@@ -9362,13 +9729,7 @@ function cpClientApprove(postId){
   cpShowTab('social');
 }
 
-function cpClientRevision(postId){
-  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
-  if(!note){
-    const el=document.getElementById('cp-feedback-text');
-    if(el){el.style.borderColor='var(--red)';el.placeholder='Please describe what changes you need…';el.focus();}
-    return;
-  }
+function cpClientRevisionWithNote(postId, note){
   const posts=socialPostsLoad();
   const idx=posts.findIndex(p=>p.id===postId);
   if(idx<0) return;
@@ -9381,6 +9742,22 @@ function cpClientRevision(postId){
   socialPostsSave(posts);
   cpClosePost();
   cpShowTab('social');
+}
+
+// Legacy wrappers — keep working for renderSocialApprovals on the ops side
+function cpClientApprove(postId){
+  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
+  cpClientApproveWithNote(postId, note);
+}
+
+function cpClientRevision(postId){
+  const note=(document.getElementById('cp-feedback-text')?.value||'').trim();
+  if(!note){
+    const el=document.getElementById('cp-feedback-text');
+    if(el){el.style.borderColor='var(--red)';el.placeholder='Please describe what changes you need…';el.focus();}
+    return;
+  }
+  cpClientRevisionWithNote(postId, note);
 }
 
 function cpSendMessage(){
@@ -15900,6 +16277,12 @@ let _socialEditingPostId = null;
 let _socialCalYear = new Date().getFullYear();
 let _socialCalMonth = new Date().getMonth();
 let _socialNewLabelColor = SOCIAL_LABEL_COLORS[0];
+// Reel upload state
+let _reelObjectUrl = null;
+let _reelCoverDataUrl = null;
+let _reelCoverTime = 0;
+let _reelDuration = 0;
+let _frameStripCapturing = false;
 
 // ── Storage ───────────────────────────────────────────────────────────────────────────────
 function socialWorkspacesLoad(){
@@ -16076,6 +16459,7 @@ function renderSocialPostCard(p){
   return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid var(--border);overflow:hidden">
     <div style="height:5px;background:${status.color}"></div>
     <div style="padding:13px">
+      ${p.coverPhotoData?`<div style="margin-bottom:8px"><img src="${p.coverPhotoData}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;display:block"></div>`:''}
       ${addressLine}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
         <div style="font-weight:600;font-size:13px;color:var(--white);flex:1;margin-right:8px;line-height:1.35">${p.reelNumber||p.title||'Untitled'}${p.reelNumber&&p.title?`<span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:5px">${p.title}</span>`:''}</div>
@@ -16390,6 +16774,7 @@ function renderSocialApprovals(){
       const plats=(p.platforms||[]).map(pid=>SOCIAL_PLATFORMS.find(x=>x.id===pid)?.label||pid).join(', ');
       const approvers=p.status.includes('r1')?(ws?.approvers1||''):(ws?.approvers2||'');
       return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid ${status.color}33;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+        ${p.coverPhotoData?`<img src="${p.coverPhotoData}" style="width:36px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0">`:''}
         <div style="flex:1;min-width:200px">
           <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:3px">${p.address||p.reelNumber||p.title||'Untitled'}</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${ws?.name||'—'} · ${format?.label||'Reel'}${plats?' · '+plats:''}</div>
@@ -16515,6 +16900,38 @@ function openSocialPostModal(id){
   document.getElementById('social-post-asset').value=post?.assetName||'';
   document.getElementById('social-post-final-link').value=post?.finalDriveLink||'';
   document.getElementById('social-post-cover').value=post?.coverPhoto||'';
+  // Restore reel state
+  _reelObjectUrl=null; _reelCoverDataUrl=post?.coverPhotoData||null; _reelCoverTime=post?.coverPhotoTime||0; _reelDuration=0;
+  // Reset upload zone defaults
+  const _rz=document.getElementById('reel-upload-zone');
+  const _rvw=document.getElementById('reel-video-wrap');
+  const _fsw=document.getElementById('frame-scrubber-wrap');
+  const _fs=document.getElementById('frame-strip');
+  const _rfi=document.getElementById('reel-file-input');
+  if(_rz) _rz.style.display='block';
+  if(_rvw) _rvw.style.display='none';
+  if(_fsw) _fsw.style.display='none';
+  if(_fs) _fs.innerHTML='';
+  if(_rfi) _rfi.value='';
+  const _igVid=document.getElementById('ig-preview-video');
+  if(_igVid){ _igVid.src=''; _igVid.style.display='none'; }
+  const _igCov=document.getElementById('ig-preview-cover');
+  const _igPh=document.getElementById('ig-preview-placeholder');
+  if(_reelCoverDataUrl){
+    if(_igCov){ _igCov.src=_reelCoverDataUrl; _igCov.style.display='block'; }
+    if(_igPh) _igPh.style.display='none';
+    const coverWrap=document.getElementById('cover-preview-wrap');
+    const coverImg=document.getElementById('cover-preview-img');
+    const coverTimeEl=document.getElementById('cover-preview-time');
+    if(coverWrap) coverWrap.style.display='flex';
+    if(coverImg) coverImg.src=_reelCoverDataUrl;
+    if(coverTimeEl) coverTimeEl.textContent='Frame @ '+fmtSec(_reelCoverTime);
+  } else {
+    if(_igCov){ _igCov.src=''; _igCov.style.display='none'; }
+    if(_igPh) _igPh.style.display='flex';
+    const coverWrap=document.getElementById('cover-preview-wrap');
+    if(coverWrap) coverWrap.style.display='none';
+  }
   document.getElementById('social-post-song').value=post?.songName||'';
   document.getElementById('social-post-timestamps').value=post?.songTimestamps||'';
   document.getElementById('social-post-status').value=post?.status||'draft';
@@ -16537,6 +16954,7 @@ function openSocialPostModal(id){
   buildSocialLabelColorPicker('social-label-color-picker','social-post-label-color', post?.labelColor||'');
   updateSocialPlatformSpecs();
   updateSocialFirstCommentPreview();
+  updateInstagramPreview();
   document.getElementById('social-post-modal').style.display='flex';
 }
 
@@ -16555,6 +16973,28 @@ function buildSocialLabelColorPicker(pickerId, hiddenId, selected){
 
 function closeSocialPostModal(){
   document.getElementById('social-post-modal').style.display='none';
+  if(_reelObjectUrl){ URL.revokeObjectURL(_reelObjectUrl); _reelObjectUrl=null; }
+  _reelCoverDataUrl=null; _reelCoverTime=0; _reelDuration=0;
+  const zone=document.getElementById('reel-upload-zone');
+  const wrap=document.getElementById('reel-video-wrap');
+  const scrubWrap=document.getElementById('frame-scrubber-wrap');
+  if(zone) zone.style.display='block';
+  if(wrap) wrap.style.display='none';
+  if(scrubWrap) scrubWrap.style.display='none';
+  const strip=document.getElementById('frame-strip');
+  if(strip) strip.innerHTML='';
+  const vid=document.getElementById('reel-preview-video');
+  if(vid){ vid.src=''; }
+  const igVid=document.getElementById('ig-preview-video');
+  if(igVid){ igVid.src=''; igVid.style.display='none'; }
+  const igCover=document.getElementById('ig-preview-cover');
+  if(igCover){ igCover.src=''; igCover.style.display='none'; }
+  const igPh=document.getElementById('ig-preview-placeholder');
+  if(igPh) igPh.style.display='flex';
+  const coverWrap=document.getElementById('cover-preview-wrap');
+  if(coverWrap) coverWrap.style.display='none';
+  const fi=document.getElementById('reel-file-input');
+  if(fi) fi.value='';
 }
 
 function saveSocialPost(forceStatus){
@@ -16577,6 +17017,9 @@ function saveSocialPost(forceStatus){
     assetName:   document.getElementById('social-post-asset').value||null,
     finalDriveLink:document.getElementById('social-post-final-link').value||null,
     coverPhoto:  document.getElementById('social-post-cover').value||null,
+    coverPhotoData: _reelCoverDataUrl||null,
+    coverPhotoTime: _reelCoverTime||0,
+    reelFileName: document.getElementById('reel-file-name')?.textContent||null,
     songName:    document.getElementById('social-post-song').value||null,
     songTimestamps:document.getElementById('social-post-timestamps').value||null,
     status,
@@ -16600,14 +17043,252 @@ function saveSocialPost(forceStatus){
   } else {
     posts.push({id:'post_'+Date.now(),...postData,history:[{action:'Created',by:_activeSessionEmail||'team',at:new Date().toISOString()}],createdAt:new Date().toISOString().slice(0,10)});
   }
-  socialPostsSave(posts);
+  try{ socialPostsSave(posts); }catch(e){
+    // If localStorage quota exceeded (large cover photo), strip coverPhotoData and retry
+    if(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'){
+      posts.forEach(p=>{ if(p.coverPhotoData&&p.coverPhotoData.length>1000) p.coverPhotoData=null; });
+      try{ socialPostsSave(posts); }catch(e2){ console.error('socialPostsSave failed even after stripping cover data',e2); }
+    } else { console.error('socialPostsSave failed',e); }
+  }
   closeSocialPostModal();
   _socialPostFilter='all';
   refreshSocialApprovalBadge();
   renderSocialWorkspaces();
 }
 
-// Platform spec pre-check
+// ── Reel upload & frame scrubber ─────────────────────────────────────────────
+function fmtSec(s){
+  if(!s||isNaN(s)) return '0:00';
+  const m=Math.floor(s/60);
+  const sec=Math.floor(s%60);
+  return m+':'+(sec<10?'0':'')+sec;
+}
+
+function handleReelFileUpload(input){
+  const file=input.files[0];
+  if(!file) return;
+  if(_reelObjectUrl) URL.revokeObjectURL(_reelObjectUrl);
+  _reelObjectUrl=URL.createObjectURL(file);
+
+  const video=document.getElementById('reel-preview-video');
+  const zone=document.getElementById('reel-upload-zone');
+  const wrap=document.getElementById('reel-video-wrap');
+  const nameEl=document.getElementById('reel-file-name');
+
+  video.src=_reelObjectUrl;
+  if(zone) zone.style.display='none';
+  if(wrap) wrap.style.display='block';
+  if(nameEl) nameEl.textContent=file.name;
+
+  video.onloadedmetadata=()=>{
+    _reelDuration=video.duration;
+    const durEl=document.getElementById('frame-duration');
+    if(durEl) durEl.textContent=fmtSec(_reelDuration);
+    const scrubWrap=document.getElementById('frame-scrubber-wrap');
+    if(scrubWrap) scrubWrap.style.display='block';
+    generateFrameStrip(video);
+    // Auto-select first frame after brief delay
+    setTimeout(()=>captureReelFrame(video,0,true),300);
+  };
+
+  // Update Instagram phone preview video src
+  const igVid=document.getElementById('ig-preview-video');
+  if(igVid){ igVid.src=_reelObjectUrl; igVid.style.display='block'; }
+  const igPlaceholder=document.getElementById('ig-preview-placeholder');
+  if(igPlaceholder) igPlaceholder.style.display='none';
+  const igCover=document.getElementById('ig-preview-cover');
+  if(igCover) igCover.style.display='none';
+
+  updateInstagramPreview();
+}
+
+function generateFrameStrip(video){
+  const strip=document.getElementById('frame-strip');
+  if(!strip||_frameStripCapturing) return;
+  strip.innerHTML='';
+  _frameStripCapturing=true;
+  const count=10;
+  const thumbW=40,thumbH=71;
+  let i=0;
+
+  function captureNext(){
+    if(i>=count){ _frameStripCapturing=false; return; }
+    const t=(i/(count-1))*(_reelDuration||1);
+    const canvas=document.createElement('canvas');
+    canvas.width=thumbW; canvas.height=thumbH;
+    const idx=i;
+    const time=t;
+
+    const onSeeked=()=>{
+      video.removeEventListener('seeked',onSeeked);
+      try{
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(video,0,0,thumbW,thumbH);
+      }catch(e){}
+      canvas.title='Frame @ '+fmtSec(time);
+      canvas.onclick=()=>{
+        document.querySelectorAll('#frame-strip canvas').forEach(c=>c.classList.remove('selected-frame'));
+        canvas.classList.add('selected-frame');
+        const slider=document.getElementById('frame-scrubber-slider');
+        if(slider) slider.value=Math.round((time/_reelDuration)*1000);
+        captureReelFrame(video,time,false);
+      };
+      strip.appendChild(canvas);
+      i++;
+      // Small timeout to avoid hammering
+      setTimeout(captureNext,80);
+    };
+
+    video.addEventListener('seeked',onSeeked);
+    video.currentTime=t;
+    // Fallback timeout if seeked never fires
+    setTimeout(()=>{
+      if(strip.children.length<=idx){
+        video.removeEventListener('seeked',onSeeked);
+        strip.appendChild(canvas);
+        i++;
+        setTimeout(captureNext,80);
+      }
+    },600);
+  }
+  captureNext();
+}
+
+function captureReelFrame(video,time,isAuto){
+  const canvas=document.getElementById('frame-canvas');
+  if(!canvas) return;
+  canvas.width=320; canvas.height=569;
+
+  const onSeeked=()=>{
+    video.removeEventListener('seeked',onSeeked);
+    try{
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(video,0,0,320,569);
+      _reelCoverDataUrl=canvas.toDataURL('image/jpeg',0.7);
+      _reelCoverTime=time;
+
+      // Update scrubber time display
+      const ctEl=document.getElementById('frame-current-time');
+      if(ctEl) ctEl.textContent=fmtSec(time);
+
+      // Update hidden cover field
+      const covEl=document.getElementById('social-post-cover');
+      if(covEl) covEl.value='Frame @ '+fmtSec(time);
+
+      // Show cover preview
+      const coverWrap=document.getElementById('cover-preview-wrap');
+      const coverImg=document.getElementById('cover-preview-img');
+      const coverTimeEl=document.getElementById('cover-preview-time');
+      if(coverWrap) coverWrap.style.display='flex';
+      if(coverImg) coverImg.src=_reelCoverDataUrl;
+      if(coverTimeEl) coverTimeEl.textContent='Frame @ '+fmtSec(time);
+
+      updateInstagramPreviewCover();
+    }catch(e){ console.warn('captureReelFrame error',e); }
+  };
+
+  video.addEventListener('seeked',onSeeked);
+  video.currentTime=time;
+  // Fallback in case seeked doesn't fire
+  setTimeout(()=>{
+    if(video.currentTime!==time||Math.abs(video.currentTime-time)>0.5){
+      video.removeEventListener('seeked',onSeeked);
+      // try anyway
+      try{
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(video,0,0,320,569);
+        _reelCoverDataUrl=canvas.toDataURL('image/jpeg',0.7);
+        _reelCoverTime=time;
+        updateInstagramPreviewCover();
+      }catch(e){}
+    }
+  },700);
+}
+
+function scrubToFrame(val){
+  if(!_reelDuration) return;
+  const time=(val/1000)*_reelDuration;
+  const ctEl=document.getElementById('frame-current-time');
+  if(ctEl) ctEl.textContent=fmtSec(time);
+  const video=document.getElementById('reel-preview-video');
+  if(video) captureReelFrame(video,time,false);
+  // Highlight nearest strip thumb
+  const strip=document.getElementById('frame-strip');
+  if(strip){
+    const thumbs=strip.querySelectorAll('canvas');
+    const nearest=Math.round((val/1000)*(thumbs.length-1));
+    thumbs.forEach((c,i)=>c.classList.toggle('selected-frame',i===nearest));
+  }
+}
+
+function clearReelUpload(){
+  if(_reelObjectUrl){ URL.revokeObjectURL(_reelObjectUrl); _reelObjectUrl=null; }
+  _reelCoverDataUrl=null; _reelCoverTime=0; _reelDuration=0;
+  _frameStripCapturing=false;
+  const vid=document.getElementById('reel-preview-video');
+  if(vid) vid.src='';
+  const zone=document.getElementById('reel-upload-zone');
+  const wrap=document.getElementById('reel-video-wrap');
+  const scrubWrap=document.getElementById('frame-scrubber-wrap');
+  const strip=document.getElementById('frame-strip');
+  const fi=document.getElementById('reel-file-input');
+  if(zone) zone.style.display='block';
+  if(wrap) wrap.style.display='none';
+  if(scrubWrap) scrubWrap.style.display='none';
+  if(strip) strip.innerHTML='';
+  if(fi) fi.value='';
+  // Reset Instagram preview
+  const igVid=document.getElementById('ig-preview-video');
+  if(igVid){ igVid.src=''; igVid.style.display='none'; }
+  const igCover=document.getElementById('ig-preview-cover');
+  if(igCover){ igCover.src=''; igCover.style.display='none'; }
+  const igPh=document.getElementById('ig-preview-placeholder');
+  if(igPh) igPh.style.display='flex';
+  const coverWrap=document.getElementById('cover-preview-wrap');
+  if(coverWrap) coverWrap.style.display='none';
+  // Clear hidden fields
+  const covEl=document.getElementById('social-post-cover');
+  if(covEl) covEl.value='';
+}
+
+function updateInstagramPreviewCover(){
+  if(!_reelCoverDataUrl) return;
+  const igCover=document.getElementById('ig-preview-cover');
+  if(igCover){ igCover.src=_reelCoverDataUrl; igCover.style.display='block'; }
+  const igVid=document.getElementById('ig-preview-video');
+  if(igVid) igVid.style.display='none';
+  const igPh=document.getElementById('ig-preview-placeholder');
+  if(igPh) igPh.style.display='none';
+}
+
+function updateInstagramPreview(){
+  // Address
+  const addr=(document.getElementById('social-post-address')?.value||'').trim();
+  const addrEl=document.getElementById('ig-header-address');
+  if(addrEl) addrEl.textContent=addr?'📍 '+addr.substring(0,30)+(addr.length>30?'…':''):'';
+
+  // Caption
+  const caption=(document.getElementById('social-post-content')?.value||'').trim();
+  const capEl=document.getElementById('ig-caption-preview');
+  if(capEl) capEl.textContent=caption?caption.substring(0,60)+(caption.length>60?'…':''):'Caption will appear here…';
+
+  // Hashtags
+  const tags=(document.getElementById('social-post-hashtags')?.value||'').trim();
+  const tagEl=document.getElementById('ig-hashtag-preview');
+  if(tagEl) tagEl.textContent=tags?tags.substring(0,50)+(tags.length>50?'…':''):'';
+
+  // Overlay text
+  const overlay=(document.getElementById('social-post-overlay')?.value||'').trim();
+  const ovEl=document.getElementById('ig-overlay-text-preview');
+  if(ovEl){ ovEl.textContent=overlay; ovEl.style.display=overlay?'block':'none'; }
+
+  // Song
+  const song=(document.getElementById('social-post-song')?.value||'').trim();
+  const songEl=document.getElementById('ig-song-preview');
+  if(songEl) songEl.textContent=song||'Song name';
+}
+
+// ── Platform spec pre-check
 function updateSocialPlatformSpecs(){
   const len=(document.getElementById('social-post-content')?.value||'').length;
   const sel=SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-plt-'+p.id)?.checked).map(p=>p.id);
