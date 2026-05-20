@@ -138,6 +138,9 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 #pane-tracker,#pane-louchat,#pane-jobs,#pane-clients,#pane-calendar,#pane-sales{max-width:100%;}
 /* Give tracker full bleed — remove the .wrap horizontal padding for it */
 .wrap:has(#pane-tracker.active){padding-left:0;padding-right:0;}
+/* LouChat: prevent page scroll — only the chat window scrolls internally */
+body:has(#pane-louchat.active){overflow:hidden;}
+.wrap:has(#pane-louchat.active){padding-bottom:0;overflow:hidden;}
 h1{font-size:16px;font-weight:600;margin-bottom:1.25rem;color:var(--white)}
 .section-label{font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
 .card{background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:12px;transition:border-color .2s;overflow:hidden}
