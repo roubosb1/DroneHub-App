@@ -228,6 +228,7 @@ input::placeholder{color:var(--muted);}
 .status-quoted{background:rgba(168,180,208,.18);color:var(--offwhite)}
 .status-confirmed{background:var(--amber-bg);color:var(--amber)}
 .status-completed{background:var(--green-bg);color:var(--green)}
+.status-requested{background:rgba(245,166,35,.15);color:var(--amber)}
 .status-pill-btn{padding:5px 14px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-family:var(--font);font-weight:600;cursor:pointer}
 .us-pkg-btn{padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-family:var(--font);font-weight:600;cursor:pointer;transition:all .15s}
 .us-pkg-active{border-color:var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright)}
@@ -770,6 +771,7 @@ button{font-family:var(--font);}
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span id="cp-welcome-name" style="font-size:13px;color:var(--offwhite);font-weight:600"></span>
+        <button id="cp-notif-bell" onclick="cpShowTab('overview')" title="Notifications" style="position:relative;padding:6px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span id="cp-notif-count" style="display:none;position:absolute;top:0;right:0;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:800;line-height:16px;text-align:center;padding:0 3px"></span></button>
         <button onclick="switchToTeamPortal()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1px solid rgba(245,166,35,.4);background:rgba(245,166,35,.08);color:var(--amber);font-size:12px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team Portal</button>
         <button onclick="cpLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">Sign out</button>
       </div>
@@ -786,6 +788,7 @@ button{font-family:var(--font);}
         <button onclick="cpShowTab('files')" class="cp-tab" data-tab="files" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Files</button>
         <button onclick="cpShowTab('messages')" class="cp-tab" data-tab="messages" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat</button>
         <button onclick="cpShowTab('social')" class="cp-tab" data-tab="social" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg> Social</button>
+        <button onclick="cpShowTab('booking')" class="cp-tab" data-tab="booking" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Book a Shoot</button>
       </div>
     </div>
 
@@ -904,6 +907,39 @@ button{font-family:var(--font);}
       </div>
     </div>
 
+    <!-- Draft review overlay (client reviews video drafts) -->
+    <div id="cp-draft-review-overlay" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.97);overflow-y:auto;flex-direction:column">
+      <div style="max-width:760px;margin:0 auto;padding:20px 16px 60px;width:100%;box-sizing:border-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <div id="cp-dro-title" style="font-size:17px;font-weight:700;color:var(--white)"></div>
+            <div id="cp-dro-subtitle" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+          </div>
+          <button onclick="cpCloseDraftReview()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">✕ Close</button>
+        </div>
+        <!-- Video player -->
+        <div id="cp-dro-player" style="background:#000;border-radius:12px;overflow:hidden;margin-bottom:18px;aspect-ratio:16/9;width:100%"></div>
+        <!-- Action buttons -->
+        <div id="cp-dro-actions" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+          <button onclick="cpApproveDraft()" style="flex:1;min-width:140px;padding:12px;border-radius:12px;border:1px solid var(--green);background:rgba(34,217,122,.12);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">✓ Approve Draft</button>
+          <button onclick="cpRequestChangesToggle()" id="cp-dro-req-btn" style="flex:1;min-width:140px;padding:12px;border-radius:12px;border:1px solid var(--amber);background:rgba(245,166,35,.12);color:var(--amber);font-size:13px;font-weight:700;cursor:pointer">↩ Request Changes</button>
+        </div>
+        <div id="cp-dro-changes-box" style="display:none;margin-bottom:18px">
+          <textarea id="cp-dro-changes-notes" placeholder="Describe the changes you'd like…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);min-height:80px;resize:vertical;font-family:var(--font)"></textarea>
+          <button onclick="cpSubmitRequestChanges()" style="margin-top:8px;padding:10px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--amber),#d97706);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Submit Request</button>
+        </div>
+        <!-- Comments -->
+        <div class="card">
+          <div class="section-label" style="margin-bottom:12px">Comments</div>
+          <div id="cp-dro-comments" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:320px;overflow-y:auto"></div>
+          <div style="border-top:1px solid var(--border);padding-top:12px">
+            <textarea id="cp-dro-comment-input" placeholder="Add a comment…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);min-height:60px;resize:vertical;font-family:var(--font)"></textarea>
+            <button onclick="cpSubmitDraftComment()" style="margin-top:8px;padding:9px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Send Comment</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Full invoice overlay (shown when client clicks View Invoice) -->
     <div id="cp-invoice-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(13,17,23,.96);overflow-y:auto;padding:24px 16px 60px">
       <div style="max-width:720px;margin:0 auto">
@@ -969,6 +1005,7 @@ button{font-family:var(--font);}
         <button onclick="tpShowTab('overview')" class="cp-tab active" data-tptab="overview">Overview</button>
         <button onclick="tpShowTab('projects')" class="cp-tab" data-tptab="projects">My Projects</button>
         <button onclick="tpShowTab('available')" class="cp-tab" data-tptab="available">Claim Projects</button>
+        <button onclick="tpShowTab('social')" class="cp-tab" data-tptab="social">Social</button>
         <button onclick="tpShowTab('calendar')" class="cp-tab" data-tptab="calendar">Calendar</button>
         <button onclick="tpShowTab('paystubs')" class="cp-tab" data-tptab="paystubs">Pay Stubs</button>
         <button onclick="tpShowTab('messages')" class="cp-tab" data-tptab="messages">💬 LouChat</button>
@@ -9033,6 +9070,7 @@ function cpShowTab(tab){
   document.querySelectorAll('#cp-dashboard .cp-tab').forEach(t=>{
     t.classList.toggle('active', t.dataset.tab===tab);
   });
+  setTimeout(cpUpdateNotifBadge,100);
   // Fall back to portal account data if no matching client record exists
   const cpAcctFallback=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
   const c=clients.find(cl=>cl.id===cpActiveClientId)||{
@@ -9070,6 +9108,24 @@ function cpShowTab(tab){
         <div style="font-size:12px;color:var(--muted);margin-top:3px">${cJobs[0].date} · ${cJobs[0].address}</div>
         <span class="status-badge status-${cJobs[0].status||'quoted'}" style="margin-top:8px;display:inline-block">${cJobs[0].status||'quoted'}</span>
       </div>`:''}
+      ${(()=>{
+        const allDrafts=videoDraftsLoad();
+        const draftsToReview=cJobs.filter(j=>{const vd=allDrafts.find(d=>d.jobId===j.id);if(!vd) return false;const last=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;return last&&(last.status==='awaiting_review'||vd.status==='awaiting_review');});
+        const socialPosts=socialPostsLoad();
+        const socialWorkspaces=socialWorkspacesLoad();
+        const pendingSocial=socialPosts.filter(p=>{if(p.status!=='pending') return false;if(p.clientId===cpActiveClientId) return true;if(p.workspaceId){const ws=socialWorkspaces.find(w=>w.id===p.workspaceId);if(ws?.clientId===cpActiveClientId) return true;}return false;});
+        const items=[];
+        draftsToReview.forEach(j=>items.push({type:'draft',label:`Draft ready to review: ${j.name}`,action:`cpShowTab('production')`}));
+        pendingSocial.forEach(p=>items.push({type:'social',label:`Post awaiting approval: ${p.address||p.title||'Post'}`,action:`cpShowTab('social')`}));
+        if(!items.length) return '';
+        return `<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:10px;display:flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${items.length} action${items.length>1?'s':''} need your attention</div>
+          ${items.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(124,58,237,.15);gap:10px">
+            <div style="font-size:12px;color:var(--offwhite)">${it.label}</div>
+            <button onclick="${it.action}" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(124,58,237,.5);background:transparent;color:#A78BFA;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">View →</button>
+          </div>`).join('')}
+        </div>`;
+      })()}
       <div class="card">
         <div class="section-label" style="margin-bottom:10px">Quick access</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -9106,6 +9162,7 @@ function cpShowTab(tab){
           </div>
           ${ts.completionDate?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Estimated completion: ${ts.completionDate}</div>`:''}
           <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${(()=>{const DRAFT_STATUSES=['draft1','draft2','draft3','draft_plus','finals_sent'];if(DRAFT_STATUSES.includes(ts.editStatus||'')){const vd=videoDraftsLoad().find(d=>d.jobId===j.id);if(vd){const lastDraft=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;if(lastDraft&&(lastDraft.status==='awaiting_review'||lastDraft.status==='changes_requested'||vd.status==='awaiting_review'||vd.status==='changes_requested')){return `<button onclick="cpOpenDraftReview('${j.id}')" style="padding:6px 14px;border-radius:10px;border:1px solid #7C3AED;background:rgba(124,58,237,.15);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer;animation:pulse 2s infinite">▶ Review Draft</button>`;}}};return '';})()}
             ${ts.frameioLink?`<a href="${ts.frameioLink}" target="_blank" style="padding:6px 14px;border-radius:10px;border:1px solid var(--purple);background:var(--purple-bg);color:#A78BFA;font-size:12px;font-weight:700;text-decoration:none">🎬 Review & give feedback on Frame.io</a>`:''}
             ${ts.downloadLink?`<a href="${ts.downloadLink}" target="_blank" style="padding:6px 14px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;text-decoration:none">↓ Download your finals</a>`:''}
           </div>
@@ -9476,12 +9533,279 @@ function cpShowTab(tab){
       </div>`;
     }
   }
+  else if(tab==='booking'){
+    const myBookings=savedJobs.filter(j=>j.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const statusBadge=s=>s==='requested'?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(245,166,35,.15);color:var(--amber)">REQUESTED</span>`
+      :s==='confirmed'?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(34,217,122,.12);color:var(--green)">CONFIRMED</span>`
+      :s==='completed'?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(91,141,239,.15);color:var(--blue-bright)">COMPLETED</span>`
+      :`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--navy-lift);color:var(--muted)">${s||'—'}</span>`;
+    html=`<div>
+      <div class="card" style="margin-bottom:18px">
+        <div class="section-label" style="margin-bottom:14px">📅 Request a new shoot</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Property address</label>
+          <input type="text" id="cp-book-address" placeholder="123 Main St, Oakville, ON" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Shoot type</label>
+          <select id="cp-book-type" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <option value="Aerial Photo">Aerial Photo</option>
+            <option value="Aerial Video">Aerial Video</option>
+            <option value="Photo+Video">Photo + Video</option>
+            <option value="Virtual Tour">Virtual Tour</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Preferred date</label>
+            <input type="date" id="cp-book-date" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Preferred time</label>
+            <input type="time" id="cp-book-time" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Notes</label>
+          <textarea id="cp-book-notes" placeholder="Any special instructions, access notes, or questions…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);min-height:70px;resize:vertical;font-family:var(--font)"></textarea>
+        </div>
+        <div id="cp-book-success" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(34,217,122,.12);border:1px solid rgba(34,217,122,.3);color:var(--green);font-size:13px;font-weight:600;margin-bottom:12px">✓ Request submitted! We'll confirm your booking shortly.</div>
+        <button onclick="cpSubmitBookingRequest()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Submit Request →</button>
+      </div>
+      ${myBookings.length?`<div class="card">
+        <div class="section-label" style="margin-bottom:12px">Your shoots</div>
+        ${myBookings.map(j=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date||'—'}${j.shootTime?' at '+j.shootTime:''}${j.address?' · '+j.address:''}</div>
+            ${j.shootType?`<div style="font-size:11px;color:var(--blue-bright);margin-top:2px">${j.shootType}</div>`:''}
+          </div>
+          <div style="flex-shrink:0">${statusBadge(j.status)}</div>
+        </div>`).join('')}
+      </div>`:''}
+    </div>`;
+  }
 
   document.getElementById('cp-content').innerHTML=html;
 }
 
 function cpCloseInvoice(){
   document.getElementById('cp-invoice-overlay').style.display='none';
+}
+
+// ── FEATURE 1: Client Portal Video Draft Review ────────────────────────────
+
+let _cpDraftReviewJobId=null;
+
+function cpOpenDraftReview(jobId){
+  _cpDraftReviewJobId=jobId;
+  const job=savedJobs.find(j=>j.id===jobId||String(j.id)===String(jobId));
+  const vd=videoDraftsLoad().find(d=>d.jobId===jobId);
+  if(!vd){alert('No draft found for this job.');return;}
+  const lastDraft=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;
+  const overlay=document.getElementById('cp-draft-review-overlay');
+  if(!overlay) return;
+
+  document.getElementById('cp-dro-title').textContent='Draft Review'+(lastDraft?' — Draft '+vd.drafts.length:'');
+  document.getElementById('cp-dro-subtitle').textContent=job?job.name:'';
+  document.getElementById('cp-dro-changes-box').style.display='none';
+  document.getElementById('cp-dro-changes-notes').value='';
+  document.getElementById('cp-dro-comment-input').value='';
+
+  // Render video player
+  const playerEl=document.getElementById('cp-dro-player');
+  const url=lastDraft?.videoUrl||'';
+  if(url){
+    if(url.includes('youtube.com')||url.includes('youtu.be')){
+      let embedUrl=url.replace('watch?v=','embed/').replace('youtu.be/','www.youtube.com/embed/');
+      playerEl.innerHTML=`<iframe src="${embedUrl}" style="width:100%;height:100%;border:none;aspect-ratio:16/9;display:block" allowfullscreen></iframe>`;
+    } else if(url.includes('vimeo.com')){
+      const vimeoId=url.split('/').pop().split('?')[0];
+      playerEl.innerHTML=`<iframe src="https://player.vimeo.com/video/${vimeoId}" style="width:100%;height:100%;border:none;aspect-ratio:16/9;display:block" allowfullscreen></iframe>`;
+    } else {
+      playerEl.innerHTML=`<video src="${url}" controls style="width:100%;height:100%;display:block;background:#000"></video>`;
+    }
+  } else {
+    playerEl.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--navy-card);color:var(--muted);font-size:13px;padding:40px;text-align:center">No video URL available for this draft yet.</div>`;
+  }
+
+  // Render comments
+  cpRenderDraftComments(vd);
+
+  overlay.style.display='flex';
+}
+
+function cpRenderDraftComments(vd){
+  const commentsEl=document.getElementById('cp-dro-comments');
+  if(!commentsEl) return;
+  const comments=(vd.comments||[]).filter(c=>!c.isSystem).sort((a,b)=>(a.at||'').localeCompare(b.at||''));
+  if(!comments.length){
+    commentsEl.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No comments yet. Be the first to leave feedback!</div>';
+    return;
+  }
+  commentsEl.innerHTML=comments.map(c=>`<div style="padding:10px 12px;border-radius:10px;background:${c.from==='client'?'rgba(91,141,239,.12)':'var(--navy-lift)'};border:1px solid ${c.from==='client'?'rgba(91,141,239,.25)':'var(--border)'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:11px;font-weight:700;color:${c.from==='client'?'var(--blue-bright)':'var(--muted)'}">${c.by||c.from}</span>
+      <span style="font-size:10px;color:var(--muted)">${c.at?new Date(c.at).toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}</span>
+    </div>
+    <div style="font-size:12px;color:var(--offwhite);line-height:1.5">${c.text}</div>
+  </div>`).join('');
+  commentsEl.scrollTop=commentsEl.scrollHeight;
+}
+
+function cpCloseDraftReview(){
+  const overlay=document.getElementById('cp-draft-review-overlay');
+  if(overlay) overlay.style.display='none';
+  const playerEl=document.getElementById('cp-dro-player');
+  if(playerEl) playerEl.innerHTML='';
+  _cpDraftReviewJobId=null;
+}
+
+function cpSubmitDraftComment(){
+  if(!_cpDraftReviewJobId) return;
+  const input=document.getElementById('cp-dro-comment-input');
+  const text=(input?.value||'').trim();
+  if(!text) return;
+  const cpAcct=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{name:'Client'};
+  const all=videoDraftsLoad();
+  let vd=all.find(d=>d.jobId===_cpDraftReviewJobId);
+  if(!vd) return;
+  if(!vd.comments) vd.comments=[];
+  vd.comments.push({
+    id:'cc_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    text,
+    from:'client',
+    by:cpAcct.name||'Client',
+    at:new Date().toISOString(),
+  });
+  videoDraftsSave(all);
+  if(input) input.value='';
+  cpRenderDraftComments(vd);
+}
+
+function cpRequestChangesToggle(){
+  const box=document.getElementById('cp-dro-changes-box');
+  if(box) box.style.display=box.style.display==='none'?'block':'none';
+}
+
+function cpSubmitRequestChanges(){
+  if(!_cpDraftReviewJobId) return;
+  const notes=(document.getElementById('cp-dro-changes-notes')?.value||'').trim();
+  // Add a comment with the notes if provided
+  if(notes){
+    const cpAcct=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{name:'Client'};
+    const all=videoDraftsLoad();
+    let vd=all.find(d=>d.jobId===_cpDraftReviewJobId);
+    if(vd){
+      if(!vd.comments) vd.comments=[];
+      vd.comments.push({
+        id:'cc_'+Date.now()+'_req',
+        text:'Change request: '+notes,
+        from:'client',
+        by:cpAcct.name||'Client',
+        at:new Date().toISOString(),
+      });
+      videoDraftsSave(all);
+      cpRenderDraftComments(vd);
+    }
+  }
+  _vdActiveJobId=_cpDraftReviewJobId;
+  const vdAll=videoDraftsLoad();
+  const vd=vdAll.find(d=>d.jobId===_cpDraftReviewJobId);
+  if(vd&&vd.drafts&&vd.drafts.length){
+    _vdActiveDraftId=vd.drafts[vd.drafts.length-1].id||null;
+  }
+  vdClientDecision('changes_requested');
+  document.getElementById('cp-dro-changes-box').style.display='none';
+  cpCloseDraftReview();
+  cpShowTab('production');
+}
+
+function cpApproveDraft(){
+  if(!_cpDraftReviewJobId) return;
+  _vdActiveJobId=_cpDraftReviewJobId;
+  const vdAll=videoDraftsLoad();
+  const vd=vdAll.find(d=>d.jobId===_cpDraftReviewJobId);
+  if(vd&&vd.drafts&&vd.drafts.length){
+    _vdActiveDraftId=vd.drafts[vd.drafts.length-1].id||null;
+  }
+  vdClientDecision('approved');
+  cpCloseDraftReview();
+  cpShowTab('production');
+}
+
+// ── FEATURE 2: Book a Shoot ────────────────────────────────────────────────
+
+function cpSubmitBookingRequest(){
+  const address=(document.getElementById('cp-book-address')?.value||'').trim();
+  const shootType=(document.getElementById('cp-book-type')?.value||'Aerial Photo');
+  const preferredDate=(document.getElementById('cp-book-date')?.value||'');
+  const preferredTime=(document.getElementById('cp-book-time')?.value||'');
+  const notes=(document.getElementById('cp-book-notes')?.value||'').trim();
+  if(!address){alert('Please enter a property address.');return;}
+  if(!preferredDate){alert('Please select a preferred date.');return;}
+  const newJob={
+    id:'jr_'+Date.now(),
+    name:address+' — '+shootType,
+    date:preferredDate,
+    address,
+    status:'requested',
+    clientId:cpActiveClientId,
+    shootType,
+    preferredTime,
+    notes,
+    requestedAt:new Date().toISOString(),
+    grand:0,
+    services:{},
+    payouts:{},
+  };
+  savedJobs.push(newJob);
+  saveJobsToStorage();
+  const successEl=document.getElementById('cp-book-success');
+  if(successEl){successEl.style.display='block';}
+  ['cp-book-address','cp-book-date','cp-book-time','cp-book-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  setTimeout(()=>cpShowTab('booking'),1800);
+}
+
+// ── FEATURE 4: Notification Badge ────────────────────────────────────────────
+
+function cpCountPendingActions(){
+  if(!cpActiveClientId) return 0;
+  const cJobs=savedJobs.filter(j=>j.clientId===cpActiveClientId);
+  const allDrafts=videoDraftsLoad();
+  let count=0;
+  cJobs.forEach(j=>{
+    const vd=allDrafts.find(d=>d.jobId===j.id);
+    if(vd){
+      const last=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;
+      if(last&&(last.status==='awaiting_review'||vd.status==='awaiting_review')) count++;
+    }
+  });
+  const socialPosts=socialPostsLoad();
+  const socialWorkspaces=socialWorkspacesLoad();
+  const clientAddr=(clients.find(cl=>cl.id===cpActiveClientId)?.address||'').toLowerCase();
+  socialPosts.forEach(p=>{
+    if(p.status!=='pending') return;
+    if(p.clientId&&p.clientId===cpActiveClientId){count++;return;}
+    if(p.workspaceId){const ws=socialWorkspaces.find(w=>w.id===p.workspaceId);if(ws?.clientId===cpActiveClientId){count++;return;}}
+  });
+  return count;
+}
+
+function cpUpdateNotifBadge(){
+  const count=cpCountPendingActions();
+  const badge=document.getElementById('cp-notif-count');
+  const bell=document.getElementById('cp-notif-bell');
+  if(!badge) return;
+  if(count>0){
+    badge.textContent=count>9?'9+':String(count);
+    badge.style.display='block';
+    if(bell) bell.style.color='var(--offwhite)';
+  } else {
+    badge.style.display='none';
+    if(bell) bell.style.color='var(--muted)';
+  }
 }
 
 function cpViewInvoice(jobId){
@@ -14690,6 +15014,53 @@ function tpShowTab(tab){
           :'<div style="color:var(--muted);font-size:13px;padding:12px 0;text-align:center">No upcoming shoots. Claim a project to get started.</div>'}
         </div>
       </div>`;
+  }
+  else if(tab==='social'){
+    const posts=socialPostsLoad();
+    const workspaces=socialWorkspacesLoad();
+    const awaitingAction=posts.filter(p=>p.status==='revision'||p.status==='draft');
+    const pendingApproval=posts.filter(p=>p.status==='pending');
+    const recentlyApproved=posts.filter(p=>p.status==='approved');
+    const getWsName=p=>{if(p.workspaceId){const w=workspaces.find(x=>x.id===p.workspaceId);return w?w.name:''}return '';};
+    const statusBadge=s=>{const map={draft:{label:'Draft',color:'var(--muted)'},revision:{label:'Revision',color:'var(--amber)'},pending:{label:'Pending Approval',color:'#F5C842'},approved:{label:'Approved',color:'var(--green)'},scheduled:{label:'Scheduled',color:'var(--blue-bright)'},published:{label:'Published',color:'#A78BFA'}};const st=map[s]||{label:s,color:'var(--muted)'};return `<span style="padding:2px 9px;border-radius:8px;font-size:10px;font-weight:700;background:${st.color}22;color:${st.color}">${st.label}</span>`;};
+    html=`<div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-label" style="margin-bottom:12px">Posts Awaiting Action</div>
+        ${awaitingAction.length?awaitingAction.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--white)">${p.address||p.title||'Post'}</div>
+            ${getWsName(p)?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${getWsName(p)}</div>`:''}
+            <div style="margin-top:5px">${statusBadge(p.status)}</div>
+          </div>
+          <button onclick="exitTeamPortal();showPane('social')" style="padding:7px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">Open in Social</button>
+        </div>`).join('')
+        :`<div style="font-size:12px;color:var(--muted);padding:8px 0">No posts awaiting action.</div>`}
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-label" style="margin-bottom:12px">Pending Client Approvals</div>
+        ${pendingApproval.length?pendingApproval.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--white)">${p.address||p.title||'Post'}</div>
+            ${getWsName(p)?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${getWsName(p)}</div>`:''}
+            <div style="font-size:11px;color:#F5C842;margin-top:4px">Out for client review</div>
+          </div>
+          <div>${statusBadge('pending')}</div>
+        </div>`).join('')
+        :`<div style="font-size:12px;color:var(--muted);padding:8px 0">No posts pending client approval.</div>`}
+      </div>
+      <div class="card">
+        <div class="section-label" style="margin-bottom:12px">Recently Approved</div>
+        ${recentlyApproved.length?recentlyApproved.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--white)">${p.address||p.title||'Post'}</div>
+            ${getWsName(p)?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${getWsName(p)}</div>`:''}
+            <div style="margin-top:5px">${statusBadge('approved')}</div>
+          </div>
+          <button onclick="exitTeamPortal();showPane('social')" style="padding:7px 14px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Send for R2</button>
+        </div>`).join('')
+        :`<div style="font-size:12px;color:var(--muted);padding:8px 0">No recently approved posts.</div>`}
+      </div>
+    </div>`;
   }
   else if(tab==='paystubs'){
     const myJobs=savedJobs.filter(j=>
