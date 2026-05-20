@@ -2884,11 +2884,11 @@ button{font-family:var(--font);}
       </div>
 
       <!-- File drop zone -->
-      <div id="import-dropzone" ondragover="event.preventDefault();this.style.borderColor='var(--blue-bright)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="onImportDrop(event)" style="border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s" onclick="document.getElementById('import-file-input').click()">
+      <div id="sales-import-dropzone" ondragover="event.preventDefault();this.style.borderColor='var(--blue-bright)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="onImportDrop(event)" style="border:2px dashed var(--border);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s" onclick="document.getElementById('sales-import-file-input').click()">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <div style="font-size:13px;font-weight:600;color:var(--offwhite);margin-bottom:4px">Click to choose file or drag &amp; drop</div>
         <div style="font-size:11px;color:var(--muted)">.xlsx, .xls, or .csv — duplicates by email are skipped</div>
-        <input id="import-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="runSalesImport(this)">
+        <input id="sales-import-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="runSalesImport(this)">
       </div>
       <div id="import-filename" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
 
@@ -15277,8 +15277,10 @@ function salesLoad(){
   catch(e){ return []; }
 }
 function salesSave(arr){
+  const now = Date.now();
   localStorage.setItem('dronehub_sales', JSON.stringify(arr));
-  if(db) fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: Date.now()}).catch(()=>{});
+  localStorage.setItem('dronehub_sales_updatedAt', String(now));
+  if(db) fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
 }
 
 async function salesSyncFirebase(){
@@ -15286,8 +15288,15 @@ async function salesSyncFirebase(){
   try{
     const fb = await fbGet('orgs', ORG_ID+':sales');
     if(fb?.data){
-      const remote = JSON.parse(fb.data);
-      localStorage.setItem('dronehub_sales', JSON.stringify(remote));
+      // Only overwrite local data if Firebase has a newer timestamp.
+      // This prevents a slow Firebase read from erasing a just-completed import.
+      const localTs = parseInt(localStorage.getItem('dronehub_sales_updatedAt')||'0', 10);
+      const remoteTs = fb.updatedAt || 0;
+      if(remoteTs > localTs){
+        const remote = JSON.parse(fb.data);
+        localStorage.setItem('dronehub_sales', JSON.stringify(remote));
+        localStorage.setItem('dronehub_sales_updatedAt', String(remoteTs));
+      }
     }
   }catch(e){}
 }
@@ -15848,7 +15857,7 @@ function openImportModal(){
   // Wire up radio change to update styles
   radios.forEach(r => r.onchange = updateImportPickerStyles);
   // Clear previous file selection and reset overwrite toggle
-  const fi = document.getElementById('import-file-input');
+  const fi = document.getElementById('sales-import-file-input');
   if(fi) fi.value = '';
   document.getElementById('import-filename').textContent = '';
   const ow = document.getElementById('import-overwrite-dupes');
@@ -15888,7 +15897,7 @@ function getImportSelectedList(){
 
 function onImportDrop(e){
   e.preventDefault();
-  document.getElementById('import-dropzone').style.borderColor = 'var(--border)';
+  document.getElementById('sales-import-dropzone').style.borderColor = 'var(--border)';
   const file = e.dataTransfer?.files?.[0];
   if(!file) return;
   const fn = document.getElementById('import-filename');
