@@ -1939,7 +1939,7 @@ button{font-family:var(--font);}
 
 <!-- LOUCHAT -->
 <div id="pane-louchat" class="pane">
-  <div id="lc-flex-container" style="display:flex;min-height:calc(100vh - 160px);gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+  <div id="lc-flex-container" style="display:flex;height:calc(100vh - 160px);gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
 
     <!-- Sidebar -->
     <div id="lc-sidebar" style="width:230px;flex-shrink:0;background:#0D1117;border-right:1px solid var(--border);display:flex;flex-direction:column">
@@ -10871,6 +10871,7 @@ function lcOpenChannel(channelId){
           const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===channelId);
           localStorage.setItem('dronehub_lc_msgs_'+channelId,JSON.stringify(msgs));
           lcRenderMessages();
+          lcScrollToBottom(); // scroll after async Firebase data arrives
         }catch(e){}
       }
     });
@@ -10911,6 +10912,7 @@ function lcOpenChannel(channelId){
 
   renderLouChat();
   lcRenderMessages();
+  lcScrollToBottom();
   setTimeout(()=>document.getElementById('lc-msg-input').focus(),50);
 }
 
@@ -11057,6 +11059,17 @@ function lcMemberHasAccess(channelId, memberId){
   return ch.members.some(m=>m.id===memberId);
 }
 
+function lcScrollToBottom(){
+  // Use rAF + setTimeout so the browser has fully painted the new messages
+  // before we set scrollTop — fixes the "doesn't scroll" bug on channel switch.
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      const el = document.getElementById('lc-messages');
+      if(el) el.scrollTop = el.scrollHeight;
+    }, 0);
+  });
+}
+
 function lcRenderMessages(){
   const msgs=getLcMessages(lcActiveChannel);
   const channels=getLcChannels();
@@ -11151,8 +11164,7 @@ function lcRenderMessages(){
   });
 
   container.innerHTML=html;
-  // Scroll to bottom
-  container.scrollTop=container.scrollHeight;
+  lcScrollToBottom();
   // Init drag-drop
   lcInitDragDrop();
 }
