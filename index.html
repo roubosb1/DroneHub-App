@@ -522,6 +522,8 @@ button{font-family:var(--font);}
 /* Spinning music disc */
 @keyframes spin-disc{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .ig-disc-spin{animation:spin-disc 3s linear infinite}
+/* Pulse glow for Review Draft button */
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.5)}50%{box-shadow:0 0 0 6px rgba(124,58,237,0)}}
 </style>
 </head>
 <body>
@@ -2521,7 +2523,24 @@ button{font-family:var(--font);}
         <button onclick="clearAllJobs()" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:11px;background:rgba(240,82,82,.1);color:#F05252;cursor:pointer">Clear all</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px" id="jobs-pipeline">
+    <!-- Client booking requests banner -->
+    <div id="jobs-requested-banner" style="display:none;margin-bottom:14px;padding:12px 16px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);border-radius:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">📬</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--amber)" id="jobs-requested-banner-title">New booking request</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">A client has requested a shoot — review and confirm below.</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('status-btn-requested')?.click()" style="padding:6px 14px;border-radius:10px;border:1px solid var(--amber);background:rgba(245,166,35,.15);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">View requests →</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px" id="jobs-pipeline">
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--amber);margin-bottom:8px;padding:4px 8px;background:rgba(245,166,35,.1);border-radius:6px;display:flex;align-items:center;gap:6px">📬 Requested <span id="col-requested-count" style="display:none;background:var(--amber);color:#000;border-radius:8px;padding:0 6px;font-size:10px"></span></div>
+        <div id="col-requested"></div>
+      </div>
       <div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#A8B4D0;margin-bottom:8px;padding:4px 8px;background:#1C2333;border-radius:6px">Quoted</div>
         <div id="col-quoted"></div>
@@ -3908,6 +3927,7 @@ function setFinanceMarket(m){
 function saveJobsToStorage(){
   try{localStorage.setItem('dronehub_jobs',JSON.stringify(savedJobs));}catch(e){}
   fbSet('orgs',ORG_ID+':jobs',{data:JSON.stringify(savedJobs),updatedAt:Date.now()});
+  if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
 }
 function saveClientsToStorage(){
   try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}
@@ -7338,6 +7358,38 @@ function renderJobs(){
   pipeline.style.display=filtered.length?'grid':'none';
   if(emptyEl) emptyEl.style.display=filtered.length?'none':'block';
 
+  // Render requested (client bookings) column + banner
+  const requestedJobs=savedJobs.filter(j=>j.status==='requested');
+  const reqCol=document.getElementById('col-requested');
+  const reqBanner=document.getElementById('jobs-requested-banner');
+  const reqCount=document.getElementById('col-requested-count');
+  if(reqBanner) reqBanner.style.display=requestedJobs.length?'block':'none';
+  if(reqCount){if(requestedJobs.length){reqCount.textContent=requestedJobs.length;reqCount.style.display='inline';}else{reqCount.style.display='none';}}
+  const reqTitle=document.getElementById('jobs-requested-banner-title');
+  if(reqTitle&&requestedJobs.length) reqTitle.textContent=requestedJobs.length===1?'1 new booking request':`${requestedJobs.length} new booking requests`;
+  if(reqCol){
+    if(!requestedJobs.length){reqCol.innerHTML='<div style="font-size:11px;color:var(--muted);padding:8px 4px">None</div>';}
+    else{reqCol.innerHTML=requestedJobs.map(j=>{
+      const clientRec=clients.find(c=>c.id===j.clientId);
+      const clientName=clientRec?.name||j.clientName||'Client portal';
+      return `<div class="job-card" onclick="openJobDetail('${j.id}')" style="cursor:pointer;border-color:rgba(245,166,35,.4)"
+        onmouseover="this.style.borderColor='var(--amber)';this.style.boxShadow='0 0 0 1px var(--amber)'"
+        onmouseout="this.style.borderColor='rgba(245,166,35,.4)';this.style.boxShadow=''">
+        <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📬 New request</div>
+        <div class="job-card-title">${j.name}</div>
+        <div class="job-card-meta">${j.date||'No date'}${j.preferredTime?' at '+j.preferredTime:''}</div>
+        ${clientName?`<div style="font-size:11px;color:var(--green);margin-bottom:3px">👤 ${clientName}</div>`:''}
+        ${j.shootType?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:4px">${j.shootType}</div>`:''}
+        ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,60)}${j.notes.length>60?'…':''}</div>`:''}
+        <div class="job-card-actions">
+          <button class="job-action-btn job-action-confirm" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">✓ Confirm</button>
+          <button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','quoted')">→ Quoted</button>
+          <button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob('${j.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');}
+  }
+
   const statuses=['quoted','confirmed','completed'];
   statuses.forEach(st=>{
     const col=document.getElementById('col-'+st);
@@ -7346,17 +7398,17 @@ function renderJobs(){
     if(!jobs.length){col.innerHTML='<div style="font-size:11px;color:#ccc;padding:8px 4px">None</div>';return;}
     col.innerHTML=jobs.map(j=>{
       const actionBtns=[];
-      if(st==='quoted') actionBtns.push(`<button class="job-action-btn job-action-confirm" onclick="event.stopPropagation();updateJobStatus(${j.id},'confirmed')">Confirm</button>`);
-      if(st==='confirmed') actionBtns.push(`<button class="job-action-btn job-action-complete" onclick="event.stopPropagation();updateJobStatus(${j.id},'completed')">Complete</button>`);
-      if(st==='confirmed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus(${j.id},'quoted')">← Quoted</button>`);
-      if(st==='completed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus(${j.id},'confirmed')">← Confirmed</button>`);
-      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openInvoice(${j.id})">📄 Invoice</button>`);
-      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();openAndSendInvoice(${j.id})">📧 Send invoice</button>`);
-      actionBtns.push(`<button class="job-action-btn" style="border-color:#C87D1E;background:rgba(245,166,35,.1);color:#F5A623" onclick="event.stopPropagation();openEditJob(${j.id})">✏ Edit</button>`);
-      actionBtns.push(`<button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob(${j.id})">Delete</button>`);
+      if(st==='quoted') actionBtns.push(`<button class="job-action-btn job-action-confirm" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">Confirm</button>`);
+      if(st==='confirmed') actionBtns.push(`<button class="job-action-btn job-action-complete" onclick="event.stopPropagation();updateJobStatus('${j.id}','completed')">Complete</button>`);
+      if(st==='confirmed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','quoted')">← Quoted</button>`);
+      if(st==='completed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">← Confirmed</button>`);
+      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openInvoice('${j.id}')">📄 Invoice</button>`);
+      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();openAndSendInvoice('${j.id}')">📧 Send invoice</button>`);
+      actionBtns.push(`<button class="job-action-btn" style="border-color:#C87D1E;background:rgba(245,166,35,.1);color:#F5A623" onclick="event.stopPropagation();openEditJob('${j.id}')">✏ Edit</button>`);
+      actionBtns.push(`<button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob('${j.id}')">Delete</button>`);
       const ts=getTrackerStage(j.id);
       const assigned=[ts.videographer,ts.claimedBy].filter((n,i,a)=>n&&a.indexOf(n)===i).join(' · ');
-      return `<div class="job-card" onclick="openJobDetail(${j.id})" style="cursor:pointer"
+      return `<div class="job-card" onclick="openJobDetail('${j.id}')" style="cursor:pointer"
         onmouseover="this.style.borderColor='var(--blue)';this.style.boxShadow='0 0 0 1px var(--blue)'"
         onmouseout="this.style.borderColor='';this.style.boxShadow=''">
         <div class="job-card-title">${j.name}</div>
@@ -17996,7 +18048,9 @@ function vdCreateShell(jobId){
 // ── END VIDEO DRAFT REVIEW SYSTEM ─────────────
 
 function refreshNotificationBadge(){
-  const count=notificationsLoad().filter(n=>!n.read).length;
+  const notifCount=notificationsLoad().filter(n=>!n.read).length;
+  const requestedCount=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested').length;
+  const count=notifCount+requestedCount;
   const badge=document.getElementById('notif-badge');
   const btn=document.getElementById('notif-bell-btn');
   if(badge){ badge.textContent=count>9?'9+':String(count); badge.style.display=count>0?'flex':'none'; }
@@ -18018,12 +18072,28 @@ function renderNotificationPanel(){
   refreshNotificationBadge();
   const fmtDt=iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
   const typeIcon={approval:'✓',revision:'✏',message:'💬',date_change:'📅'};
+  const requestedJobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested');
+  const bookingRows=requestedJobs.map(j=>{
+    const clientRec=(typeof clients!=='undefined'?clients:[]).find(c=>c.id===j.clientId);
+    const clientName=clientRec?.name||j.clientName||'Client portal';
+    return `<div onclick="document.getElementById('notif-panel').style.display='none';showPane('sales');setTimeout(()=>{switchSalesView('jobs');},200)" style="padding:10px 16px;border-bottom:1px solid rgba(245,166,35,.25);cursor:pointer;background:rgba(245,166,35,.06)" onmouseenter="this.style.background='rgba(245,166,35,.12)'" onmouseleave="this.style.background='rgba(245,166,35,.06)'">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <span style="font-size:14px;flex-shrink:0">📬</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:2px">New booking request</div>
+          <div style="font-size:12px;color:var(--white);line-height:1.4">${j.name}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${clientName} · ${j.date||'No date'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
   panel.innerHTML=`
     <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
       <span style="font-size:13px;font-weight:700;color:var(--white)">Notifications</span>
       <button onclick="notificationsClear()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer">Clear all</button>
     </div>
     <div style="overflow-y:auto;max-height:320px">
+      ${bookingRows}
       ${notifs.length?notifs.map(n=>`
         <div onclick="document.getElementById('notif-panel').style.display='none';showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)" style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--navy-card)" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='var(--navy-card)'">
           <div style="display:flex;gap:8px;align-items:flex-start">
@@ -18034,7 +18104,7 @@ function renderNotificationPanel(){
             </div>
           </div>
         </div>`).join('')
-      :'<div style="padding:32px;text-align:center;color:var(--muted);font-size:12px">No notifications</div>'}
+      :(!bookingRows?'<div style="padding:32px;text-align:center;color:var(--muted);font-size:12px">No notifications</div>':'')}
     </div>`;
 }
 function notificationsClear(){
