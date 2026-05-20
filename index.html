@@ -2584,7 +2584,7 @@ button{font-family:var(--font);}
   </div>
 
   <!-- ── CONTACTS VIEW ── -->
-  <div id="sales-view-contacts">
+  <div id="sales-view-contacts" style="display:none">
     <!-- Header row -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -4077,9 +4077,7 @@ function showPane(id,ev){
   }
   if(id==='sales'){
     renderSales();
-    // Render whichever sub-view is currently active
-    if(salesView==='jobs') renderJobs();
-    else if(salesView==='clients') renderClients();
+    setSalesView(salesView); // syncs button styles, panel visibility, and triggers the right render
   }
   if(id==='social'){ renderSocial(); }
   if(id==='platform'){ renderPlatformDashboard(); }
@@ -16051,7 +16049,7 @@ function processSalesImportFile(file, listId, overwriteDupes){
 }
 
 // ── Sales view switcher ──
-let salesView = 'contacts';
+let salesView = 'clients';
 function setSalesView(v){
   salesView = v;
   const views = ['jobs','clients','contacts','pipeline'];
