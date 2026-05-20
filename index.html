@@ -3111,8 +3111,14 @@ button{font-family:var(--font);}
       <button onclick="closeSocialWorkspaceModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&#215;</button>
     </div>
     <div style="margin-bottom:16px">
-      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Client / Workspace Name</label>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Workspace Name</label>
       <input id="social-ws-name" type="text" placeholder="e.g. Katrina Burch Real Estate" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Link to Client Portal <span style="font-weight:400">(client will see these posts in their portal)</span></label>
+      <select id="social-ws-client-id" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px">
+        <option value="">— No client linked —</option>
+      </select>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:10px">Social Channels</label>
@@ -9285,11 +9291,19 @@ function cpShowTab(tab){
   }
   else if(tab==='social'){
     const socialPosts=socialPostsLoad();
+    const socialWorkspaces=socialWorkspacesLoad();
     const clientAddr=(c?.address||'').toLowerCase();
     const clientName=(c?.name||'').toLowerCase();
     const myPosts=socialPosts.filter(p=>{
       if(p.status==='draft') return false; // hide drafts from client
+      // 1. Direct post→client link
       if(p.clientId && p.clientId===cpActiveClientId) return true;
+      // 2. Workspace→client link (post inherits from its workspace)
+      if(p.workspaceId){
+        const ws=socialWorkspaces.find(w=>w.id===p.workspaceId);
+        if(ws?.clientId && ws.clientId===cpActiveClientId) return true;
+      }
+      // 3. Address fuzzy-match fallback
       const addr=(p.address||'').toLowerCase();
       if(!addr) return false;
       const searchStr=clientAddr||clientName;
@@ -17809,11 +17823,13 @@ function renderSocialWorkspaces(){
     const pending=wsp.filter(p=>p.status==='pending'||p.status==='revision').length;
     const on=_socialActiveWorkspace===ws.id;
     const chLabels=(ws.channels||[]).map(c=>SOCIAL_PLATFORMS.find(p=>p.id===c)?.label||c).join(', ');
+    const linkedClient=ws.clientId?(clients||[]).find(c=>c.id===ws.clientId):null;
     return `<div onclick="selectSocialWorkspace('${ws.id}')" style="padding:11px 14px;border-radius:10px;cursor:pointer;border:1px solid ${on?'var(--blue)':'transparent'};background:${on?'rgba(91,141,239,.1)':'var(--navy-lift)'};margin-bottom:8px;transition:all .18s">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <span style="font-weight:600;font-size:13px;color:${on?'var(--blue-bright)':'var(--white)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ws.name}</span>
         ${pending>0?`<span style="margin-left:6px;padding:1px 7px;border-radius:10px;background:rgba(245,200,66,.18);color:#F5C842;font-size:10px;font-weight:700;white-space:nowrap">${pending}</span>`:''}
       </div>
+      ${linkedClient?`<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style="font-size:10px;color:var(--green);font-weight:600">Portal: ${linkedClient.name}</span></div>`:'<div style="font-size:10px;color:var(--muted);margin-bottom:3px;opacity:.6">No portal client</div>'}
       <div style="font-size:11px;color:var(--muted)">${wsp.length} post${wsp.length!==1?'s':''} · ${chLabels||'No channels'}</div>
     </div>`;
   }).join('');
@@ -17854,6 +17870,11 @@ function renderSocialPostsArea(){
 
   const chBadges=(ws.channels||[]).map(c=>{ const pl=SOCIAL_PLATFORMS.find(p=>p.id===c); return `<span style="padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(122,171,255,.1);color:var(--blue-bright)">${pl?pl.label:c}</span>`; }).join('');
 
+  const linkedClient=ws.clientId?(clients||[]).find(c=>c.id===ws.clientId):null;
+  const clientBadge=linkedClient
+    ?`<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(34,217,122,.1);color:var(--green);border:1px solid rgba(34,217,122,.25)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Portal: ${linkedClient.name}</span>`
+    :`<span onclick="openSocialWorkspaceModal('${ws.id}')" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:rgba(245,200,66,.08);color:#F5C842;border:1px solid rgba(245,200,66,.2);cursor:pointer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>No client linked — click Edit to connect</span>`;
+
   const postsGrid=filtered.length===0
     ?`<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No ${_socialPostFilter==='all'?'':''+_socialPostFilter.replace(/_/g,' ')+' '}posts yet</div>`
     :`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:16px;margin-top:16px">${filtered.map(p=>renderSocialPostCard(p)).join('')}</div>`;
@@ -17862,7 +17883,7 @@ function renderSocialPostsArea(){
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-size:18px;font-weight:700;color:var(--white)">${ws.name}</div>
-        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">${chBadges||'<span style="font-size:12px;color:var(--muted)">No channels configured</span>'}</div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">${chBadges||'<span style="font-size:12px;color:var(--muted)">No channels configured</span>'}${clientBadge}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="openSocialPostModal()" style="padding:8px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Post</button>
@@ -18408,6 +18429,13 @@ function openSocialWorkspaceModal(id){
   document.getElementById('social-ws-approvers2').value=(ws?.approvers2||'');
   const selected=ws?.channels||[];
   SOCIAL_PLATFORMS.forEach(p=>{ const cb=document.getElementById('social-ch-'+p.id); if(cb) cb.checked=selected.includes(p.id); });
+  // Populate client dropdown
+  const clientSel=document.getElementById('social-ws-client-id');
+  if(clientSel){
+    clientSel.innerHTML='<option value="">— No client linked —</option>'
+      +(clients||[]).map(c=>`<option value="${c.id}">${c.name}${c.company?' ('+c.company+')':''}</option>`).join('');
+    clientSel.value=ws?.clientId||'';
+  }
   document.getElementById('social-ws-modal').style.display='flex';
 }
 function closeSocialWorkspaceModal(){
@@ -18419,16 +18447,25 @@ function saveSocialWorkspace(){
   const channels=SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-ch-'+p.id)?.checked).map(p=>p.id);
   const approvers1=document.getElementById('social-ws-approvers1').value.trim();
   const approvers2=document.getElementById('social-ws-approvers2').value.trim();
+  const clientId=document.getElementById('social-ws-client-id')?.value||null;
   const workspaces=socialWorkspacesLoad();
   if(_socialEditingWsId){
     const idx=workspaces.findIndex(w=>w.id===_socialEditingWsId);
-    if(idx>=0){ Object.assign(workspaces[idx],{name,channels,approvers1,approvers2}); }
+    if(idx>=0){ Object.assign(workspaces[idx],{name,channels,approvers1,approvers2,clientId:clientId||null}); }
   } else {
-    const nw={id:'ws_'+Date.now(),name,channels,approvers1,approvers2,labels:[],createdAt:new Date().toISOString().slice(0,10)};
+    const nw={id:'ws_'+Date.now(),name,channels,approvers1,approvers2,clientId:clientId||null,labels:[],createdAt:new Date().toISOString().slice(0,10)};
     workspaces.push(nw);
     _socialActiveWorkspace=nw.id;
   }
   socialWorkspacesSave(workspaces);
+  // Backfill clientId on existing posts that belong to this workspace and have no clientId set
+  if(clientId){
+    const wsId=_socialEditingWsId||(workspaces[workspaces.length-1]?.id);
+    const allPosts=socialPostsLoad();
+    let changed=false;
+    allPosts.forEach(p=>{ if(p.workspaceId===wsId && !p.clientId){ p.clientId=clientId; changed=true; } });
+    if(changed) socialPostsSave(allPosts);
+  }
   closeSocialWorkspaceModal();
   renderSocialWorkspaces();
 }
@@ -18576,7 +18613,13 @@ function saveSocialPost(forceStatus){
     revisionNote:document.getElementById('social-post-revision').value||null,
     labelColor:  document.getElementById('social-post-label-color').value||null,
     workspaceId: _socialActiveWorkspace,
-    clientId:    document.getElementById('social-post-client-id')?.value||null,
+    clientId:    (()=>{
+      const manual=document.getElementById('social-post-client-id')?.value||null;
+      if(manual) return manual;
+      // Inherit from workspace if no manual override
+      const ws=socialWorkspacesLoad().find(w=>w.id===_socialActiveWorkspace);
+      return ws?.clientId||null;
+    })(),
   };
   const posts=socialPostsLoad();
   if(_socialEditingPostId){
