@@ -6722,15 +6722,21 @@ function renderClientPortal(id, activeTab){
     // Pull all tracker stages for this client's jobs
     const trackerJobs=cJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
     const STATUS_STYLES={
-      ready:         {label:'Ready to Start',   color:'var(--blue-bright)',  bg:'rgba(91,141,239,.12)'},
-      footage_pending:{label:'Footage Pending', color:'var(--muted)',       bg:'rgba(136,146,187,.1)'},
-      draft1:        {label:'D1 — Sent',        color:'var(--green)',       bg:'rgba(34,217,122,.12)'},
-      draft2:        {label:'D2 — Sent',        color:'var(--green)',       bg:'rgba(34,217,122,.12)'},
-      draft3:        {label:'D3 — Sent',        color:'var(--amber)',       bg:'rgba(245,166,35,.12)'},
-      draft_plus:    {label:'Draft +',          color:'var(--red)',         bg:'rgba(240,82,82,.12)'},
-      finals_sent:   {label:'✓ Ready to Download', color:'var(--green)',   bg:'rgba(34,217,122,.15)'},
-      in_progress:   {label:'In Progress',      color:'var(--blue-bright)', bg:'rgba(91,141,239,.12)'},
-      review:        {label:'In Review',        color:'#A78BFA',           bg:'rgba(139,92,246,.12)'},
+      ready:            {label:'Ready to Start',       color:'var(--blue-bright)', bg:'rgba(91,141,239,.12)'},
+      footage_pending:  {label:'Footage Pending',      color:'var(--muted)',       bg:'rgba(136,146,187,.1)'},
+      draft1_progress:  {label:'D1 — In Progress',     color:'var(--green)',       bg:'rgba(34,217,122,.12)'},
+      draft1:           {label:'D1 — Sent',             color:'var(--green)',       bg:'rgba(34,217,122,.12)'},
+      draft2_ready:     {label:'D2 — Ready to Start',  color:'#60C8FF',            bg:'rgba(91,141,239,.15)'},
+      draft2_progress:  {label:'D2 — In Progress',     color:'var(--amber)',       bg:'rgba(245,166,35,.12)'},
+      draft2:           {label:'D2 — Sent',             color:'var(--green)',       bg:'rgba(34,217,122,.12)'},
+      draft3_ready:     {label:'D3 — Ready to Start',  color:'#60C8FF',            bg:'rgba(91,141,239,.15)'},
+      draft3_progress:  {label:'D3 — In Progress',     color:'var(--amber)',       bg:'rgba(245,166,35,.12)'},
+      draft3:           {label:'D3 — Sent',             color:'var(--amber)',       bg:'rgba(245,166,35,.12)'},
+      draft_plus_ready: {label:'D+ — Ready to Start',  color:'#60C8FF',            bg:'rgba(91,141,239,.15)'},
+      draft_plus:       {label:'Draft +',               color:'var(--red)',         bg:'rgba(240,82,82,.12)'},
+      finals_sent:      {label:'✓ Ready to Download',  color:'var(--green)',       bg:'rgba(34,217,122,.15)'},
+      in_progress:      {label:'In Progress',           color:'var(--blue-bright)', bg:'rgba(91,141,239,.12)'},
+      review:           {label:'In Review',             color:'#A78BFA',            bg:'rgba(139,92,246,.12)'},
     };
     tabContent=`<div class="card">
       <div class="section-label" style="margin-bottom:12px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Production Status</div>
@@ -13732,21 +13738,24 @@ const TRACKER_STAGES=[
 ];
 
 const EDIT_STATUS_OPTS=[
-  {key:'footage_pending',label:'Footage Pending'},
-  {key:'ready',label:'Ready to Start'},
-  {key:'draft1_progress',label:'Draft 1 - In Progress'},
-  {key:'draft1',label:'Draft 1 - Sent'},
-  {key:'draft2_progress',label:'Draft 2 - In Progress'},
-  {key:'draft2',label:'Draft 2 - Sent'},
-  {key:'draft3_progress',label:'Draft 3 - In Progress'},
-  {key:'draft3',label:'Draft 3 - Sent'},
-  {key:'draft_plus',label:'Draft + - In Progress'},
-  {key:'finals_sent',label:'Finals Sent'},
+  {key:'footage_pending',  label:'Footage Pending'},
+  {key:'ready',            label:'Ready to Start'},
+  {key:'draft1_progress',  label:'Draft 1 - In Progress'},
+  {key:'draft1',           label:'Draft 1 - Sent'},
+  {key:'draft2_ready',     label:'Draft 2 - Ready to Start'},
+  {key:'draft2_progress',  label:'Draft 2 - In Progress'},
+  {key:'draft2',           label:'Draft 2 - Sent'},
+  {key:'draft3_ready',     label:'Draft 3 - Ready to Start'},
+  {key:'draft3_progress',  label:'Draft 3 - In Progress'},
+  {key:'draft3',           label:'Draft 3 - Sent'},
+  {key:'draft_plus_ready', label:'Draft + - Ready to Start'},
+  {key:'draft_plus',       label:'Draft + - In Progress'},
+  {key:'finals_sent',      label:'Finals Sent'},
 ];
 
 // Which edit statuses belong to which tab
 const UPCOMING_STATUSES=['footage_pending','ready',''];
-const INPROGRESS_STATUSES=['draft1_progress','draft1','draft2_progress','draft2','draft3_progress','draft3','draft_plus'];
+const INPROGRESS_STATUSES=['draft1_progress','draft1','draft2_ready','draft2_progress','draft2','draft3_ready','draft3_progress','draft3','draft_plus_ready','draft_plus'];
 const COMPLETED_STATUSES=['finals_sent'];
 
 function getTrackerTab(editStatus){
@@ -13853,10 +13862,11 @@ function renderTracker(){
     else emptyMsg.textContent='No completed projects';
   }
 
-  // Sort: rush jobs first, then by shoot date
-  // Upcoming: soonest shoot date first (ascending)
-  // In Progress: oldest first (started longest ago)
-  // Completed: most recently completed first
+  // Sort: rush jobs first, then tab-specific
+  // Upcoming:    soonest shoot date first
+  // In Progress: client who finished reviewing first gets priority (clientDecisionAt asc),
+  //              so editors work on the job whose client has been waiting longest
+  // Completed:   most recently completed first
   jobs.sort((a,b)=>{
     const tsA=getTrackerStage(a.id);
     const tsB=getTrackerStage(b.id);
@@ -13866,25 +13876,34 @@ function renderTracker(){
     if(_trackerTab==='completed'){
       return (b.date||'').localeCompare(a.date||'');
     }
-    // Upcoming and In Progress: soonest shoot date first
+    if(_trackerTab==='active'){
+      // Jobs where the client finished reviewing earliest come first
+      const decA=tsA.clientDecisionAt||tsA.updatedAt||a.date||'';
+      const decB=tsB.clientDecisionAt||tsB.updatedAt||b.date||'';
+      return decA.localeCompare(decB);
+    }
+    // Upcoming: soonest shoot date first
     return (a.date||'').localeCompare(b.date||'');
   });
 
   if(countEl) countEl.textContent=jobs.length+' project'+(jobs.length===1?'':'s');
 
   const STATUS_STYLES={
-    footage_pending: {bg:'#2d2d2d',color:'#A8B4D0',label:'Footage Pending'},
-    ready:           {bg:'#1a3a5c',color:'#7AABFF',label:'Ready to Start'},
-    draft1_progress: {bg:'#1a2a1a',color:'#34D399',label:'D1 - In Progress'},
-    draft1:          {bg:'#1a3a2a',color:'#22D97A',label:'D1 - Sent'},
-    draft2_progress: {bg:'#2a2a1a',color:'#FCD34D',label:'D2 - In Progress'},
-    draft2:          {bg:'#2a2a1a',color:'#F5A623',label:'D2 - Sent'},
-    draft3_progress: {bg:'#2a1a1a',color:'#FB923C',label:'D3 - In Progress'},
-    draft3:          {bg:'#2a1a1a',color:'#F05252',label:'D3 - Sent'},
-    draft_plus:      {bg:'#3a1a1a',color:'#F87171',label:'Draft + - In Progress'},
-    finals_sent:     {bg:'#0d2d1a',color:'#22D97A',label:'Finals Sent ✓'},
-    in_progress:     {bg:'#1a2a3a',color:'#5B8DEF',label:'In Progress'},
-    review:          {bg:'#2a1a3a',color:'#A78BFA',label:'In Review'},
+    footage_pending:  {bg:'#2d2d2d',color:'#A8B4D0',label:'Footage Pending'},
+    ready:            {bg:'#1a3a5c',color:'#7AABFF',label:'Ready to Start'},
+    draft1_progress:  {bg:'#1a2a1a',color:'#34D399',label:'D1 - In Progress'},
+    draft1:           {bg:'#1a3a2a',color:'#22D97A',label:'D1 - Sent'},
+    draft2_ready:     {bg:'#1a3a5c',color:'#60C8FF',label:'D2 - Ready to Start'},
+    draft2_progress:  {bg:'#2a2a1a',color:'#FCD34D',label:'D2 - In Progress'},
+    draft2:           {bg:'#2a2a1a',color:'#F5A623',label:'D2 - Sent'},
+    draft3_ready:     {bg:'#1a3a5c',color:'#60C8FF',label:'D3 - Ready to Start'},
+    draft3_progress:  {bg:'#2a1a1a',color:'#FB923C',label:'D3 - In Progress'},
+    draft3:           {bg:'#2a1a1a',color:'#F05252',label:'D3 - Sent'},
+    draft_plus_ready: {bg:'#1a3a5c',color:'#60C8FF',label:'D+ - Ready to Start'},
+    draft_plus:       {bg:'#3a1a1a',color:'#F87171',label:'Draft + - In Progress'},
+    finals_sent:      {bg:'#0d2d1a',color:'#22D97A',label:'Finals Sent ✓'},
+    in_progress:      {bg:'#1a2a3a',color:'#5B8DEF',label:'In Progress'},
+    review:           {bg:'#2a1a3a',color:'#A78BFA',label:'In Review'},
   };
 
   // Videographer color pills (reuse CREATOR_COLORS)
@@ -17342,18 +17361,49 @@ function vdClientDecision(decision){
   });
 
   videoDraftsSave(all);
-  vdRenderProfile(vd);
 
-  addSocialNotification && addSocialNotification(
-    _vdActiveJobId,
-    decisionLabel,
-    decision==='approved' ? 'video_approved' : 'video_changes'
-  );
-
-  if(decision==='approved'){
-    alert('✅ Video approved! The production team has been notified.');
+  // ── Advance tracker edit status when client requests changes ──────────────
+  if(decision === 'changes_requested'){
+    const ts = getTrackerStage(_vdActiveJobId);
+    const curr = ts.editStatus || '';
+    // Map current status → next "Ready to Start" state for the following draft
+    const NEXT_DRAFT_STATUS = {
+      'ready':          'draft2_ready',
+      'draft1_progress':'draft2_ready',
+      'draft1':         'draft2_ready',
+      'draft2_progress':'draft3_ready',
+      'draft2':         'draft3_ready',
+      'draft3_progress':'draft_plus_ready',
+      'draft3':         'draft_plus_ready',
+      'draft_plus':     'draft_plus_ready',
+    };
+    const DRAFT_NUMBER = {draft2_ready:2, draft3_ready:3, draft_plus_ready:4};
+    const nextStatus = NEXT_DRAFT_STATUS[curr] || 'draft2_ready';
+    const nextDraftNum = DRAFT_NUMBER[nextStatus] || 2;
+    // Auto-increment draftCount to at least the next draft number
+    const newDraftCount = Math.max(parseInt(ts.draftCount)||0, nextDraftNum);
+    setTrackerStage(_vdActiveJobId, {
+      editStatus:       nextStatus,
+      draftCount:       newDraftCount,
+      clientDecisionAt: new Date().toISOString(), // used for In Progress priority sort
+    });
+    const nextLabel = {draft2_ready:'Draft 2', draft3_ready:'Draft 3', draft_plus_ready:'Draft +'}[nextStatus] || 'next draft';
+    addSocialNotification && addSocialNotification(
+      _vdActiveJobId,
+      `↩ Client requested changes — ${nextLabel} ready to start`,
+      'video_changes'
+    );
+    vdRenderProfile(vd);
+    alert(`↩ Changes requested. ${nextLabel} has been queued as "Ready to Start" in the project tracker — the editor will be notified.`);
   } else {
-    alert('↩ Changes requested. The editor will be notified with your comments.');
+    // Approved: no status advancement — finals delivery handled separately
+    addSocialNotification && addSocialNotification(
+      _vdActiveJobId,
+      '✅ Approved by client — ready for final delivery',
+      'video_approved'
+    );
+    vdRenderProfile(vd);
+    alert('✅ Video approved! The production team has been notified.');
   }
 }
 
