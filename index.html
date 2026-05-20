@@ -16785,7 +16785,11 @@ function vdRenderProfile(vd){
   // Find active draft object
   const activeDraft = vd.drafts.find(d=>d.id===_vdActiveDraftId) || vd.drafts[vd.drafts.length-1];
   if(activeDraft?.videoUrl){
-    vdLoadVideo(activeDraft.videoUrl);
+    // Only (re)load the player if the URL has actually changed — avoids
+    // resetting the video to 0:00 when re-rendering after a comment is posted.
+    if(activeDraft.videoUrl !== _vdCurrentUrl){
+      vdLoadVideo(activeDraft.videoUrl);
+    }
   } else {
     document.getElementById('vd-no-video').style.display = 'flex';
     document.getElementById('vd-iframe').style.display   = 'none';
