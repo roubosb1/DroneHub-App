@@ -16847,15 +16847,61 @@ function vdRenderProfile(vd){
     </div>`;
   }).join('') || '<div style="font-size:12px;color:var(--muted)">No drafts yet.</div>';
 
-  // Open edit requests (unresolved comments from client)
-  const openEdits = (vd.comments||[]).filter(c=>!c.resolved && c.from==='client');
+  // Editor checklist — client comments (all, not just unresolved, so editor can see full history)
+  const clientEdits = (vd.comments||[]).filter(c=>c.from==='client'&&!c.isSystem);
   const er = document.getElementById('vd-edit-requests');
-  er.innerHTML = openEdits.length ? openEdits.map(c=>`
-    <div style="padding:8px 10px;border-radius:8px;border:1px solid rgba(245,200,66,.3);background:rgba(245,200,66,.05)">
-      ${c.videoTimestamp!=null?`<div style="font-size:10px;font-weight:700;color:var(--blue-bright);margin-bottom:3px">🕐 ${vdFmtTime(c.videoTimestamp)} — Draft ${(vd.drafts.find(d=>d.id===c.draftId)||{}).draftNumber||'?'}</div>`:''}
-      <div style="font-size:12px;color:var(--offwhite)">${escSalesHtml(c.text)}</div>
-      <button onclick="vdResolveComment('${vd.jobId}','${c.id}')" style="margin-top:5px;font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer">Mark Resolved</button>
-    </div>`).join('') : '<div style="font-size:12px;color:var(--muted)">All clear ✓</div>';
+  if(!clientEdits.length){
+    er.innerHTML='<div style="font-size:12px;color:var(--muted)">No client edit requests yet.</div>';
+  } else {
+    const doneCount = clientEdits.filter(c=>c.checkedOff||c.rebuttal).length;
+    er.innerHTML = `
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+        <span>Edit requests</span>
+        <span style="font-weight:700;color:${doneCount===clientEdits.length?'var(--green)':'var(--amber)'}">${doneCount}/${clientEdits.length} addressed</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+      ${clientEdits.map(c=>{
+        const isDone = !!c.checkedOff;
+        const hasRebuttal = !!c.rebuttal;
+        const isAddressed = isDone || hasRebuttal;
+        const draftNum = (vd.drafts.find(d=>d.id===c.draftId)||{}).draftNumber||'?';
+        const borderCol = isDone ? 'rgba(34,217,122,.35)' : hasRebuttal ? 'rgba(91,141,239,.35)' : 'rgba(245,200,66,.3)';
+        const bgCol     = isDone ? 'rgba(34,217,122,.06)' : hasRebuttal ? 'rgba(91,141,239,.06)' : 'rgba(245,200,66,.04)';
+        const tsLabel   = c.videoTimestamp!=null ? `<span onclick="vdSeekTo(${c.videoTimestamp})" style="font-size:10px;font-weight:700;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.35);color:var(--blue-bright);border-radius:8px;padding:1px 7px;cursor:pointer;flex-shrink:0">▶ ${vdFmtTime(c.videoTimestamp)}</span>` : '';
+        const draftLabel = `<span style="font-size:10px;color:var(--muted)">D${draftNum}</span>`;
+        return `<div style="border-radius:10px;border:1px solid ${borderCol};background:${bgCol};overflow:hidden">
+          <!-- Main row: checkbox + text -->
+          <div style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px">
+            <div onclick="vdCheckOffEdit('${vd.jobId}','${c.id}')" title="${isDone?'Mark as not done':'Mark as done'}"
+              style="width:17px;height:17px;border-radius:4px;border:2px solid ${isDone?'var(--green)':'rgba(245,200,66,.6)'};background:${isDone?'var(--green)':'transparent'};cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s">
+              ${isDone?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':''}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">${tsLabel}${draftLabel}</div>
+              <div style="font-size:12px;color:${isDone?'var(--muted)':'var(--offwhite)'};line-height:1.45;${isDone?'text-decoration:line-through;':''}">${escSalesHtml(c.text)}</div>
+            </div>
+          </div>
+          <!-- Existing rebuttal display -->
+          ${hasRebuttal?`<div style="padding:7px 10px;border-top:1px solid rgba(91,141,239,.2);background:rgba(91,141,239,.06)">
+            <div style="font-size:10px;font-weight:700;color:var(--blue-bright);margin-bottom:2px">↩ Editor response</div>
+            <div style="font-size:11px;color:var(--offwhite);line-height:1.4">${escSalesHtml(c.rebuttal)}</div>
+          </div>`:''}
+          <!-- Action buttons (only shown when not yet fully addressed) -->
+          ${!isAddressed?`<div style="padding:0 10px 8px;display:flex;gap:5px">
+            <button onclick="vdCheckOffEdit('${vd.jobId}','${c.id}')" style="flex:1;padding:4px 8px;border-radius:7px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Done</button>
+            <button onclick="vdToggleRebuttalInput('${c.id}')" style="flex:1;padding:4px 8px;border-radius:7px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Reply</button>
+          </div>
+          <div id="vd-rebuttal-input-${c.id}" style="display:none;padding:0 10px 10px">
+            <textarea id="vd-rebuttal-text-${c.id}" placeholder="Explain why this can't be done, or add a note…" rows="2" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:7px;font-size:11px;background:var(--navy-lift);color:var(--white);resize:none;line-height:1.5;font-family:var(--font)"></textarea>
+            <div style="display:flex;gap:5px;margin-top:5px">
+              <button onclick="vdSaveRebuttal('${vd.jobId}','${c.id}')" style="flex:1;padding:4px 10px;border-radius:7px;border:1px solid rgba(91,141,239,.5);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;font-weight:700;cursor:pointer">Send Reply</button>
+              <button onclick="vdToggleRebuttalInput('${c.id}')" style="padding:4px 8px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">Cancel</button>
+            </div>
+          </div>`:''}
+        </div>`;
+      }).join('')}
+      </div>`;
+  }
 }
 
 function vdSelectDraft(jobId, draftId){
@@ -17255,6 +17301,54 @@ function vdResolveComment(jobId, commentId){
   vdRenderProfile(vd);
 }
 
+function vdCheckOffEdit(jobId, commentId){
+  const all = videoDraftsLoad();
+  const vd = all.find(d=>d.jobId===jobId);
+  if(!vd) return;
+  const c = vd.comments.find(x=>x.id===commentId);
+  if(!c) return;
+  // Toggle checked state
+  if(c.checkedOff){
+    c.checkedOff = false;
+    c.checkedOffAt = null;
+    c.resolved = !!c.rebuttal; // stay resolved if there's a rebuttal
+  } else {
+    c.checkedOff = true;
+    c.checkedOffAt = new Date().toISOString();
+    c.resolved = true;
+  }
+  videoDraftsSave(all);
+  vdRenderProfile(vd);
+}
+
+function vdToggleRebuttalInput(commentId){
+  const el = document.getElementById('vd-rebuttal-input-'+commentId);
+  if(!el) return;
+  const isVisible = el.style.display !== 'none';
+  el.style.display = isVisible ? 'none' : 'block';
+  if(!isVisible){
+    const ta = el.querySelector('textarea');
+    if(ta) ta.focus();
+  }
+}
+
+function vdSaveRebuttal(jobId, commentId){
+  const el = document.getElementById('vd-rebuttal-input-'+commentId);
+  const ta = el ? el.querySelector('textarea') : null;
+  const text = ta ? ta.value.trim() : '';
+  if(!text){ alert('Please type a reply first.'); return; }
+  const all = videoDraftsLoad();
+  const vd = all.find(d=>d.jobId===jobId);
+  if(!vd) return;
+  const c = vd.comments.find(x=>x.id===commentId);
+  if(!c) return;
+  c.rebuttal = text;
+  c.rebuttalAt = new Date().toISOString();
+  c.resolved = true;
+  videoDraftsSave(all);
+  vdRenderProfile(vd);
+}
+
 function vdRenderComments(comments){
   const el = document.getElementById('vd-comments-list');
   if(!el) return;
@@ -17279,17 +17373,29 @@ function vdRenderComments(comments){
     const tsChip = c.videoTimestamp!=null
       ? `<span onclick="vdSeekTo(${c.videoTimestamp})" title="Jump to ${vdFmtTime(c.videoTimestamp)}" style="font-size:10px;font-weight:700;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.35);color:var(--blue-bright);border-radius:10px;padding:1px 8px;margin-right:6px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='rgba(91,141,239,.3)'" onmouseleave="this.style.background='rgba(91,141,239,.15)'">▶ ${vdFmtTime(c.videoTimestamp)}</span>`
       : '';
-    const resolvedStyle = c.resolved ? 'opacity:.45;' : '';
+    const resolvedStyle = c.checkedOff ? 'opacity:.5;' : '';
+    const checkedBadge = c.checkedOff
+      ? `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(34,217,122,.12);border:1px solid rgba(34,217,122,.35);border-radius:10px;padding:1px 8px;margin-left:4px">✓ Done</span>`
+      : '';
+    const rebuttalBlock = c.rebuttal
+      ? `<div style="margin-top:6px;padding:6px 8px;border-radius:7px;background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.2)">
+           <span style="font-size:10px;font-weight:700;color:var(--blue-bright)">Reply</span>
+           <span style="font-size:10px;color:var(--muted);margin-left:4px">${c.rebuttalAt ? new Date(c.rebuttalAt).toLocaleDateString() : ''}</span>
+           <div style="font-size:11px;color:var(--offwhite);margin-top:3px;line-height:1.4">${escSalesHtml(c.rebuttal)}</div>
+         </div>`
+      : '';
     return `<div style="${resolvedStyle}padding:10px 12px;border-radius:10px;border:1px solid ${bdr};background:${bg}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
           ${tsChip}
           <span style="font-size:11px;font-weight:700;color:${col}">${c.by}</span>
           <span style="font-size:10px;color:var(--muted)">${new Date(c.at).toLocaleDateString()}</span>
+          ${checkedBadge}
         </div>
-        ${c.resolved ? '<span style="font-size:10px;color:var(--green)">✓ Resolved</span>' : ''}
+        ${!c.checkedOff && c.resolved ? '<span style="font-size:10px;color:var(--green)">✓ Resolved</span>' : ''}
       </div>
-      <div style="font-size:12px;color:var(--offwhite);line-height:1.5">${escSalesHtml(c.text)}</div>
+      <div style="font-size:12px;color:var(--offwhite);line-height:1.5;${c.checkedOff?'text-decoration:line-through;opacity:.6':''}">${escSalesHtml(c.text)}</div>
+      ${rebuttalBlock}
     </div>`;
   }).join('');
 }
