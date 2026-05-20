@@ -16719,11 +16719,17 @@ function closeVdProfile(){
   _vdActiveJobId   = null;
   _vdActiveDraftId = null;
   _vdCommentTs     = null;
-  // Stop any playing video
+  _vdStopProgressTimer();
+  // Stop / destroy players
   const vid = document.getElementById('vd-video-el');
   if(vid){ vid.pause(); vid.src=''; }
   const iframe = document.getElementById('vd-iframe');
   if(iframe) iframe.src='';
+  if(_vdYtPlayer){ try{ _vdYtPlayer.destroy(); }catch(e){} _vdYtPlayer=null; }
+  if(_vdVimeoPlayer){ try{ _vdVimeoPlayer.destroy(); }catch(e){} _vdVimeoPlayer=null; }
+  const ytCont = document.getElementById('vd-yt-container');
+  if(ytCont) ytCont.innerHTML='';
+  _vdCurrentUrl='';
 }
 
 function vdRenderNoDraft(){
@@ -16810,49 +16816,302 @@ function vdSelectDraft(jobId, draftId){
   if(vd) vdRenderProfile(vd);
 }
 
-function vdLoadVideo(url){
-  const iframe  = document.getElementById('vd-iframe');
-  const videoEl = document.getElementById('vd-video-el');
-  const noVid   = document.getElementById('vd-no-video');
-  const bar     = document.getElementById('vd-comment-bar');
+// ── Video player globals ──────────────────────
+let _vdYtPlayer      = null;   // YouTube IFrame Player instance
+let _vdVimeoPlayer   = null;   // Vimeo Player instance
+let _vdProgressTimer = null;   // setInterval for scrubber progress
+let _vdCurrentUrl    = '';
 
-  // Detect URL type
-  const ytMatch  = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
-  const viMatch  = url.match(/vimeo\.com\/(\d+)/);
+function vdLoadVideo(url){
+  if(!url) return;
+  _vdCurrentUrl = url;
+  _vdStopProgressTimer();
+  _vdYtPlayer    = null;
+  _vdVimeoPlayer = null;
+
+  const iframe    = document.getElementById('vd-iframe');
+  const videoEl   = document.getElementById('vd-video-el');
+  const ytCont    = document.getElementById('vd-yt-container');
+  const noVid     = document.getElementById('vd-no-video');
+  const bar       = document.getElementById('vd-comment-bar');
+  const scrubWrap = document.getElementById('vd-scrubber-wrap');
+
+  // Hide everything first
+  iframe.style.display  = 'none';
+  videoEl.style.display = 'none';
+  ytCont.style.display  = 'none';
+  noVid.style.display   = 'none';
+  bar.style.display     = 'none';
+  if(scrubWrap) scrubWrap.style.display = 'none';
+  // Clear old YT container
+  ytCont.innerHTML = '';
+  iframe.src = '';
+  videoEl.src = '';
+
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  const viMatch = url.match(/vimeo\.com\/(\d+)/);
 
   if(ytMatch){
-    iframe.src = `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?enablejsapi=1`;
-    iframe.style.display = 'block';
-    videoEl.style.display = 'none';
-    noVid.style.display   = 'none';
-    bar.style.display     = 'none';
-    document.getElementById('vd-free-comment').placeholder = 'Type "at 1:23 —" or pause and use the timestamp button below the player';
+    ytCont.style.display = 'block';
+    noVid.style.display  = 'none';
+    if(scrubWrap) scrubWrap.style.display = '';
+    _vdLoadYouTube(ytMatch[1]);
   } else if(viMatch){
-    iframe.src = `https://player.vimeo.com/video/${viMatch[1]}?api=1`;
+    iframe.src = `https://player.vimeo.com/video/${viMatch[1]}`;
     iframe.style.display = 'block';
-    videoEl.style.display = 'none';
-    noVid.style.display   = 'none';
-    bar.style.display     = 'none';
+    noVid.style.display  = 'none';
+    if(scrubWrap) scrubWrap.style.display = '';
+    _vdLoadVimeo(viMatch[1]);
   } else {
-    // Direct video file
+    // Direct video file — full auto-detect on pause
     videoEl.src = url;
     videoEl.style.display = 'block';
-    iframe.style.display  = 'none';
     noVid.style.display   = 'none';
-    // Wire up pause listener for timestamp capture
+    if(scrubWrap) scrubWrap.style.display = '';
+    videoEl.onloadedmetadata = function(){
+      const dur = document.getElementById('vd-scrubber-duration');
+      if(dur) dur.textContent = vdFmtTime(videoEl.duration);
+      vdUpdateScrubberPins();
+    };
     videoEl.onpause = function(){
       if(videoEl.readyState < 2) return;
       _vdCommentTs = videoEl.currentTime;
-      const badge = document.getElementById('vd-comment-ts-badge');
-      if(badge) badge.textContent = '🕐 ' + vdFmtTime(_vdCommentTs);
-      bar.style.display = 'flex';
-      bar.style.flexDirection = 'column';
-      setTimeout(()=>{ document.getElementById('vd-comment-text')?.focus(); }, 50);
+      vdShowCommentBar(_vdCommentTs);
     };
     videoEl.onplay = function(){
       bar.style.display = 'none';
+      _vdStartProgressTimer(()=>{
+        if(!videoEl.duration) return;
+        vdSetScrubberProgress(videoEl.currentTime, videoEl.duration);
+      });
+    };
+    videoEl.onseeked = function(){
+      vdSetScrubberProgress(videoEl.currentTime, videoEl.duration||1);
     };
   }
+}
+
+// ── YouTube IFrame Player API ─────────────────
+function _vdLoadYouTube(videoId){
+  const initPlayer = function(){
+    const div = document.createElement('div');
+    div.id = 'vd-yt-inner';
+    document.getElementById('vd-yt-container').appendChild(div);
+    _vdYtPlayer = new YT.Player('vd-yt-inner', {
+      width:'100%', height:'100%', videoId,
+      playerVars:{rel:0, modestbranding:1, color:'white'},
+      events:{
+        onReady: function(){
+          const dur = _vdYtPlayer.getDuration();
+          const durEl = document.getElementById('vd-scrubber-duration');
+          if(durEl) durEl.textContent = vdFmtTime(dur);
+          vdUpdateScrubberPins();
+        },
+        onStateChange: function(e){
+          if(e.data === YT.PlayerState.PAUSED){
+            const t = _vdYtPlayer.getCurrentTime();
+            _vdCommentTs = t;
+            vdShowCommentBar(t);
+            _vdStopProgressTimer();
+          } else if(e.data === YT.PlayerState.PLAYING){
+            document.getElementById('vd-comment-bar').style.display = 'none';
+            _vdStartProgressTimer(()=>{
+              const t2 = _vdYtPlayer.getCurrentTime();
+              const d2 = _vdYtPlayer.getDuration();
+              vdSetScrubberProgress(t2, d2);
+            });
+          } else if(e.data === YT.PlayerState.ENDED){
+            _vdStopProgressTimer();
+          }
+        }
+      }
+    });
+  };
+  if(window.YT && window.YT.Player){
+    initPlayer();
+  } else {
+    // Load the API script once
+    if(!document.getElementById('yt-iframe-api')){
+      const s = document.createElement('script');
+      s.id  = 'yt-iframe-api';
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
+    }
+    // Queue init — onYouTubeIframeAPIReady is called by the script
+    window._vdYtPendingInit = initPlayer;
+  }
+}
+// Global callback required by YouTube API
+if(!window.onYouTubeIframeAPIReady){
+  window.onYouTubeIframeAPIReady = function(){
+    if(window._vdYtPendingInit){ window._vdYtPendingInit(); window._vdYtPendingInit = null; }
+  };
+}
+
+// ── Vimeo Player SDK ──────────────────────────
+function _vdLoadVimeo(videoId){
+  const initVimeo = function(){
+    const iframe = document.getElementById('vd-iframe');
+    _vdVimeoPlayer = new Vimeo.Player(iframe);
+    _vdVimeoPlayer.getDuration().then(dur=>{
+      const durEl = document.getElementById('vd-scrubber-duration');
+      if(durEl) durEl.textContent = vdFmtTime(dur);
+      // Pins need duration — now we have it
+      vdUpdateScrubberPins_withDuration(dur);
+    });
+    _vdVimeoPlayer.on('pause', function(data){
+      _vdCommentTs = data.seconds;
+      vdShowCommentBar(data.seconds);
+      _vdStopProgressTimer();
+    });
+    _vdVimeoPlayer.on('play', function(){
+      document.getElementById('vd-comment-bar').style.display = 'none';
+      _vdVimeoPlayer.getDuration().then(dur=>{
+        _vdStartProgressTimer(()=>{
+          _vdVimeoPlayer.getCurrentTime().then(t=>vdSetScrubberProgress(t, dur));
+        });
+      });
+    });
+    _vdVimeoPlayer.on('ended', ()=>_vdStopProgressTimer());
+    _vdVimeoPlayer.on('timeupdate', data=>{
+      _vdVimeoPlayer.getDuration().then(dur=>vdSetScrubberProgress(data.seconds, dur));
+    });
+  };
+  if(window.Vimeo){
+    initVimeo();
+  } else {
+    if(!document.getElementById('vimeo-player-sdk')){
+      const s = document.createElement('script');
+      s.id  = 'vimeo-player-sdk';
+      s.src = 'https://player.vimeo.com/api/player.js';
+      s.onload = initVimeo;
+      document.head.appendChild(s);
+    }
+  }
+}
+
+// ── Scrubber helpers ──────────────────────────
+function vdShowCommentBar(t){
+  const badge = document.getElementById('vd-comment-ts-badge');
+  if(badge) badge.textContent = '🕐 ' + vdFmtTime(t);
+  const bar = document.getElementById('vd-comment-bar');
+  if(bar){ bar.style.display='flex'; bar.style.flexDirection='column'; }
+  setTimeout(()=>document.getElementById('vd-comment-text')?.focus(), 60);
+}
+
+function vdSetScrubberProgress(current, duration){
+  if(!duration) return;
+  const pct = Math.min(100, (current/duration)*100);
+  const fill = document.getElementById('vd-scrubber-fill');
+  if(fill) fill.style.width = pct + '%';
+  const cur = document.getElementById('vd-scrubber-current');
+  if(cur) cur.textContent = vdFmtTime(current);
+}
+
+function _vdStartProgressTimer(fn){
+  _vdStopProgressTimer();
+  _vdProgressTimer = setInterval(fn, 250);
+}
+function _vdStopProgressTimer(){
+  clearInterval(_vdProgressTimer);
+  _vdProgressTimer = null;
+}
+
+function vdScrubberClick(e){
+  const track = document.getElementById('vd-scrubber-track');
+  if(!track) return;
+  const rect = track.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  let duration = 0;
+  const videoEl = document.getElementById('vd-video-el');
+  if(videoEl && videoEl.style.display!=='none' && videoEl.duration) duration = videoEl.duration;
+  else if(_vdYtPlayer?.getDuration) duration = _vdYtPlayer.getDuration();
+  if(!duration) return;
+  const seekTo = pct * duration;
+  vdSeekTo(seekTo);
+}
+
+function vdSeekTo(seconds){
+  const videoEl = document.getElementById('vd-video-el');
+  if(videoEl && videoEl.style.display!=='none'){
+    videoEl.currentTime = seconds;
+  } else if(_vdYtPlayer?.seekTo){
+    _vdYtPlayer.seekTo(seconds, true);
+    _vdYtPlayer.pauseVideo();
+  } else if(_vdVimeoPlayer){
+    _vdVimeoPlayer.setCurrentTime(seconds).then(()=>_vdVimeoPlayer.pause());
+  }
+}
+
+function vdUpdateScrubberPins(){
+  // Called after comments render or video loads — places pin dots on scrubber
+  if(!_vdActiveJobId || !_vdActiveDraftId) return;
+  const vd = videoDraftForJob(_vdActiveJobId);
+  if(!vd) return;
+  const comments = (vd.comments||[]).filter(c=>c.draftId===_vdActiveDraftId && c.videoTimestamp!=null && !c.isSystem);
+  const pinsEl = document.getElementById('vd-scrubber-pins');
+  if(!pinsEl) return;
+
+  // Get duration
+  let duration = 0;
+  const videoEl = document.getElementById('vd-video-el');
+  if(videoEl && videoEl.style.display!=='none' && videoEl.duration) duration = videoEl.duration;
+  else if(_vdYtPlayer?.getDuration) duration = _vdYtPlayer.getDuration();
+  // For Vimeo, duration is fetched async — pins update when loaded via getDuration().then
+  if(!duration){ pinsEl.innerHTML=''; return; }
+
+  pinsEl.innerHTML = comments.map(c=>{
+    const pct = Math.min(99, (c.videoTimestamp/duration)*100);
+    const col  = c.from==='client' ? '#F5C842' : '#7AABFF';
+    const safe = escSalesHtml(c.text.slice(0,60)+(c.text.length>60?'…':''));
+    return `<div
+      onclick="event.stopPropagation();vdSeekTo(${c.videoTimestamp})"
+      title="${vdFmtTime(c.videoTimestamp)}: ${safe}"
+      style="position:absolute;left:${pct}%;top:50%;transform:translate(-50%,-50%);
+        width:11px;height:11px;border-radius:50%;background:${col};
+        border:2px solid rgba(255,255,255,.8);cursor:pointer;z-index:3;
+        box-shadow:0 0 0 2px rgba(0,0,0,.4);transition:transform .12s"
+      onmouseenter="this.style.transform='translate(-50%,-50%) scale(1.6)';vdShowScrubberTooltip(event,'${vdFmtTime(c.videoTimestamp)}',${pct})"
+      onmouseleave="this.style.transform='translate(-50%,-50%) scale(1)';vdHideScrubberTooltip()"
+    ></div>`;
+  }).join('');
+}
+
+function vdUpdateScrubberPins_withDuration(duration){
+  // Same as vdUpdateScrubberPins but with explicit duration (for async cases like Vimeo)
+  if(!_vdActiveJobId || !_vdActiveDraftId || !duration) return;
+  const vd = videoDraftForJob(_vdActiveJobId);
+  if(!vd) return;
+  const comments = (vd.comments||[]).filter(c=>c.draftId===_vdActiveDraftId && c.videoTimestamp!=null && !c.isSystem);
+  const pinsEl = document.getElementById('vd-scrubber-pins');
+  if(!pinsEl) return;
+  pinsEl.innerHTML = comments.map(c=>{
+    const pct = Math.min(99, (c.videoTimestamp/duration)*100);
+    const col  = c.from==='client' ? '#F5C842' : '#7AABFF';
+    const safe = escSalesHtml(c.text.slice(0,60)+(c.text.length>60?'…':''));
+    return `<div
+      onclick="event.stopPropagation();vdSeekTo(${c.videoTimestamp})"
+      title="${vdFmtTime(c.videoTimestamp)}: ${safe}"
+      style="position:absolute;left:${pct}%;top:50%;transform:translate(-50%,-50%);
+        width:11px;height:11px;border-radius:50%;background:${col};
+        border:2px solid rgba(255,255,255,.8);cursor:pointer;z-index:3;
+        box-shadow:0 0 0 2px rgba(0,0,0,.4);transition:transform .12s"
+      onmouseenter="this.style.transform='translate(-50%,-50%) scale(1.6)';vdShowScrubberTooltip(event,'${vdFmtTime(c.videoTimestamp)}',${pct})"
+      onmouseleave="this.style.transform='translate(-50%,-50%) scale(1)';vdHideScrubberTooltip()"
+    ></div>`;
+  }).join('');
+}
+
+function vdShowScrubberTooltip(e, label, pct){
+  const tt = document.getElementById('vd-scrubber-tooltip');
+  if(!tt) return;
+  tt.textContent = label;
+  tt.style.left    = pct + '%';
+  tt.style.display = 'block';
+}
+function vdHideScrubberTooltip(){
+  const tt = document.getElementById('vd-scrubber-tooltip');
+  if(tt) tt.style.display = 'none';
 }
 
 function vdFmtTime(sec){
@@ -16951,6 +17210,8 @@ function vdResolveComment(jobId, commentId){
 function vdRenderComments(comments){
   const el = document.getElementById('vd-comments-list');
   if(!el) return;
+  // Update scrubber pins to match
+  setTimeout(vdUpdateScrubberPins, 80);
   if(!comments.length){
     el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">No comments on this draft yet.</div>';
     return;
@@ -16968,7 +17229,7 @@ function vdRenderComments(comments){
     const bg  = isClient ? 'rgba(245,200,66,.06)' : 'rgba(91,141,239,.06)';
     const bdr = isClient ? 'rgba(245,200,66,.25)' : 'rgba(91,141,239,.25)';
     const tsChip = c.videoTimestamp!=null
-      ? `<span style="font-size:10px;font-weight:700;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.35);color:var(--blue-bright);border-radius:10px;padding:1px 8px;margin-right:6px">🕐 ${vdFmtTime(c.videoTimestamp)}</span>`
+      ? `<span onclick="vdSeekTo(${c.videoTimestamp})" title="Jump to ${vdFmtTime(c.videoTimestamp)}" style="font-size:10px;font-weight:700;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.35);color:var(--blue-bright);border-radius:10px;padding:1px 8px;margin-right:6px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='rgba(91,141,239,.3)'" onmouseleave="this.style.background='rgba(91,141,239,.15)'">▶ ${vdFmtTime(c.videoTimestamp)}</span>`
       : '';
     const resolvedStyle = c.resolved ? 'opacity:.45;' : '';
     return `<div style="${resolvedStyle}padding:10px 12px;border-radius:10px;border:1px solid ${bdr};background:${bg}">
@@ -19043,13 +19304,33 @@ function initGoogleMaps(){
         <div id="vd-draft-selector" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
 
         <!-- Video player area -->
-        <div id="vd-video-area" style="background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;position:relative;margin-bottom:14px">
+        <div id="vd-video-area" style="background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;position:relative;margin-bottom:0">
           <div id="vd-no-video" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:8px">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
             <div style="font-size:12px">No video uploaded yet</div>
           </div>
+          <div id="vd-yt-container" style="width:100%;height:100%;display:none"></div>
           <iframe id="vd-iframe" style="width:100%;height:100%;border:none;display:none" allowfullscreen allow="autoplay"></iframe>
           <video id="vd-video-el" style="width:100%;height:100%;display:none" controls></video>
+        </div>
+
+        <!-- Frame.io-style comment timeline scrubber -->
+        <div id="vd-scrubber-wrap" style="display:none;margin-bottom:14px;position:relative;padding:0 2px">
+          <!-- Track -->
+          <div id="vd-scrubber-track" onclick="vdScrubberClick(event)" style="position:relative;height:6px;background:rgba(255,255,255,.1);border-radius:3px;cursor:pointer;margin:10px 0 18px">
+            <!-- Playhead progress fill -->
+            <div id="vd-scrubber-fill" style="position:absolute;left:0;top:0;height:100%;background:rgba(91,141,239,.6);border-radius:3px;pointer-events:none;transition:width .25s linear"></div>
+            <!-- Comment pins injected here by JS -->
+            <div id="vd-scrubber-pins"></div>
+          </div>
+          <!-- Hover tooltip -->
+          <div id="vd-scrubber-tooltip" style="display:none;position:absolute;top:-28px;background:rgba(0,0,0,.85);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;pointer-events:none;white-space:nowrap;transform:translateX(-50%)"></div>
+          <!-- Time display -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+            <span id="vd-scrubber-current" style="font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums">0:00</span>
+            <span style="font-size:10px;color:var(--muted)">Pause to drop a comment pin</span>
+            <span id="vd-scrubber-duration" style="font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums">0:00</span>
+          </div>
         </div>
 
         <!-- Timestamp comment bar -->
@@ -19072,8 +19353,7 @@ function initGoogleMaps(){
           <button onclick="vdSubmitFreeComment()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;cursor:pointer">Send</button>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-          <button onclick="vdCaptureManualTs()" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">📍 Add Timestamp Comment</button>
-          <span style="font-size:10px;color:var(--muted)">Direct video files auto-capture on pause · YouTube/Vimeo use the button</span>
+          <span style="font-size:10px;color:var(--muted)">Pause the video at any moment to drop a timestamped comment pin ↑</span>
         </div>
 
         <!-- Comments list for current draft -->
