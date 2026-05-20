@@ -1642,7 +1642,7 @@ button{font-family:var(--font);}
   </div>
 
   <!-- Spreadsheet table -->
-  <div style="overflow-x:auto;width:100%">
+  <div style="overflow-x:auto;width:100%;padding:0 20px;box-sizing:border-box">
     <table id="tracker-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1400px">
       <thead>
         <tr style="background:#0D1117;position:sticky;top:0;z-index:5">
@@ -13964,10 +13964,11 @@ function renderTracker(){
       <td style="padding:8px 10px;text-align:center;color:var(--muted);white-space:nowrap">${ts.completionDate||'—'}</td>
       <td style="padding:8px 10px;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${notes}">${notes||'—'}</td>
       <td style="padding:8px 10px" onclick="event.stopPropagation()">
-        ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:#22D97A;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${filemaLink}">📦 Filemail ↗</a>`:''}
-        ${dlLink?`<a href="${dlLink}" target="_blank" style="color:#5B8DEF;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis;max-width:140px;margin-top:2px" title="${dlLink}">↓ Download ↗</a>`:''}
-        ${!filemaLink&&!dlLink?'<span style="color:var(--border-bright);font-size:10px">—</span>':''}
-        <button onclick="openVdProfile('${j.id}','team')" title="Video Draft Review" style="margin-top:4px;padding:3px 8px;border-radius:8px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:block">📽 Review</button>
+        <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
+          ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:#22D97A;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${filemaLink}">📦 Filemail ↗</a>`:''}
+          ${dlLink?`<a href="${dlLink}" target="_blank" style="color:#5B8DEF;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${dlLink}">↓ Download ↗</a>`:''}
+          <button onclick="openVdProfile('${j.id}','team')" title="Video Draft Review" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Review</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
