@@ -2712,7 +2712,7 @@ button{font-family:var(--font);}
               <th style="width:36px"><input type="checkbox" id="sales-select-all" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
               <th class="sortable" id="sth-name"    onclick="setSalesSort('name')"    >Name<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-company" onclick="setSalesSort('company')" >Company<span class="sort-arrow">↕</span></th>
-              <th id="sth-field" style="display:none">Field</th>
+              <th id="sth-field" style="display:none">Type</th>
               <th class="sortable" id="sth-city"    onclick="setSalesSort('city')"    >City / Region<span class="sort-arrow">↕</span></th>
               <th>Phone</th>
               <th class="sortable" id="sth-email"   onclick="setSalesSort('email')"   >Email<span class="sort-arrow">↕</span></th>
@@ -2857,8 +2857,11 @@ button{font-family:var(--font);}
           </select>
         </div>
         <div id="sc-field-row" style="display:none;grid-column:1/-1">
-          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Field / Industry</div>
-          <input id="sc-field" type="text" placeholder="e.g. Architecture, Legal, Healthcare…" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Job Type <span style="font-weight:400;text-transform:none;letter-spacing:0">(Other tab only)</span></div>
+          <select id="sc-field" onchange="scUpdateTypePreview()" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+            <option value="">— Select a type —</option>
+          </select>
+          <div id="sc-type-preview" style="display:none;margin-top:6px;display:flex;align-items:center;gap:6px"></div>
         </div>
         <div id="sc-clienttype-row" style="display:none;grid-column:1/-1">
           <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Client Type</div>
@@ -2978,6 +2981,32 @@ button{font-family:var(--font);}
           <strong style="color:var(--offwhite)">Phone:</strong> Phone, Mobile, Cell &nbsp;·&nbsp;
           <strong style="color:var(--offwhite)">City:</strong> City, Region, Location, Market
         </div>
+      </div>
+
+      <!-- Other-tab Type hint — shown only when Other is selected -->
+      <div id="import-other-type-hint" style="display:none;margin-top:10px;background:rgba(91,141,239,.07);border:1px solid rgba(91,141,239,.25);border-radius:10px;padding:12px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📋 Other list — Type column</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px">
+          Add a column named <strong style="color:var(--offwhite)">Type</strong> (or Field, Industry, Category, Job Type) to automatically classify contacts into job categories.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <span style="font-size:10px;color:var(--muted);font-weight:700;align-self:center;margin-right:2px">Accepted values:</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(91,141,239,.15);color:var(--blue-bright);font-weight:600">commercial</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(251,146,60,.15);color:#FB923C;font-weight:600">industrial</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(245,200,66,.15);color:#F5C842;font-weight:600">construction</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.15);color:#22D97A;font-weight:600">agriculture</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(167,139,250,.15);color:#A78BFA;font-weight:600">events</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(122,171,255,.15);color:#7AABFF;font-weight:600">inspection</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(232,93,58,.15);color:#E85D3A;font-weight:600">insurance</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(0,199,190,.15);color:#00C7BE;font-weight:600">mapping</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(155,93,229,.15);color:#9B5DE5;font-weight:600">municipal</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,45,85,.15);color:#FF2D55;font-weight:600">sports</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(136,135,128,.15);color:#888780;font-weight:600">utility</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,149,0,.15);color:#FF9500;font-weight:600">education</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(52,199,89,.15);color:#34C759;font-weight:600">healthcare</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(200,125,30,.15);color:#C87D1E;font-weight:600">legal</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:7px;font-style:italic">Partial matches and keywords are auto-detected (e.g. "Construction / Dev", "Ag", "Gov").</div>
       </div>
 
     </div>
@@ -15801,6 +15830,54 @@ const SALES_LISTS = [
 
 let salesActiveList  = 'realestate';
 let _salesClientSub  = 'all';  // 'all' | 'active' | 'past' — sub-filter for clients tab
+let _salesOtherType  = 'all';  // sub-filter for other tab by type
+
+// ── Recognized job types for the "Other" list ────────────────────────────────
+const OTHER_TYPES = [
+  { id:'commercial',    label:'Commercial',            color:'#5B7FDB' },
+  { id:'industrial',    label:'Industrial',            color:'#FB923C' },
+  { id:'construction',  label:'Construction / Dev',    color:'#F5C842' },
+  { id:'agriculture',   label:'Agriculture / Land',    color:'#22D97A' },
+  { id:'events',        label:'Events / Entertainment',color:'#A78BFA' },
+  { id:'inspection',    label:'Inspection / Survey',   color:'#7AABFF' },
+  { id:'insurance',     label:'Insurance / Claims',    color:'#E85D3A' },
+  { id:'mapping',       label:'Mapping / GIS',         color:'#00C7BE' },
+  { id:'municipal',     label:'Municipal / Government',color:'#9B5DE5' },
+  { id:'sports',        label:'Sports / Recreation',   color:'#FF2D55' },
+  { id:'utility',       label:'Utility / Infrastructure',color:'#888780' },
+  { id:'education',     label:'Education',             color:'#FF9500' },
+  { id:'healthcare',    label:'Healthcare',            color:'#34C759' },
+  { id:'legal',         label:'Legal',                 color:'#C87D1E' },
+  { id:'other',         label:'Other',                 color:'#A8B4D0' },
+];
+
+// Normalize a freeform type string to the nearest OTHER_TYPES id
+function normalizeOtherType(raw){
+  if(!raw) return '';
+  const s = raw.toLowerCase().trim();
+  // Exact id match
+  const exact = OTHER_TYPES.find(t=>t.id===s);
+  if(exact) return exact.id;
+  // Label match (case-insensitive)
+  const byLabel = OTHER_TYPES.find(t=>t.label.toLowerCase()===s);
+  if(byLabel) return byLabel.id;
+  // Keyword heuristics
+  if(/^comm/.test(s))                            return 'commercial';
+  if(/^indust/.test(s))                          return 'industrial';
+  if(/const|dev(elop)?/.test(s))                 return 'construction';
+  if(/agri|farm|land/.test(s))                   return 'agriculture';
+  if(/event|entertain|wedding|concert/.test(s))  return 'events';
+  if(/inspect|survey/.test(s))                   return 'inspection';
+  if(/insur|claim/.test(s))                      return 'insurance';
+  if(/map|gis|lidar|topograph/.test(s))          return 'mapping';
+  if(/munici|gov|city|town|county/.test(s))      return 'municipal';
+  if(/sport|rec(reation)?|athlet/.test(s))       return 'sports';
+  if(/util|infra|power|pipeline|telecm/.test(s)) return 'utility';
+  if(/edu|school|college|university/.test(s))    return 'education';
+  if(/health|medic|clinic|hospital/.test(s))     return 'healthcare';
+  if(/legal|law|attor|notary/.test(s))           return 'legal';
+  return raw; // keep original if no match — fall through to 'other' badge style
+}
 let salesEditingId   = null;
 let salesSortCol     = 'name';  // default sort column
 let salesSortDir     = 'asc';   // 'asc' | 'desc'
@@ -15877,6 +15954,7 @@ async function salesSyncFirebase(){
 function setSalesList(listId){
   salesActiveList = listId;
   if(listId !== 'clients') _salesClientSub = 'all';
+  if(listId !== 'other')   _salesOtherType  = 'all';
   document.querySelectorAll('.sales-list-tab').forEach(b=>{
     b.classList.toggle('active', b.id === 'sltab-'+listId);
   });
@@ -15922,7 +16000,7 @@ function renderSalesTable(){
   const q   = (document.getElementById('sales-search')?.value||'').toLowerCase().trim();
   const list= all.filter(c=> c.list === salesActiveList && !c._deleted);
 
-  // Client sub-filter bar
+  // Client sub-filter bar / Other type filter bar
   const subFilterEl = document.getElementById('clients-sub-filter');
   if(salesActiveList === 'clients' && subFilterEl){
     const activeCount = list.filter(c=>(c.clientType||'active')==='active').length;
@@ -15935,14 +16013,41 @@ function renderSalesTable(){
           ${lbl} <span style="opacity:.65">(${cnt})</span>
         </button>`).join('')}
     </div>`;
+  } else if(salesActiveList === 'other' && subFilterEl){
+    // Build type filter pills for the Other tab
+    const typeCounts = {};
+    list.forEach(c=>{ const k = normalizeOtherType(c.field||'')||''; typeCounts[k] = (typeCounts[k]||0)+1; });
+    const usedTypes = OTHER_TYPES.filter(t=>typeCounts[t.id]>0);
+    const unclassifiedCount = (typeCounts['']||0) + Object.entries(typeCounts).filter(([k])=>k&&!OTHER_TYPES.find(t=>t.id===k)).reduce((s,[,v])=>s+v,0);
+    subFilterEl.style.display = '';
+    subFilterEl.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px">Type:</span>
+      <button onclick="_salesOtherType='all';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='all'?'var(--blue-bright)':'var(--border)'};background:${_salesOtherType==='all'?'rgba(91,141,239,.15)':'var(--navy-lift)'};color:${_salesOtherType==='all'?'var(--blue-bright)':'var(--muted)'}">
+        All <span style="opacity:.65">(${list.length})</span>
+      </button>
+      ${usedTypes.map(t=>`
+        <button onclick="_salesOtherType='${t.id}';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType===t.id?t.color:'var(--border)'};background:${_salesOtherType===t.id?t.color+'22':'var(--navy-lift)'};color:${_salesOtherType===t.id?t.color:'var(--muted)'}">
+          ${t.label} <span style="opacity:.65">(${typeCounts[t.id]||0})</span>
+        </button>`).join('')}
+      ${unclassifiedCount>0?`<button onclick="_salesOtherType='__unset__';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='__unset__'?'var(--muted)':'var(--border)'};background:${_salesOtherType==='__unset__'?'rgba(168,180,208,.12)':'var(--navy-lift)'};color:var(--muted)">
+        Unclassified <span style="opacity:.65">(${unclassifiedCount})</span>
+      </button>`:''}
+    </div>`;
   } else if(subFilterEl){
     subFilterEl.style.display = 'none';
   }
 
-  // Apply client sub-filter
-  const subList = (salesActiveList==='clients' && _salesClientSub!=='all')
-    ? list.filter(c=>(c.clientType||'active')===_salesClientSub)
-    : list;
+  // Apply sub-filter
+  let subList = list;
+  if(salesActiveList==='clients' && _salesClientSub!=='all'){
+    subList = list.filter(c=>(c.clientType||'active')===_salesClientSub);
+  } else if(salesActiveList==='other' && _salesOtherType!=='all'){
+    if(_salesOtherType==='__unset__'){
+      subList = list.filter(c=>!OTHER_TYPES.find(t=>t.id===normalizeOtherType(c.field||'')));
+    } else {
+      subList = list.filter(c=>normalizeOtherType(c.field||'')===_salesOtherType);
+    }
+  }
 
   const filtered = q ? subList.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.notes].join(' ').toLowerCase().includes(q)) : subList;
 
@@ -16005,7 +16110,14 @@ function renderSalesTable(){
           ? `<span style="color:var(--muted);font-size:12px;text-decoration:line-through" title="Do Not Email — cannot send">${escSalesHtml(c.email)}</span>`
           : `<a class="sales-email-link" onclick="openSalesIndivEmail('${escSalesAttr(c.id)}')" href="javascript:void(0)">${escSalesHtml(c.email)}</a>`)
       : '—';
-    const fieldCell = isOtherTab ? `<td style="font-size:12px;color:var(--muted)">${escSalesHtml(c.field||'—')}</td>` : '';
+    let fieldCell = '';
+    if(isOtherTab){
+      const normType = normalizeOtherType(c.field||'');
+      const typeObj  = OTHER_TYPES.find(t=>t.id===normType);
+      fieldCell = typeObj
+        ? `<td><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:${typeObj.color}22;color:${typeObj.color};border:1px solid ${typeObj.color}44;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:${typeObj.color};display:inline-block;flex-shrink:0"></span>${escSalesHtml(typeObj.label)}</span></td>`
+        : `<td style="font-size:11px;color:var(--muted);font-style:italic">${c.field?escSalesHtml(c.field):'—'}</td>`;
+    }
     const ctToggleBtn = isClientsTab
       ? `<button class="sales-action-btn" onclick="salesToggleClientType('${escSalesAttr(c.id)}')" title="${ctType==='active'?'Mark as Past Client':'Mark as Active Client'}" style="${ctType==='active'?'color:var(--green);border-color:rgba(34,217,122,.4)':'color:var(--blue-bright);border-color:rgba(91,141,239,.4)'}">${ctType==='active'?'●◌':'◌●'}</button>`
       : '';
@@ -16157,9 +16269,29 @@ function openSalesAddModal(editId){
     if(row) row.style.display = listVal==='other' ? '' : 'none';
     const ctRow = document.getElementById('sc-clienttype-row');
     if(ctRow) ctRow.style.display = listVal==='clients' ? '' : 'none';
-    // Update client type radio label styles
+    // Populate the type dropdown
+    const sel = document.getElementById('sc-field');
+    if(sel && sel.tagName==='SELECT' && sel.options.length <= 1){
+      sel.innerHTML = '<option value="">— Select a type —</option>'
+        + OTHER_TYPES.map(t=>`<option value="${t.id}">${t.label}</option>`).join('');
+    }
+    scUpdateTypePreview();
     scRefreshClientTypeStyles();
   }
+  function scUpdateTypePreview(){
+    const sel = document.getElementById('sc-field');
+    const preview = document.getElementById('sc-type-preview');
+    if(!sel || !preview) return;
+    const val = sel.value;
+    const t = OTHER_TYPES.find(x=>x.id===val);
+    if(t && val){
+      preview.style.display = 'flex';
+      preview.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${t.color}22;color:${t.color};border:1px solid ${t.color}44"><span style="width:7px;height:7px;border-radius:50%;background:${t.color};display:inline-block"></span>${t.label}</span>`;
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+  window.scUpdateTypePreview = scUpdateTypePreview;
   function scRefreshClientTypeStyles(){
     const activeRadio = document.getElementById('sc-ct-active');
     const pastRadio   = document.getElementById('sc-ct-past');
@@ -16189,7 +16321,16 @@ function openSalesAddModal(editId){
       document.getElementById('sc-list').value    = c.list||salesActiveList;
       document.getElementById('sc-status').value  = c.status||'new';
       document.getElementById('sc-notes').value   = c.notes||'';
-      const fieldEl = document.getElementById('sc-field'); if(fieldEl) fieldEl.value = c.field||'';
+      const fieldEl = document.getElementById('sc-field');
+      if(fieldEl){
+        // Populate options first if needed (select may not be populated yet)
+        if(fieldEl.tagName==='SELECT' && fieldEl.options.length<=1){
+          fieldEl.innerHTML = '<option value="">— Select a type —</option>'
+            + OTHER_TYPES.map(t=>`<option value="${t.id}">${t.label}</option>`).join('');
+        }
+        const normalized = normalizeOtherType(c.field||'');
+        fieldEl.value = OTHER_TYPES.find(t=>t.id===normalized) ? normalized : '';
+      }
       // Client type
       const ctVal = c.clientType||'active';
       const ctA = document.getElementById('sc-ct-active'); if(ctA) ctA.checked = ctVal==='active';
@@ -16202,9 +16343,11 @@ function openSalesAddModal(editId){
       modal.querySelector('.sales-modal-header div').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Contact';
     }
   } else {
-    ['sc-fname','sc-lname','sc-company','sc-phone','sc-email','sc-notes','sc-field'].forEach(id=>{
+    ['sc-fname','sc-lname','sc-company','sc-phone','sc-email','sc-notes'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value='';
     });
+    const fieldEl = document.getElementById('sc-field');
+    if(fieldEl){ if(fieldEl.tagName==='SELECT'){ fieldEl.innerHTML='<option value="">— Select a type —</option>'+OTHER_TYPES.map(t=>`<option value="${t.id}">${t.label}</option>`).join(''); } fieldEl.value=''; }
     document.getElementById('sc-list').value   = salesActiveList;
     document.getElementById('sc-status').value = 'new';
     // Default client type to active for new contacts
@@ -16449,8 +16592,9 @@ function updateImportPickerStyles(){
     const radio = lbl?.querySelector('input[type=radio]');
     if(!lbl || !radio) return;
     const isActive = id === 'clients-active';
-    const activeCol = isActive ? 'var(--green)' : 'var(--blue-bright)';
-    const activeBg  = isActive ? 'rgba(34,217,122,.1)' : 'rgba(91,141,239,.12)';
+    const isOther  = id === 'other';
+    const activeCol = isActive ? 'var(--green)' : isOther ? 'var(--amber)' : 'var(--blue-bright)';
+    const activeBg  = isActive ? 'rgba(34,217,122,.1)' : isOther ? 'rgba(245,166,35,.1)' : 'rgba(91,141,239,.12)';
     if(radio.checked){
       lbl.style.borderColor = activeCol;
       lbl.style.background  = activeBg;
@@ -16461,6 +16605,10 @@ function updateImportPickerStyles(){
       lbl.style.color       = 'var(--muted)';
     }
   });
+  // Show/hide the Other-tab Type hint
+  const hint = document.getElementById('import-other-type-hint');
+  const selectedList = getImportSelectedList();
+  if(hint) hint.style.display = selectedList === 'other' ? 'block' : 'none';
 }
 
 function getImportSelectedList(){
@@ -16516,7 +16664,8 @@ function processSalesImportFile(file, listId, overwriteDupes){
         const city      = String(r.city||r.cityregion||r.region||r.location||r.market||r.area||r.territory||'').trim();
         const notes     = String(r.notes||r.note||r.comments||'').trim();
         const status    = String(r.status||'new').toLowerCase();
-        const field     = listId==='other' ? String(r.field||r.industry||r.category||r.sector||r.type||'').trim() : '';
+        const rawField  = listId==='other' ? String(r.type||r.field||r.industry||r.category||r.sector||r.jobtype||r['job type']||r['job_type']||'').trim() : '';
+        const field     = listId==='other' ? normalizeOtherType(rawField) : '';
         const doNotEmail= String(r.donotemail||r['do not email']||r.optout||r['opt out']||'').trim().toLowerCase();
         // Client type: use import-level default, allow row override via 'clienttype'/'type' column
         let rowClientType = undefined;
@@ -16540,7 +16689,7 @@ function processSalesImportFile(file, listId, overwriteDupes){
             if(phone)     ex.phone     = phone;
             if(city)      ex.city      = city;
             if(notes)     ex.notes     = notes;
-            if(field)     ex.field     = field;
+            if(field)     ex.field     = normalizeOtherType(field)||field;
             ex.updatedAt = new Date().toISOString();
             updated++;
           } else {
