@@ -524,6 +524,17 @@ button{font-family:var(--font);}
 .ig-disc-spin{animation:spin-disc 3s linear infinite}
 /* Pulse glow for Review Draft button */
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.5)}50%{box-shadow:0 0 0 6px rgba(124,58,237,0)}}
+/* Notification toast */
+#dh-toast-stack{position:fixed;top:74px;right:20px;z-index:99000;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:340px}
+.dh-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:14px;background:var(--navy-mid);border:1px solid var(--border-bright);box-shadow:0 8px 32px rgba(0,0,0,.55);font-family:var(--font);animation:toastIn .3s cubic-bezier(.22,1,.36,1);transition:opacity .4s,transform .4s}
+.dh-toast.hiding{opacity:0;transform:translateX(20px)}
+.dh-toast-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.dh-toast-body{flex:1;min-width:0}
+.dh-toast-title{font-size:12px;font-weight:700;color:var(--white);margin-bottom:2px}
+.dh-toast-text{font-size:11px;color:var(--muted);line-height:1.45}
+.dh-toast-close{flex-shrink:0;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;align-self:flex-start}
+@keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes bellShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(8deg)}}
 </style>
 </head>
 <body>
@@ -1057,6 +1068,9 @@ button{font-family:var(--font);}
     </div>
   </div>
 </div>
+<!-- ── Notification toast stack ───────────────────────────────────────────── -->
+<div id="dh-toast-stack"></div>
+
 <div class="wrap">
 
 <div class="tabs">
@@ -3169,9 +3183,18 @@ button{font-family:var(--font);}
       <h3 id="social-ws-modal-title" style="margin:0;font-size:16px;font-weight:700;color:var(--white)">New Workspace</h3>
       <button onclick="closeSocialWorkspaceModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&#215;</button>
     </div>
-    <div style="margin-bottom:16px">
-      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Workspace Name</label>
-      <input id="social-ws-name" type="text" placeholder="e.g. Katrina Burch Real Estate" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Workspace Name</label>
+        <input id="social-ws-name" type="text" placeholder="e.g. Katrina Burch Real Estate" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Instagram Handle <span style="font-weight:400">(shows on mockup)</span></label>
+        <div style="position:relative">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);pointer-events:none">@</span>
+          <input id="social-ws-ig-handle" type="text" placeholder="katrinaburch" oninput="igUpdateHandlePreview()" style="width:100%;padding:9px 12px 9px 24px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Link to Client Portal <span style="font-weight:400">(client will see these posts in their portal)</span></label>
@@ -3225,7 +3248,7 @@ button{font-family:var(--font);}
           <div style="display:flex;align-items:center;gap:7px">
             <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">DH</div>
             <div>
-              <div style="font-size:11px;font-weight:700;color:#fff;line-height:1.2">dronehubmedia</div>
+              <div id="ig-header-account" style="font-size:11px;font-weight:700;color:#fff;line-height:1.2">dronehubmedia</div>
               <div id="ig-header-address" style="font-size:9px;color:#aaa;line-height:1.2"></div>
             </div>
           </div>
@@ -3245,10 +3268,11 @@ button{font-family:var(--font);}
           <img id="ig-preview-cover" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover" src="" alt="">
           <!-- Video element (shown when video uploaded, hidden when cover selected) -->
           <video id="ig-preview-video" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover" muted loop playsinline></video>
-          <!-- Play button overlay -->
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-            <div style="width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21"/></svg>
+          <!-- Play button overlay — clickable to toggle play/pause -->
+          <div id="ig-play-overlay" onclick="igTogglePlay()" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s">
+            <div id="ig-play-btn" style="width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+              <svg id="ig-play-icon" width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21"/></svg>
+              <svg id="ig-pause-icon" width="14" height="14" viewBox="0 0 24 24" fill="#fff" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
             </div>
           </div>
           <!-- Overlay text -->
@@ -9814,6 +9838,12 @@ function cpSubmitBookingRequest(){
   };
   savedJobs.push(newJob);
   saveJobsToStorage();
+  // Notify the ops team via toast
+  if(typeof addSocialNotification==='function'){
+    addSocialNotification(newJob.id, `New shoot request: ${newJob.name} on ${preferredDate}`, 'booking');
+  } else if(typeof showDhToast==='function'){
+    showDhToast('New Booking Request','Client requested a shoot: '+newJob.name,'📬','var(--amber)');
+  }
   const successEl=document.getElementById('cp-book-success');
   if(successEl){successEl.style.display='block';}
   ['cp-book-address','cp-book-date','cp-book-time','cp-book-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -17220,6 +17250,43 @@ function addSocialNotification(postId,text,type){
   if(notifs.length>50) notifs.splice(50);
   notificationsSave(notifs);
   refreshNotificationBadge();
+  // Show a toast alert for the new notification
+  const icons={approval:'✅',revision:'✏️',message:'💬',date_change:'📅',video_approved:'🎬',video_changes:'↩',booking:'📬'};
+  const titles={approval:'Client Approved',revision:'Revision Requested',message:'New Message',date_change:'Date Changed',video_approved:'Video Approved',video_changes:'Changes Requested',booking:'New Booking Request'};
+  const colors={approval:'#22D97A',revision:'#FB923C',video_approved:'#22D97A',video_changes:'#F5C842',booking:'var(--amber)',message:'var(--blue-bright)',date_change:'var(--blue-bright)'};
+  showDhToast(titles[type]||'Notification', text, icons[type]||'🔔', colors[type]||'var(--blue-bright)');
+}
+
+// ── Toast Notification System ───────────────────────────────────────────────
+function showDhToast(title, text, icon='🔔', accentColor='var(--blue-bright)', durationMs=6000){
+  const stack=document.getElementById('dh-toast-stack');
+  if(!stack) return;
+  const id='toast_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+  const toast=document.createElement('div');
+  toast.className='dh-toast';
+  toast.id=id;
+  toast.style.borderLeftColor=accentColor;
+  toast.style.borderLeftWidth='3px';
+  toast.innerHTML=`
+    <div class="dh-toast-icon">${icon}</div>
+    <div class="dh-toast-body">
+      <div class="dh-toast-title" style="color:${accentColor}">${title}</div>
+      <div class="dh-toast-text">${text}</div>
+    </div>
+    <button class="dh-toast-close" onclick="dismissDhToast('${id}')">×</button>`;
+  stack.prepend(toast);
+  // Shake the bell button
+  const bell=document.getElementById('notif-bell-btn');
+  if(bell){ bell.style.animation='none'; bell.offsetWidth; bell.style.animation='bellShake 0.5s ease'; }
+  // Auto-dismiss
+  setTimeout(()=>dismissDhToast(id), durationMs);
+}
+
+function dismissDhToast(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.classList.add('hiding');
+  setTimeout(()=>el.remove(), 420);
 }
 
 // ══════════════════════════════════════════════
@@ -18937,6 +19004,7 @@ function openSocialWorkspaceModal(id){
   const ws=id?socialWorkspacesLoad().find(w=>w.id===id):null;
   document.getElementById('social-ws-modal-title').textContent=ws?'Edit Workspace':'New Workspace';
   document.getElementById('social-ws-name').value=ws?.name||'';
+  document.getElementById('social-ws-ig-handle').value=ws?.igHandle||'';
   document.getElementById('social-ws-approvers1').value=(ws?.approvers1||'');
   document.getElementById('social-ws-approvers2').value=(ws?.approvers2||'');
   const selected=ws?.channels||[];
@@ -18956,6 +19024,7 @@ function closeSocialWorkspaceModal(){
 function saveSocialWorkspace(){
   const name=document.getElementById('social-ws-name').value.trim();
   if(!name){ alert('Workspace name is required'); return; }
+  const igHandle=(document.getElementById('social-ws-ig-handle')?.value||'').trim().replace(/^@/,'');
   const channels=SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-ch-'+p.id)?.checked).map(p=>p.id);
   const approvers1=document.getElementById('social-ws-approvers1').value.trim();
   const approvers2=document.getElementById('social-ws-approvers2').value.trim();
@@ -18963,9 +19032,9 @@ function saveSocialWorkspace(){
   const workspaces=socialWorkspacesLoad();
   if(_socialEditingWsId){
     const idx=workspaces.findIndex(w=>w.id===_socialEditingWsId);
-    if(idx>=0){ Object.assign(workspaces[idx],{name,channels,approvers1,approvers2,clientId:clientId||null}); }
+    if(idx>=0){ Object.assign(workspaces[idx],{name,igHandle,channels,approvers1,approvers2,clientId:clientId||null}); }
   } else {
-    const nw={id:'ws_'+Date.now(),name,channels,approvers1,approvers2,clientId:clientId||null,labels:[],createdAt:new Date().toISOString().slice(0,10)};
+    const nw={id:'ws_'+Date.now(),name,igHandle,channels,approvers1,approvers2,clientId:clientId||null,labels:[],createdAt:new Date().toISOString().slice(0,10)};
     workspaces.push(nw);
     _socialActiveWorkspace=nw.id;
   }
@@ -19058,14 +19127,26 @@ function openSocialPostModal(id){
 function buildSocialLabelColorPicker(pickerId, hiddenId, selected){
   const el=document.getElementById(pickerId);
   if(!el) return;
-  // workspace labels first, then palette fallback
+  // Workspace labels take priority; fall back to full SOCIAL_LABEL_COLORS palette
   const wsLabels=_socialActiveWorkspace?socialLabelsLoad(_socialActiveWorkspace):[];
-  const allColors=wsLabels.length?wsLabels.map(l=>({color:l.color,name:l.name})):SOCIAL_LABEL_COLORS.map(c=>({color:c,name:''}));
-  el.innerHTML=`<span style="font-size:11px;color:var(--muted)">Pick:</span>`+allColors.map(c=>`<span onclick="document.getElementById('${hiddenId}').value='${c.color}';buildSocialLabelColorPicker('${pickerId}','${hiddenId}','${c.color}')" title="${c.name||c.color}" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${c.color};cursor:pointer;border:2px solid ${selected===c.color?'white':'transparent'};transition:border .15s"></span>`).join('');
-  if(!wsLabels.length){
-    const none=`<span onclick="document.getElementById('${hiddenId}').value='';buildSocialLabelColorPicker('${pickerId}','${hiddenId}','')" style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:${selected===''?'underline':'none'}">None</span>`;
-    el.innerHTML+=none;
-  }
+  const allColors=wsLabels.length
+    ? wsLabels.map(l=>({color:l.color,name:l.name}))
+    : SOCIAL_LABEL_COLORS.map(c=>({color:c,name:''}));
+
+  // Render as calendar-style chips: colored dot + name (if named) or just dot
+  const chips=allColors.map(c=>{
+    const isSelected=selected===c.color;
+    const chip=c.name
+      ? `<span onclick="document.getElementById('${hiddenId}').value='${c.color}';buildSocialLabelColorPicker('${pickerId}','${hiddenId}','${c.color}')" title="${c.color}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 6px;border-radius:20px;border:1.5px solid ${isSelected?'white':'transparent'};background:${c.color}22;cursor:pointer;font-size:10px;font-weight:700;color:${c.color};transition:all .15s;box-shadow:${isSelected?'0 0 0 2px '+c.color:'none'}">
+          <span style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0;display:inline-block"></span>${c.name}
+        </span>`
+      : `<span onclick="document.getElementById('${hiddenId}').value='${c.color}';buildSocialLabelColorPicker('${pickerId}','${hiddenId}','${c.color}')" title="${c.color}" style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${c.color};cursor:pointer;border:2.5px solid ${isSelected?'white':'transparent'};box-shadow:${isSelected?'0 0 0 2px '+c.color:'none'};transition:all .15s" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'"></span>`;
+    return chip;
+  }).join('');
+
+  const none=`<span onclick="document.getElementById('${hiddenId}').value='';buildSocialLabelColorPicker('${pickerId}','${hiddenId}','')" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--muted);cursor:pointer;padding:3px 8px;border-radius:20px;border:1.5px solid ${selected===''?'var(--muted)':'transparent'};background:${selected===''?'rgba(168,180,208,.12)':'transparent'};transition:all .15s">✕ None</span>`;
+
+  el.innerHTML=chips+none;
 }
 
 function closeSocialPostModal(){
@@ -19083,7 +19164,14 @@ function closeSocialPostModal(){
   const vid=document.getElementById('reel-preview-video');
   if(vid){ vid.src=''; }
   const igVid=document.getElementById('ig-preview-video');
-  if(igVid){ igVid.src=''; igVid.style.display='none'; }
+  if(igVid){ igVid.pause(); igVid.src=''; igVid.style.display='none'; }
+  // Reset play button state
+  const playIcon=document.getElementById('ig-play-icon');
+  const pauseIcon=document.getElementById('ig-pause-icon');
+  const igOverlay=document.getElementById('ig-play-overlay');
+  if(playIcon) playIcon.style.display='block';
+  if(pauseIcon) pauseIcon.style.display='none';
+  if(igOverlay) igOverlay.style.opacity='1';
   const igCover=document.getElementById('ig-preview-cover');
   if(igCover){ igCover.src=''; igCover.style.display='none'; }
   const igPh=document.getElementById('ig-preview-placeholder');
@@ -19200,7 +19288,19 @@ function handleReelFileUpload(input){
 
   // Update Instagram phone preview video src
   const igVid=document.getElementById('ig-preview-video');
-  if(igVid){ igVid.src=_reelObjectUrl; igVid.style.display='block'; }
+  if(igVid){
+    igVid.src=_reelObjectUrl;
+    igVid.style.display='block';
+    // Auto-play in mockup
+    igVid.play().then(()=>{
+      const playIcon=document.getElementById('ig-play-icon');
+      const pauseIcon=document.getElementById('ig-pause-icon');
+      const overlay=document.getElementById('ig-play-overlay');
+      if(playIcon) playIcon.style.display='none';
+      if(pauseIcon) pauseIcon.style.display='block';
+      if(overlay) setTimeout(()=>{ overlay.style.opacity='0'; },1500);
+    }).catch(()=>{});
+  }
   const igPlaceholder=document.getElementById('ig-preview-placeholder');
   if(igPlaceholder) igPlaceholder.style.display='none';
   const igCover=document.getElementById('ig-preview-cover');
@@ -19363,12 +19463,27 @@ function updateInstagramPreviewCover(){
   const igCover=document.getElementById('ig-preview-cover');
   if(igCover){ igCover.src=_reelCoverDataUrl; igCover.style.display='block'; }
   const igVid=document.getElementById('ig-preview-video');
-  if(igVid) igVid.style.display='none';
+  if(igVid){ igVid.pause(); igVid.style.display='none'; }
+  // Reset play button — cover frame is showing, not the video
+  const playIcon=document.getElementById('ig-play-icon');
+  const pauseIcon=document.getElementById('ig-pause-icon');
+  const igOverlay=document.getElementById('ig-play-overlay');
+  if(playIcon) playIcon.style.display='block';
+  if(pauseIcon) pauseIcon.style.display='none';
+  if(igOverlay) igOverlay.style.opacity='1';
   const igPh=document.getElementById('ig-preview-placeholder');
   if(igPh) igPh.style.display='none';
 }
 
 function updateInstagramPreview(){
+  // Account name — from active workspace igHandle
+  const accountEl=document.getElementById('ig-header-account');
+  if(accountEl){
+    const ws=_socialActiveWorkspace?socialWorkspacesLoad().find(w=>w.id===_socialActiveWorkspace):null;
+    const handle=ws?.igHandle||'dronehubmedia';
+    accountEl.textContent='@'+handle;
+  }
+
   // Address
   const addr=(document.getElementById('social-post-address')?.value||'').trim();
   const addrEl=document.getElementById('ig-header-address');
@@ -19394,6 +19509,54 @@ function updateInstagramPreview(){
   const songEl=document.getElementById('ig-song-preview');
   if(songEl) songEl.textContent=song||'Song name';
 }
+
+// Live preview of IG handle while typing in workspace modal
+function igUpdateHandlePreview(){
+  const val=(document.getElementById('social-ws-ig-handle')?.value||'').trim().replace(/^@/,'');
+  const accountEl=document.getElementById('ig-header-account');
+  if(accountEl) accountEl.textContent='@'+(val||'dronehubmedia');
+}
+
+// Toggle play/pause on the mockup video
+function igTogglePlay(){
+  const vid=document.getElementById('ig-preview-video');
+  if(!vid||vid.style.display==='none') return;
+  const playIcon=document.getElementById('ig-play-icon');
+  const pauseIcon=document.getElementById('ig-pause-icon');
+  const overlay=document.getElementById('ig-play-overlay');
+  if(vid.paused){
+    vid.play().then(()=>{
+      if(playIcon) playIcon.style.display='none';
+      if(pauseIcon) pauseIcon.style.display='block';
+      // Fade out overlay after 1.5s when playing
+      if(overlay) { overlay.style.opacity='0'; setTimeout(()=>{ if(!vid.paused) overlay.style.opacity='0'; },1500); }
+    }).catch(()=>{});
+  } else {
+    vid.pause();
+    if(playIcon) playIcon.style.display='block';
+    if(pauseIcon) pauseIcon.style.display='none';
+    if(overlay) overlay.style.opacity='1';
+  }
+}
+
+// Show play overlay on hover when playing
+(function(){
+  document.addEventListener('DOMContentLoaded',()=>{
+    const wrap=document.getElementById('ig-preview-video-wrap');
+    const overlay=document.getElementById('ig-play-overlay');
+    const vid=document.getElementById('ig-preview-video');
+    if(!wrap||!overlay||!vid) return;
+    wrap.addEventListener('mouseenter',()=>{ overlay.style.opacity='1'; });
+    wrap.addEventListener('mouseleave',()=>{ if(!vid.paused) overlay.style.opacity='0'; });
+    vid.addEventListener('ended',()=>{
+      const playIcon=document.getElementById('ig-play-icon');
+      const pauseIcon=document.getElementById('ig-pause-icon');
+      if(playIcon) playIcon.style.display='block';
+      if(pauseIcon) pauseIcon.style.display='none';
+      if(overlay) overlay.style.opacity='1';
+    });
+  });
+})();
 
 // ── Platform spec pre-check
 function updateSocialPlatformSpecs(){
