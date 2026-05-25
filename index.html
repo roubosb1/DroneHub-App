@@ -15920,6 +15920,19 @@ function getExtraServiceLines(){
 }
 
 
+// ── Early variable declarations ───────────────────────────────────────────────
+// These must be declared BEFORE the initialization block (lines below) because
+// gateInit() → gateEnterApp() → gateShowAdminView() can run synchronously
+// (when Firebase is offline) and call renderSalesTable() / pricingLoad()
+// before the parser reaches the original let statements further down.
+let salesActiveList  = 'realestate';
+let _salesClientSub  = 'all';
+let _salesOtherType  = 'all';
+let salesSortCol     = 'name';
+let salesSortDir     = 'asc';
+let salesView        = 'clients';
+let _pricingConfig   = null;
+
 const jobDateInput=document.getElementById('job-date-input');
 if(jobDateInput) jobDateInput.value=new Date().toISOString().slice(0,10);
 const expDateInput=document.getElementById('exp-date');
@@ -15983,9 +15996,7 @@ const SALES_LISTS = [
   {id:'clients',    label:'✅ Existing Clients'},
 ];
 
-let salesActiveList  = 'realestate';
-let _salesClientSub  = 'all';  // 'all' | 'active' | 'past' — sub-filter for clients tab
-let _salesOtherType  = 'all';  // sub-filter for other tab by type
+// salesActiveList, _salesClientSub, _salesOtherType declared early above (TDZ fix)
 
 // ── Recognized job types for the "Other" list ────────────────────────────────
 const OTHER_TYPES = [
@@ -16034,8 +16045,7 @@ function normalizeOtherType(raw){
   return raw; // keep original if no match — fall through to 'other' badge style
 }
 let salesEditingId   = null;
-let salesSortCol     = 'name';  // default sort column
-let salesSortDir     = 'asc';   // 'asc' | 'desc'
+// salesSortCol, salesSortDir declared early above (TDZ fix)
 
 // Split a full name typed into the first-name field when last name is blank.
 // 2 words  → "John Smith"       → {firstName:'John', lastName:'Smith'}
@@ -16941,7 +16951,7 @@ function processSalesImportFile(file, listId, overwriteDupes){
 }
 
 // ── Sales view switcher ──
-let salesView = 'clients';
+// salesView declared early above (TDZ fix)
 function setSalesView(v){
   salesView = v;
   const views = ['jobs','clients','contacts','pipeline'];
@@ -20318,7 +20328,7 @@ async function platformToggleFee(orgId){
 // PRICING CONFIG — data layer
 // ═══════════════════════════════════════════════════════════════════════════════
 
-let _pricingConfig=null;
+// _pricingConfig declared early above (TDZ fix)
 
 function defaultPricingConfig(){
   return {
