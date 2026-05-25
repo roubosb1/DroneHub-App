@@ -2509,6 +2509,7 @@ button{font-family:var(--font);}
     </div>
     <button onclick="openAddTeamMemberModal()" style="padding:8px 20px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">+ Add team member</button>
     <button onclick="teamForceSync()" style="padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center" title="Sync team from Firebase"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    <button onclick="mergeTeamDuplicates(false)" style="padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px" title="Find and merge duplicate accounts with the same email"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Merge dupes</button>
   </div>
 
   <!-- Invite banner -->
@@ -14089,6 +14090,83 @@ function saveAdminTeamMembers(arr){
   fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(arr),updatedAt:Date.now()});
 }
 
+// ── MERGE DUPLICATE ACCOUNTS ──────────────────────────────────────────────────
+// Finds all duplicate emails in gate_users and admin_team, merges them into one
+// record each, and syncs both to Firebase. Safe to call at any time.
+function mergeTeamDuplicates(silent){
+  let dupeCount=0;
+
+  // 1. Merge login accounts (dronehub_gate_users)
+  const users=gateGetUsers();
+  const uMap={};
+  users.forEach(u=>{
+    const key=(u.email||'').toLowerCase().trim();
+    if(!key) return;
+    if(!uMap[key]){
+      uMap[key]={...u};
+    } else {
+      dupeCount++;
+      const ex=uMap[key];
+      // Prefer the entry that has a passHash; if both have one, prefer newer createdAt
+      const uNewer=u.createdAt&&ex.createdAt&&u.createdAt>ex.createdAt;
+      if(u.passHash&&(!ex.passHash||uNewer)) ex.passHash=u.passHash;
+      // Fill in any missing fields from the other record
+      if(u.name&&!ex.name) ex.name=u.name;
+      if(u.jobTitle&&!ex.jobTitle) ex.jobTitle=u.jobTitle;
+      if(u.role&&ex.role==='contractor'&&u.role!=='contractor') ex.role=u.role;
+      if(u.type==='admin') ex.type='admin'; // if either was admin, keep admin
+      if(u.createdAt&&(!ex.createdAt||u.createdAt>ex.createdAt)) ex.createdAt=u.createdAt;
+    }
+  });
+  const mergedUsers=Object.values(uMap);
+  if(mergedUsers.length<users.length){
+    gateSaveUsers(mergedUsers);
+  }
+
+  // 2. Merge admin team roster (dronehub_admin_team)
+  const members=getAdminTeamMembers();
+  const mMap={};
+  members.forEach(m=>{
+    const key=(m.email||'').toLowerCase().trim();
+    if(!key) return;
+    if(!mMap[key]){
+      mMap[key]={...m};
+    } else {
+      const ex=mMap[key];
+      // Active beats invited beats anything else
+      if(m.status==='active') ex.status='active';
+      // Keep most recent activity timestamps
+      if(m.activatedAt&&(!ex.activatedAt||m.activatedAt>ex.activatedAt)) ex.activatedAt=m.activatedAt;
+      if(m.lastSeen&&(!ex.lastSeen||m.lastSeen>ex.lastSeen)) ex.lastSeen=m.lastSeen;
+      // Carry over data from whichever record has it
+      if(m.customTabs?.length&&!ex.customTabs?.length) ex.customTabs=m.customTabs;
+      if(m.hourlyRate&&!ex.hourlyRate) ex.hourlyRate=m.hourlyRate;
+      if(m.phone&&!ex.phone) ex.phone=m.phone;
+      if(m.name&&!ex.name) ex.name=m.name;
+      if(m.jobTitle&&!ex.jobTitle) ex.jobTitle=m.jobTitle;
+      if(m.role&&ex.role==='contractor'&&m.role!=='contractor') ex.role=m.role;
+    }
+  });
+  const mergedMembers=Object.values(mMap);
+  if(mergedMembers.length<members.length){
+    saveAdminTeamMembers(mergedMembers);
+  }
+
+  if(!silent){
+    const removed=users.length-mergedUsers.length + members.length-mergedMembers.length;
+    const toast=document.createElement('div');
+    toast.textContent=removed>0
+      ?`✓ Merged ${removed} duplicate account${removed!==1?'s':''} — team list cleaned up`
+      :'No duplicate accounts found';
+    toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:'+(removed>0?'#1D9E75':'#444')+';color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(),3500);
+  }
+
+  if(mergedMembers.length<members.length) renderTeam();
+  return users.length-mergedUsers.length + members.length-mergedMembers.length;
+}
+
 async function teamForceSync(){
   try{
     let members=[];
@@ -14161,6 +14239,9 @@ function getRelativeTime(ts){
 }
 
 function renderTeam(){
+  // Silently merge any duplicate accounts on every render so they never accumulate
+  mergeTeamDuplicates(true);
+
   // Pull fresh data from Firebase so lastSeen/status from team member devices
   // is always reflected in the admin view.
   if(db){
