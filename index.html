@@ -13237,26 +13237,31 @@ const SALES_ALLOWED_EMAILS = [
   'alex@dronehubmedia.com',
 ];
 
-// Explicitly blocked from Sales CRM regardless of role
+// Explicitly blocked from Sales CRM regardless of role or other flags
 const SALES_BLOCKED_EMAILS = [
   'adrian@dronehubmedia.com',
   'brad@dronehubmedia.com',
   'bradloiselle@dronehubmedia.com',
 ];
 
+// Roles that are never allowed into Sales CRM
+const SALES_BLOCKED_ROLES = ['editor','videographer','contractor'];
+
 function canAccessSales(email){
   const e=(email||'').toLowerCase().trim();
   if(!e) return false;
-  // Explicit deny list — overrides everything
+  // Explicit email deny list — overrides everything
   if(SALES_BLOCKED_EMAILS.includes(e)) return false;
+  // Role-based deny — editors, videographers, contractors never get Sales CRM
+  const members=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+  const member=members.find(m=>(m.email||'').toLowerCase()===e);
+  if(member && SALES_BLOCKED_ROLES.includes(member.role)) return false;
   // Hardcoded allow-list
   if(SALES_ALLOWED_EMAILS.includes(e)) return true;
-  // Admins always get full sales access
+  // Admins/owners always get full sales access
   const session=gateGetSession();
   if(session&&(session.role==='admin'||session.role==='owner')) return true;
   // Team members whose record has salesAccess flag
-  const members=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
-  const member=members.find(m=>(m.email||'').toLowerCase()===e);
   if(member&&member.salesAccess) return true;
   return false;
 }
