@@ -19922,7 +19922,10 @@ function renderPlatformOrgs(){
             <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${statusColor}22;color:${statusColor}">${(org.status||'active').toUpperCase()}</span>
           </div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${org.adminEmail||'—'} · ${org.industry||'Media'}</div>
-          <div style="font-size:11px;color:var(--muted)">Joined ${created} · Modules: ${modules}</div>
+          <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span>Joined ${created} · Modules: ${modules}</span>
+            <span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:${org.platformFeeEnabled?'rgba(34,217,122,.12)':'rgba(168,180,208,.1)'};color:${org.platformFeeEnabled?'var(--green)':'var(--muted)'}">Fee ${org.platformFeeEnabled?'2% ON':'OFF'}</span>
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
           <div style="font-size:11px;color:var(--muted)">
@@ -19944,34 +19947,45 @@ function renderPlatformRevenue(){
   const el=document.getElementById('platform-revenue-content');
   if(!el) return;
   const totalRevenue=_platformOrgs.reduce((s,o)=>s+(o.totalRevenue||0),0);
-  const platformFee=totalRevenue*0.02;
+  const feeableRevenue=_platformOrgs.filter(o=>o.platformFeeEnabled).reduce((s,o)=>s+(o.totalRevenue||0),0);
+  const platformFee=feeableRevenue*0.02;
+  const feeOrgs=_platformOrgs.filter(o=>o.platformFeeEnabled).length;
+  const freeOrgs=_platformOrgs.filter(o=>!o.platformFeeEnabled).length;
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
       <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:20px">
         <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Total Org Revenue</div>
         <div style="font-size:32px;font-weight:800;color:var(--white)">$${totalRevenue.toLocaleString('en-CA',{minimumFractionDigits:0})}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">across ${_platformOrgs.length} org(s)</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">across ${_platformOrgs.length} org(s) · ${freeOrgs} fee-free</div>
       </div>
       <div style="background:var(--navy-card);border:1px solid rgba(34,217,122,.3);border-radius:14px;padding:20px">
         <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Your Platform Fees (2%)</div>
         <div style="font-size:32px;font-weight:800;color:var(--green)">$${platformFee.toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">2% of all invoiced revenue</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">from ${feeOrgs} paying org${feeOrgs!==1?'s':''} · ${freeOrgs} waived</div>
       </div>
     </div>
     <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;overflow:hidden">
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="border-bottom:1px solid var(--border)">
           <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Company</th>
+          <th style="padding:12px 16px;text-align:center;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Fee Status</th>
           <th style="padding:12px 16px;text-align:right;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Revenue</th>
           <th style="padding:12px 16px;text-align:right;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Your Fee</th>
         </tr></thead>
         <tbody>
-          ${_platformOrgs.length===0?`<tr><td colspan="3" style="padding:32px;text-align:center;color:var(--muted)">No data yet</td></tr>`:
-          _platformOrgs.map(o=>`<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:12px 16px;color:var(--white);font-weight:600">${o.companyName||'—'}</td>
-            <td style="padding:12px 16px;text-align:right;color:var(--offwhite)">$${(o.totalRevenue||0).toLocaleString('en-CA',{minimumFractionDigits:0})}</td>
-            <td style="padding:12px 16px;text-align:right;color:var(--green);font-weight:600">$${((o.totalRevenue||0)*0.02).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-          </tr>`).join('')}
+          ${_platformOrgs.length===0?`<tr><td colspan="4" style="padding:32px;text-align:center;color:var(--muted)">No data yet</td></tr>`:
+          _platformOrgs.map(o=>{
+            const feeOn=o.platformFeeEnabled===true;
+            const fee=feeOn?(o.totalRevenue||0)*0.02:0;
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:12px 16px;color:var(--white);font-weight:600">${o.companyName||'—'}</td>
+              <td style="padding:12px 16px;text-align:center">
+                <span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:${feeOn?'rgba(34,217,122,.12)':'rgba(168,180,208,.1)'};color:${feeOn?'var(--green)':'var(--muted)'}">${feeOn?'2% ON':'Waived'}</span>
+              </td>
+              <td style="padding:12px 16px;text-align:right;color:var(--offwhite)">$${(o.totalRevenue||0).toLocaleString('en-CA',{minimumFractionDigits:0})}</td>
+              <td style="padding:12px 16px;text-align:right;color:${feeOn?'var(--green)':'var(--muted)'};font-weight:600">${feeOn?'$'+fee.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
     </div>`;
@@ -20027,8 +20041,122 @@ async function platformSuspendOrg(orgId){
 }
 
 function platformViewOrg(orgId){
-  // TODO: drill-down into org in a future release
-  alert('Org drill-down coming soon! Org ID: '+orgId);
+  const org=_platformOrgs.find(o=>o.orgId===orgId);
+  if(!org) return;
+  const feeOn=org.platformFeeEnabled===true;
+  const created=org.createdAt?new Date(org.createdAt).toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'}):'—';
+  const revenue=(org.totalRevenue||0);
+  const feeEarned=feeOn?revenue*0.02:0;
+  const stripeConnected=org.stripeAccountId?`<span style="color:var(--green);font-weight:600">✅ Connected</span> <span style="font-size:11px;color:var(--muted)">${org.stripeAccountId}</span>`:`<span style="color:var(--muted)">Not connected yet</span>`;
+
+  // Build modal
+  const existing=document.getElementById('platform-org-modal');
+  if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='platform-org-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`
+    <div style="background:var(--navy-mid);border:1px solid var(--border-bright);border-radius:20px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:28px">
+      <!-- Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+        <div>
+          <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:4px">${org.companyName||'Unnamed Org'}</div>
+          <div style="font-size:12px;color:var(--muted)">${org.adminEmail||'—'} · Joined ${created}</div>
+        </div>
+        <button onclick="document.getElementById('platform-org-modal').remove()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
+      </div>
+
+      <!-- Stats row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px">
+        <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--white)">${org.teamCount||1}</div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Team Members</div>
+        </div>
+        <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--white)">${org.clientCount||0}</div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Clients</div>
+        </div>
+        <div style="background:var(--navy-card);border:1px solid rgba(34,217,122,.3);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--green)">$${revenue.toLocaleString('en-CA',{minimumFractionDigits:0})}</div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Invoiced</div>
+        </div>
+      </div>
+
+      <!-- Platform Fee Toggle -->
+      <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px">Platform Fee (2%)</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5">When ON, DroneHub automatically takes 2% of every invoice this org processes. When OFF, they keep 100%.</div>
+            <div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600">You've earned: $${feeEarned.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})} from this org</div>
+          </div>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div id="pom-fee-label" style="font-size:11px;font-weight:700;color:${feeOn?'var(--green)':'var(--muted)'}">${feeOn?'ON':'OFF'}</div>
+            <div onclick="platformToggleFee('${orgId}')" id="pom-fee-toggle" style="width:52px;height:28px;border-radius:14px;background:${feeOn?'var(--green)':'var(--border-bright)'};cursor:pointer;position:relative;transition:background .2s;flex-shrink:0">
+              <div style="position:absolute;top:3px;left:${feeOn?'27px':'3px'};width:22px;height:22px;border-radius:11px;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stripe Connect -->
+      <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Stripe Account</div>
+        <div style="font-size:13px">${stripeConnected}</div>
+      </div>
+
+      <!-- Modules -->
+      <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Enabled Modules</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${(org.enabledTabs&&org.enabledTabs.length>0?org.enabledTabs:['All modules']).map(m=>`<span style="padding:3px 10px;border-radius:8px;background:rgba(91,141,239,.12);border:1px solid rgba(91,141,239,.3);color:var(--blue-bright);font-size:11px;font-weight:600">${m}</span>`).join('')}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="platformSuspendOrg('${orgId}');document.getElementById('platform-org-modal').remove()" style="padding:9px 18px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">${org.status==='suspended'?'Reactivate Org':'Suspend Org'}</button>
+        <button onclick="document.getElementById('platform-org-modal').remove()" style="padding:9px 20px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">Done</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target===modal) modal.remove();});
+}
+
+async function platformToggleFee(orgId){
+  const org=_platformOrgs.find(o=>o.orgId===orgId);
+  if(!org) return;
+  const newState=!(org.platformFeeEnabled===true);
+  org.platformFeeEnabled=newState;
+  await fbSet('platform','orgs_registry',{orgs:_platformOrgs});
+
+  // Update toggle UI in place without closing modal
+  const toggle=document.getElementById('pom-fee-toggle');
+  const label=document.getElementById('pom-fee-label');
+  if(toggle){
+    toggle.style.background=newState?'var(--green)':'var(--border-bright)';
+    toggle.querySelector('div').style.left=newState?'27px':'3px';
+  }
+  if(label){
+    label.textContent=newState?'ON':'OFF';
+    label.style.color=newState?'var(--green)':'var(--muted)';
+  }
+
+  // Update earned amount
+  const revenue=org.totalRevenue||0;
+  const feeEarned=newState?revenue*0.02:0;
+  const earnedEl=toggle?.closest('[style]')?.parentElement?.querySelector('[style*="green"]');
+
+  showDhToast(
+    newState?'Platform fee enabled':'Platform fee waived',
+    newState?`${org.companyName} will now contribute 2% on all invoices.`:`${org.companyName} is fee-free — you can turn this on anytime.`,
+    newState?'💰':'🎁',
+    newState?'var(--green)':'var(--blue-bright)',
+    4000
+  );
+
+  renderPlatformOrgs();
+  renderPlatformRevenue();
 }
 
 // Submit a suggestion (called from Settings pane for org admins)
