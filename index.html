@@ -13664,19 +13664,19 @@ function gateLogout(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 const TEAM_ROLES=[
-  {key:'admin',       label:'Admin',          desc:'Full access except financials',        color:'#8B5CF6',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'},
-  {key:'editor',      label:'Editor',         desc:'Projects, tracker, LouChat, calendar', color:'#5B8DEF',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'},
-  {key:'contractor',  label:'Contractor',     desc:'Shoots, projects, LouChat, pay stubs', color:'#22D97A',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'},
-  {key:'sales',       label:'Sales',          desc:'Clients, projects, LouChat',           color:'#F5A623',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>'},
+  {key:'admin',       label:'Admin',       desc:'Full access including Sales & Finance',    color:'#8B5CF6',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'},
+  {key:'editor',      label:'Editor',      desc:'Tracker, LouChat, calendar, pay stubs',   color:'#5B8DEF',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'},
+  {key:'contractor',  label:'Contractor',  desc:'Tracker, LouChat, calendar, pay stubs',   color:'#22D97A',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'},
+  {key:'sales',       label:'Sales',       desc:'Sales CRM, LouChat, calendar',            color:'#F5A623',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>'},
 ];
 const TEAM_ACCESS={
-  admin:       {tracker:true, louchat:true, calendar:true, clients:true, jobs:true, payroll:true, financials:true},
-  editor:      {tracker:true, louchat:true, calendar:true, clients:false,jobs:false,payroll:true, financials:false},
-  videographer:{tracker:true, louchat:true, calendar:true, clients:false,jobs:false,payroll:true, financials:false}, // legacy
-  sales:       {tracker:false,louchat:true, calendar:true, clients:true, jobs:false,payroll:false,financials:false},
-  contractor:  {tracker:true, louchat:true, calendar:true, clients:false,jobs:false,payroll:true, financials:false},
+  admin:       {tracker:true, louchat:true, calendar:true, sales:true, payroll:true, finance:true},
+  editor:      {tracker:true, louchat:true, calendar:true, sales:false,payroll:true, finance:false},
+  videographer:{tracker:true, louchat:true, calendar:true, sales:false,payroll:true, finance:false},
+  sales:       {tracker:false,louchat:true, calendar:true, sales:true, payroll:false, finance:false},
+  contractor:  {tracker:true, louchat:true, calendar:true, sales:false,payroll:true, finance:false},
 };
-const ACCESS_LABELS={tracker:'Project Tracker',louchat:'LouChat',calendar:'Calendar',clients:'Clients',jobs:'Jobs',payroll:'Pay Stubs',financials:'Financials'};
+const ACCESS_LABELS={tracker:'Tracker',louchat:'LouChat',calendar:'Calendar',sales:'Sales CRM',payroll:'Pay Stubs',finance:'Finance'};
 
 function getAdminTeamMembers(){return JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');}
 function saveAdminTeamMembers(arr){
@@ -13792,10 +13792,9 @@ function _renderTeamUI(){
     const statusLabel=m.status==='active'
       ?`${isRecent?dot('var(--green)')+'Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
       :m.status==='invited'?dot('var(--amber)')+'Invited — awaiting signup':dot('var(--muted)')+'Inactive';
-    const salesBadge = canAccessSales(m.email)
-      ? `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(34,217,122,.12);color:var(--green)">✓ Sales CRM</span>`
-      : '';
-    const accessBadges=Object.entries(access).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]}</span>`).join('')+salesBadge;
+    // Override sales key with actual canAccessSales result (respects deny list + salesAccess flag)
+    const effectiveAccess={...access, sales:canAccessSales(m.email)};
+    const accessBadges=Object.entries(effectiveAccess).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${ACCESS_LABELS[k]||k}</span>`).join('');
     return `<div class="card" style="padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
         <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
