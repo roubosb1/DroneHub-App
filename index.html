@@ -2556,11 +2556,15 @@ button{font-family:var(--font);}
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="cal-filter-contractor" onchange="renderCalendar()" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-        <option value="">All creators</option>
+        <option value="">All people</option>
       </select>
+      <button onclick="openCalEventModal()" style="padding:5px 14px;border:1px solid var(--blue);border-radius:8px;font-size:12px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-weight:700">+ Add Event</button>
       <button onclick="openCalImportModal()" style="padding:5px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite);cursor:pointer;font-weight:600">📅 Google Calendar</button>
     </div>
   </div>
+
+  <!-- Event type filter pills -->
+  <div id="cal-type-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
 
   <!-- Creator color legend -->
   <div id="cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px"></div>
@@ -2584,6 +2588,18 @@ button{font-family:var(--font);}
       <button onclick="document.getElementById('cal-day-detail').style.display='none'" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
     </div>
     <div id="cal-day-jobs"></div>
+  </div>
+
+  <!-- Vacation Tracker -->
+  <div style="margin-top:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:7px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z"/></svg>
+        ✈️ Vacation Tracker
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${new Date().getFullYear()} — click ✏️ to set allocation</span>
+    </div>
+    <div id="vac-tracker-panel"></div>
   </div>
 
   <!-- Google Calendar imported events (read-only display) -->
@@ -4295,7 +4311,7 @@ function showPane(id,ev){
       renderTeam();
     },500);
   }
-  if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
+  if(id==='calendar'){populateCalNameDropdown();renderCalendar();calEventsSyncFirebase().then(()=>renderCalendar());renderVacationTracker();}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){
@@ -4986,6 +5002,277 @@ let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 function calNav(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMonth();renderCalendar();}
 
+// ── CUSTOM EVENT TYPES ────────────────────────────────────────────────────────
+const CAL_EVENT_TYPES=[
+  {id:'vacation',   label:'Vacation',       icon:'✈️', color:'#8B5CF6', bg:'rgba(139,92,246,.18)'},
+  {id:'sick',       label:'Sick Day',        icon:'🤒', color:'#EF4444', bg:'rgba(239,68,68,.14)'},
+  {id:'holiday',    label:'Stat Holiday',    icon:'🎉', color:'#F59E0B', bg:'rgba(245,158,11,.14)'},
+  {id:'client_mtg', label:'Client Meeting',  icon:'🤝', color:'#06B6D4', bg:'rgba(6,182,212,.14)'},
+  {id:'editing',    label:'Edit Day',        icon:'🎬', color:'#10B981', bg:'rgba(16,185,129,.14)'},
+  {id:'travel',     label:'Travel',          icon:'🚗', color:'#6366F1', bg:'rgba(99,102,241,.14)'},
+  {id:'team_mtg',   label:'Team Meeting',    icon:'👥', color:'#EC4899', bg:'rgba(236,72,153,.14)'},
+  {id:'deadline',   label:'Deadline',        icon:'⏰', color:'#F97316', bg:'rgba(249,115,22,.14)'},
+  {id:'other',      label:'Other',           icon:'📌', color:'#64748B', bg:'rgba(100,116,139,.14)'},
+];
+
+// Active type filters — null = all, otherwise Set of active type ids
+let _calTypeFilters=null; // null = show all
+
+function calEventsLoad(){try{return JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');}catch(e){return[];}}
+function calEventsSave(arr){
+  localStorage.setItem('dronehub_cal_events',JSON.stringify(arr));
+  if(db) fbSet('orgs',ORG_ID+':cal_events',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+}
+async function calEventsSyncFirebase(){
+  if(!db) return;
+  try{
+    const fb=await fbGet('orgs',ORG_ID+':cal_events');
+    if(fb?.data){
+      const local=JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');
+      const fbArr=JSON.parse(fb.data);
+      if(fbArr.length>=local.length) localStorage.setItem('dronehub_cal_events',JSON.stringify(fbArr));
+    }
+  }catch(e){}
+}
+
+function vacationAllocLoad(){try{return JSON.parse(localStorage.getItem('dronehub_vac_alloc')||'[]');}catch(e){return[];}}
+function vacationAllocSave(arr){
+  localStorage.setItem('dronehub_vac_alloc',JSON.stringify(arr));
+  if(db) fbSet('orgs',ORG_ID+':vac_alloc',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+}
+
+// Count vacation days used by a member in a given year (inclusive date range)
+function vacationDaysUsed(memberName, year){
+  const evts=calEventsLoad().filter(e=>e.type==='vacation'&&e.memberName===memberName);
+  let total=0;
+  evts.forEach(e=>{
+    const s=new Date(e.date+'T12:00:00');
+    const end=new Date((e.endDate||e.date)+'T12:00:00');
+    if(s.getFullYear()!==year&&end.getFullYear()!==year) return;
+    for(let d=new Date(s);d<=end;d.setDate(d.getDate()+1)){
+      if(d.getFullYear()===year) total++;
+    }
+  });
+  return total;
+}
+
+// Detect vacation overlap: returns array of {name, dates} for others booked off on same dates
+function vacationOverlapCheck(startDate, endDate, excludeName){
+  const evts=calEventsLoad().filter(e=>e.type==='vacation'&&e.memberName!==excludeName);
+  const overlaps=[];
+  evts.forEach(e=>{
+    const eStart=new Date(e.date+'T12:00:00');
+    const eEnd=new Date((e.endDate||e.date)+'T12:00:00');
+    const rStart=new Date(startDate+'T12:00:00');
+    const rEnd=new Date((endDate||startDate)+'T12:00:00');
+    if(eStart<=rEnd&&eEnd>=rStart) overlaps.push(e.memberName);
+  });
+  return [...new Set(overlaps)];
+}
+
+function calToggleTypeFilter(typeId){
+  if(_calTypeFilters===null) _calTypeFilters=new Set(CAL_EVENT_TYPES.map(t=>t.id).concat(['shoots']));
+  if(_calTypeFilters.has(typeId)) _calTypeFilters.delete(typeId);
+  else _calTypeFilters.add(typeId);
+  renderCalendar();
+}
+function calSetAllFilters(){_calTypeFilters=null;renderCalendar();}
+
+// Open add-event modal
+function openCalEventModal(prefillDate){
+  const members=getAdminTeamMembers();
+  const session=gateGetSession();
+  const modal=document.createElement('div');
+  modal.id='cal-event-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:480px;border:1px solid var(--border-bright)" onclick="event.stopPropagation()">
+    <div style="background:var(--navy-mid);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0">
+      <div style="font-size:14px;font-weight:700;color:var(--white)">Add Calendar Event</div>
+      <button onclick="document.getElementById('cal-event-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Event title</label>
+        <input id="cae-title" type="text" placeholder="e.g. Bailey – Vacation" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Event type</label>
+        <select id="cae-type" onchange="calEventTypeChanged()" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          ${CAL_EVENT_TYPES.map(t=>`<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Start date</label>
+          <input id="cae-start" type="date" value="${prefillDate||new Date().toISOString().slice(0,10)}" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">End date</label>
+          <input id="cae-end" type="date" value="${prefillDate||new Date().toISOString().slice(0,10)}" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Team member</label>
+        <select id="cae-member" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          ${[{name:session?.name||session?.email||'Me'},...members].map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+        </select>
+      </div>
+      <div id="cae-overlap-warn" style="display:none;padding:8px 12px;border-radius:8px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.4);font-size:11px;color:#F97316"></div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Notes (optional)</label>
+        <textarea id="cae-notes" placeholder="Any details…" rows="2" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);resize:none;font-family:var(--font)"></textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="saveCalEvent()" style="flex:1;padding:9px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save event</button>
+        <button onclick="document.getElementById('cal-event-modal').remove()" style="padding:9px 16px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>document.getElementById('cae-title')?.focus(),100);
+  // Live overlap check on date/member change
+  ['cae-start','cae-end','cae-member'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change',calEventCheckOverlap);
+  });
+}
+
+function calEventTypeChanged(){
+  const type=document.getElementById('cae-type')?.value;
+  const isVac=type==='vacation';
+  // For vacation, run overlap check
+  if(isVac) calEventCheckOverlap();
+  else document.getElementById('cae-overlap-warn').style.display='none';
+}
+
+function calEventCheckOverlap(){
+  const type=document.getElementById('cae-type')?.value;
+  if(type!=='vacation'){document.getElementById('cae-overlap-warn').style.display='none';return;}
+  const start=document.getElementById('cae-start')?.value;
+  const end=document.getElementById('cae-end')?.value||start;
+  const member=document.getElementById('cae-member')?.value||'';
+  const overlaps=vacationOverlapCheck(start,end,member);
+  const warn=document.getElementById('cae-overlap-warn');
+  if(overlaps.length){
+    warn.style.display='block';
+    warn.innerHTML=`⚠️ <strong>Vacation overlap:</strong> ${overlaps.join(', ')} ${overlaps.length===1?'is':'are'} also off during this period.`;
+  } else {
+    warn.style.display='none';
+  }
+}
+
+function saveCalEvent(){
+  const title=document.getElementById('cae-title')?.value.trim();
+  const type=document.getElementById('cae-type')?.value;
+  const start=document.getElementById('cae-start')?.value;
+  const end=document.getElementById('cae-end')?.value||start;
+  const member=document.getElementById('cae-member')?.value||'';
+  const notes=document.getElementById('cae-notes')?.value.trim()||'';
+  if(!title){alert('Please enter a title.');return;}
+  if(!start){alert('Please select a start date.');return;}
+  if(end<start){alert('End date cannot be before start date.');return;}
+  const evt={
+    id:'cale_'+Date.now(),
+    type,title,
+    date:start,endDate:end,
+    memberName:member,
+    notes,
+    createdAt:new Date().toISOString(),
+  };
+  const arr=calEventsLoad();
+  arr.push(evt);
+  calEventsSave(arr);
+  document.getElementById('cal-event-modal').remove();
+  renderCalendar();
+  renderVacationTracker();
+  showDhToast('Event added','','✅','var(--green)',3000);
+}
+
+function deleteCalEvent(id){
+  if(!confirm('Delete this event?')) return;
+  calEventsSave(calEventsLoad().filter(e=>e.id!==id));
+  renderCalendar();
+  renderVacationTracker();
+}
+
+// Vacation tracker panel
+function renderVacationTracker(){
+  const panel=document.getElementById('vac-tracker-panel');
+  if(!panel) return;
+  const year=new Date().getFullYear();
+  const members=getAdminTeamMembers();
+  const allocs=vacationAllocLoad();
+  if(!members.length){panel.innerHTML='<div style="font-size:12px;color:var(--muted)">No team members yet.</div>';return;}
+  panel.innerHTML=members.map(m=>{
+    const alloc=allocs.find(a=>a.memberId===m.id&&a.year===year)||{allocatedDays:14};
+    const used=vacationDaysUsed(m.name,year);
+    const remaining=alloc.allocatedDays-used;
+    const pct=alloc.allocatedDays>0?Math.min(100,Math.round(used/alloc.allocatedDays*100)):0;
+    const barColor=remaining<=0?'var(--red)':remaining<=3?'var(--amber)':'var(--green)';
+    return `<div style="padding:12px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          ${getAvatarHtml(m.name,m.email,28,9)}
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--white)">${m.name}</div>
+            <div style="font-size:10px;color:var(--muted)">${m.role||'team'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--muted)">Used / Allocated</div>
+            <div style="font-size:13px;font-weight:700;color:${barColor}">${used} <span style="color:var(--muted);font-weight:400">/ ${alloc.allocatedDays} days</span></div>
+          </div>
+          <button onclick="openVacAllocModal('${m.id}','${m.name}')" title="Edit allocation" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer">✏️</button>
+        </div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .3s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--muted)">
+        <span>${remaining>0?remaining+' days remaining':'⚠️ '+Math.abs(remaining)+' days over'}</span>
+        <span>${year}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openVacAllocModal(memberId, memberName){
+  const year=new Date().getFullYear();
+  const allocs=vacationAllocLoad();
+  const current=allocs.find(a=>a.memberId===memberId&&a.year===year)?.allocatedDays??14;
+  const modal=document.createElement('div');
+  modal.id='vac-alloc-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9900;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:14px;width:100%;max-width:340px;border:1px solid var(--border-bright);padding:20px" onclick="event.stopPropagation()">
+    <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px">Vacation Allocation</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px">${memberName} · ${year}</div>
+    <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Allocated vacation days</label>
+    <input id="vac-alloc-days" type="number" value="${current}" min="0" max="365" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:18px;font-weight:700;background:var(--navy-lift);color:var(--white);text-align:center">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="saveVacAlloc('${memberId}','${memberName}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save</button>
+      <button onclick="document.getElementById('vac-alloc-modal').remove()" style="padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>document.getElementById('vac-alloc-days')?.select(),100);
+}
+
+function saveVacAlloc(memberId,memberName){
+  const days=parseInt(document.getElementById('vac-alloc-days')?.value||14);
+  if(isNaN(days)||days<0){alert('Enter a valid number of days.');return;}
+  const year=new Date().getFullYear();
+  const allocs=vacationAllocLoad();
+  const idx=allocs.findIndex(a=>a.memberId===memberId&&a.year===year);
+  const record={memberId,memberName,allocatedDays:days,year};
+  if(idx>=0) allocs[idx]=record; else allocs.push(record);
+  vacationAllocSave(allocs);
+  document.getElementById('vac-alloc-modal').remove();
+  renderVacationTracker();
+  showDhToast('Saved','Vacation allocation updated','✅','var(--green)',2500);
+}
+
 // ── CREATOR COLOUR SYSTEM ──────────────────────────────────────────────────
 const CREATOR_COLORS=[
   {bg:'rgba(91,141,239,.22)',border:'#5B8DEF',text:'#7AABFF'},
@@ -5378,52 +5665,81 @@ function renderCalendar(){
   if(!grid) return;
   calPopulateFilter();
   const filterCreator=document.getElementById('cal-filter-contractor')?.value||'';
+  const showShoots=_calTypeFilters===null||_calTypeFilters.has('shoots');
   const firstDay=new Date(calYear,calMonth,1).getDay();
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const daysInPrev=new Date(calYear,calMonth,0).getDate();
   const todayStr=new Date().toISOString().slice(0,10);
 
-  // Map jobs to dates — show job under EVERY contractor assigned to it
+  // Render type-filter pill bar
+  const pillBar=document.getElementById('cal-type-filter-bar');
+  if(pillBar){
+    const allActive=_calTypeFilters===null;
+    const pills=[
+      {id:'all',    label:'All',    icon:'📋', color:'var(--blue-bright)'},
+      {id:'shoots', label:'Shoots', icon:'📸', color:'#22D97A'},
+      ...CAL_EVENT_TYPES
+    ];
+    pillBar.innerHTML=pills.map(p=>{
+      const active=p.id==='all'?allActive:(!allActive&&_calTypeFilters.has(p.id));
+      const col=p.color||'var(--blue-bright)';
+      return `<button onclick="${p.id==='all'?'calSetAllFilters()':'calToggleTypeFilter(\''+p.id+'\')'}"
+        style="padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;border:1px solid ${active?col:'var(--border)'};background:${active?col+'22':'transparent'};color:${active?col:'var(--muted)'};transition:all .15s">
+        ${p.icon} ${p.label}
+      </button>`;
+    }).join('');
+  }
+
+  // Map jobs to dates
   const jobsByDate={};
-  savedJobs.forEach(j=>{
-    if(!j.date) return;
-
-    // Collect ALL contractors assigned to this job
-    const assignedNames=new Set();
-    // New format: payouts[name].entries
-    Object.values(j.payouts||{}).forEach(p=>{
-      if(p.name&&!p.name.includes('unassigned')) assignedNames.add(p.name);
+  if(showShoots){
+    savedJobs.forEach(j=>{
+      if(!j.date) return;
+      const assignedNames=new Set();
+      Object.values(j.payouts||{}).forEach(p=>{
+        if(p.name&&!p.name.includes('unassigned')) assignedNames.add(p.name);
+      });
+      const ts=getTrackerStage(j.id);
+      if(ts.videographer) assignedNames.add(ts.videographer);
+      if(ts.claimedBy) assignedNames.add(ts.claimedBy);
+      const primary=getJobCreator(j)||'Unknown';
+      if(!assignedNames.size) assignedNames.add(primary);
+      if(filterCreator&&!assignedNames.has(filterCreator)) return;
+      const creator=assignedNames.has(filterCreator)&&filterCreator?filterCreator:primary;
+      if(!jobsByDate[j.date]) jobsByDate[j.date]=[];
+      if(!jobsByDate[j.date].find(e=>e.id===j.id)){
+        jobsByDate[j.date].push({...j,_creator:creator,_allCreators:[...assignedNames],_evtType:'shoot'});
+      }
     });
-    // Fallback: tracker stage
-    const ts=getTrackerStage(j.id);
-    if(ts.videographer) assignedNames.add(ts.videographer);
-    if(ts.claimedBy) assignedNames.add(ts.claimedBy);
-    // Final fallback: getJobCreator
-    const primary=getJobCreator(j)||'Unknown';
-    if(!assignedNames.size) assignedNames.add(primary);
+    // Overlay GCal events
+    getGcalLinks().forEach(link=>{
+      (link.events||[]).forEach(ev=>{
+        if(!ev.date) return;
+        if(filterCreator&&link.creatorName!==filterCreator) return;
+        if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
+        jobsByDate[ev.date].push({_gcal:true,name:ev.title||'GCal event',_creator:link.creatorName,date:ev.date,shootTime:ev.time||'',_evtType:'shoot'});
+      });
+    });
+  }
 
-    // If filtering, only include this job if the filter name is one of the assigned contractors
-    if(filterCreator&&!assignedNames.has(filterCreator)) return;
-
-    // Use primary creator for the colour dot
-    const creator=assignedNames.has(filterCreator)&&filterCreator?filterCreator:primary;
-    if(!jobsByDate[j.date]) jobsByDate[j.date]=[];
-    // Avoid duplicate entries for same job on same date
-    if(!jobsByDate[j.date].find(e=>e.id===j.id)){
-      jobsByDate[j.date].push({...j,_creator:creator,_allCreators:[...assignedNames]});
+  // Overlay custom events (vacation, sick, etc.)
+  const customEvts=calEventsLoad();
+  customEvts.forEach(e=>{
+    if(_calTypeFilters!==null&&!_calTypeFilters.has(e.type)) return;
+    if(filterCreator&&e.memberName!==filterCreator) return;
+    const typeDef=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    // Expand multi-day events across all their dates in this month
+    const start=new Date(e.date+'T12:00:00');
+    const end=new Date((e.endDate||e.date)+'T12:00:00');
+    for(let dt=new Date(start);dt<=end;dt.setDate(dt.getDate()+1)){
+      const dStr=dt.toISOString().slice(0,10);
+      if(dt.getFullYear()!==calYear||dt.getMonth()!==calMonth) continue;
+      if(!jobsByDate[dStr]) jobsByDate[dStr]=[];
+      jobsByDate[dStr].push({_customEvt:true,id:e.id,name:e.title,_creator:e.memberName,date:dStr,_evtType:e.type,_typeDef:typeDef,_eventId:e.id});
     }
   });
-  // Overlay GCal events
-  getGcalLinks().forEach(link=>{
-    (link.events||[]).forEach(ev=>{
-      if(!ev.date) return;
-      if(filterCreator&&link.creatorName!==filterCreator) return;
-      if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
-      jobsByDate[ev.date].push({_gcal:true,name:ev.title||'GCal event',_creator:link.creatorName,date:ev.date,shootTime:ev.time||''});
-    });
-  });
 
-  // Legend — show ALL contractors who appear across all saved jobs (not just this month)
+  // Legend
   const legend=document.getElementById('cal-legend');
   if(legend){
     const allNames=new Set();
@@ -5437,6 +5753,7 @@ function renderCalendar(){
     });
     Object.values(CONTRACTORS).forEach(c=>allNames.add(c.name));
     getGcalLinks().forEach(l=>allNames.add(l.creatorName));
+    calEventsLoad().forEach(e=>{if(e.memberName)allNames.add(e.memberName);});
     const used=filterCreator?new Set([filterCreator]):allNames;
     if(used.size){
       legend.style.display='flex';
@@ -5459,17 +5776,24 @@ function renderCalendar(){
   for(let d=1;d<=daysInMonth;d++){
     const dateStr=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isToday=dateStr===todayStr;
-    const dayJobs=jobsByDate[dateStr]||[];
-    const badges=dayJobs.slice(0,3).map(j=>{
+    const dayItems=jobsByDate[dateStr]||[];
+    const badges=dayItems.slice(0,4).map(j=>{
+      if(j._customEvt){
+        const td=j._typeDef;
+        return `<div onclick="showCalDay('${dateStr}',event)" title="${j._creator?j._creator+': ':''}${j.name}"
+          style="font-size:11px;padding:3px 7px 3px 8px;border-radius:6px;margin-bottom:3px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;font-weight:600;background:${td.bg};border-left:3px solid ${td.color};color:${td.color}">
+          ${td.icon} ${j.name.slice(0,20)}
+        </div>`;
+      }
       const col=getCreatorColor(j._creator);
       const time=j.shootTime?j.shootTime.slice(0,5)+' ':'';
-      const label=(time+j.name).slice(0,24);
+      const lbl=(time+j.name).slice(0,24);
       return `<div onclick="showCalDay('${dateStr}',event)" title="${j._creator?j._creator+': ':''}${j.name}"
         style="font-size:11px;padding:4px 8px 4px 9px;border-radius:6px;margin-bottom:3px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;font-weight:600;background:${col.bg};border-left:3px solid ${col.border};color:${col.text}">
-        ${j._gcal?'📅 ':''}${label}
+        ${j._gcal?'📅 ':''}${lbl}
       </div>`;
     }).join('');
-    const more=dayJobs.length>3?`<div style="font-size:9px;color:var(--muted);padding:1px 4px">+${dayJobs.length-3} more</div>`:'';
+    const more=dayItems.length>4?`<div style="font-size:9px;color:var(--muted);padding:1px 4px">+${dayItems.length-4} more</div>`:'';
     html+=`<div class="cal-cell${isToday?' today':''}" onclick="showCalDay('${dateStr}',event)">
       <div style="font-size:${isToday?'17':'14'}px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};margin-bottom:8px;line-height:1">${d}${isToday?'<span style="font-size:9px;font-weight:700;color:var(--blue-bright);padding:1px 5px;border-radius:5px;background:rgba(91,141,239,.15);margin-left:4px">TODAY</span>':''}</div>
       ${badges}${more}
@@ -5484,25 +5808,39 @@ function renderCalendar(){
 function showCalDay(dateStr,e){
   if(e) e.stopPropagation();
   const dayJobs=savedJobs.filter(j=>j.date===dateStr);
+  const dayCustomEvts=calEventsLoad().filter(ev=>{
+    const s=ev.date, end=ev.endDate||ev.date;
+    return dateStr>=s&&dateStr<=end;
+  });
   const panel=document.getElementById('cal-day-detail');
   const title=document.getElementById('cal-day-title');
   const jobsEl=document.getElementById('cal-day-jobs');
   const d=new Date(dateStr+'T12:00:00');
   title.textContent=d.toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  if(!dayJobs.length){
-    jobsEl.innerHTML='<div style="font-size:12px;color:#7A8AAA">No jobs scheduled.</div>';
-  } else {
-    jobsEl.innerHTML=dayJobs.map(j=>{
+  let html='';
+  // Custom events first
+  dayCustomEvts.forEach(ev=>{
+    const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    const isMultiDay=ev.endDate&&ev.endDate!==ev.date;
+    html+=`<div style="padding:10px 12px;border:1px solid ${td.color}55;border-left:4px solid ${td.color};border-radius:8px;margin-bottom:8px;background:${td.bg}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:700;color:var(--white)">${td.icon} ${ev.title}</span>
+        <button onclick="deleteCalEvent('${ev.id}')" title="Delete event" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px">🗑</button>
+      </div>
+      ${ev.memberName?`<div style="font-size:11px;color:${td.color};font-weight:600;margin-bottom:2px">👤 ${ev.memberName}</div>`:''}
+      ${isMultiDay?`<div style="font-size:10px;color:var(--muted)">${ev.date} → ${ev.endDate}</div>`:''}
+      ${ev.notes?`<div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic">${ev.notes}</div>`:''}
+    </div>`;
+  });
+  // Jobs
+  if(dayJobs.length){
+    html+=dayJobs.map(j=>{
       const creator=getJobCreator(j);
       const col=getCreatorColor(creator);
-      const contractors=[
-        document.getElementById('sel-videographer')?.value,
-        document.getElementById('sel-photographer')?.value,
-      ].filter(Boolean);
       const svcsStr=Object.entries(j.services||{}).filter(([k,v])=>v&&!['tvideo','tphoto'].includes(k)).map(([k])=>({video:'Video',photo:'Photo',reel:'Reels',extphoto:'Ext. photo',extvideo:'Ext. video',floorplan:'Floor plan',randomvideo:'Random video',randomphoto:'Random photo'}[k]||k)).join(', ');
       return `<div style="padding:10px;border:1px solid ${col.border};border-radius:8px;margin-bottom:8px;background:${col.bg}">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;flex-wrap:wrap;gap:6px">
-          <span style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--white)">📸 ${j.name}</span>
           <div style="display:flex;gap:6px;align-items:center">
             ${creator?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${col.border}22;border:1px solid ${col.border};color:${col.text}">👤 ${creator}</span>`:''}
             <span class="status-badge status-${j.status||'quoted'}">${j.status||'quoted'}</span>
@@ -5517,6 +5855,8 @@ function showCalDay(dateStr,e){
       </div>`;
     }).join('');
   }
+  if(!html) html='<div style="font-size:12px;color:#7A8AAA">Nothing scheduled — <button onclick="openCalEventModal(\''+dateStr+'\')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;padding:0;font-weight:600">+ add event</button></div>';
+  jobsEl.innerHTML=html;
   panel.style.display='block';
 }
 
