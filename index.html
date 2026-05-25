@@ -13237,9 +13237,18 @@ const SALES_ALLOWED_EMAILS = [
   'alex@dronehubmedia.com',
 ];
 
+// Explicitly blocked from Sales CRM regardless of role
+const SALES_BLOCKED_EMAILS = [
+  'adrian@dronehubmedia.com',
+  'brad@dronehubmedia.com',
+  'bradloiselle@dronehubmedia.com',
+];
+
 function canAccessSales(email){
   const e=(email||'').toLowerCase().trim();
   if(!e) return false;
+  // Explicit deny list — overrides everything
+  if(SALES_BLOCKED_EMAILS.includes(e)) return false;
   // Hardcoded allow-list
   if(SALES_ALLOWED_EMAILS.includes(e)) return true;
   // Admins always get full sales access
