@@ -1,5 +1,3 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
 exports.handler = async (event) => {
   // Only allow POST
   if (event.httpMethod !== 'POST') {
@@ -8,6 +6,13 @@ exports.handler = async (event) => {
 
   try {
     const { amount, jobName, invoiceNumber, clientEmail, currency, jobId } = JSON.parse(event.body);
+
+    // Route to the correct Stripe account based on invoice currency
+    const isUsd = (currency || 'cad').toLowerCase() === 'usd';
+    const stripeKey = isUsd
+      ? (process.env.STRIPE_SECRET_KEY_US || process.env.STRIPE_SECRET_KEY)
+      : process.env.STRIPE_SECRET_KEY;
+    const stripe = require('stripe')(stripeKey);
 
     // amount comes in as dollars (e.g. 347.52), convert to cents
     const amountCents = Math.round(parseFloat(amount) * 100);

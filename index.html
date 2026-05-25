@@ -2280,8 +2280,9 @@ button{font-family:var(--font);}
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">HST number</label><input type="text" id="biz-hst" placeholder="123456789 RT0001" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="divider"></div>
     <div class="section-label" style="margin-bottom:8px">Payment</div>
-    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/…" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
-    <div class="note" style="margin-bottom:12px">Create a Payment Link at dashboard.stripe.com → Payment Links. Paste the URL here and it will appear as a "Pay now" button on every invoice.</div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">🇨🇦 CAD Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/… (Canadian Stripe)" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">🇺🇸 USD Payment Link</label><input type="url" id="biz-stripe-url-us" placeholder="https://buy.stripe.com/… (US Stripe)" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="note" style="margin-bottom:12px">Create Payment Links at dashboard.stripe.com → Payment Links. CAD link uses your Canadian Stripe account; USD link uses your US Stripe account (DRONEHUB MEDIA COMPANY USA INC). These appear as fallback "Pay now" buttons on invoices.</div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Payment terms</label><input type="text" id="biz-terms" placeholder="Payment due upon receipt" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Invoice notes</label><input type="text" id="biz-notes" placeholder="Thank you for choosing DroneHub Media!" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <button onclick="saveSettings()" style="margin-top:6px;padding:8px 24px;border-radius:20px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:500;cursor:pointer">Save settings ✓</button>
@@ -5498,6 +5499,7 @@ function saveSettings(){
     website:document.getElementById('biz-website').value.trim(),
     hst:document.getElementById('biz-hst').value.trim(),
     stripeUrl:document.getElementById('biz-stripe-url').value.trim(),
+    stripeUrlUs:document.getElementById('biz-stripe-url-us').value.trim(),
     terms:document.getElementById('biz-terms').value.trim(),
     notes:document.getElementById('biz-notes').value.trim(),
   };
@@ -5555,7 +5557,7 @@ function loadSettings(){
   const suggBox=document.getElementById('settings-suggestion-box');
   if(suggBox) suggBox.style.display='none';
   const map={name:'biz-name',addr1:'biz-addr1',addr2:'biz-addr2',phone:'biz-phone',
-    email:'biz-email',website:'biz-website',hst:'biz-hst',stripeUrl:'biz-stripe-url',
+    email:'biz-email',website:'biz-website',hst:'biz-hst',stripeUrl:'biz-stripe-url',stripeUrlUs:'biz-stripe-url-us',
     terms:'biz-terms',notes:'biz-notes'};
   Object.entries(map).forEach(([k,id])=>{
     const el=document.getElementById(id);
@@ -5823,7 +5825,8 @@ function openInvoice(jobId){
     <td style="padding:9px 0;border-bottom:0.5px solid #f0ede6;font-size:13px;text-align:right;font-weight:500">${fmtN(l.total)}</td>
   </tr>`).join('');
 
-  const stripeUrl=biz.stripeUrl||'';
+  const isUsdJob=(job.currency||'cad').toLowerCase()==='usd';
+  const stripeUrl=isUsdJob?(biz.stripeUrlUs||biz.stripeUrl||''):(biz.stripeUrl||'');
   const stripeBtn=`<div style="margin-top:20px;padding:20px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
       <div style="font-size:13px;color:#A8B4D0;margin-bottom:6px">Pay securely online via Stripe</div>
       <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:14px">${fmtN(grandTotal)}</div>
