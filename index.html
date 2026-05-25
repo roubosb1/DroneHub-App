@@ -2725,12 +2725,33 @@ button{font-family:var(--font);}
           <!-- Manual entry card -->
           <div class="card" style="border-color:var(--border-bright)">
             <div class="section-label" style="margin-bottom:12px">Add single client</div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
-              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Full name *</label><input type="text" id="acp-name" placeholder="First and last name" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
-              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Company / brokerage</label><input type="text" id="acp-company" placeholder="Optional" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+              <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Full name *</label><input type="text" id="acp-name" placeholder="First and last name" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Company / brokerage</label><input type="text" id="acp-company" placeholder="Optional" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
               <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Email</label><input type="email" id="acp-email" placeholder="email@example.com" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
               <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Phone</label><input type="tel" id="acp-phone" placeholder="905-555-0100" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
-              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Address</label><input type="text" id="acp-address" placeholder="123 Main St, City, ON  L0L 0L0" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Website</label><input type="url" id="acp-website" placeholder="https://…" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Account #</label><input type="text" id="acp-account" placeholder="Internal ref" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Address line 1</label><input type="text" id="acp-address" placeholder="123 Main St" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Address line 2</label><input type="text" id="acp-address2" placeholder="Suite, unit, floor…" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">City</label><input type="text" id="acp-city" placeholder="New York" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">State / Province</label><input type="text" id="acp-state" placeholder="NY" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Zip / Postal code</label><input type="text" id="acp-zip" placeholder="10001" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)"></div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Country</label>
+                <select id="acp-country" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)" onchange="acpSyncCurrency()">
+                  <option value="">— select —</option>
+                  <option value="United States">United States</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Currency</label>
+                <select id="acp-currency" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+                  <option value="">— auto —</option>
+                  <option value="usd">USD $</option>
+                  <option value="cad">CAD $</option>
+                </select>
+              </div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               <button onclick="saveClientFromPanel()" style="padding:7px 20px;border-radius:16px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save client ✓</button>
@@ -6371,14 +6392,16 @@ function openInvoice(jobId){
   const stripeBtn=`<div style="margin-top:20px;padding:20px;background:rgba(99,91,255,.08);border:1px solid rgba(99,91,255,.3);border-radius:10px;text-align:center">
       <div style="font-size:13px;color:#A8B4D0;margin-bottom:6px">Pay securely online via Stripe</div>
       <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:14px">${fmtN(grandTotal)}</div>
-      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}','${job.currency||'cad'}',${job.id})" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
+      <button onclick="openStripeCheckout(${grandTotal},'${invNum}','${client?.email||''}','${job.currency||getClientCurrency(client)||'cad'}',${job.id})" style="display:inline-block;padding:13px 36px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;border-radius:8px;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.01em">
         💳 Pay now
       </button>
       <div style="font-size:11px;color:#7A8AAA;margin-top:10px">Powered by Stripe · Secure checkout</div>
     </div>`;
 
+  // Resolve currency: job setting → client country/currency → default cad
+  const resolvedCurrency=job.currency||getClientCurrency(client)||'cad';
   // Store for Send Invoice button
-  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media',currency:job.currency||'cad',jobId:job.id};
+  currentInvoiceData={clientEmail:client?.email||'',clientName:client?.name||'',invNum,grandTotal,jobName:job.name,jobDate:job.date,stripeUrl,bname:biz.name||'DroneHub Media',currency:resolvedCurrency,jobId:job.id};
   const sendStatus=document.getElementById('invoice-send-status');
   if(sendStatus) sendStatus.style.display='none';
 
@@ -6492,7 +6515,11 @@ function toggleAddClientPanel(){
   btn.style.borderColor=open?'var(--red)':'var(--blue)';
   btn.style.color=open?'var(--red)':'var(--blue-bright)';
   if(open){
-    ['acp-name','acp-company','acp-email','acp-phone','acp-address'].forEach(id=>{
+    ['acp-name','acp-company','acp-email','acp-phone','acp-website','acp-account',
+     'acp-address','acp-address2','acp-city','acp-state','acp-zip'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    ['acp-country','acp-currency'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value='';
     });
     document.getElementById('acp-error').textContent='';
@@ -6501,17 +6528,35 @@ function toggleAddClientPanel(){
   }
 }
 
+// Auto-select currency when country changes
+function acpSyncCurrency(){
+  const country=(document.getElementById('acp-country')?.value||'').toLowerCase();
+  const currEl=document.getElementById('acp-currency');
+  if(!currEl) return;
+  if(country.includes('united states')||country==='us'||country==='usa') currEl.value='usd';
+  else if(country.includes('canada')||country==='ca') currEl.value='cad';
+}
+
 function saveClientFromPanel(){
   const name=document.getElementById('acp-name').value.trim();
   const err=document.getElementById('acp-error');
   if(!name){err.textContent='Name is required.';return;}
+  const v=id=>document.getElementById(id)?.value.trim()||'';
   const client={
     id:'c'+Date.now(),
     name,
-    company:document.getElementById('acp-company').value.trim(),
-    email:document.getElementById('acp-email').value.trim(),
-    phone:document.getElementById('acp-phone').value.trim(),
-    address:document.getElementById('acp-address').value.trim(),
+    company:v('acp-company'),
+    email:v('acp-email'),
+    phone:v('acp-phone'),
+    website:v('acp-website'),
+    accountNumber:v('acp-account'),
+    address:v('acp-address'),
+    address2:v('acp-address2'),
+    city:v('acp-city'),
+    state:v('acp-state'),
+    zip:v('acp-zip'),
+    country:v('acp-country'),
+    currency:v('acp-currency'),
     createdAt:new Date().toISOString().slice(0,10),
   };
   clients.push(client);
@@ -6548,16 +6593,25 @@ function handleClientImportFile(files){
 }
 
 function guessClientCol(headers, type){
-  const h=headers.map(x=>x.toLowerCase());
+  const h=headers.map(x=>x.toLowerCase().trim());
   const patterns={
-    name:['name','full name','client name','contact','first name'],
-    email:['email','e-mail','email address'],
-    phone:['phone','mobile','cell','tel','telephone','number'],
-    company:['company','brokerage','business','firm','organization','org'],
-    address:['address','street','location','addr'],
+    name:    ['customer name','full name','client name','contact name','name','first name'],
+    lastName:['last name','surname','family name'],
+    email:   ['email','e-mail','email address'],
+    phone:   ['phone number','phone','mobile','cell','tel','telephone'],
+    company: ['company','brokerage','business','firm','organization','org','team'],
+    address: ['address 1','address1','street address','street','address','location','addr'],
+    address2:['address 2','address2','suite','unit','apt'],
+    city:    ['city','town'],
+    state:   ['state','province','state/province','region'],
+    zip:     ['zip code','zip','postal code','postal','postcode'],
+    country: ['country'],
+    currency:['currency'],
+    website: ['website','web','url','site'],
+    accountNumber:['account number','account #','account no','acct'],
   };
   for(const p of patterns[type]||[]){
-    const idx=h.findIndex(x=>x.includes(p));
+    const idx=h.findIndex(x=>x===p||x.includes(p));
     if(idx>=0) return idx;
   }
   return -1;
@@ -6566,19 +6620,26 @@ function guessClientCol(headers, type){
 function showClientImportMapper(){
   document.getElementById('client-import-mapper').style.display='block';
   const fields=[
-    {id:'cic-name',label:'Name *'},
-    {id:'cic-email',label:'Email'},
-    {id:'cic-phone',label:'Phone'},
-    {id:'cic-company',label:'Company'},
-    {id:'cic-address',label:'Address'},
+    {id:'cic-name',     label:'Name *',          type:'name'},
+    {id:'cic-company',  label:'Company',          type:'company'},
+    {id:'cic-email',    label:'Email',            type:'email'},
+    {id:'cic-phone',    label:'Phone',            type:'phone'},
+    {id:'cic-address',  label:'Address 1',        type:'address'},
+    {id:'cic-address2', label:'Address 2',        type:'address2'},
+    {id:'cic-city',     label:'City',             type:'city'},
+    {id:'cic-state',    label:'State / Province', type:'state'},
+    {id:'cic-zip',      label:'Zip / Postal',     type:'zip'},
+    {id:'cic-country',  label:'Country',          type:'country'},
+    {id:'cic-currency', label:'Currency',         type:'currency'},
+    {id:'cic-website',  label:'Website',          type:'website'},
+    {id:'cic-account',  label:'Account #',        type:'accountNumber'},
   ];
-  const guessTypes=['name','email','phone','company','address'];
-  document.getElementById('client-import-col-map').innerHTML=fields.map((f,i)=>`
+  document.getElementById('client-import-col-map').innerHTML=fields.map(f=>`
     <div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">${f.label}</div>
       <select id="${f.id}" onchange="updateClientImportPreview()" style="width:100%;padding:5px 6px;border:1px solid var(--border-bright);border-radius:7px;font-size:11px;background:var(--navy-lift);color:var(--white)">
         <option value="-1">— skip —</option>
-        ${clientImportHeaders.map((h,j)=>`<option value="${j}"${j===guessClientCol(clientImportHeaders,guessTypes[i])?' selected':''}>${h||'(col '+(j+1)+')'}</option>`).join('')}
+        ${clientImportHeaders.map((h,j)=>`<option value="${j}"${j===guessClientCol(clientImportHeaders,f.type)?' selected':''}>${h||'(col '+(j+1)+')'}</option>`).join('')}
       </select>
     </div>`).join('');
   updateClientImportPreview();
@@ -6586,14 +6647,41 @@ function showClientImportMapper(){
 
 function getClientImportMapped(){
   const gi=id=>parseInt(document.getElementById(id)?.value??-1);
-  const ni=gi('cic-name'),ei=gi('cic-email'),pi=gi('cic-phone'),ci=gi('cic-company'),ai=gi('cic-address');
-  return clientImportRows.map(r=>({
-    name:ni>=0?(r[ni]||'').trim():'',
-    email:ei>=0?(r[ei]||'').trim():'',
-    phone:pi>=0?(r[pi]||'').trim():'',
-    company:ci>=0?(r[ci]||'').trim():'',
-    address:ai>=0?(r[ai]||'').trim():'',
-  })).filter(r=>r.name);
+  const g=id=>gi(id);
+  const ni=g('cic-name'),coi=g('cic-company'),ei=g('cic-email'),pi=g('cic-phone');
+  const a1i=g('cic-address'),a2i=g('cic-address2'),cii=g('cic-city'),sti=g('cic-state');
+  const zi=g('cic-zip'),ctri=g('cic-country'),curi=g('cic-currency');
+  const wi=g('cic-website'),aci=g('cic-account');
+  return clientImportRows.map(r=>{
+    let rawName=ni>=0?(r[ni]||'').trim():'';
+    let company=coi>=0?(r[coi]||'').trim():'';
+    // Handle "First Last | Company Name" pattern common in Numbers exports
+    if(rawName.includes('|')){
+      const parts=rawName.split('|');
+      rawName=parts[0].trim();
+      if(!company) company=parts[1].trim();
+    }
+    const currency=(curi>=0?(r[curi]||'').trim():'').toLowerCase();
+    const country=ctri>=0?(r[ctri]||'').trim():'';
+    // Normalise currency: derive from country if blank
+    const resolvedCurrency=currency==='usd'||currency==='cad'?currency:
+      (country.toLowerCase().includes('united states')||country.toLowerCase()==='us'?'usd':'');
+    return {
+      name:rawName,
+      company,
+      email:ei>=0?(r[ei]||'').trim():'',
+      phone:pi>=0?(r[pi]||'').trim():'',
+      address:a1i>=0?(r[a1i]||'').trim():'',
+      address2:a2i>=0?(r[a2i]||'').trim():'',
+      city:cii>=0?(r[cii]||'').trim():'',
+      state:sti>=0?(r[sti]||'').trim():'',
+      zip:zi>=0?(r[zi]||'').trim():'',
+      country,
+      currency:resolvedCurrency,
+      website:wi>=0?(r[wi]||'').trim():'',
+      accountNumber:aci>=0?(r[aci]||'').trim():'',
+    };
+  }).filter(r=>r.name);
 }
 
 function updateClientImportPreview(){
@@ -6603,10 +6691,12 @@ function updateClientImportPreview(){
   const tbl=document.getElementById('client-import-preview');
   if(!rows.length){tbl.innerHTML='<tr><td style="color:var(--muted);font-size:11px;padding:6px">No valid rows — check column mapping.</td></tr>';return;}
   const preview=rows.slice(0,4);
+  const cols=['name','company','email','phone','address','city','state','country','currency'];
+  const colLabels=['Name','Company','Email','Phone','Address','City','State','Country','Currency'];
   tbl.innerHTML=`<thead><tr style="border-bottom:1px solid var(--border)">
-    ${['Name','Email','Phone','Company','Address'].map(h=>`<th style="text-align:left;padding:3px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">${h}</th>`).join('')}
+    ${colLabels.map(h=>`<th style="text-align:left;padding:3px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;white-space:nowrap">${h}</th>`).join('')}
   </tr></thead><tbody>${preview.map(r=>`<tr style="border-bottom:0.5px solid var(--border)">
-    ${[r.name,r.email,r.phone,r.company,r.address].map(v=>`<td style="padding:4px 8px;font-size:11px;color:var(--offwhite);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v||'—'}</td>`).join('')}
+    ${cols.map(k=>`<td style="padding:4px 8px;font-size:11px;color:var(--offwhite);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r[k]||'—'}</td>`).join('')}
   </tr>`).join('')}</tbody>`;
 }
 
@@ -6659,6 +6749,19 @@ function saveNewClient(){
   renderClients();
 }
 
+// Resolve a client's billing currency:
+// 1. client.currency if explicitly set
+// 2. Infer from client.country (US → usd, otherwise cad)
+// 3. Default cad
+function getClientCurrency(clientOrId){
+  const c=typeof clientOrId==='string'?clients.find(cl=>cl.id===clientOrId):clientOrId;
+  if(!c) return 'cad';
+  if(c.currency) return c.currency.toLowerCase();
+  const co=(c.country||'').toLowerCase();
+  if(co.includes('united states')||co==='us'||co==='usa') return 'usd';
+  return 'cad';
+}
+
 function selectClient(id){
   const c=clients.find(cl=>cl.id===id);
   if(!c) return;
@@ -6671,8 +6774,13 @@ function selectClient(id){
   document.getElementById('client-selected-name').textContent=c.name+(c.company?' — '+c.company:'');
   const jobCount=savedJobs.filter(j=>j.clientId===id&&j.status==='completed').length;
   const rev=savedJobs.filter(j=>j.clientId===id&&j.status==='completed').reduce((s,j)=>s+j.grand,0);
+  const cur=getClientCurrency(c).toUpperCase();
   document.getElementById('client-selected-meta').textContent=
-    (c.email||'')+(c.phone?' · '+c.phone:'')+(jobCount?' · '+jobCount+' completed job'+(jobCount>1?'s':'')+' · '+fmt(rev)+' revenue':'');
+    (c.email||'')+(c.phone?' · '+c.phone:'')+(c.country?' · '+c.country:'')
+    +' · '+cur+(jobCount?' · '+jobCount+' completed job'+(jobCount>1?'s':'')+' · '+fmt(rev)+' revenue':'');
+  // Auto-set job currency to match client's billing currency
+  const currInput=document.getElementById('job-currency-input');
+  if(currInput) currInput.value=getClientCurrency(c);
 }
 
 function clearClientSelection(){
