@@ -13238,7 +13238,18 @@ const SALES_ALLOWED_EMAILS = [
 ];
 
 function canAccessSales(email){
-  return SALES_ALLOWED_EMAILS.includes((email||'').toLowerCase().trim());
+  const e=(email||'').toLowerCase().trim();
+  if(!e) return false;
+  // Hardcoded allow-list
+  if(SALES_ALLOWED_EMAILS.includes(e)) return true;
+  // Admins always get full sales access
+  const session=gateGetSession();
+  if(session&&(session.role==='admin'||session.role==='owner')) return true;
+  // Team members whose record has salesAccess flag
+  const members=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+  const member=members.find(m=>(m.email||'').toLowerCase()===e);
+  if(member&&member.salesAccess) return true;
+  return false;
 }
 
 function applySalesAccess(session){
@@ -16940,13 +16951,17 @@ function setSalesView(v){
     if(el) el.style.display = id===v ? '' : 'none';
     if(btn){ btn.style.borderBottomColor = id===v?'var(--blue-bright)':'transparent'; btn.style.color = id===v?'var(--blue-bright)':'var(--muted)'; }
   });
-  // Hide contacts/pipeline sub-tabs from non-sales users
+  // Show/hide contacts & pipeline based on sales access (re-evaluated every call)
   const emailToCheck = _activeSessionEmail || gateGetSession()?.email || '';
   const hasSalesAccess = canAccessSales(emailToCheck);
   ['contacts','pipeline'].forEach(id=>{
     const btn = document.getElementById('sales-view-'+id+'-btn');
     if(btn) btn.style.display = hasSalesAccess ? 'flex' : 'none';
   });
+  // If user tried to navigate to a gated view without access, fall back to clients
+  if(!hasSalesAccess && (v==='contacts'||v==='pipeline')){
+    setSalesView('clients'); return;
+  }
   if(v==='pipeline') renderDealsTable();
   if(v==='jobs') renderJobs();
   if(v==='clients') renderClients();
