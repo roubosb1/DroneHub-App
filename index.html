@@ -6575,21 +6575,29 @@ function handleClientImportFile(files){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
+      const buf=e.target.result; // always ArrayBuffer
+      let csvText;
       if(isExcel){
         if(typeof XLSX==='undefined'){alert('Excel library not loaded yet — try again in a moment.');return;}
-        const wb=XLSX.read(e.target.result,{type:'array'});
+        const wb=XLSX.read(buf,{type:'array'});
         const ws=wb.Sheets[wb.SheetNames[0]];
-        const parsed=parseCSV(XLSX.utils.sheet_to_csv(ws));
-        clientImportHeaders=parsed.headers; clientImportRows=parsed.rows;
+        csvText=XLSX.utils.sheet_to_csv(ws);
       } else {
-        const parsed=parseCSV(e.target.result);
-        clientImportHeaders=parsed.headers; clientImportRows=parsed.rows;
+        // Detect encoding from BOM — Numbers exports UTF-16 LE by default
+        const bytes=new Uint8Array(buf);
+        let encoding='utf-8';
+        let start=0;
+        if(bytes[0]===0xFF&&bytes[1]===0xFE){encoding='utf-16le';start=2;}
+        else if(bytes[0]===0xFE&&bytes[1]===0xFF){encoding='utf-16be';start=2;}
+        else if(bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF){start=3;} // UTF-8 BOM
+        csvText=new TextDecoder(encoding).decode(buf.slice(start));
       }
+      const parsed=parseCSV(csvText);
+      clientImportHeaders=parsed.headers; clientImportRows=parsed.rows;
       showClientImportMapper();
     }catch(err){alert('Could not read file: '+err.message);}
   };
-  if(isExcel) reader.readAsArrayBuffer(file);
-  else reader.readAsText(file);
+  reader.readAsArrayBuffer(file); // always read as ArrayBuffer so we can detect encoding
 }
 
 function guessClientCol(headers, type){
