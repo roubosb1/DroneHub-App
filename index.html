@@ -2269,9 +2269,17 @@ button{font-family:var(--font);}
 
 <!-- SETTINGS -->
 <div id="pane-settings" class="pane">
+
+  <!-- 🇨🇦 CANADIAN ENTITY -->
   <div class="card">
-    <div class="section-label" style="margin-bottom:12px">Business information — appears on all invoices</div>
-    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Business name</label><input type="text" id="biz-name" placeholder="DroneHub Media Company" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:18px">🇨🇦</span>
+      <div>
+        <div class="section-label" style="margin-bottom:0">Canadian Entity</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Appears on all CAD invoices</div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Legal business name</label><input type="text" id="biz-name" placeholder="DroneHub Media Company" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Address line 1</label><input type="text" id="biz-addr1" placeholder="123 Main St" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Address line 2</label><input type="text" id="biz-addr2" placeholder="Welland, ON  L3C 0A0" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Phone</label><input type="tel" id="biz-phone" placeholder="905-555-0100" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
@@ -2279,14 +2287,38 @@ button{font-family:var(--font);}
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Website</label><input type="text" id="biz-website" placeholder="www.dronehub.ca" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">HST number</label><input type="text" id="biz-hst" placeholder="123456789 RT0001" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="divider"></div>
-    <div class="section-label" style="margin-bottom:8px">Payment</div>
-    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">🇨🇦 CAD Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/… (Canadian Stripe)" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
-    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">🇺🇸 USD Payment Link</label><input type="url" id="biz-stripe-url-us" placeholder="https://buy.stripe.com/… (US Stripe)" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
-    <div class="note" style="margin-bottom:12px">Create Payment Links at dashboard.stripe.com → Payment Links. CAD link uses your Canadian Stripe account; USD link uses your US Stripe account (DRONEHUB MEDIA COMPANY USA INC). These appear as fallback "Pay now" buttons on invoices.</div>
+    <div class="section-label" style="margin-bottom:8px">🇨🇦 Canadian Payment</div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url" placeholder="https://buy.stripe.com/… (Canadian Stripe)" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Payment terms</label><input type="text" id="biz-terms" placeholder="Payment due upon receipt" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
     <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Invoice notes</label><input type="text" id="biz-notes" placeholder="Thank you for choosing DroneHub Media!" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
-    <button onclick="saveSettings()" style="margin-top:6px;padding:8px 24px;border-radius:20px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:500;cursor:pointer">Save settings ✓</button>
+    <button onclick="saveSettings()" style="margin-top:6px;padding:8px 24px;border-radius:20px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:500;cursor:pointer">Save Canadian entity ✓</button>
     <span id="settings-saved-msg" style="font-size:12px;color:#22D97A;margin-left:10px"></span>
+  </div>
+
+  <!-- 🇺🇸 US ENTITY -->
+  <div class="card" style="margin-top:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:18px">🇺🇸</span>
+      <div>
+        <div class="section-label" style="margin-bottom:0">US Entity</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Appears on all USD invoices</div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Legal business name</label><input type="text" id="biz-us-name" placeholder="DroneHub Media Company USA Inc." style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Address line 1</label><input type="text" id="biz-us-addr1" placeholder="1300 North Frontage Road West" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Address line 2</label><input type="text" id="biz-us-addr2" placeholder="Vail, CO 81657 US" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Phone</label><input type="tel" id="biz-us-phone" placeholder="+1 (512) 573-5846" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Email</label><input type="email" id="biz-us-email" placeholder="hello@dronehubmedia.com" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Website</label><input type="text" id="biz-us-website" placeholder="www.dronehubmedia.com" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">EIN</label><input type="text" id="biz-us-ein" placeholder="12-3456789" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="divider"></div>
+    <div class="section-label" style="margin-bottom:8px">🇺🇸 US Payment</div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Stripe Payment Link</label><input type="url" id="biz-stripe-url-us" placeholder="https://buy.stripe.com/… (US Stripe)" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="note" style="margin-bottom:12px">No sales tax — leave tax fields blank. EIN appears on USD invoices in place of HST.</div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Payment terms</label><input type="text" id="biz-us-terms" placeholder="Payment due upon receipt" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <div class="row" style="margin-bottom:8px"><label style="min-width:140px">Invoice notes</label><input type="text" id="biz-us-notes" placeholder="Thank you for choosing DroneHub Media!" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></div>
+    <button onclick="saveUsSettings()" style="margin-top:6px;padding:8px 24px;border-radius:20px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:500;cursor:pointer">Save US entity ✓</button>
+    <span id="settings-us-saved-msg" style="font-size:12px;color:#22D97A;margin-left:10px"></span>
   </div>
 
   <!-- PRICING SETUP -->
@@ -5563,6 +5595,12 @@ function showContractorDetail(key){
 
 
 let bizSettings=JSON.parse(localStorage.getItem('dronehub_settings')||'{}');
+let bizSettingsUs=JSON.parse(localStorage.getItem('dronehub_settings_us')||'{}');
+
+// Returns the right entity profile based on currency
+function bizForCurrency(currency){
+  return (currency||'cad').toLowerCase()==='usd' ? {...bizSettings,...bizSettingsUs,_isUs:true} : {...bizSettings,_isUs:false};
+}
 
 function saveSettings(){
   bizSettings={
@@ -5574,15 +5612,33 @@ function saveSettings(){
     website:document.getElementById('biz-website').value.trim(),
     hst:document.getElementById('biz-hst').value.trim(),
     stripeUrl:document.getElementById('biz-stripe-url').value.trim(),
-    stripeUrlUs:document.getElementById('biz-stripe-url-us').value.trim(),
     terms:document.getElementById('biz-terms').value.trim(),
     notes:document.getElementById('biz-notes').value.trim(),
   };
   try{localStorage.setItem('dronehub_settings',JSON.stringify(bizSettings));}catch(e){}
   fbSet('orgs',ORG_ID+':settings',{data:JSON.stringify(bizSettings),updatedAt:Date.now()});
   const msg=document.getElementById('settings-saved-msg');
-  msg.textContent='Saved!';
-  setTimeout(()=>msg.textContent='',2500);
+  if(msg){msg.textContent='Saved!';setTimeout(()=>msg.textContent='',2500);}
+}
+
+function saveUsSettings(){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  bizSettingsUs={
+    name:g('biz-us-name'),
+    addr1:g('biz-us-addr1'),
+    addr2:g('biz-us-addr2'),
+    phone:g('biz-us-phone'),
+    email:g('biz-us-email'),
+    website:g('biz-us-website'),
+    ein:g('biz-us-ein'),
+    stripeUrlUs:g('biz-stripe-url-us'),
+    terms:g('biz-us-terms'),
+    notes:g('biz-us-notes'),
+  };
+  try{localStorage.setItem('dronehub_settings_us',JSON.stringify(bizSettingsUs));}catch(e){}
+  fbSet('orgs',ORG_ID+':settings_us',{data:JSON.stringify(bizSettingsUs),updatedAt:Date.now()});
+  const msg=document.getElementById('settings-us-saved-msg');
+  if(msg){msg.textContent='Saved!';setTimeout(()=>msg.textContent='',2500);}
 }
 
 function changePassword(){
@@ -5632,11 +5688,19 @@ function loadSettings(){
   const suggBox=document.getElementById('settings-suggestion-box');
   if(suggBox) suggBox.style.display='none';
   const map={name:'biz-name',addr1:'biz-addr1',addr2:'biz-addr2',phone:'biz-phone',
-    email:'biz-email',website:'biz-website',hst:'biz-hst',stripeUrl:'biz-stripe-url',stripeUrlUs:'biz-stripe-url-us',
+    email:'biz-email',website:'biz-website',hst:'biz-hst',stripeUrl:'biz-stripe-url',
     terms:'biz-terms',notes:'biz-notes'};
   Object.entries(map).forEach(([k,id])=>{
     const el=document.getElementById(id);
     if(el&&bizSettings[k]) el.value=bizSettings[k];
+  });
+  // US entity fields
+  const usMap={name:'biz-us-name',addr1:'biz-us-addr1',addr2:'biz-us-addr2',phone:'biz-us-phone',
+    email:'biz-us-email',website:'biz-us-website',ein:'biz-us-ein',stripeUrlUs:'biz-stripe-url-us',
+    terms:'biz-us-terms',notes:'biz-us-notes'};
+  Object.entries(usMap).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el&&bizSettingsUs[k]) el.value=bizSettingsUs[k];
   });
 }
 
@@ -5745,7 +5809,7 @@ function openInvoice(jobId){
   const job=savedJobs.find(j=>j.id===jobId);
   if(!job){alert('Job not found.');return;}
   const client=job.clientId?clients.find(c=>c.id===job.clientId):null;
-  const biz=bizSettings;
+  const biz=bizForCurrency(job.currency);
   const invNum=nextInvoiceNum();
   // Stamp invoice date on job if first time
   if(!job.invoicedAt){
@@ -5921,7 +5985,7 @@ function openInvoice(jobId){
       <div>
         <div style="font-size:22px;font-weight:700;margin-bottom:6px">${biz.name||'DroneHub Media Company'}</div>
         ${[biz.addr1,biz.addr2,biz.phone,biz.email,biz.website].filter(Boolean).map(v=>`<div style="font-size:12px;color:#A8B4D0;line-height:1.7">${v}</div>`).join('')}
-        ${biz.hst?`<div style="font-size:11px;color:#7A8AAA;margin-top:4px">HST # ${biz.hst}</div>`:''}
+        ${biz._isUs?(biz.ein?`<div style="font-size:11px;color:#7A8AAA;margin-top:4px">EIN: ${biz.ein}</div>`:''):(biz.hst?`<div style="font-size:11px;color:#7A8AAA;margin-top:4px">HST # ${biz.hst}</div>`:'')}
       </div>
       <div style="text-align:right">
         <div style="font-size:32px;font-weight:200;color:#1D9E75;letter-spacing:.03em">INVOICE</div>
@@ -10015,7 +10079,7 @@ function cpViewInvoice(jobId){
     return;
   }
   const client=clients.find(c=>c.id===job.clientId)||{name:'Client',email:'',company:''};
-  const biz=bizSettings||{};
+  const biz=bizForCurrency(job.currency)||{};
   const bname=biz.name||'DroneHub Media';
   const fmtC=n=>(job.currency||'CAD').toUpperCase()+' $'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -10095,7 +10159,7 @@ function cpViewInvoice(jobId){
       <div>
         <div style="font-size:20px;font-weight:800;color:#E8EAF0;margin-bottom:6px;letter-spacing:-.3px">${bname}</div>
         ${[biz.addr1,biz.addr2,biz.phone,biz.email,biz.website].filter(Boolean).map(v=>`<div style="font-size:12px;color:#A8B4D0;line-height:1.75">${v}</div>`).join('')}
-        ${biz.hst?`<div style="font-size:11px;color:#6B7A9F;margin-top:4px">HST # ${biz.hst}</div>`:''}
+        ${biz._isUs?(biz.ein?`<div style="font-size:11px;color:#6B7A9F;margin-top:4px">EIN: ${biz.ein}</div>`:''):(biz.hst?`<div style="font-size:11px;color:#6B7A9F;margin-top:4px">HST # ${biz.hst}</div>`:'')}
       </div>
       <div style="text-align:right">
         <div style="font-size:13px;font-weight:800;color:#22D97A;letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px">Invoice</div>
