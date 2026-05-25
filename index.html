@@ -13202,6 +13202,37 @@ async function gateLogin(){
           }
         }catch(e){console.warn('Firebase user lookup failed:',e);}
       }
+      // Last resort: check admin team roster — if email is there, auto-create a
+      // gate_users entry with no passHash so the login flow lets them set one now.
+      if(!user){
+        try{
+          let teamMembers=getAdminTeamMembers();
+          // Also try Firebase admin team in case localStorage is empty on this device
+          if(!teamMembers.length&&db){
+            const fbTeam=await fbGet('orgs',ORG_ID+':team');
+            if(fbTeam?.data) try{teamMembers=JSON.parse(fbTeam.data);}catch(e){}
+          }
+          const teamEntry=teamMembers.find(m=>(m.email||'').toLowerCase()===email);
+          if(teamEntry){
+            // Create login account from roster entry — passHash blank triggers first-login flow
+            user={
+              email:teamEntry.email,
+              name:teamEntry.name||email.split('@')[0],
+              role:teamEntry.role||'contractor',
+              type:teamEntry.role==='admin'?'admin':'team',
+              jobTitle:teamEntry.jobTitle||'',
+              passHash:'',
+              clientId:null,
+              createdAt:new Date().toISOString().slice(0,10),
+            };
+            const merged=gateGetUsers();
+            if(!merged.find(u=>u.email.toLowerCase()===email)){
+              merged.push(user);
+              gateSaveUsers(merged);
+            }
+          }
+        }catch(e){console.warn('Team roster fallback failed:',e);}
+      }
     }
     if(!user){errEl.textContent='No account found for that email. Please sign up first or ask your admin to reset your access.';errEl.style.display='block';return;}
     errEl.style.display='none';
