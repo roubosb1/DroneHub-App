@@ -2289,6 +2289,81 @@ button{font-family:var(--font);}
     <span id="settings-saved-msg" style="font-size:12px;color:#22D97A;margin-left:10px"></span>
   </div>
 
+  <!-- PRICING SETUP -->
+  <div class="card" style="margin-top:12px" id="pricing-setup-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div class="section-label" style="margin-bottom:0">📊 Quote Builder — Pricing Setup</div>
+      <button onclick="openCustomQuoteBuilder()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Build a Quote
+      </button>
+    </div>
+    <div class="note" style="margin-bottom:16px">Configure your services, rates and margins. The Quote Builder uses these to build accurate, branded estimates for your clients instantly.</div>
+
+    <!-- Services list -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Your Services</div>
+    <div id="pricing-services-list" style="display:grid;gap:8px;margin-bottom:10px"></div>
+    <button onclick="pricingAddService()" style="padding:6px 14px;border-radius:10px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">+ Add Service</button>
+
+    <div class="divider" style="margin:16px 0 14px"></div>
+
+    <!-- Modifiers -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pricing Modifiers</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Travel rate (per km)</label>
+        <input type="number" id="pc-travel-rate" placeholder="0.73" min="0" step="0.01" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Free km (before charging)</label>
+        <input type="number" id="pc-travel-free" placeholder="0" min="0" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Rush fee (%)</label>
+        <input type="number" id="pc-rush-pct" placeholder="25" min="0" max="200" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Weekend surcharge (%)</label>
+        <input type="number" id="pc-weekend-pct" placeholder="0" min="0" max="200" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+    </div>
+
+    <div class="divider" style="margin:16px 0 14px"></div>
+
+    <!-- Margins & Tax -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Margins & Tax</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Profit margin (%)</label>
+        <input type="number" id="pc-profit-pct" placeholder="20" min="0" max="100" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Admin / overhead (%)</label>
+        <input type="number" id="pc-admin-pct" placeholder="10" min="0" max="100" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Tax name</label>
+        <input type="text" id="pc-tax-name" placeholder="HST" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Tax rate (%)</label>
+        <input type="number" id="pc-tax-pct" placeholder="13" min="0" max="100" step="0.1" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Default currency</label>
+        <select id="pc-currency" style="width:100%;box-sizing:border-box;padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+          <option value="cad">🇨🇦 CAD</option>
+          <option value="usd">🇺🇸 USD</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;align-items:center;gap:12px">
+      <button onclick="savePricingConfig()" style="padding:8px 24px;border-radius:20px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:500;cursor:pointer">Save pricing setup ✓</button>
+      <span id="pricing-saved-msg" style="font-size:12px;color:#22D97A"></span>
+    </div>
+  </div>
+
   <!-- Change Password -->
   <div class="card" style="margin-top:12px">
     <div class="section-label" style="margin-bottom:12px">🔒 Change password</div>
@@ -4189,7 +4264,7 @@ function showPane(id,ev){
     },500);
   }
   if(id==='calendar'){populateCalNameDropdown();renderCalendar();}
-  if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();}
+  if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){
     renderFinance();
@@ -15786,6 +15861,7 @@ renderJobs();
 renderClients();
 renderCalendar();
 loadSettings();
+renderPricingSetup();
 
 // Hide the app UI until authenticated — gateInit shows login gate or enters app
 const _ah=document.querySelector('.app-header');
@@ -20159,6 +20235,326 @@ async function platformToggleFee(orgId){
   renderPlatformRevenue();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRICING CONFIG — data layer
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _pricingConfig=null;
+
+function defaultPricingConfig(){
+  return {
+    services:[],
+    modifiers:{travelRatePerKm:0.73,travelFreeKm:0,rushPct:25,weekendPct:0},
+    margins:{profitPct:20,adminPct:10,taxName:'HST',taxPct:13,currency:'cad'}
+  };
+}
+
+function pricingLoad(){
+  if(_pricingConfig) return _pricingConfig;
+  try{
+    const raw=localStorage.getItem('dronehub_pricing_config');
+    _pricingConfig=raw?JSON.parse(raw):defaultPricingConfig();
+  }catch(e){ _pricingConfig=defaultPricingConfig(); }
+  return _pricingConfig;
+}
+
+function pricingSave(cfg){
+  _pricingConfig=cfg;
+  try{localStorage.setItem('dronehub_pricing_config',JSON.stringify(cfg));}catch(e){}
+  fbSet('orgs',ORG_ID+':pricing',{data:JSON.stringify(cfg),updatedAt:Date.now()});
+}
+
+// ─── Settings UI ──────────────────────────────────────────────────────────────
+
+function renderPricingSetup(){
+  const cfg=pricingLoad();
+  // Services list
+  const el=document.getElementById('pricing-services-list');
+  if(el){
+    if(cfg.services.length===0){
+      el.innerHTML=`<div style="font-size:12px;color:var(--muted);padding:10px 0">No services yet — click "+ Add Service" to get started.</div>`;
+    } else {
+      el.innerHTML=cfg.services.map((s,i)=>`
+        <div style="display:grid;grid-template-columns:1fr 130px 110px 36px;gap:8px;align-items:center">
+          <input type="text" value="${s.name||''}" oninput="pricingUpdateService(${i},'name',this.value)" placeholder="Service name" style="padding:7px 10px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#1A2235;color:#E8ECF8;font-family:var(--font)">
+          <select onchange="pricingUpdateService(${i},'unit',this.value)" style="padding:7px 8px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:12px;background:#1A2235;color:#E8ECF8;font-family:var(--font)">
+            ${['per shoot','per hour','per day','per image','per deliverable','flat fee'].map(u=>`<option value="${u}"${s.unit===u?' selected':''}>${u}</option>`).join('')}
+          </select>
+          <div style="position:relative">
+            <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none">$</span>
+            <input type="number" value="${s.rate||''}" oninput="pricingUpdateService(${i},'rate',+this.value)" placeholder="0.00" min="0" step="0.01" style="width:100%;box-sizing:border-box;padding:7px 10px 7px 22px;border:0.5px solid var(--border-bright);border-radius:8px;font-size:13px;background:#1A2235;color:#E8ECF8;font-family:var(--font)">
+          </div>
+          <button onclick="pricingRemoveService(${i})" style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(240,82,82,.3);background:rgba(240,82,82,.08);color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">×</button>
+        </div>`).join('');
+    }
+  }
+  // Modifiers
+  const m=cfg.modifiers||{};
+  const setVal=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+  setVal('pc-travel-rate',m.travelRatePerKm);
+  setVal('pc-travel-free',m.travelFreeKm);
+  setVal('pc-rush-pct',m.rushPct);
+  setVal('pc-weekend-pct',m.weekendPct);
+  // Margins
+  const mg=cfg.margins||{};
+  setVal('pc-profit-pct',mg.profitPct);
+  setVal('pc-admin-pct',mg.adminPct);
+  setVal('pc-tax-name',mg.taxName);
+  setVal('pc-tax-pct',mg.taxPct);
+  const cur=document.getElementById('pc-currency');
+  if(cur) cur.value=mg.currency||'cad';
+}
+
+function pricingAddService(){
+  const cfg=pricingLoad();
+  cfg.services.push({id:'svc_'+Date.now(),name:'',unit:'per shoot',rate:0});
+  _pricingConfig=cfg;
+  renderPricingSetup();
+}
+
+function pricingRemoveService(idx){
+  const cfg=pricingLoad();
+  cfg.services.splice(idx,1);
+  _pricingConfig=cfg;
+  renderPricingSetup();
+}
+
+function pricingUpdateService(idx,field,val){
+  const cfg=pricingLoad();
+  if(cfg.services[idx]) cfg.services[idx][field]=val;
+  _pricingConfig=cfg;
+}
+
+function savePricingConfig(){
+  const cfg=pricingLoad();
+  const g=id=>parseFloat(document.getElementById(id)?.value||'0')||0;
+  const gs=id=>(document.getElementById(id)?.value||'').trim();
+  cfg.modifiers={
+    travelRatePerKm:g('pc-travel-rate')||0.73,
+    travelFreeKm:g('pc-travel-free'),
+    rushPct:g('pc-rush-pct'),
+    weekendPct:g('pc-weekend-pct')
+  };
+  cfg.margins={
+    profitPct:g('pc-profit-pct'),
+    adminPct:g('pc-admin-pct'),
+    taxName:gs('pc-tax-name')||'HST',
+    taxPct:g('pc-tax-pct'),
+    currency:document.getElementById('pc-currency')?.value||'cad'
+  };
+  pricingSave(cfg);
+  const msg=document.getElementById('pricing-saved-msg');
+  if(msg){msg.textContent='Saved!';setTimeout(()=>msg.textContent='',2500);}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CUSTOM QUOTE BUILDER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _cqbLines=[]; // [{svcId, name, unit, qty, rate, override}]
+
+function openCustomQuoteBuilder(){
+  const cfg=pricingLoad();
+  _cqbLines=[];
+
+  // Populate client dropdown
+  const clients=salesLoad().filter(c=>c.firstName||c.company);
+  const sel=document.getElementById('cqb-client');
+  if(sel){
+    sel.innerHTML='<option value="">— Select client —</option>'+
+      clients.map(c=>{
+        const name=[c.firstName,c.lastName].filter(Boolean).join(' ')||(c.company||'');
+        return `<option value="${c.id}">${name}${c.company&&name!==c.company?' ('+c.company+')':''}</option>`;
+      }).join('');
+  }
+
+  // Set modifier labels
+  const rush=document.getElementById('cqb-rush-pct-label');
+  const wknd=document.getElementById('cqb-weekend-pct-label');
+  if(rush) rush.textContent=cfg.modifiers?.rushPct?'+'+cfg.modifiers.rushPct+'%':'';
+  if(wknd) wknd.textContent=cfg.modifiers?.weekendPct?'+'+cfg.modifiers.weekendPct+'%':'';
+
+  // Reset form
+  const jobname=document.getElementById('cqb-jobname');
+  if(jobname) jobname.value='';
+  const travelKm=document.getElementById('cqb-travel-km');
+  if(travelKm) travelKm.value='0';
+  const rush2=document.getElementById('cqb-rush');
+  if(rush2) rush2.checked=false;
+  const wknd2=document.getElementById('cqb-weekend');
+  if(wknd2) wknd2.checked=false;
+  const notes=document.getElementById('cqb-notes');
+  if(notes) notes.value='';
+
+  // Start with one empty line
+  cqbAddLine();
+
+  document.getElementById('custom-quote-modal').style.display='block';
+  cqbCalc();
+}
+
+function closeCQB(){
+  document.getElementById('custom-quote-modal').style.display='none';
+  _cqbLines=[];
+}
+
+function cqbAddLine(){
+  const cfg=pricingLoad();
+  const id='cqbl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  _cqbLines.push({id,svcId:'',name:'',unit:'per shoot',qty:1,rate:0,override:false});
+  cqbRenderLines(cfg);
+}
+
+function cqbRemoveLine(id){
+  _cqbLines=_cqbLines.filter(l=>l.id!==id);
+  cqbRenderLines(pricingLoad());
+  cqbCalc();
+}
+
+function cqbRenderLines(cfg){
+  const el=document.getElementById('cqb-lines');
+  if(!el) return;
+  const svcOpts='<option value="">— custom —</option>'+
+    (cfg.services||[]).map(s=>`<option value="${s.id}">${s.name} (${s.unit}) — $${(+s.rate).toFixed(2)}</option>`).join('');
+
+  el.innerHTML=_cqbLines.map((l,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 80px 110px 36px;gap:8px;align-items:center" data-line="${l.id}">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <select onchange="cqbSelectSvc('${l.id}',this.value)" style="padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">${svcOpts.replace(`value="${l.svcId}"`,`value="${l.svcId}" selected`)}</select>
+        <input type="text" value="${l.name||''}" placeholder="Description" oninput="cqbUpdateLine('${l.id}','name',this.value)" style="padding:6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+      </div>
+      <input type="number" value="${l.qty||1}" min="0.5" step="0.5" oninput="cqbUpdateLine('${l.id}','qty',+this.value)" style="padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);text-align:center" placeholder="Qty">
+      <div style="position:relative">
+        <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none">$</span>
+        <input type="number" value="${l.rate||''}" placeholder="Rate" min="0" step="0.01" oninput="cqbUpdateLine('${l.id}','rate',+this.value)" style="width:100%;box-sizing:border-box;padding:7px 10px 7px 22px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+      </div>
+      <button onclick="cqbRemoveLine('${l.id}')" style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(240,82,82,.3);background:rgba(240,82,82,.08);color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+    </div>`).join('');
+}
+
+function cqbSelectSvc(lineId,svcId){
+  const cfg=pricingLoad();
+  const line=_cqbLines.find(l=>l.id===lineId);
+  if(!line) return;
+  if(svcId){
+    const svc=cfg.services.find(s=>s.id===svcId);
+    if(svc){line.svcId=svcId;line.name=svc.name;line.unit=svc.unit;line.rate=svc.rate;}
+  } else {
+    line.svcId='';
+  }
+  cqbRenderLines(cfg);
+  cqbCalc();
+}
+
+function cqbUpdateLine(lineId,field,val){
+  const line=_cqbLines.find(l=>l.id===lineId);
+  if(line){line[field]=val;}
+  cqbCalc();
+}
+
+function cqbCalc(){
+  const cfg=pricingLoad();
+  const mg=cfg.margins||{profitPct:20,adminPct:10,taxName:'HST',taxPct:13};
+  const mod=cfg.modifiers||{travelRatePerKm:0.73,travelFreeKm:0,rushPct:25,weekendPct:0};
+
+  // Subtotal from line items
+  const subtotal=_cqbLines.reduce((s,l)=>s+(((+l.rate)||0)*((+l.qty)||1)),0);
+
+  // Overhead markup (applied to subtotal)
+  const overheadPct=(+(mg.profitPct||0))+(+(mg.adminPct||0));
+  const overhead=subtotal*(overheadPct/100);
+  let total=subtotal+overhead;
+
+  // Modifiers
+  const travelKm=Math.max(0,(+(document.getElementById('cqb-travel-km')?.value||0))-(+(mod.travelFreeKm||0)));
+  const travelCost=travelKm*(+(mod.travelRatePerKm||0));
+  const isRush=document.getElementById('cqb-rush')?.checked;
+  const isWeekend=document.getElementById('cqb-weekend')?.checked;
+  const rushAdj=isRush?total*(+(mod.rushPct||0)/100):0;
+  const weekendAdj=isWeekend?total*(+(mod.weekendPct||0)/100):0;
+  total+=travelCost+rushAdj+weekendAdj;
+
+  // Tax
+  const tax=total*(+(mg.taxPct||0)/100);
+  const grandTotal=total+tax;
+
+  const fmt=n=>'$'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const row=(label,amt,color='var(--offwhite)',bold=false)=>
+    `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-weight:${bold?700:400};color:${color}">
+      <span>${label}</span><span>${fmt(amt)}</span>
+    </div>`;
+
+  const el=document.getElementById('cqb-calc');
+  if(!el) return;
+
+  if(subtotal===0&&travelCost===0){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Add line items above to see the estimate.</div>';
+    return;
+  }
+
+  el.innerHTML=
+    row('Services subtotal',subtotal)+
+    (overhead>0?row(`Overhead (${overheadPct}%)`,overhead,'var(--muted)'):'')+
+    (travelCost>0?row(`Travel (${travelKm.toFixed(0)} km × $${mod.travelRatePerKm}/km)`,travelCost,'var(--muted)'):'')+
+    (rushAdj>0?row(`Rush fee (+${mod.rushPct}%)`,rushAdj,'var(--amber)'):'')+
+    (weekendAdj>0?row(`Weekend (+${mod.weekendPct}%)`,weekendAdj,'var(--blue-bright)'):'')+
+    row(`${mg.taxName||'Tax'} (${mg.taxPct}%)`,tax,'var(--muted)')+
+    `<div style="display:flex;justify-content:space-between;padding:12px 0 4px;font-size:18px;font-weight:800;color:var(--green)">
+      <span>Total</span><span>${fmt(grandTotal)}</span>
+    </div>`;
+}
+
+async function cqbCreateJob(){
+  const cfg=pricingLoad();
+  const mg=cfg.margins||{taxPct:13,taxName:'HST',currency:'cad'};
+  const mod=cfg.modifiers||{travelRatePerKm:0.73,travelFreeKm:0,rushPct:25,weekendPct:0};
+
+  const clientId=document.getElementById('cqb-client')?.value||'';
+  const jobName=(document.getElementById('cqb-jobname')?.value||'').trim()||'Custom Quote';
+  const notes=(document.getElementById('cqb-notes')?.value||'').trim();
+
+  if(_cqbLines.length===0||_cqbLines.every(l=>!l.name&&!l.rate)){
+    alert('Add at least one line item before saving.');return;
+  }
+
+  // Recalculate totals
+  const subtotal=_cqbLines.reduce((s,l)=>s+(((+l.rate)||0)*((+l.qty)||1)),0);
+  const overheadPct=(+(mg.profitPct||0))+(+(mg.adminPct||0));
+  let total=subtotal*(1+overheadPct/100);
+  const travelKm=Math.max(0,(+(document.getElementById('cqb-travel-km')?.value||0))-(+(mod.travelFreeKm||0)));
+  const travelCost=travelKm*(+(mod.travelRatePerKm||0));
+  const isRush=document.getElementById('cqb-rush')?.checked;
+  const isWeekend=document.getElementById('cqb-weekend')?.checked;
+  total+=travelCost+(isRush?total*(+(mod.rushPct||0)/100):0)+(isWeekend?total*(+(mod.weekendPct||0)/100):0);
+  const grandTotal=total*(1+(+(mg.taxPct||0)/100));
+
+  // Build job object
+  const client=clientId?salesLoad().find(c=>c.id===clientId):null;
+  const job={
+    id:'j'+Date.now(),
+    name:jobName,
+    clientId:clientId||'',
+    status:'quoted',
+    currency:mg.currency||'cad',
+    date:new Date().toISOString().slice(0,10),
+    notes,
+    quoteLines:_cqbLines.map(l=>({name:l.name,qty:l.qty,rate:l.rate,unit:l.unit})),
+    quotedTotal:+grandTotal.toFixed(2),
+    createdAt:new Date().toISOString(),
+    source:'custom_quote'
+  };
+
+  savedJobs=[...savedJobs,job];
+  saveJobsToStorage();
+  renderJobs&&renderJobs();
+  closeCQB();
+  showDhToast('Quote saved','Job created with status Quoted. Open it to send the invoice.','✅','var(--green)',5000);
+}
+
+// ─── Load pricing into settings when settings pane opens ──────────────────────
+const _origShowPane=window.showPane;
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Submit a suggestion (called from Settings pane for org admins)
 async function submitSuggestion(){
   const text=(document.getElementById('suggestion-text')?.value||'').trim();
@@ -20661,6 +21057,89 @@ function initGoogleMaps(){
           <div id="vd-edit-requests" style="display:flex;flex-direction:column;gap:6px"></div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CUSTOM QUOTE BUILDER MODAL
+     ═══════════════════════════════════════════════════════ -->
+<div id="custom-quote-modal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.75);overflow-y:auto;padding:20px 16px 60px">
+  <div style="max-width:680px;margin:0 auto;background:var(--navy-mid);border:1px solid var(--border-bright);border-radius:20px;overflow:hidden">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <span style="font-size:17px;font-weight:800;color:var(--white)">Build a Quote</span>
+      </div>
+      <button onclick="closeCQB()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1">✕</button>
+    </div>
+
+    <div style="padding:24px">
+
+      <!-- Client + Job name -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Client</label>
+          <select id="cqb-client" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <option value="">— Select client —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Quote / Job Name</label>
+          <input type="text" id="cqb-jobname" placeholder="e.g. Spring Campaign Shoot" oninput="cqbCalc()" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+        </div>
+      </div>
+
+      <!-- Line items -->
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Line Items</div>
+      <div id="cqb-lines" style="display:grid;gap:8px;margin-bottom:10px"></div>
+      <button onclick="cqbAddLine()" style="padding:7px 16px;border-radius:10px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-weight:600;margin-bottom:20px">+ Add Line Item</button>
+
+      <!-- Modifiers -->
+      <div style="background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Modifiers</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Travel distance (km)</label>
+              <input type="number" id="cqb-travel-km" value="0" min="0" oninput="cqbCalc()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;justify-content:center">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--offwhite)">
+              <input type="checkbox" id="cqb-rush" onchange="cqbCalc()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--amber)">
+              Rush job <span id="cqb-rush-pct-label" style="color:var(--amber);font-size:11px;font-weight:700"></span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--offwhite)">
+              <input type="checkbox" id="cqb-weekend" onchange="cqbCalc()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue-bright)">
+              Weekend <span id="cqb-weekend-pct-label" style="color:var(--blue-bright);font-size:11px;font-weight:700"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live calculation -->
+      <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;padding:20px;margin-bottom:20px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">Live Estimate</div>
+        <div id="cqb-calc" style="display:grid;gap:6px;font-size:13px;color:var(--offwhite)">
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Add line items above to see the estimate.</div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div style="margin-bottom:20px">
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Notes for client (optional)</label>
+        <textarea id="cqb-notes" rows="2" placeholder="Any special conditions, inclusions or deadlines…" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);resize:vertical"></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+        <button onclick="closeCQB()" style="padding:10px 20px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="cqbCreateJob()" style="padding:10px 24px;border-radius:12px;border:1px solid var(--green);background:rgba(34,217,122,.12);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">✓ Save as Job & Invoice</button>
+      </div>
+
     </div>
   </div>
 </div>
