@@ -4054,6 +4054,25 @@ function getTeamEditors(){
   return list;
 }
 
+function buildVideographerOptions(selectedName){
+  // All team members (videographers, contractors, editors) as shoot candidates
+  const seen=new Set();
+  const opts=['<option value="">— Unassigned —</option>'];
+  getAdminTeamMembers().forEach(m=>{
+    if(m.name&&!seen.has(m.name)){
+      seen.add(m.name);
+      opts.push(`<option value="${m.name}"${selectedName===m.name?' selected':''}>${m.name}${m.role?' ('+m.role+')':''}</option>`);
+    }
+  });
+  Object.entries(CONTRACTORS||{}).forEach(([k,c])=>{
+    if(c.name&&!seen.has(c.name)){
+      seen.add(c.name);
+      opts.push(`<option value="${c.name}"${selectedName===c.name?' selected':''}>${c.name}</option>`);
+    }
+  });
+  return opts.join('');
+}
+
 function buildEditorOptions(selectedName){
   const editors=getTeamEditors();
   if(editors.length===0){
@@ -13678,7 +13697,7 @@ function gateShowTeamView(session){
   document.querySelector('.app-header')?.style.setProperty('display','flex');
   document.querySelector('.wrap')?.style.setProperty('display','block');
 
-  // Hide disallowed tabs
+  // Hide disallowed tabs (desktop)
   document.querySelectorAll('.tabs .tab').forEach(btn=>{
     const paneId=btn.getAttribute('onclick')?.match(/showPane\('(\w+)'/)?.[1]||'';
     if(!allowed.includes(paneId)){
@@ -13686,6 +13705,21 @@ function gateShowTeamView(session){
     }
   });
   applySalesAccess(session);
+
+  // Hide mobile bottom-nav buttons for non-allowed panes
+  const _mobPaneMap={quote:'mobnav-quote',sales:'mobnav-sales',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
+  const _mobMoreMap={finance:'mobmore-finance',calendar:'mobmore-calendar',team:'mobmore-team',settings:'mobmore-settings',social:'mobmore-social',payroll:'mobmore-payroll'};
+  Object.entries(_mobPaneMap).forEach(([pane,btnId])=>{
+    const b=document.getElementById(btnId);
+    if(b) b.style.display=allowed.includes(pane)?'':'none';
+  });
+  let _anyMoreVisible=false;
+  Object.entries(_mobMoreMap).forEach(([pane,btnId])=>{
+    const b=document.getElementById(btnId);
+    if(b){ const show=allowed.includes(pane); b.style.display=show?'':'none'; if(show) _anyMoreVisible=true; }
+  });
+  const _moreBtn=document.getElementById('mobnav-more');
+  if(_moreBtn) _moreBtn.style.display=_anyMoreVisible?'':'none';
 
   // Hide financial panes even if navigated to directly
   ['pane-finance','pane-model','pane-quote','pane-payroll'].forEach(id=>{
@@ -15119,6 +15153,116 @@ function openTrackerModal(jobId){
   const stageOpts=TRACKER_STAGES.map(s=>`<option value="${s.key}"${ts.stage===s.key?' selected':''}>${s.label}</option>`).join('');
   const editStatusOpts=EDIT_STATUS_OPTS.map(s=>`<option value="${s.key}"${ts.editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
   const contractorOpts=buildEditorOptions(ts.claimedBy||'');
+  const vidOpts=buildVideographerOptions(ts.videographer||videographer);
+
+  // ── SIMPLIFIED MODAL FOR TEAM MEMBERS ────────────────────────────────────────
+  const _tmSession=gateGetSession();
+  const _isTeamMember=_tmSession&&_tmSession.type==='team';
+  if(_isTeamMember){
+    const tmModal=document.createElement('div');
+    tmModal.id='tracker-modal-overlay';
+    tmModal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9500;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+    let _tmTeamDown=null;
+    tmModal.addEventListener('mousedown',e=>{_tmTeamDown=e.target;});
+    tmModal.addEventListener('mouseup',e=>{if(e.target===tmModal&&_tmTeamDown===tmModal)tmModal.remove();});
+    tmModal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:560px;border:1px solid var(--border-bright);overflow:hidden;margin:auto" onclick="event.stopPropagation()">
+      <div style="background:var(--navy-mid);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:3px">${job.name}</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            ${client?`<span style="font-size:11px;color:var(--muted)">${client.name}${client.company?' · '+client.company:''}</span>`:''}
+            <span style="font-size:11px;color:var(--muted)">${job.date||''}</span>
+            ${job.address?`<span style="font-size:11px;color:var(--muted)">${job.address}</span>`:''}
+          </div>
+        </div>
+        <button onclick="this.closest('#tracker-modal-overlay').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px;flex-shrink:0;padding:0 0 0 12px">✕</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto;max-height:calc(90vh - 80px)">
+
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Status</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Kanban stage</label>
+            <select id="tm-stage" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${stageOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Edit status</label>
+            <select id="tm-edit-status" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${editStatusOpts}</select>
+          </div>
+        </div>
+
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Team assignment</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Assigned editor</label>
+            <select id="tm-assigned" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${contractorOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Videographer</label>
+            <select id="tm-videographer" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${vidOpts}</select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div style="padding:10px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--offwhite)">
+              <input type="checkbox" id="tm-files-received" ${ts.filesReceived?'checked':''} style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
+              <span>Footage received</span>
+            </label>
+            <span id="tm-files-status" style="font-size:11px;font-weight:700;color:${ts.filesReceived?'var(--green)':'var(--red)'}">
+              ${ts.filesReceived?'✓ Confirmed':'⏳ Pending'}
+            </span>
+          </div>
+          <div style="padding:10px 12px;background:${ts.rush?'rgba(240,82,82,.15)':'var(--navy-lift)'};border-radius:8px;border:1px solid ${ts.rush?'var(--red)':'var(--border)'};display:flex;align-items:center;gap:10px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:${ts.rush?'var(--red)':'var(--offwhite)'}">
+              <input type="checkbox" id="tm-rush" ${ts.rush?'checked':''} style="width:16px;height:16px;accent-color:var(--red);cursor:pointer">
+              <span>Rush order</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Links</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Filemail — raw footage download</label>
+            <div style="display:flex;gap:6px">
+              <input type="url" id="tm-filemail" value="${ts.filemailLink||''}" placeholder="https://filemail.com/…" style="flex:1;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+              ${ts.filemailLink?`<a href="${ts.filemailLink}" target="_blank" style="padding:6px 12px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">↓ Open</a>`:''}
+            </div>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Frame.io — client review</label>
+            <div style="display:flex;gap:6px">
+              <input type="url" id="tm-frameio" value="${ts.frameioLink||''}" placeholder="https://app.frame.io/…" style="flex:1;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+              ${ts.frameioLink?`<a href="${ts.frameioLink}" target="_blank" style="padding:6px 12px;border-radius:8px;border:1px solid var(--purple);background:var(--purple-bg);color:#A78BFA;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">▶ Frame.io</a>`:''}
+            </div>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Download link — finals for client</label>
+            <div style="display:flex;gap:6px">
+              <input type="url" id="tm-download" value="${ts.downloadLink||''}" placeholder="https://drive.google.com/…" style="flex:1;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+              ${ts.downloadLink?`<a href="${ts.downloadLink}" target="_blank" style="padding:6px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">↓ Open</a>`:''}
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Project notes</div>
+        <textarea id="tm-notes" rows="3" placeholder="Instructions, shoot notes, client preferences…" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;line-height:1.6;margin-bottom:16px">${ts.notes||''}</textarea>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="saveTrackerModal('${jobId}',document.getElementById('tracker-modal-overlay'))" style="padding:9px 24px;border-radius:14px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save ✓</button>
+          <button onclick="document.getElementById('tracker-modal-overlay').remove()" style="padding:9px 16px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(tmModal);
+    tmModal.querySelector('#tm-files-received')?.addEventListener('change',function(){
+      const el=document.getElementById('tm-files-status');
+      if(el){el.textContent=this.checked?'✓ Confirmed':'⏳ Pending';el.style.color=this.checked?'var(--green)':'var(--red)';}
+    });
+    return;
+  }
+  // ── END TEAM MEMBER MODAL ─────────────────────────────────────────────────────
 
   const inp=(id,label,val,type='text',placeholder='')=>'<div>'+
     `<label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">${label}</label>`+
@@ -15127,7 +15271,11 @@ function openTrackerModal(jobId){
   const modal=document.createElement('div');
   modal.id='tracker-modal-overlay';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9500;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
-  modal.onclick=e=>{ if(e.target===modal) modal.remove(); };
+  // Use mousedown+mouseup pair so that drag-selecting text inside the modal
+  // and releasing the cursor over the overlay does NOT close the modal.
+  let _tmMouseDownTarget=null;
+  modal.addEventListener('mousedown',e=>{ _tmMouseDownTarget=e.target; });
+  modal.addEventListener('mouseup',e=>{ if(e.target===modal&&_tmMouseDownTarget===modal) modal.remove(); });
 
   modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:680px;border:1px solid var(--border-bright);overflow:hidden;margin:auto" onclick="event.stopPropagation()">
     <div style="background:var(--navy-mid);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start">
@@ -15167,7 +15315,7 @@ function openTrackerModal(jobId){
         ${inp('shoot-date','Shoot date',job.date||'','date','')}
         <div>
           <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Videographer</label>
-          <input type="text" id="tm-videographer" value="${videographer}" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+          <select id="tm-videographer" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${buildVideographerOptions(videographer)}</select>
         </div>
       </div>
       <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Files & hours</div>
@@ -15241,7 +15389,7 @@ function openTrackerModal(jobId){
 
       ${ts.updatedAt?`<div style="font-size:10px;color:var(--muted);margin-bottom:12px">Last updated: ${ts.updatedAt}${ts.claimedBy?' by '+ts.claimedBy:''}</div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="saveTrackerModal(${jobId},document.getElementById('tracker-modal-overlay'))" style="padding:9px 24px;border-radius:14px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save ✓</button>
+        <button onclick="saveTrackerModal('${jobId}',document.getElementById('tracker-modal-overlay'))" style="padding:9px 24px;border-radius:14px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save ✓</button>
         <button onclick="document.getElementById('tracker-modal-overlay').remove()" style="padding:9px 16px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
         <button onclick="document.getElementById('tracker-modal-overlay').remove();openVdProfile('${jobId}','team')" style="padding:9px 18px;border-radius:14px;border:1px solid rgba(91,141,239,.5);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Video Review</button>
       </div>
@@ -15277,34 +15425,60 @@ function saveTrackerModal(jobId, modal){
   const editStatus=v('tm-edit-status')||'ready';
   const filesReceived=document.getElementById('tm-files-received')?.checked||false;
   const rush=document.getElementById('tm-rush')?.checked||false;
-  const draftCount=parseInt(v('tm-draft-count'))||0;
-  const projectId=v('tm-project-id');
   const filemailLink=v('tm-filemail');
   const frameioLink=v('tm-frameio');
   const downloadLink=v('tm-download');
-  const approxEditHours=v('tm-edit-hours');
-  const approxFilmHours=v('tm-film-hours');
-  const completionDate=v('tm-completion-date');
   const videographer=v('tm-videographer');
 
-  // Apply draft surcharge to job if > 2 drafts
-  const extraDraftCharge=Math.max(0,draftCount-2)*30;
+  // Detect team-member simplified form — admin-only fields may not exist
+  const _saveSession=gateGetSession();
+  const _saveIsTeam=_saveSession&&_saveSession.type==='team';
+  const existing=getTrackerStage(jobId);
+
+  let stageUpdate;
+  if(_saveIsTeam){
+    // Team members only write the fields visible in their simplified form;
+    // preserve all admin-only values from the existing tracker record.
+    stageUpdate={
+      stage,claimedBy,notes,editStatus,filesReceived,rush,
+      filemailLink,frameioLink,downloadLink,videographer,
+      claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
+      // Preserve admin-only fields
+      draftCount:existing.draftCount||0,
+      projectId:existing.projectId||'',
+      approxEditHours:existing.approxEditHours||'',
+      approxFilmHours:existing.approxFilmHours||'',
+      completionDate:existing.completionDate||'',
+      extraDraftCharge:existing.extraDraftCharge||0,
+    };
+  } else {
+    const draftCount=parseInt(v('tm-draft-count'))||0;
+    const projectId=v('tm-project-id');
+    const approxEditHours=v('tm-edit-hours');
+    const approxFilmHours=v('tm-film-hours');
+    const completionDate=v('tm-completion-date');
+    const extraDraftCharge=Math.max(0,draftCount-2)*30;
+    stageUpdate={
+      stage,claimedBy,notes,editStatus,filesReceived,rush,draftCount,
+      projectId,filemailLink,frameioLink,downloadLink,
+      approxEditHours,approxFilmHours,completionDate,videographer,
+      claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
+      extraDraftCharge,
+    };
+  }
+
+  // Apply draft surcharge to job if > 2 drafts (admin-only)
   const job=savedJobs.find(j=>j.id===jobId);
-  if(job&&extraDraftCharge>0){
+  if(!_saveIsTeam&&job&&stageUpdate.extraDraftCharge>0){
     job.customAdj=(job.customAdj||0);
     // Store draft charge separately — will be added to next invoice
   }
 
-  setTrackerStage(jobId,{
-    stage,claimedBy,notes,editStatus,filesReceived,rush,draftCount,
-    projectId,filemailLink,frameioLink,downloadLink,
-    approxEditHours,approxFilmHours,completionDate,videographer,
-    claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
-    extraDraftCharge,
-  });
+  setTrackerStage(jobId, stageUpdate);
 
-  // Auto-calculate editor paystub from hours logged
-  if(approxEditHours&&claimedBy&&job){
+  // Auto-calculate editor paystub from hours logged (admin only)
+  const approxEditHours=stageUpdate.approxEditHours||'';
+  if(!_saveIsTeam&&approxEditHours&&claimedBy&&job){
     const hours=parseFloat(approxEditHours)||0;
     if(hours>0){
       // Find editor's hourly rate from admin team
