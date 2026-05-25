@@ -13950,8 +13950,8 @@ function openAddTeamMemberModal(editId){
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9700;display:flex;align-items:flex-start;justify-content:center;padding:30px 20px;overflow-y:auto';
   modal.onclick=e=>{if(e.target===modal)modal.remove();};
   const roleOpts=TEAM_ROLES.map(r=>`
-    <label class="team-role-label" data-role="${r.key}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid ${existing?.role===r.key?r.color:'var(--border)'};background:${existing?.role===r.key?r.color+'18':'transparent'};cursor:pointer;margin-bottom:6px;transition:all .15s">
-      <input type="radio" name="new-member-role" value="${r.key}" ${(existing?.role===r.key||(!existing&&r.key==='contractor'))?'checked':''} style="margin-top:2px;accent-color:${r.color}" onchange="teamHighlightRole('${r.key}');teamUpdateCustomTabs('${r.key}')">
+    <label class="team-role-label" data-role="${r.key}" onclick="teamHighlightRole('${r.key}');teamUpdateCustomTabs('${r.key}')" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:2px solid ${existing?.role===r.key?r.color:'var(--border)'};background:${existing?.role===r.key?r.color+'18':'transparent'};cursor:pointer;margin-bottom:6px;transition:all .15s">
+      <input type="radio" name="new-member-role" value="${r.key}" ${(existing?.role===r.key||(!existing&&r.key==='contractor'))?'checked':''} style="margin-top:2px;accent-color:${r.color}">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--white)">${r.icon} ${r.label}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:1px">${r.desc}</div>
@@ -14037,6 +14037,9 @@ function teamHighlightRole(roleKey){
 
 // Reset custom tab checkboxes to match the selected role's defaults
 function teamUpdateCustomTabs(roleKey){
+  // Also ensure the matching radio is checked (handles label onclick)
+  const radio=document.querySelector('input[name="new-member-role"][value="'+roleKey+'"]');
+  if(radio) radio.checked=true;
   const defaults=TEAM_ROLE_DEFAULTS[roleKey]||[];
   ALL_TABS_CONFIG.forEach(t=>{
     const cb=document.getElementById('ctab-'+t.id);
