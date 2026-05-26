@@ -6064,7 +6064,7 @@ function saveUsSettings(){
   if(msg){msg.textContent='Saved!';setTimeout(()=>msg.textContent='',2500);}
 }
 
-function changePassword(){
+async function changePassword(){
   const current=document.getElementById('change-pass-current')?.value||'';
   const newPass=document.getElementById('change-pass-new')?.value||'';
   const confirm=document.getElementById('change-pass-confirm')?.value||'';
@@ -6091,12 +6091,12 @@ function changePassword(){
   if(!user){show('Account not found.',false);return;}
 
   // Allow change if: correct current password OR no password set yet
-  if(user.passHash&&user.passHash!==simpleHash(current)){
+  if(user.passHash&&!(await verifyPass(session.email,current,user.passHash))){
     show('Current password is incorrect.',false);
     return;
   }
 
-  user.passHash=simpleHash(newPass);
+  user.passHash=await hashPass(session.email,newPass);
   gateSaveUsers(users);
   show('✓ Password updated successfully!',true);
 
@@ -9388,14 +9388,15 @@ function renderTierTable(){
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Portal accounts stored in localStorage: [{clientId, email, passHash, createdAt}]
-function createClientPortalFromDetail(clientId){
+async function createClientPortalFromDetail(clientId){
   const pass=document.getElementById('cp-new-pass-inline')?.value.trim();
   if(!pass){alert('Please set a password first.');return;}
   const c=clients.find(cl=>cl.id===clientId);
   if(!c) return;
   const accounts=getPortalAccounts();
   if(accounts.find(a=>a.clientId===clientId)){alert('Portal account already exists for this client.');return;}
-  accounts.push({clientId,passHash:simpleHash(pass),createdAt:new Date().toISOString().slice(0,10)});
+  const _cpEmail=(c.email||clientId).toLowerCase();
+  accounts.push({clientId,email:_cpEmail,passHash:await hashPass(_cpEmail,pass),createdAt:new Date().toISOString().slice(0,10)});
   savePortalAccounts(accounts);
   sendClientPortalInvite(clientId, pass);
   renderClientPortal(clientId,'portal');
@@ -9441,10 +9442,71 @@ function getPortalAccounts(){return JSON.parse(localStorage.getItem('dronehub_po
 function savePortalAccounts(accounts){try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(accounts));}catch(e){}fbSet('orgs',ORG_ID+':portal_accounts',{data:JSON.stringify(accounts),updatedAt:Date.now()});}
 
 // Simple hash (not cryptographic — replace with bcrypt on real backend)
+// Legacy weak hash — kept ONLY for migrating existing stored passwords.
+// Do not use for any new password operations.
 function simpleHash(str){
   let h=0;
   for(let i=0;i<str.length;i++){h=Math.imul(31,h)+str.charCodeAt(i)|0;}
   return Math.abs(h).toString(36);
+}
+
+// ── Secure password hashing (SHA-256 via Web Crypto) ─────────────────────────
+// Prefix stored so we can tell new hashes from legacy ones at a glance.
+const _HASH_PREFIX='sha256:';
+async function hashPass(email, pass){
+  // Salt = normalised email + app-level pepper + password. Keeps hashes
+  // user-specific so a leaked hash from one account can't authenticate another.
+  const salt=`dronehub|${email.trim().toLowerCase()}|${pass}`;
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt));
+  return _HASH_PREFIX+Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+// Returns true if the stored hash matches the password (handles both old and new format).
+async function verifyPass(email, pass, stored){
+  if(!stored) return false;
+  if(stored.startsWith(_HASH_PREFIX)) return stored===(await hashPass(email,pass));
+  // Legacy path: djb2 hash. We accept it so existing users aren't locked out.
+  return stored===simpleHash(pass);
+}
+// Call this on successful login when an old-format hash is detected: upgrades in place.
+async function upgradeHashIfLegacy(email, pass, userRecord, saveCallback){
+  if(userRecord.passHash&&!userRecord.passHash.startsWith(_HASH_PREFIX)){
+    userRecord.passHash=await hashPass(email,pass);
+    try{ saveCallback(userRecord); }catch(e){}
+  }
+}
+
+// ── Login rate limiting ───────────────────────────────────────────────────────
+// Tracks failed attempts per email in sessionStorage. After 5 failures the
+// account is locked for 15 minutes on this device/tab.
+const _RATE_KEY='dh_login_attempts';
+const _RATE_LIMIT=5;
+const _RATE_WINDOW_MS=15*60*1000; // 15 min
+function _getRateData(){ try{return JSON.parse(sessionStorage.getItem(_RATE_KEY)||'{}');}catch(e){return{};} }
+function _saveRateData(d){ try{sessionStorage.setItem(_RATE_KEY,JSON.stringify(d));}catch(e){} }
+function checkRateLimit(email){
+  // Returns null if OK to proceed, or an error string if locked out.
+  const data=_getRateData();
+  const rec=data[email]||{count:0,until:0};
+  if(rec.until>Date.now()){
+    const mins=Math.ceil((rec.until-Date.now())/60000);
+    return `Too many failed attempts. Please try again in ${mins} minute${mins===1?'':'s'}.`;
+  }
+  return null;
+}
+function recordLoginFailure(email){
+  const data=_getRateData();
+  const rec=data[email]||{count:0,until:0};
+  // Reset window if lockout has expired
+  if(rec.until>0&&rec.until<=Date.now()){ rec.count=0; rec.until=0; }
+  rec.count++;
+  if(rec.count>=_RATE_LIMIT) rec.until=Date.now()+_RATE_WINDOW_MS;
+  data[email]=rec;
+  _saveRateData(data);
+}
+function clearLoginFailures(email){
+  const data=_getRateData();
+  delete data[email];
+  _saveRateData(data);
 }
 
 // Portal messages stored per client: {[clientId]: [{from, text, ts}]}
@@ -9648,7 +9710,7 @@ function cpShowSignup(inviteCode, clientId){
   setTimeout(()=>document.getElementById('cp-signup-name')?.focus(),100);
 }
 
-function cpSignup(){
+async function cpSignup(){
   const name=(document.getElementById('cp-signup-name')?.value||'').trim();
   const email=(document.getElementById('cp-signup-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('cp-signup-pass')?.value||'';
@@ -9674,11 +9736,12 @@ function cpSignup(){
   // Create/update portal account
   const accounts=getPortalAccounts();
   const existingIdx=accounts.findIndex(a=>a.clientId===clientId || (a.email||'').toLowerCase()===email);
+  const _cpHash=await hashPass(email,pass);
   const entry={
     clientId: clientId||('cp_'+Date.now()),
     email,
     name,
-    passHash: simpleHash(pass),
+    passHash: _cpHash,
     inviteCode: _cpInviteCode,
     createdAt: new Date().toISOString().slice(0,10),
     status: 'active',
@@ -9700,7 +9763,7 @@ function cpSignup(){
   // Add to gate_users so gateInit recognises them as client type
   const gUsers=gateGetUsers();
   if(!gUsers.find(u=>u.email.toLowerCase()===email)){
-    gUsers.push({email,name,role:'client',type:'client',passHash:simpleHash(pass),clientId:clientId||entry.clientId,createdAt:entry.createdAt});
+    gUsers.push({email,name,role:'client',type:'client',passHash:_cpHash,clientId:clientId||entry.clientId,createdAt:entry.createdAt});
     gateSaveUsers(gUsers);
   }
 
@@ -9800,17 +9863,31 @@ function cpEmailInvite(clientId, btnEl){
   });
 }
 
-function cpLogin(){
+async function cpLogin(){
   const email=document.getElementById('cp-login-email').value.trim().toLowerCase();
   const pass=document.getElementById('cp-login-pass').value;
   const errEl=document.getElementById('cp-login-error');
   if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
+  const _cpL2Lock=checkRateLimit('cp2:'+email);
+  if(_cpL2Lock){errEl.textContent=_cpL2Lock;errEl.style.display='block';return;}
 
   // Look up directly in portal accounts — don't require a matching client record
   const accounts=getPortalAccounts();
   const account=accounts.find(a=>(a.email||'').toLowerCase()===email);
   if(!account||!account.passHash){errEl.textContent='No account found for that email. Please use your invite link to set up access.';errEl.style.display='block';return;}
-  if(account.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
+  const _cpL2Ok=await verifyPass(email,pass,account.passHash);
+  if(!_cpL2Ok){
+    recordLoginFailure('cp2:'+email);
+    errEl.textContent=checkRateLimit('cp2:'+email)||'Incorrect password.';
+    errEl.style.display='block';return;
+  }
+  // Migrate legacy hash
+  if(account.passHash&&!account.passHash.startsWith(_HASH_PREFIX)){
+    const _h2=await hashPass(email,pass);account.passHash=_h2;
+    const _aa=getPortalAccounts();const _ai=_aa.findIndex(a=>(a.email||'').toLowerCase()===email);
+    if(_ai>=0){_aa[_ai].passHash=_h2;try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(_aa));}catch(e){}}
+  }
+  clearLoginFailures('cp2:'+email);
 
   // Success
   cpActiveClientId=account.clientId;
@@ -11063,7 +11140,7 @@ function renderPortalAccounts(){
   }).join('');
 }
 
-function createPortalAccount(){
+async function createPortalAccount(){
   const clientId=document.getElementById('cp-new-client-sel')?.value;
   const pass=document.getElementById('cp-new-pass')?.value.trim();
   const msg=document.getElementById('cp-create-msg');
@@ -11071,7 +11148,9 @@ function createPortalAccount(){
   if(!pass||pass.length<6){msg.textContent='Password must be at least 6 characters.';msg.style.color='var(--red)';return;}
   const accounts=getPortalAccounts();
   const existing=accounts.findIndex(a=>a.clientId===clientId);
-  const entry={clientId,passHash:simpleHash(pass),createdAt:new Date().toISOString().slice(0,10)};
+  const _cpaClient=clients.find(c=>c.id===clientId);
+  const _cpaEmail=(_cpaClient?.email||clientId).toLowerCase();
+  const entry={clientId,email:_cpaEmail,passHash:await hashPass(_cpaEmail,pass),createdAt:new Date().toISOString().slice(0,10)};
   if(existing>=0) accounts[existing]=entry;
   else accounts.push(entry);
   savePortalAccounts(accounts);
@@ -13226,15 +13305,35 @@ function gateCpTab(tab){
 }
 
 // Client sign-in from main gate (mirrors cpLogin but uses gate-cp- fields)
-function gateClientLogin(){
+async function gateClientLogin(){
   const email=(document.getElementById('gate-cp-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('gate-cp-pass')?.value||'';
   const errEl=document.getElementById('gate-cp-error');
   if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
+  // Rate limit check
+  const _cpLock=checkRateLimit('cp:'+email);
+  if(_cpLock){errEl.textContent=_cpLock;errEl.style.display='block';return;}
   const accounts=getPortalAccounts();
   const account=accounts.find(a=>(a.email||'').toLowerCase()===email);
   if(!account||!account.passHash){errEl.textContent='No client account found for that email. Check your invite email or sign up below.';errEl.style.display='block';return;}
-  if(account.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
+  const _cpPassOk=await verifyPass(email,pass,account.passHash);
+  if(!_cpPassOk){
+    recordLoginFailure('cp:'+email);
+    const _cpRemaining=_RATE_LIMIT-(_getRateData()['cp:'+email]?.count||0);
+    const _cpLockMsg=checkRateLimit('cp:'+email);
+    errEl.textContent=_cpLockMsg||((_cpRemaining>0&&_cpRemaining<_RATE_LIMIT)?`Incorrect password. ${_cpRemaining} attempt${_cpRemaining===1?'':'s'} left before temporary lockout.`:'Incorrect password.');
+    errEl.style.display='block';
+    return;
+  }
+  // Migrate legacy hash silently
+  if(account.passHash&&!account.passHash.startsWith(_HASH_PREFIX)){
+    const _cpNewHash=await hashPass(email,pass);
+    account.passHash=_cpNewHash;
+    const _cpAllA=getPortalAccounts();
+    const _cpIdx=_cpAllA.findIndex(a=>(a.email||'').toLowerCase()===email);
+    if(_cpIdx>=0){_cpAllA[_cpIdx].passHash=_cpNewHash;try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(_cpAllA));}catch(e){}}
+  }
+  clearLoginFailures('cp:'+email);
   // Log in to client portal
   cpActiveClientId=account.clientId;
   const displayName=account.name||email.split('@')[0];
@@ -13248,7 +13347,7 @@ function gateClientLogin(){
 }
 
 // Client sign-up from main gate (uses invite code, mirrors cpSignup)
-function gateClientSignup(){
+async function gateClientSignup(){
   const name=(document.getElementById('gate-cp-name')?.value||'').trim();
   const email=(document.getElementById('gate-cp-signup-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('gate-cp-signup-pass')?.value||'';
@@ -13266,12 +13365,13 @@ function gateClientSignup(){
   // Check email not already taken
   if(accounts.find(a=>(a.email||'').toLowerCase()===email&&a.inviteCode!==code)){errEl.textContent='An account with that email already exists. Sign in instead.';errEl.style.display='block';return;}
   // Save account
-  acct.email=email; acct.name=name; acct.passHash=simpleHash(pass); acct.status='active';
+  const _gcsHash=await hashPass(email,pass);
+  acct.email=email; acct.name=name; acct.passHash=_gcsHash; acct.status='active';
   savePortalAccounts(accounts);
   // Add to gate_users
   const gUsers=gateGetUsers();
   if(!gUsers.find(u=>u.email.toLowerCase()===email)){
-    gUsers.push({email,name,role:'client',type:'client',passHash:simpleHash(pass),clientId:acct.clientId,createdAt:new Date().toISOString().slice(0,10)});
+    gUsers.push({email,name,role:'client',type:'client',passHash:_gcsHash,clientId:acct.clientId,createdAt:new Date().toISOString().slice(0,10)});
     gateSaveUsers(gUsers);
   }
   // Update client record email in Firebase if missing
@@ -13313,6 +13413,10 @@ async function gateLogin(){
   errEl.style.display='none';
 
   if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
+
+  // Rate limit check — block after 5 failures for 15 min
+  const _rateLock=checkRateLimit(email);
+  if(_rateLock){errEl.textContent=_rateLock;errEl.style.display='block';return;}
 
   // Check admin hardcoded accounts (password stored in gate_users)
   const users=gateGetUsers();
@@ -13401,7 +13505,7 @@ async function gateLogin(){
   // This covers accounts created via invite that never went through signup.
   if(!user.passHash){
     if(!pass){errEl.textContent='Please choose a password to continue.';errEl.style.display='block';return;}
-    user.passHash=simpleHash(pass);
+    user.passHash=await hashPass(email,pass);
     const allU=gateGetUsers();
     const uIdx=allU.findIndex(u=>u.email.toLowerCase()===email);
     if(uIdx>=0) allU[uIdx].passHash=user.passHash;
@@ -13410,7 +13514,24 @@ async function gateLogin(){
   }
 
   // ── Password check ────────────────────────────────────────────────────────
-  if(user.passHash!==simpleHash(pass)){errEl.textContent='Incorrect password.';errEl.style.display='block';return;}
+  const _passOk=await verifyPass(email,pass,user.passHash);
+  if(!_passOk){
+    recordLoginFailure(email);
+    const _remaining=_RATE_LIMIT-(_getRateData()[email]?.count||0);
+    const _lockMsg=checkRateLimit(email);
+    errEl.textContent=_lockMsg||((_remaining>0&&_remaining<_RATE_LIMIT)?`Incorrect password. ${_remaining} attempt${_remaining===1?'':'s'} left before temporary lockout.`:'Incorrect password.');
+    errEl.style.display='block';
+    return;
+  }
+  // Migrate legacy hash to SHA-256 on next login (seamless, no user action needed)
+  if(user.passHash&&!user.passHash.startsWith(_HASH_PREFIX)){
+    const _newHash=await hashPass(email,pass);
+    const _allU2=gateGetUsers();
+    const _uIdx2=_allU2.findIndex(u=>u.email.toLowerCase()===email);
+    if(_uIdx2>=0){_allU2[_uIdx2].passHash=_newHash;gateSaveUsers(_allU2);}
+    user.passHash=_newHash;
+  }
+  clearLoginFailures(email);
 
   // Force admin type for hardcoded owner accounts regardless of stored role
   const FORCE_ADMIN=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
@@ -13476,7 +13597,7 @@ async function gateLogin(){
   }
 }
 
-function gateSignup(){
+async function gateSignup(){
   const first=(document.getElementById('gate-signup-first')?.value||'').trim();
   const last=(document.getElementById('gate-signup-last')?.value||'').trim();
   const email=(document.getElementById('gate-signup-email')?.value||'').trim().toLowerCase();
@@ -13522,14 +13643,15 @@ function gateSignup(){
     type='team';
 
     // Save to gate users
-    const newUser={email,name:first+' '+last,role,type,jobTitle,passHash:simpleHash(pass),clientId:null,createdAt:new Date().toISOString().slice(0,10)};
+    const _gsHash=await hashPass(email,pass);
+    const newUser={email,name:first+' '+last,role,type,jobTitle,passHash:_gsHash,clientId:null,createdAt:new Date().toISOString().slice(0,10)};
     users.push(newUser);
     gateSaveUsers(users);
 
     // Add to portal team members (the team portal system)
     const pm=getTeamMembers();
     if(!pm.find(m=>m.email.toLowerCase()===email)){
-      pm.push({id:'tm_'+Date.now(),name:first+' '+last,email,passHash:simpleHash(pass),orgId:org.id,role,jobTitle,createdAt:new Date().toISOString().slice(0,10)});
+      pm.push({id:'tm_'+Date.now(),name:first+' '+last,email,passHash:_gsHash,orgId:org.id,role,jobTitle,createdAt:new Date().toISOString().slice(0,10)});
       saveTeamMembers(pm);
     }
 
@@ -13599,13 +13721,14 @@ function gateSignup(){
     role='client'; type='client'; clientId=matchedClient.id;
 
     // Create portal account
+    const _gsClHash=await hashPass(email,pass);
     const portalAccts=getPortalAccounts();
     if(!portalAccts.find(a=>a.clientId===matchedClient.id)){
-      portalAccts.push({clientId:matchedClient.id,passHash:simpleHash(pass),createdAt:new Date().toISOString().slice(0,10)});
+      portalAccts.push({clientId:matchedClient.id,email,passHash:_gsClHash,createdAt:new Date().toISOString().slice(0,10)});
       savePortalAccounts(portalAccts);
     }
 
-    const newUser={email,name:first+' '+last,role:'client',type:'client',passHash:simpleHash(pass),clientId,createdAt:new Date().toISOString().slice(0,10)};
+    const newUser={email,name:first+' '+last,role:'client',type:'client',passHash:_gsClHash,clientId,createdAt:new Date().toISOString().slice(0,10)};
     users.push(newUser);
     gateSaveUsers(users);
 
@@ -14853,20 +14976,21 @@ function removeTeamMember(id){
   renderTeam();
 }
 
-function adminResetPassword(id){
+async function adminResetPassword(id){
   const m=getAdminTeamMembers().find(tm=>tm.id===id);
   if(!m) return;
   const newPass=prompt('Set a new temporary password for '+m.name+':');
   if(!newPass||newPass.length<4){alert('Password must be at least 4 characters.');return;}
+  const _arpHash=await hashPass(m.email,newPass);
   const gateUsers=gateGetUsers();
   const idx=gateUsers.findIndex(u=>u.email.toLowerCase()===m.email.toLowerCase());
   if(idx>=0){
-    gateUsers[idx].passHash=simpleHash(newPass);
+    gateUsers[idx].passHash=_arpHash;
     gateSaveUsers(gateUsers);
     alert('✓ Password reset for '+m.name+'. Temporary password: '+newPass+'\n\nPlease tell them to change it after logging in.');
   } else {
     // Add them to gate_users with the new password
-    gateUsers.push({email:m.email,name:m.name,role:m.role,type:'team',passHash:simpleHash(newPass),clientId:null});
+    gateUsers.push({email:m.email,name:m.name,role:m.role,type:'team',passHash:_arpHash,clientId:null});
     gateSaveUsers(gateUsers);
     alert('✓ Account created for '+m.name+'. Temporary password: '+newPass);
   }
@@ -15846,38 +15970,54 @@ function tpSwitchMode(mode){
   document.getElementById('tp-login-error').style.display='none';
 }
 
-function tpLogin(){
+async function tpLogin(){
   const email=document.getElementById('tp-email').value.trim().toLowerCase();
   const pass=document.getElementById('tp-pass').value;
   const errEl=document.getElementById('tp-login-error');
   if(!email||!pass){errEl.textContent='Please enter email and password.';errEl.style.display='block';return;}
-  const hash=simpleHash(pass);
+  const _tpLock=checkRateLimit('tp:'+email);
+  if(_tpLock){errEl.textContent=_tpLock;errEl.style.display='block';return;}
 
   // 1. Check team_members store (normal path)
   const members=getTeamMembers();
   const member=members.find(m=>(m.email||'').toLowerCase()===email);
-  if(member&&member.passHash===hash){
-    tpActiveMemberId=member.id;
-    tpOpenDashboard(member);
-    return;
+  if(member){
+    const _tpOk=await verifyPass(email,pass,member.passHash);
+    if(_tpOk){
+      clearLoginFailures('tp:'+email);
+      // Upgrade legacy hash silently
+      if(member.passHash&&!member.passHash.startsWith(_HASH_PREFIX)){
+        const _h=await hashPass(email,pass);member.passHash=_h;
+        const _mm=getTeamMembers();const _mi=_mm.findIndex(m2=>m2.id===member.id);
+        if(_mi>=0){_mm[_mi].passHash=_h;saveTeamMembers(_mm);}
+      }
+      tpActiveMemberId=member.id;
+      tpOpenDashboard(member);
+      return;
+    }
   }
 
-  // 2. Fall back to gate_users — same password hash system.
-  //    Allows the platform owner / admins to use their main credentials here.
-  const gUser=gateGetUsers().find(u=>(u.email||'').toLowerCase()===email&&u.passHash===hash);
+  // 2. Fall back to gate_users — allows admins to use their main credentials here.
+  const gUsers2=gateGetUsers();
+  const gUser=gUsers2.find(u=>(u.email||'').toLowerCase()===email);
   if(gUser){
-    const syntheticId='tp_gate_'+email.replace(/[^a-z0-9]/g,'_');
-    const synthetic={id:syntheticId,name:gUser.name||email.split('@')[0],email:gUser.email,role:gUser.role||'admin',orgId:null};
-    tpActiveMemberId=syntheticId;
-    tpOpenDashboard(synthetic);
-    return;
+    const _tpGOk=await verifyPass(email,pass,gUser.passHash);
+    if(_tpGOk){
+      clearLoginFailures('tp:'+email);
+      const syntheticId='tp_gate_'+email.replace(/[^a-z0-9]/g,'_');
+      const synthetic={id:syntheticId,name:gUser.name||email.split('@')[0],email:gUser.email,role:gUser.role||'admin',orgId:null};
+      tpActiveMemberId=syntheticId;
+      tpOpenDashboard(synthetic);
+      return;
+    }
   }
 
-  errEl.textContent='Invalid email or password.';
+  recordLoginFailure('tp:'+email);
+  errEl.textContent=checkRateLimit('tp:'+email)||'Invalid email or password.';
   errEl.style.display='block';
 }
 
-function tpSignup(){
+async function tpSignup(){
   const first=document.getElementById('tp-signup-first').value.trim();
   const last=document.getElementById('tp-signup-last').value.trim();
   const email=document.getElementById('tp-signup-email').value.trim().toLowerCase();
@@ -15892,7 +16032,7 @@ function tpSignup(){
   const orgs=getOrgs();
   const org=inviteCode?orgs.find(o=>o.inviteCode===inviteCode):null;
   const orgId=org?org.id:(ensureDefaultOrg().id);
-  const member={id:'tm_'+Date.now(),name:first+' '+last,email,passHash:simpleHash(pass),orgId,role:'editor',createdAt:new Date().toISOString().slice(0,10)};
+  const member={id:'tm_'+Date.now(),name:first+' '+last,email,passHash:await hashPass(email,pass),orgId,role:'editor',createdAt:new Date().toISOString().slice(0,10)};
   members.push(member);
   saveTeamMembers(members);
   // Save Google Calendar link if provided
@@ -21715,7 +21855,7 @@ async function wizCreateOrg(){
       name:_wizData.firstName+' '+_wizData.lastName,
       role:'admin',
       type:'admin',
-      passHash:simpleHash(_wizData.pass),
+      passHash:await hashPass(_wizData.email,_wizData.pass),
       createdAt:now.slice(0,10),
     };
     if(db){
