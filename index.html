@@ -17499,21 +17499,11 @@ const SALES_LISTS = [
 
 // ── Recognized job types for the "Other" list ────────────────────────────────
 const OTHER_TYPES = [
-  { id:'commercial',    label:'Commercial',            color:'#5B7FDB' },
-  { id:'industrial',    label:'Industrial',            color:'#FB923C' },
-  { id:'construction',  label:'Construction / Dev',    color:'#F5C842' },
-  { id:'agriculture',   label:'Agriculture / Land',    color:'#22D97A' },
-  { id:'events',        label:'Events / Entertainment',color:'#A78BFA' },
-  { id:'inspection',    label:'Inspection / Survey',   color:'#7AABFF' },
-  { id:'insurance',     label:'Insurance / Claims',    color:'#E85D3A' },
-  { id:'mapping',       label:'Mapping / GIS',         color:'#00C7BE' },
-  { id:'municipal',     label:'Municipal / Government',color:'#9B5DE5' },
-  { id:'sports',        label:'Sports / Recreation',   color:'#FF2D55' },
-  { id:'utility',       label:'Utility / Infrastructure',color:'#888780' },
-  { id:'education',     label:'Education',             color:'#FF9500' },
-  { id:'healthcare',    label:'Healthcare',            color:'#34C759' },
-  { id:'legal',         label:'Legal',                 color:'#C87D1E' },
-  { id:'other',         label:'Other',                 color:'#A8B4D0' },
+  { id:'landscape',   label:'Landscape',                    color:'#22D97A' },
+  { id:'architects',  label:'Architects',                   color:'#5B7FDB' },
+  { id:'interior',    label:'Interior Designers & Builders', color:'#A78BFA' },
+  { id:'restaurants', label:'Restaurants',                  color:'#FB923C' },
+  { id:'retail',      label:'Retail',                       color:'#F5C842' },
 ];
 
 // Normalize a freeform type string to the nearest OTHER_TYPES id
@@ -17527,21 +17517,12 @@ function normalizeOtherType(raw){
   const byLabel = OTHER_TYPES.find(t=>t.label.toLowerCase()===s);
   if(byLabel) return byLabel.id;
   // Keyword heuristics
-  if(/^comm/.test(s))                            return 'commercial';
-  if(/^indust/.test(s))                          return 'industrial';
-  if(/const|dev(elop)?/.test(s))                 return 'construction';
-  if(/agri|farm|land/.test(s))                   return 'agriculture';
-  if(/event|entertain|wedding|concert/.test(s))  return 'events';
-  if(/inspect|survey/.test(s))                   return 'inspection';
-  if(/insur|claim/.test(s))                      return 'insurance';
-  if(/map|gis|lidar|topograph/.test(s))          return 'mapping';
-  if(/munici|gov|city|town|county/.test(s))      return 'municipal';
-  if(/sport|rec(reation)?|athlet/.test(s))       return 'sports';
-  if(/util|infra|power|pipeline|telecm/.test(s)) return 'utility';
-  if(/edu|school|college|university/.test(s))    return 'education';
-  if(/health|medic|clinic|hospital/.test(s))     return 'healthcare';
-  if(/legal|law|attor|notary/.test(s))           return 'legal';
-  return raw; // keep original if no match — fall through to 'other' badge style
+  if(/landscap|garden|lawn|outdoor/.test(s))          return 'landscape';
+  if(/architect|arch\b/.test(s))                       return 'architects';
+  if(/interior|designer|builder|renovation|reno/.test(s)) return 'interior';
+  if(/restaurant|café|cafe|dining|food|bar\b/.test(s)) return 'restaurants';
+  if(/retail|store|shop|boutique/.test(s))             return 'retail';
+  return raw; // keep original if no match — fall through to unclassified badge style
 }
 let salesEditingId   = null;
 // salesSortCol, salesSortDir declared early above (TDZ fix)
