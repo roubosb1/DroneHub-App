@@ -12052,6 +12052,46 @@ function addLcUnread(channelId){
 }
 
 let lcActiveChannel=null;
+// Firebase fetch cache — tracks when each channel's messages were last fetched
+// so we don't re-fetch on every click (30s TTL)
+const _lcFetchedAt={};
+const _LC_FETCH_TTL=30000;
+
+// Lightweight sidebar active-state swap — avoids full renderLouChat() on channel switch
+function lcUpdateSidebarActive(newId, prevId){
+  // Deactivate previous
+  if(prevId){
+    const prev=document.getElementById('lc-ch-'+prevId);
+    if(prev){
+      const isWelcome=prevId==='lc_welcome';
+      prev.style.background=isWelcome?'rgba(91,141,239,.07)':'transparent';
+      if(isWelcome) prev.style.borderColor='rgba(91,141,239,.18)';
+      const hash=prev.querySelector('.lc-ch-hash');
+      const name=prev.querySelector('.lc-ch-name');
+      if(hash) hash.style.color='var(--muted)';
+      if(name){name.style.color='var(--muted)';name.style.fontWeight='400';}
+    }
+  }
+  // Activate new
+  if(newId){
+    const next=document.getElementById('lc-ch-'+newId);
+    if(next){
+      const isWelcome=newId==='lc_welcome';
+      const channels=getLcChannels();
+      const ch=channels.find(c=>c.id===newId);
+      const meta=ch?LC_TYPE_META[ch.type]||{}:{};
+      next.style.background='rgba(91,141,239,.18)';
+      if(isWelcome) next.style.borderColor='rgba(91,141,239,.45)';
+      const hash=next.querySelector('.lc-ch-hash');
+      const name=next.querySelector('.lc-ch-name');
+      if(hash) hash.style.color=meta.color||'var(--blue-bright)';
+      if(name){name.style.color='var(--white)';name.style.fontWeight='600';}
+    } else {
+      // Channel item not in DOM yet (new channel) — fall back to full re-render
+      renderLouChat();
+    }
+  }
+}
 
 // Ensure default channels exist on first load
 function lcEnsureDefaults(){
@@ -12145,7 +12185,7 @@ function renderLouChat(){
       groups[type].forEach(ch=>{
         const isActive=ch.id===lcActiveChannel;
         const u=unread[ch.id]||0;
-        html+=`<div onclick="lcOpenChannel('${ch.id}')" style="margin:8px 8px 4px;padding:10px 12px;cursor:pointer;border-radius:10px;background:${isActive?'rgba(91,141,239,.18)':'rgba(91,141,239,.07)'};border:1px solid ${isActive?'rgba(91,141,239,.45)':'rgba(91,141,239,.18)'};transition:all .15s" onmouseover="this.style.borderColor='rgba(91,141,239,.45)'" onmouseout="this.style.borderColor='${isActive?'rgba(91,141,239,.45)':'rgba(91,141,239,.18)'}'">
+        html+=`<div id="lc-ch-${ch.id}" onclick="lcOpenChannel('${ch.id}')" style="margin:8px 8px 4px;padding:10px 12px;cursor:pointer;border-radius:10px;background:${isActive?'rgba(91,141,239,.18)':'rgba(91,141,239,.07)'};border:1px solid ${isActive?'rgba(91,141,239,.45)':'rgba(91,141,239,.18)'};transition:all .15s" onmouseover="this.style.borderColor='rgba(91,141,239,.45)'" onmouseout="this.style.borderColor='${isActive?'rgba(91,141,239,.45)':'rgba(91,141,239,.18)'}'">
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px">
             <span style="color:var(--blue-bright);display:flex;align-items:center">${LC_SVG.welcome}</span>
             <span style="font-size:12px;font-weight:700;color:${isActive?'var(--white)':'var(--blue-bright)'}"># welcome</span>
@@ -12164,9 +12204,9 @@ function renderLouChat(){
     groups[type].forEach(ch=>{
       const isActive=ch.id===lcActiveChannel;
       const u=unread[ch.id]||0;
-      html+=`<div onclick="lcOpenChannel('${ch.id}')" style="padding:6px 12px;cursor:pointer;border-radius:6px;margin:1px 6px;display:flex;align-items:center;gap:8px;background:${isActive?'rgba(91,141,239,.18)':'transparent'};transition:background .12s" onmouseover="if('${ch.id}'!==lcActiveChannel)this.style.background='rgba(255,255,255,.04)'" onmouseout="if('${ch.id}'!==lcActiveChannel)this.style.background='transparent'">
-        <span style="font-size:12px;color:${isActive?meta.color:'var(--muted)'}">#</span>
-        <span style="font-size:13px;font-weight:${isActive?'600':'400'};color:${isActive?'var(--white)':'var(--muted)'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ch.name}</span>
+      html+=`<div id="lc-ch-${ch.id}" onclick="lcOpenChannel('${ch.id}')" style="padding:6px 12px;cursor:pointer;border-radius:6px;margin:1px 6px;display:flex;align-items:center;gap:8px;background:${isActive?'rgba(91,141,239,.18)':'transparent'};transition:background .12s" onmouseover="if('${ch.id}'!==lcActiveChannel)this.style.background='rgba(255,255,255,.04)'" onmouseout="if('${ch.id}'!==lcActiveChannel)this.style.background='transparent'">
+        <span class="lc-ch-hash" style="font-size:12px;color:${isActive?meta.color:'var(--muted)'}">#</span>
+        <span class="lc-ch-name" style="font-size:13px;font-weight:${isActive?'600':'400'};color:${isActive?'var(--white)':'var(--muted)'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ch.name}</span>
         ${u>0?`<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center">${u>9?'9+':u}</span>`:''}
       </div>`;
     });
@@ -12193,32 +12233,42 @@ function renderLouChat(){
 }
 
 function lcOpenChannel(channelId){
+  const prevChannel=lcActiveChannel;
   lcActiveChannel=channelId;
   markLcRead(channelId);
 
   // Always restore normal chat layout when opening a real channel
   const vcView=document.getElementById('lc-video-call-view');
   const msgsEl=document.getElementById('lc-messages');
-  const pinnedEl=document.getElementById('lc-pinned-bar');
   if(vcView) vcView.style.display='none';
   if(msgsEl) msgsEl.style.display='flex';
 
-  // Load this channel's messages from Firebase into its own isolated key
+  // Lightweight sidebar active-state swap — no full re-render needed
+  lcUpdateSidebarActive(channelId, prevChannel);
+
+  // Fetch from Firebase only if stale (>30s since last fetch for this channel)
   if(_fbToken()){
-    fbGet('orgs',ORG_ID+':lc_msgs_'+channelId).then(fb=>{
-      if(fb?.msgs){
-        try{
-          // Strict channel isolation: exclude messages explicitly tagged to a different channel
-          const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===channelId);
-          // Assign channelId to any legacy messages that are missing it (so they won't bleed on next sync)
-          msgs.forEach(m=>{if(!m.channelId)m.channelId=channelId;});
-          localStorage.setItem('dronehub_lc_msgs_'+channelId,JSON.stringify(msgs));
-          lcRenderMessages();
-          lcScrollToBottom(); // scroll after async Firebase data arrives
-        }catch(e){}
-      }
-    });
+    const now=Date.now();
+    if(!_lcFetchedAt[channelId]||now-_lcFetchedAt[channelId]>_LC_FETCH_TTL){
+      _lcFetchedAt[channelId]=now;
+      fbGet('orgs',ORG_ID+':lc_msgs_'+channelId).then(fb=>{
+        // Only update if still on the same channel when response arrives
+        if(lcActiveChannel!==channelId) return;
+        if(fb?.msgs){
+          try{
+            // Strict channel isolation: exclude messages explicitly tagged to a different channel
+            const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===channelId);
+            // Tag legacy messages with channelId so they won't bleed on next sync
+            msgs.forEach(m=>{if(!m.channelId)m.channelId=channelId;});
+            localStorage.setItem('dronehub_lc_msgs_'+channelId,JSON.stringify(msgs));
+            lcRenderMessages();
+            lcScrollToBottom();
+          }catch(e){}
+        }
+      });
+    }
   }
+
   const channels=getLcChannels();
   const ch=channels.find(c=>c.id===channelId);
   if(!ch) return;
@@ -12253,7 +12303,6 @@ function lcOpenChannel(channelId){
     pinnedBar.style.display='none';
   }
 
-  renderLouChat();
   lcRenderMessages();
   lcScrollToBottom();
   setTimeout(()=>document.getElementById('lc-msg-input').focus(),50);
