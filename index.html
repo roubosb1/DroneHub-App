@@ -12463,16 +12463,16 @@ function lcScrollToBottom(){
 }
 
 async function lcRenderMessages(){
-  const rawMsgs=getLcMessages(lcActiveChannel);
-  // Decrypt message text in parallel before rendering (plaintext passes through)
-  const msgs=await dhDecryptMsgs(rawMsgs);
+  // Snapshot the active channel NOW — before any async work — so stale renders
+  // from a previous channel can't overwrite what we're about to paint.
+  const channelId=lcActiveChannel;
   const channels=getLcChannels();
-  const ch=channels.find(c=>c.id===lcActiveChannel);
+  const ch=channels.find(c=>c.id===channelId);
   const meta=ch?LC_TYPE_META[ch.type]||{}:{};
   const container=document.getElementById('lc-messages');
   if(!container) return;
 
-  // ── WELCOME CHANNEL — special hero render ──────────────────────────────────
+  // ── WELCOME CHANNEL — render immediately, no decryption needed ─────────────
   if(ch&&ch.type==='welcome'){
     const photo=document.getElementById('lou-photo-data')?.src||'';
     container.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px 32px;gap:32px;overflow:hidden">
@@ -12490,6 +12490,12 @@ async function lcRenderMessages(){
     </div>`;
     return;
   }
+
+  // For non-welcome channels, decrypt messages now (async)
+  const rawMsgs=getLcMessages(channelId);
+  const msgs=await dhDecryptMsgs(rawMsgs);
+  // Bail if the user switched channels while we were decrypting
+  if(lcActiveChannel!==channelId) return;
 
   if(!msgs.length){
     container.innerHTML=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
@@ -12535,10 +12541,10 @@ async function lcRenderMessages(){
           ${m.text?`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${lcFormatText(m.text)}</div>`:''}
           ${m.isMeeting?`<a href="${m.meetUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:8px 16px;border-radius:10px;background:linear-gradient(135deg,#1a73e8,#1557b0);color:#fff;text-decoration:none;font-size:13px;font-weight:700">📹 Join Google Meet</a>`:''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
-          ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${lcActiveChannel}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
+          ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${channelId}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
         </div>
         <div class="lc-msg-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;align-items:flex-start;flex-shrink:0">
-          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
+          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${channelId}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
         </div>
       </div>`;
     } else {
@@ -12549,7 +12555,7 @@ async function lcRenderMessages(){
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
         </div>
         <div class="lc-msg-actions2" style="opacity:0;transition:opacity .15s;flex-shrink:0">
-          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${lcActiveChannel}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
+          ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${channelId}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
         </div>
       </div>`;
     }
