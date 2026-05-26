@@ -10,24 +10,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const firebaseConfig={
-  apiKey:"AIzaSyA0VmEmpIoC3LCAi-M2Rh9Y-fSi6qh7iFY",
-  authDomain:"my-first-project-55c1a.firebaseapp.com",
-  projectId:"my-first-project-55c1a",
-  storageBucket:"my-first-project-55c1a.firebasestorage.app",
-  messagingSenderId:"471802947620",
-  appId:"1:471802947620:web:cd210ade51defc883b90b1"
-};
-let db=null;
-try{
-  firebase.initializeApp(firebaseConfig);
-  db=firebase.firestore();
-}catch(e){
-  console.warn('Firebase not available — running in local-only mode');
-}
+// Firebase is now accessed exclusively through server-side Netlify Functions.
+// The browser never holds Firebase credentials. All reads/writes go through
+// /.netlify/functions/firebase-proxy which validates a session token first.
+let db=null; // kept for legacy compatibility checks — always null now
+let _dhToken=null; // session token issued by /.netlify/functions/auth on login
+const _PROXY='/.netlify/functions/firebase-proxy';
 let ORG_ID='dronehub_main';
 
 // ── Platform helpers ────────────────────────────────────────────────────────
@@ -37,11 +26,11 @@ function lsKey(suffix){ return ORG_ID==='dronehub_main'?'dronehub_'+suffix:ORG_I
 function isPlatformOwner(email){ return (email||'').toLowerCase().trim()==='roubosb1@gmail.com'; }
 // Look up which org an email belongs to (for multi-tenant logins)
 async function lookupUserOrg(email){
-  if(!db) return null;
+  if(!_fbToken()) return null;
   try{
-    const snap=await db.collection('platform').doc('users').get();
-    if(snap.exists){
-      const data=snap.data();
+    const res=await _fbCall({action:'get',col:'platform',docId:'users'});
+    const data=res?.data;
+    if(data){
       const orgId=data[email.toLowerCase().replace(/[.@]/g,'_')];
       if(orgId) return orgId;
     }
@@ -50,24 +39,33 @@ async function lookupUserOrg(email){
 }
 
 // Firebase helpers — safe no-ops if Firebase not loaded
-async function fbSet(col,docId,data){
-  if(!db) return;
+// ── Firebase proxy helpers ─────────────────────────────────────────────────
+// All Firestore operations go through the server-side proxy.
+// If no session token is available (not logged in, or offline) the calls
+// are silently skipped — localStorage remains the primary data store.
+function _fbToken(){ return _dhToken||sessionStorage.getItem('dh_token')||null; }
+async function _fbCall(body){
+  const tok=_fbToken(); if(!tok) return null;
   try{
-    await db.collection(col).doc(docId).set(data,{merge:true});
-    localStorage.setItem('dronehub_last_save',Date.now().toString());
-  }catch(e){console.warn('fbSet:',e);}
+    const r=await fetch(_PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){return null;}
+}
+async function fbSet(col,docId,data){
+  const res=await _fbCall({action:'set',col,docId,data});
+  if(res) localStorage.setItem('dronehub_last_save',Date.now().toString());
 }
 async function fbGet(col,docId){
-  if(!db) return null;
-  try{const d=await db.collection(col).doc(docId).get();return d.exists?d.data():null;}catch(e){return null;}
+  const res=await _fbCall({action:'get',col,docId});
+  return res?.data??null;
 }
 async function fbGetAll(col){
-  if(!db) return[];
-  try{const s=await db.collection(col).get();return s.docs.map(d=>({id:d.id,...d.data()}));}catch(e){return[];}
+  const res=await _fbCall({action:'getAll',col});
+  return res?.data??[];
 }
 async function fbDelete(col,docId){
-  if(!db) return;
-  try{await db.collection(col).doc(docId).delete();}catch(e){}
+  await _fbCall({action:'delete',col,docId});
 }
 
 
@@ -4347,7 +4345,7 @@ function showPane(id,ev){
   if(id==='clients'){showPane('sales');setSalesView('clients');return;}
   if(id==='team'){
     renderTeam();
-    if(db) setTimeout(async()=>{
+    if(_fbToken()) setTimeout(async()=>{
       await teamForceSync();
       renderTeam();
     },500);
@@ -5062,10 +5060,10 @@ let _calTypeFilters=null; // null = show all
 function calEventsLoad(){try{return JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');}catch(e){return[];}}
 function calEventsSave(arr){
   localStorage.setItem('dronehub_cal_events',JSON.stringify(arr));
-  if(db) fbSet('orgs',ORG_ID+':cal_events',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs',ORG_ID+':cal_events',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
 }
 async function calEventsSyncFirebase(){
-  if(!db) return;
+  if(!_fbToken()) return;
   try{
     const fb=await fbGet('orgs',ORG_ID+':cal_events');
     if(fb?.data){
@@ -5079,7 +5077,7 @@ async function calEventsSyncFirebase(){
 function vacationAllocLoad(){try{return JSON.parse(localStorage.getItem('dronehub_vac_alloc')||'[]');}catch(e){return[];}}
 function vacationAllocSave(arr){
   localStorage.setItem('dronehub_vac_alloc',JSON.stringify(arr));
-  if(db) fbSet('orgs',ORG_ID+':vac_alloc',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs',ORG_ID+':vac_alloc',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
 }
 
 // Count vacation days used by a member in a given year (inclusive date range)
@@ -10661,7 +10659,7 @@ function cpViewInvoice(jobId){
   const job=savedJobs.find(j=>j.id==jobId||String(j.id)===String(jobId));
   if(!job){
     // Jobs might not have synced yet — try loading from Firebase then retry
-    if(db){
+    if(_fbToken()){
       fbGet('orgs',ORG_ID+':jobs').then(fb=>{
         if(fb?.data){
           const fbJobs=JSON.parse(fb.data);
@@ -11909,7 +11907,7 @@ function lcResetAllMessages(){
   const channels=getLcChannels();
   channels.forEach(ch=>localStorage.removeItem('dronehub_lc_msgs_'+ch.id));
   // Reload each channel from Firebase
-  if(db){
+  if(_fbToken()){
     channels.forEach(ch=>{
       fbGet('orgs',ORG_ID+':lc_msgs_'+ch.id).then(fb=>{
         if(fb?.msgs){
@@ -12125,7 +12123,7 @@ function lcOpenChannel(channelId){
   if(msgsEl) msgsEl.style.display='flex';
 
   // Load this channel's messages from Firebase into its own isolated key
-  if(db){
+  if(_fbToken()){
     fbGet('orgs',ORG_ID+':lc_msgs_'+channelId).then(fb=>{
       if(fb?.msgs){
         try{
@@ -13195,6 +13193,9 @@ function gateInit(){
   }
   const session=gateGetSession();
   if(session&&session.email){
+    // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
+    const _storedTok=sessionStorage.getItem('dh_token');
+    if(_storedTok) _dhToken=_storedTok;
     gateEnterApp(session);
     return;
   }
@@ -13432,7 +13433,7 @@ async function gateLogin(){
 
   if(!user){
     // Local not found — check Firebase before giving up (handles cross-device logins)
-    if(db){
+    if(_fbToken()){
       errEl.textContent='Checking…';errEl.style.display='block';
       // First: check if this email belongs to a different org (multi-tenant)
       try{
@@ -13470,7 +13471,7 @@ async function gateLogin(){
         try{
           let teamMembers=getAdminTeamMembers();
           // Also try Firebase admin team in case localStorage is empty on this device
-          if(!teamMembers.length&&db){
+          if(!teamMembers.length&&_fbToken()){
             const fbTeam=await fbGet('orgs',ORG_ID+':team');
             if(fbTeam?.data) try{teamMembers=JSON.parse(fbTeam.data);}catch(e){}
           }
@@ -13533,6 +13534,25 @@ async function gateLogin(){
   }
   clearLoginFailures(email);
 
+  // Fetch a Firebase proxy token from the server-side auth endpoint.
+  // This token allows fbGet/fbSet to reach Firestore through the proxy.
+  // Runs in the background — login proceeds immediately; Firebase sync
+  // will work once the token arrives (typically <300ms on the same CDN).
+  (async()=>{
+    try{
+      const _pHash=user.passHash; // already the stored hash
+      const _authR=await fetch('/.netlify/functions/auth',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,passHash:_pHash,orgId:ORG_ID})
+      });
+      if(_authR.ok){
+        const {token}=await _authR.json();
+        if(token){_dhToken=token;try{sessionStorage.setItem('dh_token',token);}catch(e){}}
+      }
+    }catch(e){console.log('Firebase proxy token unavailable (offline?) — local-only mode');}
+  })();
+
   // Force admin type for hardcoded owner accounts regardless of stored role
   const FORCE_ADMIN=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
   if(FORCE_ADMIN.includes(user.email.toLowerCase())){
@@ -13568,7 +13588,7 @@ async function gateLogin(){
     // This fixes mobile/cross-device logins where localStorage is empty but 2FA was
     // already configured on another device.
     let syncedFrom2fa=false;
-    if(db){
+    if(_fbToken()){
       try{
         const fb2fa=await fbGet('orgs',ORG_ID+':2fa');
         if(fb2fa?.data){
@@ -13752,7 +13772,7 @@ async function gateEnterApp(session){
   // This fixes: (1) team members getting "Link to team" on their own device,
   // (2) lastSeen/status never updating because localStorage was always empty.
   try{
-    if(db){
+    if(_fbToken()){
       const fbTeam=await fbGet('orgs',ORG_ID+':team');
       if(fbTeam?.data){
         const fbMembers=JSON.parse(fbTeam.data);
@@ -13958,7 +13978,7 @@ async function gateShowAdminView(session){
   const fab=document.getElementById('suggest-fab');
   if(fab) fab.style.display=(!isPlatformOwner(session.email)&&ORG_ID!=='dronehub_main')?'flex':'none';
   // Load org settings for non-dronehub_main orgs (tab customization)
-  if(ORG_ID!=='dronehub_main'&&db){
+  if(ORG_ID!=='dronehub_main'&&_fbToken()){
     try{
       const orgSettingsData=await fbGet('orgs',ORG_ID+':settings');
       if(orgSettingsData?.data){
@@ -14152,7 +14172,7 @@ async function reset2FAForCurrentUser(){
 
   // Remove from Firebase
   try{
-    if(db){
+    if(_fbToken()){
       const fb2fa=await fbGet('orgs',ORG_ID+':2fa');
       if(fb2fa?.data){
         const all=JSON.parse(fb2fa.data);
@@ -14335,7 +14355,7 @@ async function gate2faReset(){
   }catch(e){}
   // Clear Firebase 2FA record so other devices also skip it
   try{
-    if(db){
+    if(_fbToken()){
       const fb2fa=await fbGet('orgs',ORG_ID+':2fa');
       if(fb2fa?.data){
         const all2fa=JSON.parse(fb2fa.data);
@@ -14350,6 +14370,9 @@ async function gate2faReset(){
 
 function gateLogout(){
   gateClearSession();
+  // Clear Firebase proxy token so sync stops immediately
+  _dhToken=null;
+  try{sessionStorage.removeItem('dh_token');}catch(e){}
   // Reload page to show login gate fresh
   window.location.reload();
 }
@@ -14556,7 +14579,7 @@ function renderTeam(){
 
   // Pull fresh data from Firebase so lastSeen/status from team member devices
   // is always reflected in the admin view.
-  if(db){
+  if(_fbToken()){
     fbGet('orgs',ORG_ID+':team').then(fbTeam=>{
       if(fbTeam?.data){
         try{
@@ -16959,7 +16982,7 @@ if(_ah) _ah.style.display='none';
 if(_wr) _wr.style.display='none';
 gateInit();
 // Pre-populate demo data when running in Claude sandbox (no Firebase)
-if(!db){
+if(!_fbToken()){
   if(!localStorage.getItem('dronehub_admin_team')){
     localStorage.setItem('dronehub_admin_team',JSON.stringify([
       {id:'tmadmin_1',name:'Bailey Roubos',email:'roubosb1@gmail.com',phone:'',type:'admin',role:'admin',orgId:'org_default',status:'active',jobTitle:'Founder/Owner',activatedAt:'2026-05-01',lastSeen:'2026-05-08 11:00'},
@@ -16982,7 +17005,7 @@ if(!db){
   }
 }
 // Restore data from Firebase if localStorage was cleared
-if(db) setTimeout(()=>restoreFromFirebase(),1000);
+if(_fbToken()) setTimeout(()=>restoreFromFirebase(),1000);
 
 // ══════════════════════════════════════════════════════
 // SALES CRM
@@ -17145,11 +17168,11 @@ function salesSave(arr){
   const now = Date.now();
   localStorage.setItem('dronehub_sales', JSON.stringify(arr));
   localStorage.setItem('dronehub_sales_updatedAt', String(now));
-  if(db) fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
 }
 
 async function salesSyncFirebase(){
-  if(!db) return;
+  if(!_fbToken()) return;
   try{
     const fb = await fbGet('orgs', ORG_ID+':sales');
     if(fb?.data){
@@ -18196,11 +18219,11 @@ function dealsLoad(){
 }
 function dealsSave(arr){
   localStorage.setItem('dronehub_sales_deals', JSON.stringify(arr));
-  if(db) fbSet('orgs', ORG_ID+':sales_deals', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs', ORG_ID+':sales_deals', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
 }
 
 async function dealsSyncFirebase(){
-  if(!db) return;
+  if(!_fbToken()) return;
   try{
     const fb = await fbGet('orgs', ORG_ID+':sales_deals');
     if(fb?.data){
@@ -18533,7 +18556,7 @@ function socialWorkspacesLoad(){
 }
 function socialWorkspacesSave(arr){
   localStorage.setItem('dronehub_social_workspaces', JSON.stringify(arr));
-  if(db) fbSet('orgs', ORG_ID+':social_workspaces', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs', ORG_ID+':social_workspaces', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
 }
 function socialPostsLoad(){
   try{
@@ -18555,17 +18578,17 @@ function socialPostsLoad(){
 }
 function socialPostsSave(arr){
   localStorage.setItem('dronehub_social_posts', JSON.stringify(arr));
-  if(db) fbSet('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
 }
 function videoDraftsLoad(){
   try{ return JSON.parse(localStorage.getItem('dh_video_drafts')||'[]'); }catch(e){ return []; }
 }
 function videoDraftsSave(arr){
   localStorage.setItem('dh_video_drafts', JSON.stringify(arr));
-  if(db) fbSet('orgs', ORG_ID+':video_drafts',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs', ORG_ID+':video_drafts',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
 }
 async function videoDraftsSyncFirebase(){
-  if(!db) return;
+  if(!_fbToken()) return;
   try{
     const fb = await fbGet('orgs', ORG_ID+':video_drafts');
     if(fb?.data){ const r=JSON.parse(fb.data); localStorage.setItem('dh_video_drafts',JSON.stringify(r)); }
@@ -18593,7 +18616,7 @@ function socialLabelsSave(wsId, labels){
 }
 
 async function socialSyncFirebase(){
-  if(!db) return;
+  if(!_fbToken()) return;
   try{
     const [fbWs,fbPosts] = await Promise.all([
       fbGet('orgs',ORG_ID+':social_workspaces'),
@@ -18610,7 +18633,7 @@ function notificationsLoad(){
 }
 function notificationsSave(arr){
   localStorage.setItem('dh_social_notifs',JSON.stringify(arr));
-  if(db) fbSet('orgs',ORG_ID+':social_notifs',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSet('orgs',ORG_ID+':social_notifs',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
 }
 function addSocialNotification(postId,text,type){
   const notifs=notificationsLoad();
@@ -21030,15 +21053,9 @@ async function platformRefresh(){
 async function renderPlatformDashboard(){
   if(!isPlatformOwner(_activeSessionEmail)) return;
   // Load orgs from Firebase
-  if(db){
-    try{
-      const snap=await db.collection('platform').doc('orgs_registry').get();
-      _platformOrgs=snap.exists?(snap.data().orgs||[]):[];
-    }catch(e){ _platformOrgs=[]; }
-    try{
-      const snap=await db.collection('platform').doc('suggestions').get();
-      _platformSuggestions=snap.exists?(snap.data().items||[]):[];
-    }catch(e){ _platformSuggestions=[]; }
+  if(_fbToken()){
+    try{const r=await _fbCall({action:'get',col:'platform',docId:'orgs_registry'});_platformOrgs=r?.data?.orgs||[];}catch(e){_platformOrgs=[];}
+    try{const r=await _fbCall({action:'get',col:'platform',docId:'suggestions'});_platformSuggestions=r?.data?.items||[];}catch(e){_platformSuggestions=[];}
   }
   // KPI strip
   const kpiEl=document.getElementById('platform-kpi-strip');
@@ -21187,7 +21204,7 @@ function renderPlatformSuggestions(){
 }
 
 async function platformResolveSuggestion(idx){
-  if(!db) return;
+  if(!_fbToken()) return;
   _platformSuggestions[idx].resolved=true;
   await fbSet('platform','suggestions',{items:_platformSuggestions});
   renderPlatformSuggestions();
@@ -21652,10 +21669,10 @@ async function submitSuggestion(){
   const session=gateGetSession();
   const orgName=window._orgData?.companyName||ORG_ID;
   const item={text,orgId:ORG_ID,orgName,submittedBy:session?.email||'',createdAt:new Date().toISOString(),resolved:false};
-  if(db){
+  if(_fbToken()){
     try{
-      const snap=await db.collection('platform').doc('suggestions').get();
-      const current=snap.exists?(snap.data().items||[]):[];
+      const r=await _fbCall({action:'get',col:'platform',docId:'suggestions'});
+      const current=r?.data?.items||[];
       current.push(item);
       await fbSet('platform','suggestions',{items:current});
     }catch(e){console.warn('submitSuggestion failed:',e);}
@@ -21858,17 +21875,17 @@ async function wizCreateOrg(){
       passHash:await hashPass(_wizData.email,_wizData.pass),
       createdAt:now.slice(0,10),
     };
-    if(db){
+    if(_fbToken()){
       // Save org's gate users
       await fbSet('orgs',orgId+':gate_users',{data:JSON.stringify([adminUser]),updatedAt:Date.now()});
       // Register org in platform registry
-      const snap=await db.collection('platform').doc('orgs_registry').get();
-      const existing=snap.exists?(snap.data().orgs||[]):[];
+      const _wizOrgSnap=await _fbCall({action:'get',col:'platform',docId:'orgs_registry'});
+      const existing=(_wizOrgSnap?.data?.orgs||[]);
       existing.push(orgRecord);
       await fbSet('platform','orgs_registry',{orgs:existing});
       // Map email → orgId for login routing
-      const snap2=await db.collection('platform').doc('users').get();
-      const userMap=snap2.exists?snap2.data():{};
+      const _wizUsersSnap=await _fbCall({action:'get',col:'platform',docId:'users'});
+      const userMap=_wizUsersSnap?.data||{};
       const emailKey=_wizData.email.toLowerCase().replace(/[.@]/g,'_');
       userMap[emailKey]=orgId;
       await fbSet('platform','users',userMap);
@@ -21905,10 +21922,10 @@ async function submitSuggestionFab(){
   const session=gateGetSession();
   const orgName=window._orgData?.companyName||ORG_ID;
   const item={text,orgId:ORG_ID,orgName,submittedBy:session?.email||'',createdAt:new Date().toISOString(),resolved:false};
-  if(db){
+  if(_fbToken()){
     try{
-      const snap=await db.collection('platform').doc('suggestions').get();
-      const current=snap.exists?(snap.data().items||[]):[];
+      const r=await _fbCall({action:'get',col:'platform',docId:'suggestions'});
+      const current=r?.data?.items||[];
       current.push(item);
       await fbSet('platform','suggestions',{items:current});
     }catch(e){console.warn('suggestion failed:',e);}
