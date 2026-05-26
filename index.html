@@ -13992,8 +13992,10 @@ function gateGetUsers(){
 }
 function gateSaveUsers(arr){
   try{localStorage.setItem('dronehub_gate_users',JSON.stringify(arr));}catch(e){}
-  // Always push to Firebase so accounts work across devices/browsers
-  fbSet('orgs',ORG_ID+':gate_users',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  // SAFETY: never overwrite Firebase with an empty array — would wipe all user accounts
+  if(arr.length > 0){
+    fbSet('orgs',ORG_ID+':gate_users',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  }
 }
 
 // Called on every page load — checks if already logged in
@@ -15275,8 +15277,11 @@ const ALL_TABS_CONFIG=[
 function getAdminTeamMembers(){return JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');}
 function saveAdminTeamMembers(arr){
   try{localStorage.setItem('dronehub_admin_team',JSON.stringify(arr));}catch(e){}
-  fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(arr),updatedAt:Date.now()});
-  fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  // SAFETY: never overwrite Firebase with an empty array — would wipe all team members
+  if(arr.length > 0){
+    fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(arr),updatedAt:Date.now()});
+    fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  }
 }
 
 // ── MERGE DUPLICATE ACCOUNTS ──────────────────────────────────────────────────
