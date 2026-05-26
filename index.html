@@ -2154,6 +2154,9 @@ button{font-family:var(--font);}
           <div id="lc-emoji-grid" style="display:flex;flex-wrap:wrap;gap:4px"></div>
         </div>
 
+        <!-- @mention autocomplete dropdown (hidden by default) -->
+        <div id="lc-mention-dropdown" style="display:none;position:relative;z-index:200;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:10px;padding:4px;margin-bottom:6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.5)"></div>
+
         <!-- Input row -->
         <div style="display:flex;gap:6px;align-items:flex-end;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:12px;padding:6px 8px">
 
@@ -2202,8 +2205,8 @@ button{font-family:var(--font);}
 
           <!-- Text input -->
           <textarea id="lc-msg-input" placeholder="Message #channel…" rows="1"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();lcSendMessage();}"
-            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();const _dd=document.getElementById('lc-mention-dropdown');if(_dd&&_dd.style.display!=='none'&&_dd.querySelector('[data-selected]')){_dd.querySelector('[data-selected]').click();}else{lcSendMessage();}}if(event.key==='Escape'){const _dd2=document.getElementById('lc-mention-dropdown');if(_dd2)_dd2.style.display='none';}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';lcHandleMentionInput(this);"
             style="flex:1;background:transparent;border:none;color:var(--white);font-size:13px;font-family:var(--font);resize:none;outline:none;line-height:1.5;max-height:120px;padding:4px 6px"></textarea>
 
           <!-- Send -->
@@ -2212,6 +2215,8 @@ button{font-family:var(--font);}
 
         <div style="font-size:10px;color:var(--muted);margin-top:5px;display:flex;gap:10px">
           <span>Enter to send · Shift+Enter for new line</span>
+          <span style="color:rgba(168,180,208,.4)">|</span>
+          <span>@ to mention a teammate</span>
           <span style="color:rgba(168,180,208,.4)">|</span>
           <span>📎 Drag & drop files here to attach</span>
         </div>
@@ -4425,9 +4430,13 @@ function showPane(id,ev){
     lcCleanCorruptMessages();
     lcRequestNotifications();
     lcEnsureDefaults();
+    lcMarkMentionsRead();
     renderLouChat();
-    // Auto-open welcome on first visit
+    // Auto-open welcome on first visit; re-render active channel when returning to tab
     if(!lcActiveChannel) lcOpenChannel('lc_welcome');
+    else lcRenderMessages();
+    // Check for unread @mentions on each visit (async, non-blocking)
+    lcCheckMentions().catch(()=>{});
   }
 }
 
@@ -11985,7 +11994,7 @@ function lcCleanCorruptMessages(){
   // Remove the old merged dronehub_lc_msgs key that caused all channels to bleed into each other
   localStorage.removeItem('dronehub_lc_msgs');
   // Assign channelId to any per-channel messages that are missing it (one-time migration)
-  const _cleanKey='dh_lc_channelid_migrated_v2';
+  const _cleanKey='dh_lc_channelid_migrated_v3';
   if(!sessionStorage.getItem(_cleanKey)){
     sessionStorage.setItem(_cleanKey,'1');
     try{
@@ -12228,10 +12237,9 @@ function renderLouChat(){
   const _isAdmin=_s?.type==='admin'||_s?.role==='admin';
   const _addSec=document.getElementById('lc-add-section');
   if(_addSec) _addSec.style.display=_isAdmin?'block':'none';
-
-  if(lcActiveChannel && lcActiveChannel!=='__video_call__'){
-    lcRenderMessages();
-  }
+  // NOTE: lcRenderMessages() is intentionally NOT called here.
+  // Each lcOpenChannel() call handles its own render. Calling it here
+  // creates a second competing async render when switching channels.
 }
 
 function lcOpenChannel(channelId){
@@ -12258,7 +12266,8 @@ function lcOpenChannel(channelId){
     if(actionsEl) actionsEl.style.display='none';
     const delBtn=document.getElementById('lc-delete-channel-btn');
     if(delBtn) delBtn.style.display='none';
-    document.getElementById('lc-empty-state').style.display='none';
+    const _emptyEl=document.getElementById('lc-empty-state');
+    if(_emptyEl) _emptyEl.style.display='none';
     const pinnedBar=document.getElementById('lc-pinned-bar');
     if(pinnedBar) pinnedBar.style.display='none';
     lcRenderMessages();
@@ -12706,6 +12715,7 @@ function lcFormatText(text){
     .replace(/\*(.+?)\*/g,'<em>$1</em>')
     .replace(/`(.+?)`/g,'<code style="background:var(--navy-lift);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--blue-bright)">$1</code>')
     .replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" style="color:var(--blue-bright);text-decoration:underline">$1</a>')
+    .replace(/@([A-Za-z][A-Za-z0-9_.\- ]*?)(?=\s|$|[,!?.()\[\]])/g,'<span style="color:var(--blue-bright);font-weight:700;background:rgba(91,141,239,.18);padding:1px 5px;border-radius:4px">@$1</span>')
     .replace(/\n/g,'<br>');
 }
 
@@ -12856,7 +12866,7 @@ function lcEndMeeting(){
 function lcOpenVideoCall(){
   lcActiveChannel='__video_call__';
 
-  // Update sidebar highlight
+  // Full sidebar re-render to highlight the video call entry
   renderLouChat();
 
   // Update header
@@ -13010,6 +13020,16 @@ async function lcSendMessage(){
   };
   await saveLcMessage(lcActiveChannel,msg);
 
+  // @mention notifications — detect @Name in the message and notify
+  if(text){
+    const mentions=[...text.matchAll(/@([A-Za-z][A-Za-z0-9_.\- ]*?)(?=\s|$|[,!?.()\[\]])/g)].map(m=>m[1].trim());
+    if(mentions.length){
+      mentions.forEach(name=>{
+        lcSendMentionNotif(name,author,ch.name,lcActiveChannel,text);
+      });
+    }
+  }
+
   // If replying in a client DM channel → mirror back to portal_msgs
   // so the client sees the reply in their portal LouChat tab
   if(ch.type==='client_dm' && ch.clientId){
@@ -13021,6 +13041,8 @@ async function lcSendMessage(){
   lcRenderAttachPreview();
   const picker=document.getElementById('lc-emoji-picker');
   if(picker) picker.style.display='none';
+  const dd=document.getElementById('lc-mention-dropdown');
+  if(dd) dd.style.display='none';
   lcRenderMessages();
 }
 
@@ -13106,6 +13128,149 @@ function lcReact(channelId, msgId, emoji){
   try{localStorage.setItem(key,JSON.stringify(msgs));}catch(e){}
   fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgs),updatedAt:Date.now()});
   lcRenderMessages();
+}
+
+// ── @MENTION SYSTEM ───────────────────────────────────────────────────────────
+
+// Show autocomplete dropdown when user types @
+function lcHandleMentionInput(textarea){
+  const val=textarea.value;
+  const cursor=textarea.selectionStart;
+  const beforeCursor=val.slice(0,cursor);
+  const atMatch=beforeCursor.match(/@([A-Za-z0-9_.\- ]*)$/);
+  const dropdown=document.getElementById('lc-mention-dropdown');
+  if(!dropdown) return;
+
+  if(!atMatch){dropdown.style.display='none';return;}
+
+  const query=atMatch[1].toLowerCase();
+  const seen=new Set();
+  const allMembers=[...getAdminTeamMembers(),...getTeamMembers()];
+  const matches=allMembers.filter(m=>{
+    if(!m.name||seen.has(m.name.toLowerCase())) return false;
+    seen.add(m.name.toLowerCase());
+    return !query||m.name.toLowerCase().includes(query);
+  }).slice(0,6);
+
+  if(!matches.length){dropdown.style.display='none';return;}
+
+  dropdown.innerHTML=matches.map((m,i)=>{
+    const initials=(m.name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    const bg=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9'][m.name.charCodeAt(0)%6];
+    const photo=getProfilePhoto(m.email||'');
+    const avatar=photo
+      ?`<img src="${photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+      :`<div style="width:28px;height:28px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
+    const safeName=m.name.replace(/'/g,"\\'");
+    return `<div onclick="lcInsertMention('${safeName}')" style="padding:7px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:7px;transition:background .1s" onmouseover="this.style.background='rgba(91,141,239,.18)'" onmouseout="this.style.background='transparent'">
+      ${avatar}
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--white)">${m.name}</div>
+        ${m.role?`<div style="font-size:10px;color:var(--muted)">${m.role}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  dropdown.style.display='block';
+}
+
+// Insert @Name into the message input at the cursor position
+function lcInsertMention(name){
+  const input=document.getElementById('lc-msg-input');
+  if(!input) return;
+  const val=input.value;
+  const cursor=input.selectionStart;
+  const before=val.slice(0,cursor);
+  const after=val.slice(cursor);
+  const newBefore=before.replace(/@[A-Za-z0-9_.\- ]*$/,'@'+name+' ');
+  input.value=newBefore+after;
+  const pos=newBefore.length;
+  input.setSelectionRange(pos,pos);
+  input.focus();
+  const dd=document.getElementById('lc-mention-dropdown');
+  if(dd) dd.style.display='none';
+  // Resize
+  input.style.height='auto';
+  input.style.height=Math.min(input.scrollHeight,120)+'px';
+}
+
+// Notify a mentioned team member — stores in Firebase so they see it on next login
+function lcSendMentionNotif(mentionedName, fromAuthor, channelName, channelId, text){
+  // Don't notify yourself
+  const session=gateGetSession();
+  if((session?.name||'').toLowerCase()===mentionedName.toLowerCase()) return;
+
+  // Find mentioned person's email
+  const allMembers=[...getAdminTeamMembers(),...getTeamMembers()];
+  const person=allMembers.find(m=>(m.name||'').toLowerCase()===mentionedName.toLowerCase());
+  const toEmail=person?.email||'';
+
+  const notif={
+    id:Date.now()+Math.random(),
+    toName:mentionedName,
+    toEmail,
+    from:fromAuthor,
+    channelName,
+    channelId,
+    text:text.slice(0,120),
+    ts:new Date().toISOString(),
+  };
+
+  // Store in Firebase — read by the mentioned user on their next load
+  if(_fbToken()){
+    fbGet('orgs',ORG_ID+':lc_mentions').then(existing=>{
+      const list=existing?.list?JSON.parse(existing.list):[];
+      list.push(notif);
+      // Keep last 500 mentions total
+      const trimmed=list.slice(-500);
+      fbSet('orgs',ORG_ID+':lc_mentions',{list:JSON.stringify(trimmed),updatedAt:Date.now()});
+    }).catch(()=>{});
+  }
+
+  // Also fire browser notification immediately for anyone with the app open
+  if('Notification' in window&&Notification.permission==='granted'){
+    new Notification('LouChat — @mention in #'+channelName,{
+      body:fromAuthor+' mentioned @'+mentionedName+': '+text.slice(0,80),
+      icon:'https://sparkly-halva-0d1aa9.netlify.app/favicon.ico',
+      tag:'lc-mention-'+Date.now(),
+    });
+  }
+}
+
+// Check Firebase for unread @mentions for the current user; updates badge
+async function lcCheckMentions(){
+  const session=gateGetSession();
+  if(!session) return;
+  if(!_fbToken()) return;
+  try{
+    const data=await fbGet('orgs',ORG_ID+':lc_mentions');
+    if(!data?.list) return;
+    const list=JSON.parse(data.list);
+    const myEmail=(session.email||'').toLowerCase();
+    const myName=(session.name||'').toLowerCase();
+    // Find mentions to me that arrived after my last read time
+    const lastRead=parseInt(localStorage.getItem('dronehub_lc_mentions_read')||'0');
+    const mine=list.filter(n=>{
+      const isMe=(myEmail&&(n.toEmail||'').toLowerCase()===myEmail)||(myName&&(n.toName||'').toLowerCase()===myName);
+      return isMe&&new Date(n.ts).getTime()>lastRead;
+    });
+    if(mine.length>0){
+      localStorage.setItem('dronehub_lc_mention_count',String(mine.length));
+      // Show a mention notification bubble on the LouChat tab badge
+      const badge=document.getElementById('lc-nav-badge');
+      if(badge){
+        const existing=parseInt(badge.textContent)||0;
+        const total=existing+mine.length;
+        badge.textContent=total>99?'99+':String(total);
+        badge.style.display='inline-block';
+      }
+    }
+  }catch(e){}
+}
+
+// Mark all mentions as read (call when user opens LouChat)
+function lcMarkMentionsRead(){
+  localStorage.setItem('dronehub_lc_mentions_read',String(Date.now()));
+  localStorage.removeItem('dronehub_lc_mention_count');
 }
 
 
@@ -13356,7 +13521,7 @@ function gateInit(){
   if(session&&session.email){
     // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
     const _storedTok=sessionStorage.getItem('dh_token');
-    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});}
+    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);}
     gateEnterApp(session);
     return;
   }
@@ -13714,6 +13879,7 @@ async function gateLogin(){
           _dhToken=token;
           try{sessionStorage.setItem('dh_token',token);}catch(e){}
           _loadMsgKey().catch(()=>{}); // pre-load encryption key so chats decrypt immediately
+          setTimeout(()=>lcCheckMentions().catch(()=>{}),2000); // check for @mention notifications
         }
       }
     }catch(e){console.log('Firebase proxy token unavailable (offline?) — local-only mode');}
