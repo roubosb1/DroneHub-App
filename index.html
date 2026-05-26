@@ -12086,10 +12086,8 @@ function lcUpdateSidebarActive(newId, prevId){
       const name=next.querySelector('.lc-ch-name');
       if(hash) hash.style.color=meta.color||'var(--blue-bright)';
       if(name){name.style.color='var(--white)';name.style.fontWeight='600';}
-    } else {
-      // Channel item not in DOM yet (new channel) — fall back to full re-render
-      renderLouChat();
     }
+    // If element not in DOM yet, lcRenderMessages() from lcOpenChannel handles it
   }
 }
 
@@ -12494,7 +12492,7 @@ async function lcRenderMessages(){
   if(!container) return;
 
   // ── WELCOME CHANNEL — render immediately, no decryption needed ─────────────
-  if(ch&&ch.id==='lc_welcome'){
+  if(channelId==='lc_welcome'){
     const photo=document.getElementById('lou-photo-data')?.src||'';
     container.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px 32px;gap:32px;overflow:hidden">
       ${photo?`<img src="${photo}" alt="Lou" style="height:min(55vh,340px);width:auto;border-radius:18px;object-fit:cover;box-shadow:0 12px 48px rgba(0,0,0,.55);border:2px solid rgba(91,141,239,.45);flex-shrink:0">`:'<div style="width:72px;height:72px;border-radius:50%;background:rgba(91,141,239,.18);border:2px solid rgba(91,141,239,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'}
