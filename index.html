@@ -4863,8 +4863,8 @@ function renderCostModel(grand,driveCost,lines){
   const photoContractorShare=photoGrossedBase*(1-MARGIN); // 50% of flat photo price
   const videoShootRevenue=videoContractorShare;
   const photoShootRevenue=photoContractorShare;
-  const videoShooterFee=videoShootRevenue*0.585; // 58.5% to shooter (was 65%)
-  const videoEditorFee=videoShootRevenue*0.415;  // 41.5% to editor (was 35%)
+  const videoShooterFee=videoShootRevenue*0.600; // 60% to shooter
+  const videoEditorFee=videoShootRevenue*0.400;  // 40% to editor
   const photoShooterFee=photoShootRevenue*0.600; // 60% to shooter
   const photoEditorFee=photoShootRevenue*0.400;  // 40% to editor
 
@@ -4893,7 +4893,7 @@ function renderCostModel(grand,driveCost,lines){
     // Edit fee goes ONLY to the assigned editor — never falls back to the shooter
     const vidEdKey=editors.video||'__unassigned_editor__';
     const vidEdName=editors.video?cName(editors.video):'(no editor assigned)';
-    addEdit(vidEdKey,vidEdName,{label:'Video editing (41.5%)',fee:videoEditorFee});
+    addEdit(vidEdKey,vidEdName,{label:'Video editing (40%)',fee:videoEditorFee});
   }
   if(svc.photo){
     // Show photo costs even if no photographer assigned yet
@@ -8512,8 +8512,8 @@ function buildPayoutSnapshot(lines,ds){
       else if(!l.flat&&!l.isStandalonePhoto) vGrossedBase+=(l.total-l.admin)-(ds.vidClientCharge||0);
     });
     const vRev=vGrossedBase*(1-MARGIN);
-    const shooterFee=vRev*0.585;
-    const editorFee=vRev*0.415;
+    const shooterFee=vRev*0.600;
+    const editorFee=vRev*0.400;
     addContractor(ds.vidKey,'Video shoot',shooterFee,0,ds.vidDrive.contractorCharge||0,0,'');
     const edKey=editors.video||'__unassigned_editor__';
     addContractor(edKey,'Video editing',0,editorFee,0,0,'');
@@ -17651,8 +17651,8 @@ function tpClaimProject(jobId){
         name:member.name,
         entries:[{
           role:isEditor?'Video editing':'Video shoot',
-          shootFee:isEditor?0:Math.round(pool*0.585),
-          editFee:isEditor?Math.round(pool*0.415):0,
+          shootFee:isEditor?0:Math.round(pool*0.600),
+          editFee:isEditor?Math.round(pool*0.400):0,
           driveFee:0,miscFee:0
         }]
       };
