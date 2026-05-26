@@ -2204,7 +2204,7 @@ button{font-family:var(--font);}
           <textarea id="lc-msg-input" placeholder="Message #channel…" rows="1"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();lcSendMessage();}"
             oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
-            style="flex:1;background:transparent;border:none;color:var(--white);font-size:13px;font-family:var(--font);resize:none;outline:none;line-height:1.5;max-height:120px;padding:4px 0"></textarea>
+            style="flex:1;background:transparent;border:none;color:var(--white);font-size:13px;font-family:var(--font);resize:none;outline:none;line-height:1.5;max-height:120px;padding:4px 6px"></textarea>
 
           <!-- Send -->
           <button onclick="lcSendMessage()" style="padding:6px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;align-self:flex-end;margin-bottom:2px">Send</button>
