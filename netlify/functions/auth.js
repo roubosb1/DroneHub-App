@@ -132,6 +132,21 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ token, session: fallbackSession }) };
     }
 
+    // Empty passHash means the account exists in Firebase but was seeded without
+    // a password (admin bootstrap or pre-proxy migration). Treat as "not yet in
+    // Firebase" and issue a fallback token — local auth already passed.
+    if (!user.passHash) {
+      const fallbackSession = {
+        email: user.email,
+        name: user.name || email.split('@')[0],
+        role: user.role || 'contractor',
+        type: user.type || 'team',
+        orgId: resolvedOrgId,
+      };
+      const token = signToken({ ...fallbackSession, exp: Date.now() + TOKEN_TTL_MS });
+      return { statusCode: 200, headers, body: JSON.stringify({ token, session: fallbackSession }) };
+    }
+
     if (!passwordMatches(email, password, user.passHash)) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Incorrect password' }) };
     }
