@@ -11993,6 +11993,8 @@ function lcResetAllMessages(){
 function lcCleanCorruptMessages(){
   // Remove the old merged dronehub_lc_msgs key that caused all channels to bleed into each other
   localStorage.removeItem('dronehub_lc_msgs');
+  // ALWAYS wipe the welcome channel's message store — it renders a static photo, never messages
+  localStorage.removeItem('dronehub_lc_msgs_lc_welcome');
   // Assign channelId to any per-channel messages that are missing it (one-time migration)
   const _cleanKey='dh_lc_channelid_migrated_v3';
   if(!sessionStorage.getItem(_cleanKey)){
@@ -12000,6 +12002,7 @@ function lcCleanCorruptMessages(){
     try{
       const channels=JSON.parse(localStorage.getItem('dronehub_lc_channels')||'[]');
       channels.forEach(ch=>{
+        if(ch.id==='lc_welcome') return; // welcome has no messages, already wiped above
         const key='dronehub_lc_msgs_'+ch.id;
         const msgs=JSON.parse(localStorage.getItem(key)||'[]');
         let changed=false;
@@ -12016,6 +12019,8 @@ function lcCleanCorruptMessages(){
 }
 
 async function saveLcMessage(channelId, msg){
+  // Welcome channel is read-only — it renders a static photo, never stores messages
+  if(!channelId||channelId==='lc_welcome') return;
   msg.channelId=channelId;
   const key='dronehub_lc_msgs_'+channelId;
   const msgs=JSON.parse(localStorage.getItem(key)||'[]');
@@ -12522,8 +12527,9 @@ async function lcRenderMessages(){
   // For non-welcome channels, decrypt messages now (async)
   const rawMsgs=getLcMessages(channelId);
   const msgs=await dhDecryptMsgs(rawMsgs);
-  // Bail if the user switched channels while we were decrypting
+  // Bail if the user switched channels (or to welcome) while we were decrypting
   if(lcActiveChannel!==channelId) return;
+  if(lcActiveChannel==='lc_welcome') return; // never overwrite welcome with message HTML
 
   if(!msgs.length){
     container.innerHTML=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
@@ -12999,6 +13005,8 @@ async function lcSendMessage(){
   const text=(input?.value||'').trim();
   if(!text&&!lcPendingAttachments.length) return;
   if(!lcActiveChannel){alert('Please select a channel first.');return;}
+  // Welcome channel is read-only — should never be able to send from it
+  if(lcActiveChannel==='lc_welcome') return;
 
   // Double-check the active channel exists
   const channels=getLcChannels();
