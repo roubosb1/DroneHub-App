@@ -12250,6 +12250,23 @@ function lcOpenChannel(channelId){
   // Lightweight sidebar active-state swap — no full re-render needed
   lcUpdateSidebarActive(channelId, prevChannel);
 
+  // ── WELCOME CHANNEL: render directly — never depends on channel object ───────
+  if(channelId==='lc_welcome'){
+    document.getElementById('lc-channel-icon').innerHTML=LC_SVG.welcome||'🏠';
+    document.getElementById('lc-channel-title').textContent='# welcome';
+    document.getElementById('lc-channel-desc').textContent='A message from Lou — the person this chat is named after';
+    document.getElementById('lc-input-area').style.display='none';
+    const actionsEl=document.getElementById('lc-channel-actions');
+    if(actionsEl) actionsEl.style.display='none';
+    const delBtn=document.getElementById('lc-delete-channel-btn');
+    if(delBtn) delBtn.style.display='none';
+    document.getElementById('lc-empty-state').style.display='none';
+    const pinnedBar=document.getElementById('lc-pinned-bar');
+    if(pinnedBar) pinnedBar.style.display='none';
+    lcRenderMessages();
+    return;
+  }
+
   // Fetch from Firebase only if stale (>30s since last fetch for this channel)
   if(_fbToken()){
     const now=Date.now();
@@ -12282,9 +12299,9 @@ function lcOpenChannel(channelId){
   document.getElementById('lc-channel-icon').innerHTML=meta.icon;
   document.getElementById('lc-channel-title').textContent='# '+ch.name;
   document.getElementById('lc-channel-desc').textContent=ch.topic||'No description set';
-  document.getElementById('lc-input-area').style.display=ch.id==='lc_welcome'?'none':'block';
+  document.getElementById('lc-input-area').style.display='block';
   const actionsEl=document.getElementById('lc-channel-actions');
-  if(actionsEl) actionsEl.style.display=ch.id==='lc_welcome'?'none':'flex';
+  if(actionsEl) actionsEl.style.display='flex';
   // Show delete button only for admins
   const delBtn=document.getElementById('lc-delete-channel-btn');
   if(delBtn){const s=gateGetSession();delBtn.style.display=(s?.type==='admin'||s?.role==='admin')?'inline-block':'none';}
