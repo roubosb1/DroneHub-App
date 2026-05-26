@@ -8515,7 +8515,7 @@ function buildPayoutSnapshot(lines,ds){
     const shooterFee=vRev*0.585;
     const editorFee=vRev*0.415;
     addContractor(ds.vidKey,'Video shoot',shooterFee,0,ds.vidDrive.contractorCharge||0,0,'');
-    const edKey=editors.video||ds.vidKey;
+    const edKey=editors.video||'__unassigned_editor__';
     addContractor(edKey,'Video editing',0,editorFee,0,0,'');
   }
   // Photo
@@ -8530,7 +8530,7 @@ function buildPayoutSnapshot(lines,ds){
     const editorFee=pRev*0.470;
     const pKey=ds.sameShooter?ds.vidKey:ds.phoKey;
     addContractor(pKey,'Photo shoot',shooterFee,0,ds.sameShooter?0:ds.phoDrive.contractorCharge||0,0,'');
-    const pedKey=editors.photo||pKey;
+    const pedKey=editors.photo||'__unassigned_editor__';
     addContractor(pedKey,'Photo editing',0,editorFee,0,0,'');
   }
   // Random video
@@ -8678,6 +8678,9 @@ function openJobDetail(jobId){
   // Contractor options for dropdowns
   const contractorOpts=Object.values(CONTRACTORS).map(c=>`<option value="${c.name}" ${ts.videographer===c.name?'selected':''}>${c.name}</option>`).join('');
   const editorOpts=buildEditorOptions(ts.claimedBy||'');
+  const photoEditorOpts=buildEditorOptions(ts.photoEditor||'');
+  const hasVideo=!!(j.services?.video||j.services?.extvideo||j.services?.randomvideo||j.services?.tvideo);
+  const hasPhoto=!!(j.services?.photo||j.services?.extphoto||j.services?.randomphoto||j.services?.tphoto);
 
   const existing=document.getElementById('job-detail-modal');
   if(existing) existing.remove();
@@ -8741,14 +8744,21 @@ function openJobDetail(jobId){
               ${contractorOpts}
             </select>
           </div>
-          <div>
-            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Editor</label>
+          ${hasVideo?`<div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">🎬 Video Editor</label>
             <select id="jd-reassign-editor" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-card);color:var(--white)">
               <option value="">— Unassigned —</option>
               ${editorOpts}
             </select>
-          </div>
+          </div>`:'<div></div>'}
         </div>
+        ${hasPhoto?`<div style="margin-bottom:10px">
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">📷 Photo Editor</label>
+          <select id="jd-reassign-photo-editor" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-card);color:var(--white)">
+            <option value="">— Unassigned —</option>
+            ${photoEditorOpts}
+          </select>
+        </div>`:''}
         <div style="display:flex;align-items:center;gap:10px">
           <button onclick="jobDetailReassign('${j.id}')" style="padding:7px 18px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Save ✓</button>
           <span id="jd-reassign-status" style="font-size:11px;color:var(--muted)"></span>
@@ -8774,24 +8784,64 @@ function jobDetailReassign(jobId){
   if(!j) return;
   const vid=document.getElementById('jd-reassign-vid')?.value||'';
   const editor=document.getElementById('jd-reassign-editor')?.value||'';
+  const photoEditor=document.getElementById('jd-reassign-photo-editor')?.value||'';
   const statusEl=document.getElementById('jd-reassign-status');
 
   // Update tracker stage
   const ts=getTrackerStage(jobId);
   ts.videographer=vid;
-  ts.claimedBy=editor;
+  ts.claimedBy=editor;        // video editor
+  ts.photoEditor=photoEditor; // photo editor (separate)
   setTrackerStage(jobId,ts);
+
+  // Update job.editors and reassign payouts so payroll reflects new assignments
+  if(j){
+    if(!j.editors) j.editors={};
+    const oldVidEditor=j.editors.video||'';
+    const oldPhoEditor=j.editors.photo||'';
+    j.editors.video=editor;
+    j.editors.photo=photoEditor;
+
+    // Move edit-type payout entries to the newly assigned editors
+    const moveEditEntries=(oldKey,newKey,rolePattern)=>{
+      if(!oldKey||!newKey||oldKey===newKey) return;
+      if(!j.payouts) return;
+      const oldPayout=j.payouts[oldKey]||j.payouts['__unassigned_editor__'];
+      const newName=newKey;
+      if(!oldPayout) return;
+      const toMove=(oldPayout.entries||[]).filter(e=>rolePattern.test(e.role||''));
+      if(!toMove.length) return;
+      if(!j.payouts[newName]) j.payouts[newName]={name:newName,entries:[]};
+      toMove.forEach(e=>j.payouts[newName].entries.push({...e}));
+      // Remove moved entries from old key
+      oldPayout.entries=(oldPayout.entries||[]).filter(e=>!rolePattern.test(e.role||''));
+      // Also handle old editLines format
+      const toMoveLines=(oldPayout.editLines||[]).filter(l=>rolePattern.test(l.label||''));
+      if(toMoveLines.length){
+        if(!j.payouts[newName].editLines) j.payouts[newName].editLines=[];
+        toMoveLines.forEach(l=>j.payouts[newName].editLines.push({...l}));
+        oldPayout.editLines=(oldPayout.editLines||[]).filter(l=>!rolePattern.test(l.label||''));
+      }
+    };
+    if(editor && editor!==(oldVidEditor||'__unassigned_editor__')){
+      moveEditEntries(oldVidEditor||'__unassigned_editor__', editor, /video.edit|editing.*video|video.*edit/i);
+    }
+    if(photoEditor && photoEditor!==(oldPhoEditor||'__unassigned_editor__')){
+      moveEditEntries(oldPhoEditor||'__unassigned_editor__', photoEditor, /photo.edit|editing.*photo|photo.*edit/i);
+    }
+    saveJobsToStorage();
+  }
 
   // Post LouChat notification
   const channels=getLcChannels();
   const projectsCh=channels.find(c=>c.id==='lc_projects'||c.name==='projects');
-  if(projectsCh&&(vid||editor)){
+  if(projectsCh&&(vid||editor||photoEditor)){
     const msg={id:Date.now(),author:'DroneHub System',
-      text:`📋 **Assignment updated** — ${j.name}\n${vid?'🎥 Contractor (Shoot): '+vid:''}${editor?'\n✂️ Editor: '+editor:''}`,
+      text:`📋 **Assignment updated** — ${j.name}\n${vid?'🎥 Shooter: '+vid:''}${editor?'\n🎬 Video editor: '+editor:''}${photoEditor?'\n📷 Photo editor: '+photoEditor:''}`,
       ts:new Date().toISOString(),reactions:{},attachments:[]};
     saveLcMessage(projectsCh.id,msg);
     // Notify each assigned person in their personal channel
-    [vid,editor].filter((n,i,a)=>n&&a.indexOf(n)===i).forEach(name=>{
+    [vid,editor,photoEditor].filter((n,i,a)=>n&&a.indexOf(n)===i).forEach(name=>{
       let personalCh=channels.find(c=>c.name.toLowerCase()===name.toLowerCase().replace(/\s+/g,'-'));
       if(!personalCh){
         personalCh={id:'lc_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
@@ -8802,7 +8852,7 @@ function jobDetailReassign(jobId){
         channels.push(personalCh);
         saveLcChannels(channels);
       }
-      const role=name===vid?'🎬 Shooter':'✂️ Editor';
+      const role=name===vid?'🎬 Shooter':name===editor?'✂️ Video Editor':'📷 Photo Editor';
       saveLcMessage(personalCh.id,{id:Date.now()+Math.random(),author:'DroneHub System',
         text:`📅 **You've been assigned to a project**\n\n**${j.name}**\n📍 ${j.address||''}\n🗓 ${j.date}${j.shootTime?' at '+j.shootTime:''}\nRole: ${role}`,
         ts:new Date().toISOString(),reactions:{},attachments:[]});
