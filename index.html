@@ -5394,9 +5394,21 @@ function renderVacationTracker(){
   const panel=document.getElementById('vac-tracker-panel');
   if(!panel) return;
   const year=new Date().getFullYear();
-  const members=getAdminTeamMembers();
+  const session=gateGetSession();
+  const isAdmin=!session||session.type==='admin'||session.role==='admin';
+  let members=getAdminTeamMembers();
   const allocs=vacationAllocLoad();
   if(!members.length){panel.innerHTML='<div style="font-size:12px;color:var(--muted)">No team members yet.</div>';return;}
+  // Non-admins only see their own row
+  if(!isAdmin && session){
+    const myEmail=(session.email||'').toLowerCase().trim();
+    const myName=(session.name||'').toLowerCase().trim();
+    members=members.filter(m=>
+      (m.email&&m.email.toLowerCase().trim()===myEmail)||
+      (m.name&&m.name.toLowerCase().trim()===myName)
+    );
+    if(!members.length){panel.innerHTML='<div style="font-size:12px;color:var(--muted)">No vacation data found for your account.</div>';return;}
+  }
   panel.innerHTML=members.map(m=>{
     const alloc=allocs.find(a=>a.memberId===m.id&&a.year===year)||{allocatedDays:14,manualAdjust:0};
     const calUsed=vacationDaysUsed(m.name,year);
@@ -5419,7 +5431,7 @@ function renderVacationTracker(){
             <div style="font-size:13px;font-weight:700;color:${barColor}">${used} <span style="color:var(--muted);font-weight:400">/ ${alloc.allocatedDays} days</span></div>
             ${(alloc.manualAdjust||0)!==0?`<div style="font-size:10px;color:var(--amber)">${(alloc.manualAdjust||0)>0?'+':''}${alloc.manualAdjust} manual adj.</div>`:''}
           </div>
-          <button onclick="openVacAllocModal('${m.id}','${m.name}')" title="Edit allocation &amp; used days" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          ${isAdmin?`<button onclick="openVacAllocModal('${m.id}','${m.name}')" title="Edit allocation &amp; used days" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
         </div>
       </div>
       <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
