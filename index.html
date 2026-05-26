@@ -7610,7 +7610,7 @@ async function renderClientPortal(id, activeTab){
   const outstanding_amt=outstanding.reduce((s,j)=>s+j.grand,0);
   const assets=c.assets||[];
   const fmtN=n=>'$'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const tabs=['overview','jobs','invoices','financials','production','assets','messages','portal'];
+  const tabs=['overview','jobs','invoices','financials','production','assets','messages','social','portal'];
   const _clientTabIcons={
     overview:   `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
     jobs:       `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`,
@@ -7620,9 +7620,14 @@ async function renderClientPortal(id, activeTab){
     assets:     `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
     messages:   `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
     portal:     `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    social:     `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>`,
   };
-  const tabLabels={overview:'Overview',jobs:'Jobs',invoices:'Invoices',financials:'Financials',production:'Production',assets:'Files & Media',messages:'LouChat',portal:'Portal Access'};
+  const tabLabels={overview:'Overview',jobs:'Jobs',invoices:'Invoices',financials:'Financials',production:'Production',assets:'Files & Media',messages:'LouChat',social:'Social',portal:'Portal Access'};
   const _clientMsgUnread=getLcUnread()['lc_client_'+id]||0;
+  const _clientSocialPending=(()=>{
+    const sws=socialWorkspacesLoad();const sp=socialPostsLoad();
+    return sp.filter(p=>p.status==='pending'&&(p.clientId===id||(p.workspaceId&&sws.find(w=>w.id===p.workspaceId)?.clientId===id))).length;
+  })();
 
   const tabHtml=tabs.map(t=>`
     <button onclick="renderClientPortal('${id}','${t}')"
@@ -7630,7 +7635,7 @@ async function renderClientPortal(id, activeTab){
         background:${t===activeTab?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'transparent'};
         color:${t===activeTab?'#fff':'var(--muted)'};
         box-shadow:${t===activeTab?'0 2px 12px rgba(91,141,239,.35)':'none'}"
-    >${_clientTabIcons[t]||''}${tabLabels[t]}${t==='messages'&&_clientMsgUnread>0?`<span style="background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px">${_clientMsgUnread}</span>`:''}</button>`).join('');
+    >${_clientTabIcons[t]||''}${tabLabels[t]}${t==='messages'&&_clientMsgUnread>0?`<span style="background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px">${_clientMsgUnread}</span>`:''}${t==='social'&&_clientSocialPending>0?`<span style="background:var(--yellow,#F5C842);color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px">${_clientSocialPending}</span>`:''}</button>`).join('');
 
   let tabContent='';
 
@@ -7967,6 +7972,61 @@ async function renderClientPortal(id, activeTab){
         </div>`;
       }).join('')
       :'<div style="color:var(--muted);font-size:12px;padding:12px 0">No confirmed jobs in production yet.</div>'}
+    </div>`;
+  }
+  else if(activeTab==='social'){
+    const sAllWorkspaces=socialWorkspacesLoad();
+    const sLinkedWs=sAllWorkspaces.find(w=>w.clientId===id);
+    const sAllPosts=socialPostsLoad();
+    const sPosts=sAllPosts.filter(p=>{
+      if(p.status==='draft') return false;
+      if(p.clientId===id) return true;
+      if(p.workspaceId){const w=sAllWorkspaces.find(w=>w.id===p.workspaceId);if(w?.clientId===id) return true;}
+      return false;
+    }).sort((a,b)=>(b.scheduledAt||b.createdAt||'').localeCompare(a.scheduledAt||a.createdAt||''));
+    const sPending=sPosts.filter(p=>p.status==='pending').length;
+    const statusBadge=s=>{
+      const map={pending:'#F5C842',approved:'#22D97A',revision:'#FF6B6B',scheduled:'#5B8DEF',posted:'#A8B4D0',draft:'#666'};
+      const lbl={pending:'Awaiting Approval',approved:'Approved',revision:'Needs Revision',scheduled:'Scheduled',posted:'Posted',draft:'Draft'};
+      return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${map[s]||'#666'}22;color:${map[s]||'#666'};border:1px solid ${map[s]||'#666'}44">${lbl[s]||s}</span>`;
+    };
+    tabContent=`<div>
+      <!-- Linked workspace card -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="section-label" style="margin-bottom:14px;display:flex;align-items:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          Social Workspace
+        </div>
+        ${sLinkedWs?`
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;background:rgba(91,141,239,.07);border:1px solid rgba(91,141,239,.2);border-radius:10px;margin-bottom:12px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--white)">${sLinkedWs.name}</div>
+              ${sLinkedWs.igHandle?`<div style="font-size:11px;color:var(--muted);margin-top:2px">@${sLinkedWs.igHandle}</div>`:''}
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">${(sLinkedWs.channels||[]).join(' · ')||'No channels'}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              ${sPending?`<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(245,200,66,.15);color:#F5C842;border:1px solid rgba(245,200,66,.3)">${sPending} awaiting approval</span>`:''}
+              <button onclick="showPane('social');_socialActiveWorkspace='${sLinkedWs.id}';renderSocial()" style="padding:6px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">Open Workspace ↗</button>
+            </div>
+          </div>`:`
+          <div style="padding:12px 14px;background:rgba(136,146,187,.07);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;color:var(--muted);font-size:12px">
+            No social workspace linked yet. Go to <strong style="color:var(--offwhite)">Social → Edit workspace</strong> and select <strong style="color:var(--offwhite)">${c.name}</strong> as the linked client.
+          </div>`}
+      </div>
+      <!-- Posts list -->
+      <div class="card">
+        <div class="section-label" style="margin-bottom:14px">Recent Posts (${sPosts.length})</div>
+        ${sPosts.length===0?`<div style="text-align:center;padding:30px 0;color:var(--muted);font-size:12px">No posts yet${sLinkedWs?` in ${sLinkedWs.name}`:''}. Create posts in the Social tab and they'll appear here.</div>`:''}
+        ${sPosts.slice(0,10).map(p=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);margin-bottom:8px;background:var(--navy-lift)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.address||p.title||'Untitled post'}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${p.format||''}${p.scheduledAt?' · '+p.scheduledAt.slice(0,10):''}</div>
+            </div>
+            <div>${statusBadge(p.status)}</div>
+          </div>`).join('')}
+        ${sPosts.length>10?`<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0">+ ${sPosts.length-10} more — open workspace to see all</div>`:''}
+      </div>
     </div>`;
   }
   else if(activeTab==='portal'){
