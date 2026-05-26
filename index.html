@@ -4890,9 +4890,9 @@ function renderCostModel(grand,driveCost,lines){
     const vidShootName=ds.vidKey?cName(ds.vidKey):'(no videographer selected)';
     addPayout(vidShootKey,vidShootName,{label:'Video shoot',fee:videoShooterFee});
     if(ds.vidKey) payouts[vidShootKey].driveFee+=vidDriveReimb;
-    // Edit fee goes to assigned editor — never silently falls back to shooter
-    const vidEdKey=editors.video||ds.vidKey||'__unassigned_video__';
-    const vidEdName=editors.video?cName(editors.video):(ds.vidKey?cName(ds.vidKey):'(no videographer selected)');
+    // Edit fee goes ONLY to the assigned editor — never falls back to the shooter
+    const vidEdKey=editors.video||'__unassigned_editor__';
+    const vidEdName=editors.video?cName(editors.video):'(no editor assigned)';
     addEdit(vidEdKey,vidEdName,{label:'Video editing (41.5%)',fee:videoEditorFee});
   }
   if(svc.photo){
@@ -4901,9 +4901,9 @@ function renderCostModel(grand,driveCost,lines){
     const phoShootName=phoShootKey==='__unassigned_photo__'?'(no photographer selected)':cName(phoShootKey);
     addPayout(phoShootKey,phoShootName,{label:'Photo shoot',fee:photoShooterFee});
     if(ds.phoKey&&!ds.sameShooter) payouts[phoShootKey].driveFee+=phoDriveReimb;
-    // Edit fee goes to assigned photo editor
-    const phoEdKey=editors.photo||(ds.phoKey?(ds.sameShooter?ds.vidKey:ds.phoKey):'__unassigned_photo__');
-    const phoEdName=phoEdKey==='__unassigned_photo__'?'(no photographer selected)':cName(phoEdKey);
+    // Edit fee goes ONLY to the assigned photo editor — never falls back to the shooter
+    const phoEdKey=editors.photo||'__unassigned_editor__';
+    const phoEdName=editors.photo?cName(editors.photo):'(no editor assigned)';
     addEdit(phoEdKey,phoEdName,{label:'Photo editing (47%)',fee:photoEditorFee});
   }
 
@@ -4926,15 +4926,15 @@ function renderCostModel(grand,driveCost,lines){
   if(svc.randomvideo&&ds.vidKey){
     addPayout(ds.vidKey,cName(ds.vidKey),{label:`Random video shoot (${randVideoHrs}hr × $${RANDOM_SHOOT_PAY}/hr)`,fee:randVideoShootPay});
     payouts[ds.vidKey].driveFee+=ds.randVideoContractorCharge||0;
-    const edKey=editors.randomvideo||ds.vidKey;
-    addEdit(edKey,cName(edKey),{label:`Random video edit (${randVideoHrs}hr × $${RANDOM_EDIT_PAY}/hr)`,fee:randVideoEditPay});
+    const edKey=editors.randomvideo||'__unassigned_editor__';
+    addEdit(edKey,edKey==='__unassigned_editor__'?'(no editor assigned)':cName(edKey),{label:`Random video edit (${randVideoHrs}hr × $${RANDOM_EDIT_PAY}/hr)`,fee:randVideoEditPay});
   }
   if(svc.randomphoto&&ds.phoKey){
     const key=ds.sameShooter?ds.vidKey:ds.phoKey;
     addPayout(key,cName(key),{label:`Random photo shoot (${randPhotoHrs}hr × $${RANDOM_SHOOT_PAY}/hr)`,fee:randPhotoShootPay});
     if(!ds.sameShooter) payouts[key].driveFee+=ds.randPhotoContractorCharge||0;
-    const edKey=editors.randomphoto||(ds.sameShooter?ds.vidKey:ds.phoKey);
-    addEdit(edKey,cName(edKey),{label:`Random photo edit (${randPhotoHrs}hr × $${RANDOM_EDIT_PAY}/hr)`,fee:randPhotoEditPay});
+    const edKey=editors.randomphoto||'__unassigned_editor__';
+    addEdit(edKey,edKey==='__unassigned_editor__'?'(no editor assigned)':cName(edKey),{label:`Random photo edit (${randPhotoHrs}hr × $${RANDOM_EDIT_PAY}/hr)`,fee:randPhotoEditPay});
   }
 
   // Rush order — split by same 65/35 algorithm after 43% margin
