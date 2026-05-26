@@ -17675,6 +17675,7 @@ function renderTeamMemberSettings(){
           <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="teamMemberPhotoUpload(this,'${safeEmail}','${m.id}')">
         </label>
         ${hasPhoto?`<button onclick="teamMemberRemovePhoto('${safeEmail}','${m.id}')" title="Remove photo" style="padding:4px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">✕</button>`:''}
+        <button onclick="adminResetPassword('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap">🔑 Reset pw</button>
         <button onclick="removeTeamMember('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
       </div>
     </div>`;
