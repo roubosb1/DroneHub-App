@@ -3201,22 +3201,15 @@ button{font-family:var(--font);}
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           <span style="font-size:10px;color:var(--muted);font-weight:700;align-self:center;margin-right:2px">Accepted values:</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(91,141,239,.15);color:var(--blue-bright);font-weight:600">commercial</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(251,146,60,.15);color:#FB923C;font-weight:600">industrial</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(245,200,66,.15);color:#F5C842;font-weight:600">construction</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.15);color:#22D97A;font-weight:600">agriculture</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(167,139,250,.15);color:#A78BFA;font-weight:600">events</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(122,171,255,.15);color:#7AABFF;font-weight:600">inspection</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(232,93,58,.15);color:#E85D3A;font-weight:600">insurance</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(0,199,190,.15);color:#00C7BE;font-weight:600">mapping</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(155,93,229,.15);color:#9B5DE5;font-weight:600">municipal</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.15);color:#22D97A;font-weight:600">landscape</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(91,141,239,.15);color:#5B7FDB;font-weight:600">architects</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(167,139,250,.15);color:#A78BFA;font-weight:600">interior designers &amp; builders</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(251,146,60,.15);color:#FB923C;font-weight:600">restaurants</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(245,200,66,.15);color:#F5C842;font-weight:600">retail</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(232,121,249,.15);color:#E879F9;font-weight:600">events</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,45,85,.15);color:#FF2D55;font-weight:600">sports</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(136,135,128,.15);color:#888780;font-weight:600">utility</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,149,0,.15);color:#FF9500;font-weight:600">education</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(52,199,89,.15);color:#34C759;font-weight:600">healthcare</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(200,125,30,.15);color:#C87D1E;font-weight:600">legal</span>
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:7px;font-style:italic">Partial matches and keywords are auto-detected (e.g. "Construction / Dev", "Ag", "Gov").</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:7px;font-style:italic">Partial matches and keywords are auto-detected (e.g. "Landscaping", "Architecture", "Restaurant / Bar").</div>
       </div>
 
     </div>
@@ -17516,6 +17509,8 @@ const OTHER_TYPES = [
   { id:'interior',    label:'Interior Designers & Builders', color:'#A78BFA' },
   { id:'restaurants', label:'Restaurants',                  color:'#FB923C' },
   { id:'retail',      label:'Retail',                       color:'#F5C842' },
+  { id:'events',      label:'Events',                       color:'#E879F9' },
+  { id:'sports',      label:'Sports',                       color:'#FF2D55' },
 ];
 
 // Normalize a freeform type string to the nearest OTHER_TYPES id
@@ -17529,11 +17524,13 @@ function normalizeOtherType(raw){
   const byLabel = OTHER_TYPES.find(t=>t.label.toLowerCase()===s);
   if(byLabel) return byLabel.id;
   // Keyword heuristics
-  if(/landscap|garden|lawn|outdoor/.test(s))          return 'landscape';
-  if(/architect|arch\b/.test(s))                       return 'architects';
+  if(/landscap|garden|lawn|outdoor/.test(s))           return 'landscape';
+  if(/architect|arch\b/.test(s))                        return 'architects';
   if(/interior|designer|builder|renovation|reno/.test(s)) return 'interior';
-  if(/restaurant|café|cafe|dining|food|bar\b/.test(s)) return 'restaurants';
-  if(/retail|store|shop|boutique/.test(s))             return 'retail';
+  if(/restaurant|café|cafe|dining|food|bar\b/.test(s))  return 'restaurants';
+  if(/retail|store|shop|boutique/.test(s))              return 'retail';
+  if(/event|entertain|wedding|concert/.test(s))         return 'events';
+  if(/sport|rec(reation)?|athlet/.test(s))              return 'sports';
   return raw; // keep original if no match — fall through to unclassified badge style
 }
 let salesEditingId   = null;
