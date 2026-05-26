@@ -68,6 +68,62 @@ async function fbDelete(col,docId){
   await _fbCall({action:'delete',col,docId});
 }
 
+// ── Message Encryption (AES-GCM 256-bit) ─────────────────────────────────────
+// Encryption key lives only in memory — never written to localStorage or disk.
+// Fetched from the server on login; only authenticated sessions can decrypt.
+// Format of an encrypted payload: {"v":1,"iv":"<hex>","ct":"<hex>"}
+// Legacy plaintext messages are detected and passed through untouched.
+let _msgKey=null; // CryptoKey object, set after login
+
+async function _loadMsgKey(){
+  if(_msgKey) return _msgKey;
+  const tok=_fbToken(); if(!tok) return null;
+  try{
+    const r=await fetch('/.netlify/functions/get-msg-key',{headers:{'Authorization':'Bearer '+tok}});
+    if(!r.ok) return null;
+    const {key}=await r.json();
+    if(!key||key.length<64) return null;
+    const raw=new Uint8Array(key.match(/.{2}/g).map(b=>parseInt(b,16)));
+    _msgKey=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt','decrypt']);
+    return _msgKey;
+  }catch(e){return null;}
+}
+
+// Encrypt plaintext → encrypted payload string (or original text if key unavailable)
+async function dhEncrypt(text){
+  if(!text) return text;
+  const key=await _loadMsgKey(); if(!key) return text;
+  try{
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text));
+    const toHex=buf=>Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    return JSON.stringify({v:1,iv:toHex(iv),ct:toHex(ct)});
+  }catch(e){return text;}
+}
+
+// Decrypt an encrypted payload string → plaintext (or indicator if key unavailable)
+async function dhDecrypt(payload){
+  if(!payload) return '';
+  // Detect encrypted format: starts with { and contains "v":1
+  if(typeof payload!=='string'||!payload.startsWith('{"v":1')) return payload; // plaintext passthrough
+  try{
+    const {v,iv,ct}=JSON.parse(payload);
+    if(v!==1) return payload;
+    const key=await _loadMsgKey();
+    if(!key) return '[🔒 Encrypted — sign in to read]';
+    const fromHex=h=>new Uint8Array(h.match(/.{2}/g).map(b=>parseInt(b,16)));
+    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromHex(iv)},key,fromHex(ct));
+    return new TextDecoder().decode(plain);
+  }catch(e){return '[🔒 Could not decrypt]';}
+}
+
+// Decrypt an array of message objects in parallel (preserves all other fields)
+async function dhDecryptMsgs(msgs){
+  return Promise.all(msgs.map(async m=>{
+    const text=await dhDecrypt(m.text);
+    return {...m,text};
+  }));
+}
 
 // ── PROFILE PHOTOS ────────────────────────────────────────────────────────────
 function saveProfilePhoto(email,dataUrl){
@@ -7204,7 +7260,7 @@ function closeClientDetail(){
 
 let currentPortalClientId=null;
 
-function renderClientPortal(id, activeTab){
+async function renderClientPortal(id, activeTab){
   const c=clients.find(cl=>cl.id===id);
   if(!c) return;
 
@@ -7478,7 +7534,8 @@ function renderClientPortal(id, activeTab){
       markLcRead('lc_client_'+id);
       setTimeout(()=>renderClients(),0);
     }
-    const msgs=getPortalMessages(id);
+    const _rawMsgs=getPortalMessages(id);
+    const msgs=await dhDecryptMsgs(_rawMsgs);
     const visibleMsgs=msgs.filter(m=>m.from!=='seen'); // ops view shows only real messages
     tabContent=`<div class="card">
       <div class="section-label" style="margin-bottom:14px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> LouChat — ${c.name}</div>
@@ -9512,10 +9569,11 @@ function getPortalMessages(clientId){
   const all=JSON.parse(localStorage.getItem('dronehub_portal_msgs')||'{}');
   return all[clientId]||[];
 }
-function savePortalMessage(clientId, from, text){
+async function savePortalMessage(clientId, from, text){
   const all=JSON.parse(localStorage.getItem('dronehub_portal_msgs')||'{}');
   if(!all[clientId]) all[clientId]=[];
-  all[clientId].push({from, text, ts:new Date().toISOString()});
+  const encText=text?await dhEncrypt(text):text;
+  all[clientId].push({from, text:encText, ts:new Date().toISOString()});
   try{localStorage.setItem('dronehub_portal_msgs',JSON.stringify(all));}catch(e){}
   fbSet('orgs',ORG_ID+':portal_msgs',{data:JSON.stringify(all),updatedAt:Date.now()});
 }
@@ -9906,7 +9964,7 @@ function cpLogout(){
   document.getElementById('cp-login-pass').value='';
 }
 
-function cpShowTab(tab){
+async function cpShowTab(tab){
   // Only toggle tabs inside the client portal (not team portal which shares .cp-tab class)
   document.querySelectorAll('#cp-dashboard .cp-tab').forEach(t=>{
     t.classList.toggle('active', t.dataset.tab===tab);
@@ -10161,7 +10219,7 @@ function cpShowTab(tab){
       `<div class="card" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No files shared yet. We'll notify you when your deliverables are ready.</div>`}`;
   }
   else if(tab==='messages'){
-    const msgs=getPortalMessages(c.id);
+    const msgs=await dhDecryptMsgs(getPortalMessages(c.id));
     html=`<div class="card" style="margin-bottom:0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div class="section-label" style="margin-bottom:0">💬 LouChat — DroneHub Media</div>
@@ -11063,7 +11121,7 @@ function cpClientRevision(postId){
   cpClientRevisionWithNote(postId, note);
 }
 
-function cpSendMessage(){
+async function cpSendMessage(){
   const input=document.getElementById('cp-msg-input');
   const text=input?.value.trim();
   if(!text||!cpActiveClientId) return;
@@ -11189,7 +11247,7 @@ function exitClientPortalPreview(){
 }
 
 // Admin reply to client messages (from openClientDetail portal Assets tab or messages)
-function adminReplyMessage(clientId, text){
+async function adminReplyMessage(clientId, text){
   if(!text) return;
   savePortalMessage(clientId,'team',text);
 }
@@ -11928,17 +11986,20 @@ function lcCleanCorruptMessages(){
   localStorage.removeItem('dronehub_lc_msgs');
 }
 
-function saveLcMessage(channelId, msg){
+async function saveLcMessage(channelId, msg){
   msg.channelId=channelId;
   const key='dronehub_lc_msgs_'+channelId;
   const msgs=JSON.parse(localStorage.getItem(key)||'[]');
+  // Keep plaintext for browser notification before encrypting
+  const _notifText=msg.text||'';
+  if(msg.text) msg.text=await dhEncrypt(msg.text);
   msgs.push(msg);
   try{localStorage.setItem(key,JSON.stringify(msgs));}catch(e){}
   fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgs),updatedAt:Date.now()});
-  // Send browser notification
+  // Send browser notification with original plaintext
   const channels=getLcChannels();
   const ch=channels.find(c=>c.id===channelId);
-  if(ch&&msg.text) lcSendNotification(msg.author,msg.text,ch.name);
+  if(ch&&_notifText) lcSendNotification(msg.author,_notifText,ch.name);
 }
 function deleteLcChannelMessages(channelId){
   localStorage.removeItem('dronehub_lc_msgs_'+channelId);
@@ -12329,8 +12390,10 @@ function lcScrollToBottom(){
   });
 }
 
-function lcRenderMessages(){
-  const msgs=getLcMessages(lcActiveChannel);
+async function lcRenderMessages(){
+  const rawMsgs=getLcMessages(lcActiveChannel);
+  // Decrypt message text in parallel before rendering (plaintext passes through)
+  const msgs=await dhDecryptMsgs(rawMsgs);
   const channels=getLcChannels();
   const ch=channels.find(c=>c.id===lcActiveChannel);
   const meta=ch?LC_TYPE_META[ch.type]||{}:{};
@@ -12824,7 +12887,7 @@ function lcSendNotification(author, text, channelName){
   });
 }
 
-function lcSendMessage(){
+async function lcSendMessage(){
   const input=document.getElementById('lc-msg-input');
   const text=(input?.value||'').trim();
   if(!text&&!lcPendingAttachments.length) return;
@@ -12848,12 +12911,12 @@ function lcSendMessage(){
     reactions:{},
     attachments:lcPendingAttachments.length?[...lcPendingAttachments]:[],
   };
-  saveLcMessage(lcActiveChannel,msg);
+  await saveLcMessage(lcActiveChannel,msg);
 
   // If replying in a client DM channel → mirror back to portal_msgs
   // so the client sees the reply in their portal LouChat tab
   if(ch.type==='client_dm' && ch.clientId){
-    savePortalMessage(ch.clientId,'team',text);
+    savePortalMessage(ch.clientId,'team',text); // fire-and-forget, no await needed
   }
 
   if(input){input.value='';input.style.height='auto';}
@@ -13195,7 +13258,7 @@ function gateInit(){
   if(session&&session.email){
     // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
     const _storedTok=sessionStorage.getItem('dh_token');
-    if(_storedTok) _dhToken=_storedTok;
+    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});}
     gateEnterApp(session);
     return;
   }
@@ -13548,7 +13611,11 @@ async function gateLogin(){
       });
       if(_authR.ok){
         const {token}=await _authR.json();
-        if(token){_dhToken=token;try{sessionStorage.setItem('dh_token',token);}catch(e){}}
+        if(token){
+          _dhToken=token;
+          try{sessionStorage.setItem('dh_token',token);}catch(e){}
+          _loadMsgKey().catch(()=>{}); // pre-load encryption key so chats decrypt immediately
+        }
       }
     }catch(e){console.log('Firebase proxy token unavailable (offline?) — local-only mode');}
   })();
