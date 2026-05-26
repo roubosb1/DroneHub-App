@@ -2860,9 +2860,9 @@ button{font-family:var(--font);}
         <button id="cfil-active"   onclick="setClientFilter('active')"   style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Active</button>
         <button id="cfil-inactive" onclick="setClientFilter('inactive')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">Inactive</button>
         <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-        <button id="cctr-all"    onclick="setClientCountry('all')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">🌐 All</button>
-        <button id="cctr-canada" onclick="setClientCountry('canada')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">🍁 Canada</button>
-        <button id="cctr-usa"    onclick="setClientCountry('usa')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">🇺🇸 USA</button>
+        <button id="cctr-all"    onclick="setClientCountry('all')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>All</button>
+        <button id="cctr-canada" onclick="setClientCountry('canada')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 100 100" fill="currentColor"><path d="M50 8c0 0-7 22-10 24-3 2-22-4-22-4s10 12 12 14c2 2-8 18-8 18s18-6 20-4c2 2-4 24-4 24l12-6 12 6c0 0-6-22-4-24 2-2 20 4 20 4s-10-16-8-18c2-2 12-14 12-14s-19 6-22 4C57 30 50 8 50 8z"/></svg>Canada</button>
+        <button id="cctr-usa"    onclick="setClientCountry('usa')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="14" height="10" viewBox="0 0 14 10" fill="none"><rect x="0.5" y="0.5" width="13" height="9" rx="1" stroke="currentColor" stroke-width="0.8"/><line x1="0" y1="2.2" x2="14" y2="2.2" stroke="currentColor" stroke-width="0.7"/><line x1="0" y1="4.4" x2="14" y2="4.4" stroke="currentColor" stroke-width="0.7"/><line x1="0" y1="6.6" x2="14" y2="6.6" stroke="currentColor" stroke-width="0.7"/><line x1="0" y1="8.8" x2="14" y2="8.8" stroke="currentColor" stroke-width="0.7"/><rect x="0.5" y="0.5" width="5.5" height="4.6" fill="currentColor" opacity="0.35" rx="0.5"/></svg>USA</button>
       </div>
       <!-- A–Z letter jump bar -->
       <div id="clients-az-bar" style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px"></div>
@@ -7061,6 +7061,7 @@ function clearAllClients(){
 
 let _clientFilter='all';
 let _clientCountry='all';
+let _clientActiveLetter='A';
 
 function setClientFilter(f){
   _clientFilter=f;
@@ -7131,111 +7132,142 @@ function renderClients(){
   const enriched=clients.map(c=>{
     const cJobs=savedJobs.filter(j=>j.clientId===c.id);
     const hasActiveJob=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress')||c.status==='active';
+    // "Recently active" = real job activity or unread messages (not just imported status)
+    const isRecentlyActive=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress'||j.status==='completed')||(_lcUnread['lc_client_'+c.id]||0)>0;
     const newMsgs=_lcUnread['lc_client_'+c.id]||0;
     let lastMsgTs='';
     if(newMsgs>0){const msgs=getLcMessages('lc_client_'+c.id);if(msgs.length)lastMsgTs=msgs[msgs.length-1].ts||'';}
     const countryKey=_getClientCountryKey(c);
-    return {c, cJobs, hasActiveJob, newMsgs, lastMsgTs, countryKey};
+    return {c, cJobs, hasActiveJob, isRecentlyActive, newMsgs, lastMsgTs, countryKey};
   });
 
-  // Apply search + filter pill + country
-  const afterFilter=enriched.filter(({c, hasActiveJob, newMsgs, countryKey})=>{
-    const mQ=!q||c.name.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))||(c.company&&c.company.toLowerCase().includes(q));
-    if(!mQ) return false;
+  // Country filter base
+  const countryFiltered=enriched.filter(r=>_clientCountry==='all'||r.countryKey===_clientCountry);
+
+  // Apply filter pill
+  const applyPill=(arr)=>arr.filter(({hasActiveJob,newMsgs})=>{
     if(_clientFilter==='messages') return newMsgs>0;
     if(_clientFilter==='active')   return hasActiveJob;
     if(_clientFilter==='inactive') return !hasActiveJob;
-    if(_clientCountry!=='all'&&countryKey!==_clientCountry) return false;
     return true;
   });
 
-  // Sort A-Z (messages newest first within their group, handled per-tier)
-  afterFilter.sort((a,b)=>a.c.name.localeCompare(b.c.name));
-
-  empty.style.display=afterFilter.length?'none':'block';
-  list.style.display=afterFilter.length?'block':'none';
-
-  // A-Z bar — show letters that have at least one client
-  if(azBar){
-    const usedLetters=new Set(afterFilter.map(r=>r.c.name.charAt(0).toUpperCase()).filter(l=>/[A-Z]/.test(l)));
-    if(afterFilter.length>20&&!q){
-      azBar.style.display='flex';
-      azBar.style.flexWrap='wrap';
-      azBar.style.gap='2px';
-      azBar.style.marginBottom='12px';
-      azBar.innerHTML='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>{
-        const has=usedLetters.has(l);
-        return `<button onclick="document.getElementById('clet-${l}')?.scrollIntoView({behavior:'smooth',block:'start'})"
-          style="min-width:24px;height:24px;padding:0 3px;border-radius:5px;border:1px solid ${has?'rgba(91,141,239,.4)':'transparent'};background:${has?'rgba(91,141,239,.12)':'transparent'};color:${has?'var(--blue-bright)':'var(--muted)'};font-size:11px;font-weight:700;cursor:${has?'pointer':'default'};line-height:24px"
-          ${!has?'disabled':''}>${l}</button>`;
-      }).join('');
-    } else {
-      azBar.style.display='none';
-    }
-  }
-
-  // Simple flat mode when filtering by messages or searching
-  if(_clientFilter==='messages'||q){
-    if(_clientFilter==='messages') afterFilter.sort((a,b)=>{
-      if(b.newMsgs!==a.newMsgs) return b.newMsgs-a.newMsgs;
-      return b.lastMsgTs.localeCompare(a.lastMsgTs);
-    });
-    list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${afterFilter.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
+  // ── Search mode: flat results, no sections ──────────────────────────────────
+  if(q){
+    if(azBar) azBar.style.display='none';
+    const results=applyPill(enriched).filter(({c})=>
+      c.name.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))||(c.company&&c.company.toLowerCase().includes(q))
+    ).sort((a,b)=>a.c.name.localeCompare(b.c.name));
+    empty.style.display=results.length?'none':'block';
+    list.style.display=results.length?'block':'none';
+    list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${results.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
     return;
   }
 
-  // Tiered + sectioned mode
-  const SECTIONS=_clientCountry==='all'
-    ?[{key:'canada',label:'Canada',flag:'🍁'},{key:'usa',label:'United States',flag:'🇺🇸'},{key:'other',label:'Other',flag:'🌐'},{key:'unknown',label:'No Country Set',flag:'📋'}]
-    :[{key:_clientCountry,label:_clientCountry==='canada'?'Canada':'United States',flag:_clientCountry==='canada'?'🍁':'🇺🇸'}];
+  // ── Filter-pill modes (Messages / Active / Inactive): flat + A-Z bar ────────
+  if(_clientFilter!=='all'){
+    const results=applyPill(countryFiltered).sort((a,b)=>{
+      if(_clientFilter==='messages'){if(b.newMsgs!==a.newMsgs)return b.newMsgs-a.newMsgs;return b.lastMsgTs.localeCompare(a.lastMsgTs);}
+      return a.c.name.localeCompare(b.c.name);
+    });
+    if(azBar) azBar.style.display='none';
+    empty.style.display=results.length?'none':'block';
+    list.style.display=results.length?'block':'none';
+    list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${results.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
+    return;
+  }
 
-  const usedLetterIds=new Set(); // prevent duplicate anchor IDs across sections
+  // ── Default "All" mode: Recently Active + letter selector ───────────────────
+
+  // Build A-Z bar (letter selector)
+  const allForLetters=countryFiltered;
+  const letterCounts={};
+  allForLetters.forEach(r=>{
+    const l=r.c.name.charAt(0).toUpperCase();
+    if(/[A-Z]/.test(l)) letterCounts[l]=(letterCounts[l]||0)+1;
+  });
+  const hasLetters=Object.keys(letterCounts).length>0;
+
+  if(azBar&&hasLetters){
+    azBar.style.display='flex';
+    azBar.style.flexWrap='wrap';
+    azBar.style.gap='3px';
+    azBar.style.marginBottom='14px';
+    azBar.innerHTML='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>{
+      const cnt=letterCounts[l]||0;
+      const isActive=l===_clientActiveLetter;
+      return `<button onclick="_clientActiveLetter='${l}';renderClients()"
+        style="min-width:28px;height:28px;padding:0 4px;border-radius:6px;font-size:11px;font-weight:700;cursor:${cnt?'pointer':'default'};
+               border:1px solid ${isActive?'var(--blue)':cnt?'rgba(91,141,239,.25)':'transparent'};
+               background:${isActive?'rgba(91,141,239,.25)':cnt?'rgba(91,141,239,.06)':'transparent'};
+               color:${isActive?'var(--white)':cnt?'var(--blue-bright)':'var(--muted)'};
+               line-height:28px;transition:all .1s"
+        title="${cnt?cnt+' clients':''}"
+        ${!cnt?'disabled':''}>${l}</button>`;
+    }).join('');
+  } else if(azBar){
+    azBar.style.display='none';
+  }
+
+  // Recently Active: clients with real job activity or unread messages
+  const recentlyActive=countryFiltered
+    .filter(r=>r.isRecentlyActive)
+    .sort((a,b)=>{
+      if(a.newMsgs>0!==b.newMsgs>0) return a.newMsgs>0?-1:1; // unread first
+      return a.c.name.localeCompare(b.c.name);
+    });
+
+  // Selected letter clients (exclude those already in recently active)
+  const recentIds=new Set(recentlyActive.map(r=>r.c.id));
+  const letterClients=countryFiltered
+    .filter(r=>r.c.name.charAt(0).toUpperCase()===_clientActiveLetter && !recentIds.has(r.c.id))
+    .sort((a,b)=>a.c.name.localeCompare(b.c.name));
+
+  const totalVisible=recentlyActive.length+letterClients.length;
+  empty.style.display=totalVisible?'none':'block';
+  list.style.display=totalVisible?'block':'none';
+
   let html='';
 
-  for(const sec of SECTIONS){
-    const group=_clientCountry==='all'?afterFilter.filter(r=>r.countryKey===sec.key):afterFilter;
-    if(!group.length) continue;
+  // Recently Active section
+  if(recentlyActive.length){
+    html+=`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid rgba(34,217,122,.25)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span style="font-size:13px;font-weight:800;color:var(--green)">Recently Active</span>
+        <span style="font-size:11px;color:var(--muted);background:rgba(34,217,122,.08);border:1px solid rgba(34,217,122,.2);border-radius:10px;padding:1px 8px">${recentlyActive.length}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+        ${recentlyActive.map(r=>_clientCardHtml(r,portalAccts)).join('')}
+      </div>
+    </div>`;
+  }
 
-    const unread =group.filter(r=>r.newMsgs>0).sort((a,b)=>b.lastMsgTs.localeCompare(a.lastMsgTs));
-    const active =group.filter(r=>r.newMsgs===0&&r.hasActiveJob);
-    const inactive=group.filter(r=>r.newMsgs===0&&!r.hasActiveJob);
-
-    html+=`<div style="margin-bottom:28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--border)">
-        <span style="font-size:20px">${sec.flag}</span>
-        <span style="font-size:15px;font-weight:800;color:var(--white)">${sec.label}</span>
-        <span style="font-size:11px;color:var(--muted);background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:1px 8px">${group.length}</span>
-      </div>`;
-
-    if(unread.length)  html+=_clientTierHtml(unread,  '🔔 Unread','rgba(34,217,122,.15)','var(--green)',   usedLetterIds, portalAccts);
-    if(active.length)  html+=_clientTierHtml(active,  '✅ Active', 'rgba(34,217,122,.08)','var(--green)',   usedLetterIds, portalAccts);
-    if(inactive.length)html+=_clientTierHtml(inactive,'◌ Inactive','rgba(255,255,255,.04)','var(--muted)',  usedLetterIds, portalAccts);
-
-    html+=`</div>`;
+  // Selected letter section
+  if(letterClients.length){
+    html+=`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid rgba(91,141,239,.25)">
+        <span style="font-size:20px;font-weight:900;color:var(--blue-bright);line-height:1">${_clientActiveLetter}</span>
+        <span style="font-size:13px;font-weight:800;color:var(--white)">Clients</span>
+        <span style="font-size:11px;color:var(--muted);background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.2);border-radius:10px;padding:1px 8px">${letterClients.length}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+        ${letterClients.map(r=>_clientCardHtml(r,portalAccts)).join('')}
+      </div>
+    </div>`;
+  } else if(!recentlyActive.length){
+    html+=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No clients starting with <strong style="color:var(--blue-bright)">${_clientActiveLetter}</strong></div>`;
   }
 
   list.innerHTML=html;
 }
 
-function _clientTierHtml(group, label, bg, color, usedLetterIds, portalAccts){
-  let cards='';
-  let lastLetter='';
-  for(const r of group){
-    const letter=(r.c.name.charAt(0).toUpperCase().match(/[A-Z]/)||['#'])[0];
-    if(letter!==lastLetter){
-      const anchorId=`clet-${letter}`;
-      const anchor=usedLetterIds.has(anchorId)?'':`id="${anchorId}"`;
-      usedLetterIds.add(anchorId);
-      cards+=`<div ${anchor} style="grid-column:1/-1;padding:5px 2px 3px;font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.1em;border-bottom:1px solid var(--border)">${letter}</div>`;
-      lastLetter=letter;
-    }
-    cards+=_clientCardHtml(r,portalAccts);
-  }
+function _clientTierHtml(group, label, bg, color, portalAccts){
   return `<div style="margin-bottom:14px">
     <div style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;background:${bg};color:${color};margin-bottom:8px">
       ${label} <span style="opacity:.6">(${group.length})</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${cards}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${group.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>
   </div>`;
 }
 
