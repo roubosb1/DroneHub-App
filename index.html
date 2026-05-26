@@ -4243,12 +4243,24 @@ function setFinanceMarket(m){
 
 function saveJobsToStorage(){
   try{localStorage.setItem('dronehub_jobs',JSON.stringify(savedJobs));}catch(e){}
-  fbSet('orgs',ORG_ID+':jobs',{data:JSON.stringify(savedJobs),updatedAt:Date.now()});
+  // SAFETY: never overwrite Firebase with an empty array (same guard as clients)
+  if(savedJobs.length > 0 || window._intentionalClearJobs){
+    window._intentionalClearJobs = false;
+    fbSet('orgs',ORG_ID+':jobs',{data:JSON.stringify(savedJobs),updatedAt:Date.now()});
+  }
   if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
 }
 function saveClientsToStorage(){
   try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}
-  fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+  // SAFETY: never overwrite Firebase with an empty array — this would wipe all
+  // client records if called while localStorage was cleared but Firebase still
+  // holds real data. Only write to Firebase when there is actual data to save,
+  // OR when the caller explicitly cleared clients (e.g. "Clear all" button).
+  // The _intentionalClearClients flag is set only by the clear-all action.
+  if(clients.length > 0 || window._intentionalClearClients){
+    window._intentionalClearClients = false;
+    fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+  }
 }
 
 // ── Bidirectional sync: Sales > Clients tab ↔ Sales CRM "Existing Clients" ──
@@ -7089,6 +7101,7 @@ function deleteClient(id){
 
 function clearAllClients(){
   if(!confirm('Delete all clients? Job history will remain but clients will be unlinked.')) return;
+  window._intentionalClearClients = true; // allow empty-array write to Firebase
   clients=[];saveClientsToStorage();renderClients();
 }
 
@@ -9304,6 +9317,7 @@ function clearJobsByStatus(status){
 
 function clearAllJobs(){
   if(!confirm('Clear all saved jobs?')) return;
+  window._intentionalClearJobs = true; // allow empty-array write to Firebase
   savedJobs=[]; saveJobsToStorage(); refreshPayrollPeriods(); renderPayroll(); renderJobs();
 }
 
