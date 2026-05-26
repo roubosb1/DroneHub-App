@@ -590,6 +590,8 @@ button{font-family:var(--font);}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
 @keyframes bellShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(8deg)}}
 </style>
+<!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -2835,7 +2837,7 @@ button{font-family:var(--font);}
               <div style="font-size:12px;font-weight:600;color:var(--offwhite)">Drop CSV or Excel file here</div>
               <div style="font-size:11px;color:var(--muted);margin-top:3px">or click to browse — .csv, .xlsx, .xls</div>
             </div>
-            <input type="file" id="client-import-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleClientImportFile(this.files)">
+            <input type="file" id="client-import-input" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="handleClientImportFile(this.files)">
             <div id="client-import-mapper" style="display:none">
               <div style="font-size:11px;font-weight:600;color:var(--blue-bright);margin-bottom:8px" id="client-import-filename"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px" id="client-import-col-map"></div>
@@ -6731,34 +6733,54 @@ let clientImportRows=[], clientImportHeaders=[];
 
 function handleClientImportFile(files){
   const file=files[0]; if(!file) return;
-  document.getElementById('client-import-filename').textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-  const isExcel=/\.xlsx?$/i.test(file.name);
+  const filenameEl=document.getElementById('client-import-filename');
+  if(filenameEl) filenameEl.textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  const isExcel=/\.xlsx?$/i.test(file.name)||
+    file.type==='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'||
+    file.type==='application/vnd.ms-excel';
   const reader=new FileReader();
   reader.onload=e=>{
-    try{
-      const buf=e.target.result; // always ArrayBuffer
-      let csvText;
-      if(isExcel){
-        if(typeof XLSX==='undefined'){alert('Excel library not loaded yet — try again in a moment.');return;}
-        const wb=XLSX.read(buf,{type:'array'});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        csvText=XLSX.utils.sheet_to_csv(ws);
-      } else {
-        // Detect encoding from BOM — Numbers exports UTF-16 LE by default
-        const bytes=new Uint8Array(buf);
-        let encoding='utf-8';
-        let start=0;
-        if(bytes[0]===0xFF&&bytes[1]===0xFE){encoding='utf-16le';start=2;}
-        else if(bytes[0]===0xFE&&bytes[1]===0xFF){encoding='utf-16be';start=2;}
-        else if(bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF){start=3;} // UTF-8 BOM
-        csvText=new TextDecoder(encoding).decode(buf.slice(start));
-      }
-      const parsed=parseCSV(csvText);
-      clientImportHeaders=parsed.headers; clientImportRows=parsed.rows;
-      showClientImportMapper();
-    }catch(err){alert('Could not read file: '+err.message);}
+    const buf=e.target.result;
+    // If Excel but XLSX library not loaded yet, wait up to 5 s then retry
+    if(isExcel && typeof XLSX==='undefined'){
+      let waited=0;
+      const poll=setInterval(()=>{
+        waited+=200;
+        if(typeof XLSX!=='undefined'){
+          clearInterval(poll);
+          _parseClientImportBuf(buf, true);
+        } else if(waited>=5000){
+          clearInterval(poll);
+          alert('Could not load the Excel parser. Please refresh the page and try again.');
+        }
+      },200);
+      return;
+    }
+    _parseClientImportBuf(buf, isExcel);
   };
-  reader.readAsArrayBuffer(file); // always read as ArrayBuffer so we can detect encoding
+  reader.onerror=()=>alert('Could not read the file. Please try again.');
+  reader.readAsArrayBuffer(file);
+}
+function _parseClientImportBuf(buf, isExcel){
+  try{
+    let csvText;
+    if(isExcel){
+      const wb=XLSX.read(buf,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      csvText=XLSX.utils.sheet_to_csv(ws);
+    } else {
+      // Detect encoding from BOM — Numbers exports UTF-16 LE by default
+      const bytes=new Uint8Array(buf);
+      let encoding='utf-8', start=0;
+      if(bytes[0]===0xFF&&bytes[1]===0xFE){encoding='utf-16le';start=2;}
+      else if(bytes[0]===0xFE&&bytes[1]===0xFF){encoding='utf-16be';start=2;}
+      else if(bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF){start=3;}
+      csvText=new TextDecoder(encoding).decode(buf.slice(start));
+    }
+    const parsed=parseCSV(csvText);
+    clientImportHeaders=parsed.headers; clientImportRows=parsed.rows;
+    showClientImportMapper();
+  }catch(err){alert('Could not read file: '+err.message);}
 }
 
 function guessClientCol(headers, type){
@@ -22443,7 +22465,6 @@ function initGoogleMaps(){
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- ═══ MOBILE BOTTOM NAV ═══ -->
 <nav id="mobile-bottom-nav">
