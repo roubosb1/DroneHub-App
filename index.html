@@ -2335,6 +2335,30 @@ button{font-family:var(--font);}
 <!-- SETTINGS -->
 <div id="pane-settings" class="pane">
 
+  <!-- MY PROFILE -->
+  <div class="card" id="settings-profile-card" style="margin-bottom:12px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">My Profile</div>
+    <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <!-- Avatar / photo preview -->
+      <div id="settings-photo-preview" style="flex-shrink:0"></div>
+      <!-- Info + controls -->
+      <div style="flex:1;min-width:180px">
+        <div id="settings-profile-name" style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px"></div>
+        <div id="settings-profile-email" style="font-size:12px;color:var(--muted);margin-bottom:2px"></div>
+        <div id="settings-profile-role" style="font-size:11px;color:var(--muted);margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <label style="padding:7px 16px;border-radius:20px;border:0.5px solid var(--border-bright);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Photo
+            <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="settingsHandlePhotoUpload(this)">
+          </label>
+          <button id="settings-remove-photo-btn" onclick="settingsRemovePhoto()" style="display:none;padding:7px 14px;border-radius:20px;border:0.5px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Remove</button>
+        </div>
+        <div id="settings-photo-status" style="display:none;font-size:12px;margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 🇨🇦 CANADIAN ENTITY -->
   <div class="card">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
@@ -4019,6 +4043,14 @@ button{font-family:var(--font);}
         <label style="font-size:11px;color:#A8B4D0;display:block;margin-bottom:3px">Notes</label>
         <input type="text" id="ej-notes" style="width:100%;box-sizing:border-box;padding:6px 8px;border:0.5px solid #ccc;border-radius:7px;font-size:12px;background:#242D42;color:#E8ECF8">
       </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;color:#A8B4D0;display:block;margin-bottom:3px">
+          <svg width="12" height="12" viewBox="0 0 87.3 78" style="margin-right:4px;vertical-align:-1px" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
+          Google Drive folder link
+        </label>
+        <input type="url" id="ej-drive-link" placeholder="https://drive.google.com/drive/folders/…" style="width:100%;box-sizing:border-box;padding:6px 8px;border:0.5px solid #5B7FDB;border-radius:7px;font-size:12px;background:#242D42;color:#E8ECF8">
+        <div style="font-size:10px;color:#7A8AAA;margin-top:3px">Paste the shareable Drive folder link for this property's deliverables</div>
+      </div>
 
       <!-- New total preview -->
       <div style="padding:12px 16px;background:rgba(34,217,122,.1);border-radius:8px;border:0.5px solid #1D9E75;margin-bottom:16px">
@@ -4505,7 +4537,7 @@ function showPane(id,ev){
     },500);
   }
   if(id==='calendar'){populateCalNameDropdown();renderCalendar();calEventsSyncFirebase().then(()=>renderCalendar());renderVacationTracker();}
-  if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();}
+  if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();renderSettingsProfile();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){
     renderFinance();
@@ -5593,7 +5625,7 @@ function calPopulateFilter(){
 
 // ── GOOGLE CALENDAR LINKS ──────────────────────────────────────────────────
 // ── FIREBASE RESTORE ON STARTUP ───────────────────────────────────────────
-async function restoreFromFirebase(){
+async function restoreFromFirebase(forceAll=false){
   // Use a local timestamp to track when we last saved
   const lastLocalSave=parseInt(localStorage.getItem('dronehub_last_save')||'0');
 
@@ -5647,10 +5679,11 @@ async function restoreFromFirebase(){
       const isAlwaysSync=alwaysSync.some(s=>k.fb.endsWith(s));
 
       // Restore from Firebase if:
-      // 1. localStorage is empty, OR
-      // 2. Firebase has newer data than our last local save, OR
-      // 3. It's team data (always sync)
-      if(localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isAlwaysSync){
+      // 1. forceAll=true (called on login — Firebase is always source of truth), OR
+      // 2. localStorage is empty, OR
+      // 3. Firebase has newer data than our last local save, OR
+      // 4. It's team/auth data (always sync)
+      if(forceAll||localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isAlwaysSync){
         k.apply(fb.data);
         restored++;
       }
@@ -7697,21 +7730,10 @@ async function renderClientPortal(id, activeTab){
     </div>`;
   }
   else if(activeTab==='assets'){
-    const googleDrivePlaceholder=`
-      <div class="card" style="margin-bottom:14px;border-color:var(--border-bright)">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(91,141,239,.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📁</div>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--white)">Google Drive integration</div>
-            <div style="font-size:11px;color:var(--muted)">Connect your Google Drive to attach project folders and deliverables directly to client profiles</div>
-          </div>
-        </div>
-        <div style="padding:14px;background:var(--navy-lift);border-radius:8px;border:1px dashed var(--border-bright);text-align:center;margin-bottom:12px">
-          <div style="font-size:13px;color:var(--muted);margin-bottom:8px">🔗 Google Drive API — coming soon</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.6">Once connected, you'll be able to link client project folders, browse files, and give clients direct download access to their finalized videos and photos without leaving this app.</div>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">In the meantime, you can manually attach links below.</div>
-      </div>`;
+    // Jobs that have a Drive folder link attached
+    const driveJobs=cJobs.filter(j=>j.driveLink).sort((a,b)=>b.date.localeCompare(a.date));
+    const SVC_ICONS={video:'🎬',photo:'📷',tvideo:'🌅',tphoto:'🌅',reel:'📱',extphoto:'🏡',extvideo:'🏡',floorplan:'📐'};
+    const jobServiceTags=j=>Object.entries(j.services||{}).filter(([k,v])=>v&&SVC_ICONS[k]).map(([k])=>SVC_ICONS[k]).join(' ');
 
     const assetList=assets.length
       ?assets.map((a,i)=>`
@@ -7721,17 +7743,52 @@ async function renderClientPortal(id, activeTab){
             <div style="font-size:10px;color:var(--muted);margin-top:2px">${a.type||'File'} · Added ${a.addedAt||'—'}</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
-            ${a.url?`<a href="${a.url}" target="_blank" style="padding:4px 10px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;text-decoration:none">↓ Download</a>`:''}
+            ${a.url?`<a href="${a.url}" target="_blank" style="padding:4px 10px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;text-decoration:none">↓ Open</a>`:''}
             <button onclick="removeClientAsset('${c.id}',${i})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
           </div>
         </div>`).join('')
-      :'<div style="color:var(--muted);font-size:12px;padding:12px 0;text-align:center">No assets linked yet.</div>';
+      :'';
 
     tabContent=`
-      ${googleDrivePlaceholder}
+      <!-- Drive Files Library -->
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;flex:1">
+            <svg width="18" height="16" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
+            <div class="section-label" style="margin-bottom:0">Google Drive Files</div>
+            ${driveJobs.length?`<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(34,217,122,.12);color:var(--green)">${driveJobs.length} propert${driveJobs.length===1?'y':'ies'}</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted)">Add Drive links via <b style="color:var(--offwhite)">Edit</b> on each job</div>
+        </div>
+        ${driveJobs.length?`
+        <input type="text" id="drive-search-${c.id}" placeholder="Search by address…" oninput="filterDriveFiles('${c.id}')"
+          style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:12px">
+        <div id="drive-files-list-${c.id}">
+          ${driveJobs.map(j=>`
+          <div class="drive-file-row" data-addr="${(j.address||'').toLowerCase()}" data-name="${(j.name||'').toLowerCase()}"
+            style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--navy-lift);border-radius:10px;margin-bottom:6px;border:1px solid var(--border);gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.address||j.name}">${j.address||j.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${j.date}${j.shootTime?' · '+j.shootTime:''} ${jobServiceTags(j)?'· '+jobServiceTags(j):''}</div>
+            </div>
+            <a href="${j.driveLink}" target="_blank" rel="noopener"
+              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid rgba(0,132,71,.5);background:rgba(0,132,71,.1);color:#22D97A;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
+              <svg width="12" height="12" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
+              Open Files ↗
+            </a>
+          </div>`).join('')}
+        </div>
+        <div id="drive-no-results-${c.id}" style="display:none;text-align:center;padding:16px;color:var(--muted);font-size:12px">No properties match your search</div>
+        `:`<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;line-height:1.7">
+          No Drive folders linked yet.<br>
+          Open a job → <b style="color:var(--offwhite)">✏ Edit</b> → paste the <b style="color:var(--offwhite)">Google Drive folder link</b> for that property.
+        </div>`}
+      </div>
+
+      <!-- Manual assets / misc links -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <div class="section-label" style="margin-bottom:0">Linked assets & files</div>
+          <div class="section-label" style="margin-bottom:0">Other links & assets</div>
           <button onclick="showAddAssetForm('${c.id}')" style="padding:5px 14px;border-radius:14px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">+ Add link</button>
         </div>
         <div id="add-asset-form-${c.id}" style="display:none;padding:10px;background:var(--navy-lift);border-radius:8px;margin-bottom:10px;border:1px solid var(--border-bright)">
@@ -7762,11 +7819,15 @@ async function renderClientPortal(id, activeTab){
             <button onclick="document.getElementById('add-asset-form-${c.id}').style.display='none'" style="padding:5px 12px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
           </div>
         </div>
-        ${assetList}
+        ${assetList||'<div style="color:var(--muted);font-size:12px;padding:8px 0;text-align:center">No additional assets linked.</div>'}
       </div>`;
   }
   else if(activeTab==='financials'){
     // Year-by-year spending breakdown
+    const isUSAClient=_getClientCountryKey(c)==='usa'
+      ||cJobs.some(j=>j.market&&j.market!=='canada')
+      ||(c.currency||'').toLowerCase()==='usd'
+      ||cJobs.some(j=>(j.currency||'').toLowerCase()==='usd');
     const byYear={};
     cJobs.filter(j=>j.status==='completed'||j.status==='confirmed').forEach(j=>{
       const yr=j.date?.slice(0,4)||'Unknown';
@@ -7784,13 +7845,13 @@ async function renderClientPortal(id, activeTab){
         <div class="section-label" style="margin-bottom:12px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Spending Summary — All Time</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
           <div class="metric"><div class="mlabel">Total spent</div><div class="mval" style="color:var(--green)">${fmtN(grandTotal)}</div></div>
-          <div class="metric"><div class="mlabel">HST paid (13%)</div><div class="mval">${fmtN(grandHST)}</div></div>
+          ${isUSAClient?'':`<div class="metric"><div class="mlabel">HST paid (13%)</div><div class="mval">${fmtN(grandHST)}</div></div>`}
           <div class="metric"><div class="mlabel">Total jobs</div><div class="mval">${cJobs.length}</div></div>
           <div class="metric"><div class="mlabel">Completed</div><div class="mval" style="color:var(--green)">${completed.length}</div></div>
         </div>
-        <div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
+        ${isUSAClient?'':`<div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
           This breakdown can be shared with ${c.name.split(' ')[0]} for their annual tax records. HST amounts are estimates based on 13% HST rate.
-        </div>
+        </div>`}
       </div>
 
       ${years.length?years.map(yr=>{
@@ -7800,7 +7861,7 @@ async function renderClientPortal(id, activeTab){
             <div style="font-size:14px;font-weight:700;color:var(--white)">${yr} Tax Year</div>
             <div style="text-align:right">
               <div style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(y.total)}</div>
-              <div style="font-size:10px;color:var(--muted)">HST: ${fmtN(y.hst)}</div>
+              ${isUSAClient?'': `<div style="font-size:10px;color:var(--muted)">HST: ${fmtN(y.hst)}</div>`}
             </div>
           </div>
           ${y.jobs.map(j=>`
@@ -7811,7 +7872,7 @@ async function renderClientPortal(id, activeTab){
               </div>
               <div style="text-align:right">
                 <span style="color:var(--green);font-weight:600">${fmtN(j.grand)}</span>
-                <span style="color:var(--muted);font-size:10px;margin-left:6px">+${fmtN(j.grand*0.13)} HST</span>
+                ${isUSAClient?'': `<span style="color:var(--muted);font-size:10px;margin-left:6px">+${fmtN(j.grand*0.13)} HST</span>`}
               </div>
             </div>`).join('')}
         </div>`;
@@ -8028,6 +8089,36 @@ function saveClientEdit(clientId, modal){
 function showAddAssetForm(clientId){
   const f=document.getElementById('add-asset-form-'+clientId);
   if(f) f.style.display=f.style.display==='none'?'block':'none';
+}
+
+function filterDriveFiles(clientId){
+  const q=(document.getElementById('drive-search-'+clientId)?.value||'').toLowerCase().trim();
+  const rows=document.querySelectorAll('#drive-files-list-'+clientId+' .drive-file-row');
+  let visible=0;
+  rows.forEach(row=>{
+    const addr=row.dataset.addr||'';
+    const name=row.dataset.name||'';
+    const show=!q||addr.includes(q)||name.includes(q);
+    row.style.display=show?'':'none';
+    if(show) visible++;
+  });
+  const noRes=document.getElementById('drive-no-results-'+clientId);
+  if(noRes) noRes.style.display=(rows.length&&visible===0)?'block':'none';
+}
+
+function filterCPDriveFiles(){
+  const q=(document.getElementById('cp-drive-search')?.value||'').toLowerCase().trim();
+  const rows=document.querySelectorAll('#cp-drive-list .cp-drive-row');
+  let visible=0;
+  rows.forEach(row=>{
+    const addr=row.dataset.addr||'';
+    const name=row.dataset.name||'';
+    const show=!q||addr.includes(q)||name.includes(q);
+    row.style.display=show?'':'none';
+    if(show) visible++;
+  });
+  const noRes=document.getElementById('cp-drive-no-results');
+  if(noRes) noRes.style.display=(rows.length&&visible===0)?'block':'none';
 }
 
 function saveClientAsset(clientId){
@@ -9060,6 +9151,7 @@ function openEditJob(jobId){
   document.getElementById('ej-time').value=job.shootTime||'';
   document.getElementById('ej-duration').value=job.duration||'2';
   document.getElementById('ej-notes').value=job.notes||'';
+  document.getElementById('ej-drive-link').value=job.driveLink||'';
 
   recalcEdit();
   document.getElementById('edit-job-overlay').style.display='block';
@@ -9183,6 +9275,7 @@ function saveEditJob(){
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
   job.duration=document.getElementById('ej-duration').value||job.duration;
   job.notes=document.getElementById('ej-notes').value;
+  job.driveLink=(document.getElementById('ej-drive-link').value||'').trim()||null;
   job.customAdj=adjSigned;
   job.period=period.label; job.periodStart=period.start; job.periodEnd=period.end;
   job.editedAt=new Date().toISOString().slice(0,16).replace('T',' ');
@@ -10363,6 +10456,10 @@ async function cpShowTab(tab){
     </div>`;
   }
   else if(tab==='spending'){
+    const isUSAClient=_getClientCountryKey(c)==='usa'
+      ||cJobs.some(j=>j.market&&j.market!=='canada')
+      ||(c.currency||'').toLowerCase()==='usd'
+      ||cJobs.some(j=>(j.currency||'').toLowerCase()==='usd');
     const byYear={};
     cJobs.filter(j=>j.status==='completed'||j.status==='confirmed').forEach(j=>{
       const yr=j.date?.slice(0,4)||'Unknown';
@@ -10378,12 +10475,12 @@ async function cpShowTab(tab){
         <div class="section-label" style="margin-bottom:10px">💰 Your spending with DroneHub</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
           <div class="metric"><div class="mlabel">Total spent</div><div class="mval" style="color:var(--green)">${fmtN(grandTotal)}</div></div>
-          <div class="metric"><div class="mlabel">Est. HST paid</div><div class="mval">${fmtN(grandTotal*0.13)}</div></div>
+          ${isUSAClient?'':`<div class="metric"><div class="mlabel">Est. HST paid</div><div class="mval">${fmtN(grandTotal*0.13)}</div></div>`}
           <div class="metric"><div class="mlabel">Total projects</div><div class="mval">${completed.length}</div></div>
         </div>
-        <div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
+        ${isUSAClient?'':`<div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
           This breakdown is provided for your records. HST estimates are based on 13% and may vary — please refer to your individual invoices for exact amounts. You can print or screenshot any year for your tax records.
-        </div>
+        </div>`}
       </div>
       ${years.map(yr=>{
         const y=byYear[yr];
@@ -10392,7 +10489,7 @@ async function cpShowTab(tab){
             <div style="font-size:14px;font-weight:700;color:var(--white)">${yr}</div>
             <div style="text-align:right">
               <div style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(y.total)}</div>
-              <div style="font-size:10px;color:var(--muted)">HST est: ${fmtN(y.hst)}</div>
+              ${isUSAClient?'':`<div style="font-size:10px;color:var(--muted)">HST est: ${fmtN(y.hst)}</div>`}
             </div>
           </div>
           ${y.jobs.map(j=>`
@@ -10492,14 +10589,44 @@ async function cpShowTab(tab){
     </div>`;
   }
   else if(tab==='files'){
+    const driveJobsCP=cJobs.filter(j=>j.driveLink).sort((a,b)=>b.date.localeCompare(a.date));
+    const SVC_ICONS_CP={video:'🎬',photo:'📷',tvideo:'🌅',tphoto:'🌅',reel:'📱',extphoto:'🏡',extvideo:'🏡',floorplan:'📐'};
+    const jobTagsCP=j=>Object.entries(j.services||{}).filter(([k,v])=>v&&SVC_ICONS_CP[k]).map(([k])=>SVC_ICONS_CP[k]).join(' ');
     html=`
-      <div class="card" style="margin-bottom:14px;text-align:center;padding:28px">
-        <div style="font-size:32px;margin-bottom:10px">📁</div>
-        <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:6px">Google Drive integration — coming soon</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.7;max-width:380px;margin:0 auto">Once connected, your finalized videos, photo galleries, floor plans and project files will appear here for direct download — no email required.</div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <svg width="20" height="18" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--white)">Your Files</div>
+            <div style="font-size:11px;color:var(--muted)">Click any property to open your deliverables in Google Drive</div>
+          </div>
+        </div>
+        ${driveJobsCP.length?`
+        <input type="text" id="cp-drive-search" placeholder="Search by address…" oninput="filterCPDriveFiles()"
+          style="width:100%;box-sizing:border-box;padding:9px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:12px">
+        <div id="cp-drive-list">
+          ${driveJobsCP.map(j=>`
+          <div class="cp-drive-row" data-addr="${(j.address||'').toLowerCase()}" data-name="${(j.name||'').toLowerCase()}"
+            style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--navy-lift);border-radius:10px;margin-bottom:8px;border:1px solid var(--border);gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.address||j.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${j.date}${jobTagsCP(j)?' · '+jobTagsCP(j):''}</div>
+            </div>
+            <a href="${j.driveLink}" target="_blank" rel="noopener"
+              style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#0066da,#00ac47);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
+              Open Files ↗
+            </a>
+          </div>`).join('')}
+        </div>
+        <div id="cp-drive-no-results" style="display:none;text-align:center;padding:16px;color:var(--muted);font-size:12px">No properties match your search</div>
+        `:`<div style="text-align:center;padding:28px 20px;color:var(--muted);font-size:13px;line-height:1.8">
+          <div style="font-size:28px;margin-bottom:8px">📁</div>
+          Your deliverables will appear here as each project is completed.<br>
+          <span style="font-size:12px">We'll send you a message in LouChat when files are ready.</span>
+        </div>`}
       </div>
       ${assets.length?`<div class="card">
-        <div class="section-label" style="margin-bottom:12px">Available files</div>
+        <div class="section-label" style="margin-bottom:12px">Additional files</div>
         ${assets.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:10px">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--white)">${a.name}</div>
@@ -10507,8 +10634,8 @@ async function cpShowTab(tab){
           </div>
           ${a.url?`<a href="${a.url}" target="_blank" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">↓ Download</a>`:'<span style="font-size:11px;color:var(--muted)">Link pending</span>'}
         </div>`).join('')}
-      </div>`:
-      `<div class="card" style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No files shared yet. We'll notify you when your deliverables are ready.</div>`}`;
+      </div>`:''}
+    `;
   }
   else if(tab==='messages'){
     const msgs=await dhDecryptMsgs(getPortalMessages(c.id));
@@ -14172,29 +14299,23 @@ async function gateLogin(){
   clearLoginFailures(email);
 
   // Fetch a Firebase proxy token from the server-side auth endpoint.
-  // This token allows fbGet/fbSet to reach Firestore through the proxy.
-  // Runs in the background — login proceeds immediately; Firebase sync
-  // will work once the token arrives (typically <300ms on the same CDN).
-  (async()=>{
-    try{
-      // Send plaintext password (over HTTPS) so the server can verify against
-      // both old and new hash formats regardless of what's stored in Firebase.
-      const _authR=await fetch('/.netlify/functions/auth',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email,password:pass,orgId:ORG_ID})
-      });
-      if(_authR.ok){
-        const {token}=await _authR.json();
-        if(token){
-          _dhToken=token;
-          try{sessionStorage.setItem('dh_token',token);}catch(e){}
-          _loadMsgKey().catch(()=>{}); // pre-load encryption key so chats decrypt immediately
-          setTimeout(()=>lcCheckMentions().catch(()=>{}),2000); // check for @mention notifications
-        }
+  // Awaited so the token is available before 2FA and data-sync checks run.
+  try{
+    const _authR=await fetch('/.netlify/functions/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,orgId:ORG_ID})
+    });
+    if(_authR.ok){
+      const {token}=await _authR.json();
+      if(token){
+        _dhToken=token;
+        try{sessionStorage.setItem('dh_token',token);}catch(e){}
+        _loadMsgKey().catch(()=>{}); // pre-load encryption key so chats decrypt immediately
+        setTimeout(()=>lcCheckMentions().catch(()=>{}),2000); // check for @mention notifications
       }
-    }catch(e){console.log('Firebase proxy token unavailable (offline?) — local-only mode');}
-  })();
+    }
+  }catch(e){console.log('Firebase proxy token unavailable (offline?) — local-only mode');}
 
   // Force admin type for hardcoded owner accounts regardless of stored role
   const FORCE_ADMIN=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
@@ -14229,7 +14350,8 @@ async function gateLogin(){
   } else {
     // Before showing setup screen, check Firebase for an existing verified 2FA secret.
     // This fixes mobile/cross-device logins where localStorage is empty but 2FA was
-    // already configured on another device.
+    // already configured on another device (e.g. after clearing cache).
+    // Token is now available (awaited above) — check Firebase for existing 2FA secret.
     let syncedFrom2fa=false;
     if(_fbToken()){
       try{
@@ -14467,7 +14589,10 @@ async function gateEnterApp(session){
       gateShowLinkTeam(session);
       return;
     }
+    const _lsEmptyTeam = clients.length === 0 && savedJobs.length === 0;
+    if(_fbToken() && _lsEmptyTeam) await restoreFromFirebase(true).catch(()=>{});
     gateShowTeamView(session);
+    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); }).catch(()=>{});
     return;
   }
 
@@ -14482,7 +14607,19 @@ async function gateEnterApp(session){
     }
   }
 
+  // If localStorage is empty (cache cleared), await Firebase restore BEFORE
+  // showing the UI so the user never sees a blank client/job list.
+  // If localStorage already has data, show immediately and refresh in background.
+  const _lsEmpty = clients.length === 0 && savedJobs.length === 0;
+  if(_fbToken() && _lsEmpty){
+    await restoreFromFirebase(true).catch(()=>{});
+  }
   gateShowAdminView(session);
+  // Always pull fresh from Firebase in background (catches newer data)
+  if(_fbToken()) restoreFromFirebase(true).then(()=>{
+    renderClients();
+    renderJobs();
+  }).catch(()=>{});
 }
 
 function gateShowLinkTeam(session){
@@ -17221,6 +17358,72 @@ function tpRemovePhoto(email){
   tpShowTab('profile');
 }
 
+// ── Settings pane — My Profile ────────────────────────────────────────────────
+function renderSettingsProfile(){
+  const session=gateGetSession();
+  if(!session) return;
+  const name=session.name||session.email||'';
+  const email=session.email||'';
+  const role=session.role||session.type||'';
+  // Avatar
+  const previewEl=document.getElementById('settings-photo-preview');
+  if(previewEl) previewEl.innerHTML=getAvatarHtml(name,email,80,26);
+  // Info
+  const nameEl=document.getElementById('settings-profile-name');
+  if(nameEl) nameEl.textContent=name;
+  const emailEl=document.getElementById('settings-profile-email');
+  if(emailEl) emailEl.textContent=email;
+  const roleEl=document.getElementById('settings-profile-role');
+  if(roleEl){const rLabel=role==='admin'?'Admin':role==='contractor'?'Contractor':'Team Member';roleEl.textContent=rLabel;}
+  // Show/hide Remove button
+  const removeBtn=document.getElementById('settings-remove-photo-btn');
+  if(removeBtn) removeBtn.style.display=getProfilePhoto(email)?'inline-flex':'none';
+  // Clear status
+  const statusEl=document.getElementById('settings-photo-status');
+  if(statusEl){statusEl.style.display='none';statusEl.textContent='';}
+}
+
+function settingsHandlePhotoUpload(input){
+  const session=gateGetSession();
+  if(!session||!session.email) return;
+  const email=session.email;
+  const file=input.files?.[0];
+  if(!file) return;
+  if(file.size>2*1024*1024){
+    const s=document.getElementById('settings-photo-status');
+    if(s){s.textContent='⚠ Photo must be under 2 MB.';s.style.color='var(--amber)';s.style.display='block';}
+    input.value='';
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const dataUrl=e.target.result;
+    saveProfilePhoto(email,dataUrl);
+    // Update preview in settings card
+    const previewEl=document.getElementById('settings-photo-preview');
+    if(previewEl) previewEl.innerHTML=`<img src="${dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    const removeBtn=document.getElementById('settings-remove-photo-btn');
+    if(removeBtn) removeBtn.style.display='inline-flex';
+    const s=document.getElementById('settings-photo-status');
+    if(s){s.textContent='✓ Photo saved!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>{if(s)s.style.display='none';},3000);}
+    // Refresh header avatar
+    renderAppHeader&&renderAppHeader();
+  };
+  reader.readAsDataURL(file);
+}
+
+function settingsRemovePhoto(){
+  const session=gateGetSession();
+  if(!session||!session.email) return;
+  const email=session.email;
+  const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  delete photos[email.toLowerCase()];
+  localStorage.setItem('dronehub_photos',JSON.stringify(photos));
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  renderSettingsProfile();
+  renderAppHeader&&renderAppHeader();
+}
+
 async function tpSaveAddress(cKey, memberId){
   const addr=(document.getElementById('tp-profile-addr')?.value||'').trim();
   const statusEl=document.getElementById('tp-profile-status');
@@ -17379,14 +17582,50 @@ function renderTeamMemberSettings(){
     const salesBadge = hasSales
       ? `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(34,217,122,.12);color:var(--green);margin-left:5px">✓ Sales CRM</span>`
       : '';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
-      <div>
+    const hasPhoto = !!getProfilePhoto(m.email||'');
+    const safeEmail = (m.email||'').replace(/'/g,"\\'");
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)">
+      <div id="tm-avatar-${m.id}" style="flex-shrink:0">${getAvatarHtml(m.name,m.email,38,13)}</div>
+      <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;color:var(--white);display:flex;align-items:center;flex-wrap:wrap;gap:2px">${m.name}${salesBadge}</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px">${m.email} · ${m.role} · Joined ${m.createdAt||'—'}</div>
       </div>
-      <button onclick="removeTeamMember('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <label title="Upload photo" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">
+          📷 Photo
+          <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="teamMemberPhotoUpload(this,'${safeEmail}','${m.id}')">
+        </label>
+        ${hasPhoto?`<button onclick="teamMemberRemovePhoto('${safeEmail}','${m.id}')" title="Remove photo" style="padding:4px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">✕</button>`:''}
+        <button onclick="removeTeamMember('${m.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;font-weight:600">Remove</button>
+      </div>
     </div>`;
   }).join('');
+}
+
+function teamMemberPhotoUpload(input, email, memberId){
+  const file=input.files?.[0];
+  if(!file) return;
+  if(file.size>2*1024*1024){alert('Photo must be under 2 MB.');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    saveProfilePhoto(email,e.target.result);
+    // Update avatar in the row immediately
+    const avatarEl=document.getElementById('tm-avatar-'+memberId);
+    if(avatarEl) avatarEl.innerHTML=`<img src="${e.target.result}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    renderAppHeader&&renderAppHeader();
+    // Re-render the list so the remove button appears
+    renderTeamMemberSettings();
+  };
+  reader.readAsDataURL(file);
+}
+
+function teamMemberRemovePhoto(email, memberId){
+  const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  delete photos[email.toLowerCase()];
+  localStorage.setItem('dronehub_photos',JSON.stringify(photos));
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  renderAppHeader&&renderAppHeader();
+  renderTeamMemberSettings();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
