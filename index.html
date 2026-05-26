@@ -12102,9 +12102,13 @@ function lcEnsureDefaults(){
     // Migrate: add members array if missing
     let changed=false;
     channels.forEach(ch=>{ if(!ch.members){ch.members=[];changed=true;} });
-    // Migrate: add welcome channel if missing
-    if(!channels.find(c=>c.id==='lc_welcome')){
+    // Migrate: add welcome channel if missing, or repair corrupted type
+    const _wi=channels.findIndex(c=>c.id==='lc_welcome');
+    if(_wi===-1){
       channels.unshift({id:'lc_welcome',name:'welcome',type:'welcome',topic:'A message from Lou — the person this chat is named after',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]});
+      changed=true;
+    } else if(channels[_wi].type!=='welcome'){
+      channels[_wi].type='welcome'; // repair if Firebase sync corrupted the type
       changed=true;
     }
     if(changed) saveLcChannels(channels);
@@ -12278,9 +12282,9 @@ function lcOpenChannel(channelId){
   document.getElementById('lc-channel-icon').innerHTML=meta.icon;
   document.getElementById('lc-channel-title').textContent='# '+ch.name;
   document.getElementById('lc-channel-desc').textContent=ch.topic||'No description set';
-  document.getElementById('lc-input-area').style.display=ch.type==='welcome'?'none':'block';
+  document.getElementById('lc-input-area').style.display=ch.id==='lc_welcome'?'none':'block';
   const actionsEl=document.getElementById('lc-channel-actions');
-  if(actionsEl) actionsEl.style.display=ch.type==='welcome'?'none':'flex';
+  if(actionsEl) actionsEl.style.display=ch.id==='lc_welcome'?'none':'flex';
   // Show delete button only for admins
   const delBtn=document.getElementById('lc-delete-channel-btn');
   if(delBtn){const s=gateGetSession();delBtn.style.display=(s?.type==='admin'||s?.role==='admin')?'inline-block':'none';}
@@ -12473,7 +12477,7 @@ async function lcRenderMessages(){
   if(!container) return;
 
   // ── WELCOME CHANNEL — render immediately, no decryption needed ─────────────
-  if(ch&&ch.type==='welcome'){
+  if(ch&&ch.id==='lc_welcome'){
     const photo=document.getElementById('lou-photo-data')?.src||'';
     container.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px 32px;gap:32px;overflow:hidden">
       ${photo?`<img src="${photo}" alt="Lou" style="height:min(55vh,340px);width:auto;border-radius:18px;object-fit:cover;box-shadow:0 12px 48px rgba(0,0,0,.55);border:2px solid rgba(91,141,239,.45);flex-shrink:0">`:'<div style="width:72px;height:72px;border-radius:50%;background:rgba(91,141,239,.18);border:2px solid rgba(91,141,239,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'}
