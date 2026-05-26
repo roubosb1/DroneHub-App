@@ -4865,8 +4865,8 @@ function renderCostModel(grand,driveCost,lines){
   const photoShootRevenue=photoContractorShare;
   const videoShooterFee=videoShootRevenue*0.585; // 58.5% to shooter (was 65%)
   const videoEditorFee=videoShootRevenue*0.415;  // 41.5% to editor (was 35%)
-  const photoShooterFee=photoShootRevenue*0.530; // 53% to shooter (was 65%)
-  const photoEditorFee=photoShootRevenue*0.470;  // 47% to editor (was 35%)
+  const photoShooterFee=photoShootRevenue*0.600; // 60% to shooter
+  const photoEditorFee=photoShootRevenue*0.400;  // 40% to editor
 
   const vidDriveReimb=svc.video?ds.vidDrive.contractorCharge:0;
   const phoDriveReimb=(svc.photo&&!ds.sameShooter)?ds.phoDrive.contractorCharge:0;
@@ -4904,7 +4904,7 @@ function renderCostModel(grand,driveCost,lines){
     // Edit fee goes ONLY to the assigned photo editor — never falls back to the shooter
     const phoEdKey=editors.photo||'__unassigned_editor__';
     const phoEdName=editors.photo?cName(editors.photo):'(no editor assigned)';
-    addEdit(phoEdKey,phoEdName,{label:'Photo editing (47%)',fee:photoEditorFee});
+    addEdit(phoEdKey,phoEdName,{label:'Photo editing (40%)',fee:photoEditorFee});
   }
 
   const FLOORPLAN_PAYOUT=30, EXTERIOR_PAYOUT=150;
@@ -8526,8 +8526,8 @@ function buildPayoutSnapshot(lines,ds){
       else if(l.isStandalonePhoto) pGrossedBase+=l.base;
     });
     const pRev=pGrossedBase;
-    const shooterFee=pRev*0.530;
-    const editorFee=pRev*0.470;
+    const shooterFee=pRev*0.600;
+    const editorFee=pRev*0.400;
     const pKey=ds.sameShooter?ds.vidKey:ds.phoKey;
     addContractor(pKey,'Photo shoot',shooterFee,0,ds.sameShooter?0:ds.phoDrive.contractorCharge||0,0,'');
     const pedKey=editors.photo||'__unassigned_editor__';
