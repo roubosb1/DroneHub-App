@@ -2854,14 +2854,20 @@ button{font-family:var(--font);}
         </div>
       </div>
       <!-- Client filter pills -->
-      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
         <button id="cfil-all"      onclick="setClientFilter('all')"      style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">All</button>
         <button id="cfil-messages" onclick="setClientFilter('messages')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</button>
-        <button id="cfil-active"   onclick="setClientFilter('active')"   style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Active jobs</button>
+        <button id="cfil-active"   onclick="setClientFilter('active')"   style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Active</button>
         <button id="cfil-inactive" onclick="setClientFilter('inactive')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">Inactive</button>
+        <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
+        <button id="cctr-all"    onclick="setClientCountry('all')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">🌐 All</button>
+        <button id="cctr-canada" onclick="setClientCountry('canada')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">🍁 Canada</button>
+        <button id="cctr-usa"    onclick="setClientCountry('usa')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">🇺🇸 USA</button>
       </div>
+      <!-- A–Z letter jump bar -->
+      <div id="clients-az-bar" style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px"></div>
       <div id="clients-empty" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;display:none">No clients yet. Hit <strong style="color:var(--blue-bright)">+ Add client</strong> above to get started.</div>
-      <div id="clients-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px"></div>
+      <div id="clients-list"></div>
     </div><!-- end clients-list-panel -->
     <!-- Client portal (full-screen overlay) -->
     <div id="client-detail-overlay" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:2000;overflow-y:auto">
@@ -7054,6 +7060,8 @@ function clearAllClients(){
 }
 
 let _clientFilter='all';
+let _clientCountry='all';
+
 function setClientFilter(f){
   _clientFilter=f;
   const pillColors={
@@ -7071,6 +7079,30 @@ function setClientFilter(f){
   });
   renderClients();
 }
+
+function setClientCountry(ctry){
+  _clientCountry=ctry;
+  ['all','canada','usa'].forEach(k=>{
+    const el=document.getElementById('cctr-'+k);
+    if(!el) return;
+    const on=k===ctry;
+    el.style.background=on?'rgba(91,141,239,.18)':'var(--navy-lift)';
+    el.style.color=on?'var(--blue-bright)':'var(--muted)';
+    el.style.borderColor=on?'var(--blue)':'var(--border)';
+  });
+  renderClients();
+}
+
+function _getClientCountryKey(c){
+  const co=(c.country||'').toLowerCase().trim();
+  const cu=(c.currency||'').toLowerCase().trim();
+  if(co.includes('canada')||co==='ca'||co==='can'||cu==='cad'||
+     /ontario|british columbia|alberta|quebec|saskatchewan|manitoba|nova scotia|new brunswick|newfoundland|prince edward/.test(co)) return 'canada';
+  if(co.includes('united states')||co==='us'||co==='usa'||co.includes('america')||cu==='usd') return 'usa';
+  if(!co&&!cu) return 'unknown';
+  return 'other';
+}
+
 function toggleClientStatus(clientId){
   const idx=clients.findIndex(c=>c.id===clientId);
   if(idx<0) return;
@@ -7089,86 +7121,155 @@ function renderClients(){
   const q=(document.getElementById('clients-search')?.value||'').trim().toLowerCase();
   const list=document.getElementById('clients-list');
   const empty=document.getElementById('clients-empty');
+  const azBar=document.getElementById('clients-az-bar');
   if(!list) return;
 
   const _lcUnread=getLcUnread();
   const portalAccts=getPortalAccounts();
 
-  // Build enriched client records for sorting
+  // Build enriched records
   const enriched=clients.map(c=>{
     const cJobs=savedJobs.filter(j=>j.clientId===c.id);
     const hasActiveJob=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress')||c.status==='active';
     const newMsgs=_lcUnread['lc_client_'+c.id]||0;
-    // Get last message timestamp for sorting within unread group
     let lastMsgTs='';
-    if(newMsgs>0){
-      const msgs=getLcMessages('lc_client_'+c.id);
-      if(msgs.length) lastMsgTs=msgs[msgs.length-1].ts||'';
-    }
-    return {c, cJobs, hasActiveJob, newMsgs, lastMsgTs};
+    if(newMsgs>0){const msgs=getLcMessages('lc_client_'+c.id);if(msgs.length)lastMsgTs=msgs[msgs.length-1].ts||'';}
+    const countryKey=_getClientCountryKey(c);
+    return {c, cJobs, hasActiveJob, newMsgs, lastMsgTs, countryKey};
   });
 
-  // Apply filter pill
-  const afterFilter=enriched.filter(({c, hasActiveJob, newMsgs})=>{
-    const matchesQ=!q||c.name.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))||(c.company&&c.company.toLowerCase().includes(q));
-    if(!matchesQ) return false;
+  // Apply search + filter pill + country
+  const afterFilter=enriched.filter(({c, hasActiveJob, newMsgs, countryKey})=>{
+    const mQ=!q||c.name.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))||(c.company&&c.company.toLowerCase().includes(q));
+    if(!mQ) return false;
     if(_clientFilter==='messages') return newMsgs>0;
     if(_clientFilter==='active')   return hasActiveJob;
     if(_clientFilter==='inactive') return !hasActiveJob;
+    if(_clientCountry!=='all'&&countryKey!==_clientCountry) return false;
     return true;
   });
 
-  // Smart sort: 1) unread messages (newest first), 2) active jobs, 3) alphabetical
-  afterFilter.sort((a,b)=>{
-    const aUnread=a.newMsgs>0, bUnread=b.newMsgs>0;
-    if(aUnread!==bUnread) return aUnread?-1:1;
-    if(aUnread&&bUnread){
-      if(a.lastMsgTs&&b.lastMsgTs) return b.lastMsgTs.localeCompare(a.lastMsgTs);
-    }
-    const aActive=a.hasActiveJob, bActive=b.hasActiveJob;
-    if(aActive!==bActive) return aActive?-1:1;
-    return a.c.name.localeCompare(b.c.name);
-  });
+  // Sort A-Z (messages newest first within their group, handled per-tier)
+  afterFilter.sort((a,b)=>a.c.name.localeCompare(b.c.name));
 
   empty.style.display=afterFilter.length?'none':'block';
-  list.style.display=afterFilter.length?'grid':'none';
+  list.style.display=afterFilter.length?'block':'none';
 
-  list.innerHTML=afterFilter.map(({c, cJobs, hasActiveJob, newMsgs})=>{
-    const completed=cJobs.filter(j=>j.status==='completed');
-    const revenue=completed.reduce((s,j)=>s+j.grand,0);
-    const sortedJobs=[...cJobs].sort((a,b)=>b.date.localeCompare(a.date));
-    const lastJob=sortedJobs[0];
-    const hasPortal=portalAccts.find(a=>a.clientId===c.id);
-    const activeTrackerJobs=cJobs.filter(j=>{
-      const ts=getTrackerStage(j.id);
-      return ts.editStatus&&ts.editStatus!=='finals_sent'&&(j.status==='confirmed'||j.status==='completed');
+  // A-Z bar — show letters that have at least one client
+  if(azBar){
+    const usedLetters=new Set(afterFilter.map(r=>r.c.name.charAt(0).toUpperCase()).filter(l=>/[A-Z]/.test(l)));
+    if(afterFilter.length>20&&!q){
+      azBar.style.display='flex';
+      azBar.style.flexWrap='wrap';
+      azBar.style.gap='2px';
+      azBar.style.marginBottom='12px';
+      azBar.innerHTML='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>{
+        const has=usedLetters.has(l);
+        return `<button onclick="document.getElementById('clet-${l}')?.scrollIntoView({behavior:'smooth',block:'start'})"
+          style="min-width:24px;height:24px;padding:0 3px;border-radius:5px;border:1px solid ${has?'rgba(91,141,239,.4)':'transparent'};background:${has?'rgba(91,141,239,.12)':'transparent'};color:${has?'var(--blue-bright)':'var(--muted)'};font-size:11px;font-weight:700;cursor:${has?'pointer':'default'};line-height:24px"
+          ${!has?'disabled':''}>${l}</button>`;
+      }).join('');
+    } else {
+      azBar.style.display='none';
+    }
+  }
+
+  // Simple flat mode when filtering by messages or searching
+  if(_clientFilter==='messages'||q){
+    if(_clientFilter==='messages') afterFilter.sort((a,b)=>{
+      if(b.newMsgs!==a.newMsgs) return b.newMsgs-a.newMsgs;
+      return b.lastMsgTs.localeCompare(a.lastMsgTs);
     });
-    const isActive=hasActiveJob;
-    const hasJobActivity=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress');
-    return `<div class="client-card" onclick="openClientDetail('${c.id}')" style="${newMsgs>0?'border-color:rgba(34,217,122,.35);':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <div class="client-card-name">${c.name}</div>
-          ${isActive?`<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--green);background:rgba(34,217,122,.1);border:1px solid rgba(34,217,122,.3);border-radius:8px;padding:1px 6px">● Active</span>`:`<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:1px 6px">◌ Inactive</span>`}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          ${newMsgs>0?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;background:rgba(34,217,122,.15);color:var(--green);border:1px solid rgba(34,217,122,.3)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${newMsgs} new</span>`:''}
-          ${!hasJobActivity?`<button onclick="event.stopPropagation();toggleClientStatus('${c.id}')" title="${c.status==='inactive'?'Mark as Active':'Mark as Inactive'}" style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;cursor:pointer;border:1px solid ${c.status==='inactive'?'rgba(91,141,239,.4)':'rgba(34,217,122,.4)'};background:${c.status==='inactive'?'rgba(91,141,239,.1)':'rgba(34,217,122,.1)'};color:${c.status==='inactive'?'var(--blue-bright)':'var(--green)'}">${c.status==='inactive'?'Set Active':'Set Inactive'}</button>`:''}
-          <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;background:${hasPortal?'var(--green-bg)':'rgba(255,255,255,.05)'};color:${hasPortal?'var(--green)':'var(--muted)'}">
-            ${hasPortal?'✓ Portal':'No portal'}
-          </span>
-        </div>
+    list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${afterFilter.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
+    return;
+  }
+
+  // Tiered + sectioned mode
+  const SECTIONS=_clientCountry==='all'
+    ?[{key:'canada',label:'Canada',flag:'🍁'},{key:'usa',label:'United States',flag:'🇺🇸'},{key:'other',label:'Other',flag:'🌐'},{key:'unknown',label:'No Country Set',flag:'📋'}]
+    :[{key:_clientCountry,label:_clientCountry==='canada'?'Canada':'United States',flag:_clientCountry==='canada'?'🍁':'🇺🇸'}];
+
+  const usedLetterIds=new Set(); // prevent duplicate anchor IDs across sections
+  let html='';
+
+  for(const sec of SECTIONS){
+    const group=_clientCountry==='all'?afterFilter.filter(r=>r.countryKey===sec.key):afterFilter;
+    if(!group.length) continue;
+
+    const unread =group.filter(r=>r.newMsgs>0).sort((a,b)=>b.lastMsgTs.localeCompare(a.lastMsgTs));
+    const active =group.filter(r=>r.newMsgs===0&&r.hasActiveJob);
+    const inactive=group.filter(r=>r.newMsgs===0&&!r.hasActiveJob);
+
+    html+=`<div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--border)">
+        <span style="font-size:20px">${sec.flag}</span>
+        <span style="font-size:15px;font-weight:800;color:var(--white)">${sec.label}</span>
+        <span style="font-size:11px;color:var(--muted);background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:1px 8px">${group.length}</span>
+      </div>`;
+
+    if(unread.length)  html+=_clientTierHtml(unread,  '🔔 Unread','rgba(34,217,122,.15)','var(--green)',   usedLetterIds, portalAccts);
+    if(active.length)  html+=_clientTierHtml(active,  '✅ Active', 'rgba(34,217,122,.08)','var(--green)',   usedLetterIds, portalAccts);
+    if(inactive.length)html+=_clientTierHtml(inactive,'◌ Inactive','rgba(255,255,255,.04)','var(--muted)',  usedLetterIds, portalAccts);
+
+    html+=`</div>`;
+  }
+
+  list.innerHTML=html;
+}
+
+function _clientTierHtml(group, label, bg, color, usedLetterIds, portalAccts){
+  let cards='';
+  let lastLetter='';
+  for(const r of group){
+    const letter=(r.c.name.charAt(0).toUpperCase().match(/[A-Z]/)||['#'])[0];
+    if(letter!==lastLetter){
+      const anchorId=`clet-${letter}`;
+      const anchor=usedLetterIds.has(anchorId)?'':`id="${anchorId}"`;
+      usedLetterIds.add(anchorId);
+      cards+=`<div ${anchor} style="grid-column:1/-1;padding:5px 2px 3px;font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.1em;border-bottom:1px solid var(--border)">${letter}</div>`;
+      lastLetter=letter;
+    }
+    cards+=_clientCardHtml(r,portalAccts);
+  }
+  return `<div style="margin-bottom:14px">
+    <div style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;background:${bg};color:${color};margin-bottom:8px">
+      ${label} <span style="opacity:.6">(${group.length})</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${cards}</div>
+  </div>`;
+}
+
+function _clientCardHtml({c, cJobs, hasActiveJob, newMsgs}, portalAccts){
+  const completed=cJobs.filter(j=>j.status==='completed');
+  const revenue=completed.reduce((s,j)=>s+j.grand,0);
+  const lastJob=[...cJobs].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const hasPortal=portalAccts.find(a=>a.clientId===c.id);
+  const activeTrackerJobs=cJobs.filter(j=>{
+    const ts=getTrackerStage(j.id);
+    return ts.editStatus&&ts.editStatus!=='finals_sent'&&(j.status==='confirmed'||j.status==='completed');
+  });
+  return `<div class="client-card" onclick="openClientDetail('${c.id}')" style="${newMsgs>0?'border-color:rgba(34,217,122,.35);':''}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0">
+        <div class="client-card-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+        ${hasActiveJob?`<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--green);background:rgba(34,217,122,.1);border:1px solid rgba(34,217,122,.3);border-radius:8px;padding:1px 5px;flex-shrink:0">● Active</span>`:``}
       </div>
-      <div class="client-card-meta">${[c.company,c.email,c.phone].filter(Boolean).join(' · ')||'No contact info'}</div>
-      <div>
-        <span class="client-stat"><span class="client-stat-val">${cJobs.length}</span><span class="client-stat-lbl">Total jobs</span></span>
-        <span class="client-stat"><span class="client-stat-val">${completed.length}</span><span class="client-stat-lbl">Completed</span></span>
-        <span class="client-stat"><span class="client-stat-val">${revenue>0?fmt(revenue):'—'}</span><span class="client-stat-lbl">Revenue billed</span></span>
-        ${activeTrackerJobs.length?`<span class="client-stat"><span class="client-stat-val" style="color:var(--amber)">${activeTrackerJobs.length}</span><span class="client-stat-lbl">In production</span></span>`:''}
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:6px">
+        ${newMsgs>0?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;background:rgba(34,217,122,.15);color:var(--green);border:1px solid rgba(34,217,122,.3)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${newMsgs}</span>`:''}
+        <span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;background:${hasPortal?'var(--green-bg)':'rgba(255,255,255,.05)'};color:${hasPortal?'var(--green)':'var(--muted)'}">
+          ${hasPortal?'✓ Portal':'No portal'}
+        </span>
       </div>
-      ${lastJob?`<div style="font-size:10px;color:#7A8AAA;margin-top:8px">Last job: ${lastJob.date} — ${lastJob.name}</div>`:''}
-    </div>`;
-  }).join('');
+    </div>
+    <div class="client-card-meta">${[c.company,c.email,c.phone].filter(Boolean).join(' · ')||'No contact info'}</div>
+    <div>
+      <span class="client-stat"><span class="client-stat-val">${cJobs.length}</span><span class="client-stat-lbl">Jobs</span></span>
+      <span class="client-stat"><span class="client-stat-val">${completed.length}</span><span class="client-stat-lbl">Completed</span></span>
+      <span class="client-stat"><span class="client-stat-val">${revenue>0?fmt(revenue):'—'}</span><span class="client-stat-lbl">Billed</span></span>
+      ${activeTrackerJobs.length?`<span class="client-stat"><span class="client-stat-val" style="color:var(--amber)">${activeTrackerJobs.length}</span><span class="client-stat-lbl">In production</span></span>`:''}
+    </div>
+    ${lastJob?`<div style="font-size:10px;color:#7A8AAA;margin-top:6px">Last job: ${lastJob.date} — ${lastJob.name}</div>`:''}
+  </div>`;
 }
 
 // ── CLIENT LEADERBOARD ────────────────────────────────────────────────────────
