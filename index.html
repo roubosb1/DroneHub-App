@@ -11984,6 +11984,26 @@ function lcResetAllMessages(){
 function lcCleanCorruptMessages(){
   // Remove the old merged dronehub_lc_msgs key that caused all channels to bleed into each other
   localStorage.removeItem('dronehub_lc_msgs');
+  // Assign channelId to any per-channel messages that are missing it (one-time migration)
+  const _cleanKey='dh_lc_channelid_migrated_v2';
+  if(!sessionStorage.getItem(_cleanKey)){
+    sessionStorage.setItem(_cleanKey,'1');
+    try{
+      const channels=JSON.parse(localStorage.getItem('dronehub_lc_channels')||'[]');
+      channels.forEach(ch=>{
+        const key='dronehub_lc_msgs_'+ch.id;
+        const msgs=JSON.parse(localStorage.getItem(key)||'[]');
+        let changed=false;
+        // Remove messages tagged to a different channel, assign channelId to untagged ones
+        const clean=msgs.filter(m=>{
+          if(m.channelId&&m.channelId!==ch.id){changed=true;return false;}
+          if(!m.channelId){m.channelId=ch.id;changed=true;}
+          return true;
+        });
+        if(changed)try{localStorage.setItem(key,JSON.stringify(clean));}catch(e){}
+      });
+    }catch(e){}
+  }
 }
 
 async function saveLcMessage(channelId, msg){
@@ -11994,8 +12014,10 @@ async function saveLcMessage(channelId, msg){
   const _notifText=msg.text||'';
   if(msg.text) msg.text=await dhEncrypt(msg.text);
   msgs.push(msg);
-  try{localStorage.setItem(key,JSON.stringify(msgs));}catch(e){}
-  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgs),updatedAt:Date.now()});
+  // Enforce channel isolation: only sync messages that belong to this channel
+  const msgsForSync=msgs.filter(m=>!m.channelId||m.channelId===channelId);
+  try{localStorage.setItem(key,JSON.stringify(msgsForSync));}catch(e){}
+  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgsForSync),updatedAt:Date.now()});
   // Send browser notification with original plaintext
   const channels=getLcChannels();
   const ch=channels.find(c=>c.id===channelId);
@@ -12081,10 +12103,8 @@ function lcEnsureWelcomeMsg(){
       source:'welcome',
     }]:[],
   };
-  const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  // Always overwrite — ensures photo is never missing
-  all['lc_welcome']=[welcomeMsg];
-  try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
+  // Write to the per-channel key (not the old merged key)
+  try{localStorage.setItem('dronehub_lc_msgs_lc_welcome',JSON.stringify([welcomeMsg]));}catch(e){}
 }
 
 function renderLouChat(){
@@ -12188,7 +12208,10 @@ function lcOpenChannel(channelId){
     fbGet('orgs',ORG_ID+':lc_msgs_'+channelId).then(fb=>{
       if(fb?.msgs){
         try{
+          // Strict channel isolation: exclude messages explicitly tagged to a different channel
           const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===channelId);
+          // Assign channelId to any legacy messages that are missing it (so they won't bleed on next sync)
+          msgs.forEach(m=>{if(!m.channelId)m.channelId=channelId;});
           localStorage.setItem('dronehub_lc_msgs_'+channelId,JSON.stringify(msgs));
           lcRenderMessages();
           lcScrollToBottom(); // scroll after async Firebase data arrives
@@ -13000,13 +13023,14 @@ function lcToggleAddForm(){
 }
 
 function lcReact(channelId, msgId, emoji){
-  const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs')||'{}');
-  const msgs=all[channelId]||[];
+  const key='dronehub_lc_msgs_'+channelId;
+  const msgs=JSON.parse(localStorage.getItem(key)||'[]');
   const msg=msgs.find(m=>m.id===msgId);
   if(!msg) return;
   if(!msg.reactions) msg.reactions={};
   msg.reactions[emoji]=(msg.reactions[emoji]||0)+1;
-  try{localStorage.setItem('dronehub_lc_msgs',JSON.stringify(all));}catch(e){}
+  try{localStorage.setItem(key,JSON.stringify(msgs));}catch(e){}
+  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgs),updatedAt:Date.now()});
   lcRenderMessages();
 }
 
