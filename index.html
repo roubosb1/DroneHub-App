@@ -2836,6 +2836,7 @@ button{font-family:var(--font);}
               <div style="font-size:26px;margin-bottom:5px">📋</div>
               <div style="font-size:12px;font-weight:600;color:var(--offwhite)">Drop CSV or Excel file here</div>
               <div style="font-size:11px;color:var(--muted);margin-top:3px">or click to browse — .csv, .xlsx, .xls</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:5px;font-style:italic">Using Apple Numbers? File → Export To → Excel first</div>
             </div>
             <input type="file" id="client-import-input" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="handleClientImportFile(this.files)">
             <div id="client-import-mapper" style="display:none">
@@ -6733,6 +6734,12 @@ let clientImportRows=[], clientImportHeaders=[];
 
 function handleClientImportFile(files){
   const file=files[0]; if(!file) return;
+  // Apple Numbers files cannot be read directly — must be exported first
+  if(/\.numbers$/i.test(file.name)){
+    alert('Apple Numbers files can\'t be imported directly.\n\nIn Numbers, go to:\nFile → Export To → Excel (.xlsx)\n\nThen upload the exported .xlsx file here.');
+    const inp=document.getElementById('client-import-input'); if(inp) inp.value='';
+    return;
+  }
   const filenameEl=document.getElementById('client-import-filename');
   if(filenameEl) filenameEl.textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
   const isExcel=/\.xlsx?$/i.test(file.name)||
