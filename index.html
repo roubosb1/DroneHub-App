@@ -12475,16 +12475,16 @@ async function lcRenderMessages(){
   // ── WELCOME CHANNEL — special hero render ──────────────────────────────────
   if(ch&&ch.type==='welcome'){
     const photo=document.getElementById('lou-photo-data')?.src||'';
-    container.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;min-height:100%;padding:28px 20px;text-align:center;overflow-y:auto">
-      <div style="width:100%;max-width:500px">
-        ${photo?`<img src="${photo}" alt="Lou" style="width:100%;border-radius:18px;object-fit:cover;box-shadow:0 12px 48px rgba(0,0,0,.55);border:2px solid rgba(91,141,239,.45);display:block;margin-bottom:24px">`:'<div style="width:72px;height:72px;border-radius:50%;background:rgba(91,141,239,.18);border:2px solid rgba(91,141,239,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 24px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'}
-        <div style="font-size:34px;font-weight:900;color:var(--white);font-family:'Barlow Condensed',sans-serif;letter-spacing:-.01em;margin-bottom:10px;line-height:1.1">
+    container.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px 32px;gap:32px;overflow:hidden">
+      ${photo?`<img src="${photo}" alt="Lou" style="height:min(55vh,340px);width:auto;border-radius:18px;object-fit:cover;box-shadow:0 12px 48px rgba(0,0,0,.55);border:2px solid rgba(91,141,239,.45);flex-shrink:0">`:'<div style="width:72px;height:72px;border-radius:50%;background:rgba(91,141,239,.18);border:2px solid rgba(91,141,239,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'}
+      <div style="text-align:left;max-width:320px">
+        <div style="font-size:38px;font-weight:900;color:var(--white);font-family:'Barlow Condensed',sans-serif;letter-spacing:-.01em;margin-bottom:12px;line-height:1.05">
           Welcome to <span style="color:var(--blue-bright)">LouChat</span>
         </div>
-        <div style="font-size:16px;color:var(--offwhite);line-height:1.75;margin-bottom:10px">
+        <div style="font-size:15px;color:var(--offwhite);line-height:1.7;margin-bottom:14px">
           My name is Lou and this chat was named after me.
         </div>
-        <div style="font-size:19px;color:var(--blue-bright);font-weight:700;margin-bottom:20px">Happy Messaging!</div>
+        <div style="font-size:18px;color:var(--blue-bright);font-weight:700;margin-bottom:16px">Happy Messaging! 💬✨</div>
         <div style="font-size:11px;color:var(--muted)">— Lou · the person behind the name</div>
       </div>
     </div>`;
