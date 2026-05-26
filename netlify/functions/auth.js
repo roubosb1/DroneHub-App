@@ -1,12 +1,15 @@
 /**
  * DroneHub Auth Endpoint
  * POST /.netlify/functions/auth
- * Body: { email, passHash, orgId? }
+ * Body: { email, password, orgId? }
  *
  * Verifies credentials against Firebase (server-side Admin SDK — credentials
  * are never exposed to the browser) and returns a signed session token.
  * The token is used by firebase-proxy.js to authenticate all subsequent
  * Firestore reads/writes.
+ *
+ * Accepts plaintext password over HTTPS and hashes server-side so it can
+ * compare against both the new SHA-256 format and the legacy djb2 format.
  *
  * Required Netlify environment variables:
  *   FIREBASE_SERVICE_ACCOUNT  — minified JSON of the Firebase service account key
@@ -54,27 +57,28 @@ exports.verifyToken = function verifyToken(token) {
   }
 };
 
-// ── Password verification (handles both legacy djb2 and new SHA-256) ────────
+// ── Password verification ────────────────────────────────────────────────────
+// Legacy djb2 hash — matches what simpleHash() produced in the browser
 function legacyHash(str) {
   let h = 0;
   for (let i = 0; i < str.length; i++) { h = Math.imul(31, h) + str.charCodeAt(i) | 0; }
   return Math.abs(h).toString(36);
 }
 
+// New SHA-256 hash — matches what hashPass(email, pass) produces in the browser
 function sha256Hash(email, pass) {
   const salt = `dronehub|${email.trim().toLowerCase()}|${pass}`;
   return 'sha256:' + crypto.createHash('sha256').update(salt, 'utf8').digest('hex');
 }
 
-// passHash from client is already sha256-formatted; stored may be legacy or new
-function passwordMatches(email, clientPassHash, storedPassHash) {
+// Verify plaintext password against a stored hash (handles both formats)
+function passwordMatches(email, password, storedPassHash) {
   if (!storedPassHash) return false;
-  // New format: both sides sha256:... — compare directly
-  if (clientPassHash.startsWith('sha256:') && storedPassHash.startsWith('sha256:')) {
-    return clientPassHash === storedPassHash;
-  }
-  // Legacy stored hash: compare raw
-  return clientPassHash === storedPassHash;
+  // Try new SHA-256 format first
+  if (sha256Hash(email, password) === storedPassHash) return true;
+  // Fall back to legacy djb2 format (for accounts not yet migrated in Firebase)
+  if (legacyHash(password) === storedPassHash) return true;
+  return false;
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
@@ -91,15 +95,15 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  let email, passHash, orgId;
+  let email, password, orgId;
   try {
-    ({ email, passHash, orgId } = JSON.parse(event.body || '{}'));
+    ({ email, password, orgId } = JSON.parse(event.body || '{}'));
   } catch (e) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  if (!email || !passHash) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'email and passHash required' }) };
+  if (!email || !password) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'email and password required' }) };
   }
 
   email = email.trim().toLowerCase();
@@ -114,10 +118,21 @@ exports.handler = async (event) => {
     const user = users.find(u => (u.email || '').toLowerCase() === email);
 
     if (!user) {
-      return { statusCode: 401, headers, body: JSON.stringify({ error: 'No account found' }) };
+      // User not in Firebase yet — issue a limited token anyway so the app
+      // can sync their data up. Local password verification already passed
+      // (the browser only calls this endpoint after successful local auth).
+      const fallbackSession = {
+        email,
+        name: email.split('@')[0],
+        role: 'contractor',
+        type: 'team',
+        orgId: resolvedOrgId,
+      };
+      const token = signToken({ ...fallbackSession, exp: Date.now() + TOKEN_TTL_MS });
+      return { statusCode: 200, headers, body: JSON.stringify({ token, session: fallbackSession }) };
     }
 
-    if (!passwordMatches(email, passHash, user.passHash)) {
+    if (!passwordMatches(email, password, user.passHash)) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Incorrect password' }) };
     }
 

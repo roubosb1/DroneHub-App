@@ -13603,11 +13603,12 @@ async function gateLogin(){
   // will work once the token arrives (typically <300ms on the same CDN).
   (async()=>{
     try{
-      const _pHash=user.passHash; // already the stored hash
+      // Send plaintext password (over HTTPS) so the server can verify against
+      // both old and new hash formats regardless of what's stored in Firebase.
       const _authR=await fetch('/.netlify/functions/auth',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email,passHash:_pHash,orgId:ORG_ID})
+        body:JSON.stringify({email,password:pass,orgId:ORG_ID})
       });
       if(_authR.ok){
         const {token}=await _authR.json();
