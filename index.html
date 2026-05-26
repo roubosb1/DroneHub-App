@@ -3208,6 +3208,7 @@ button{font-family:var(--font);}
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(245,200,66,.15);color:#F5C842;font-weight:600">retail</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(232,121,249,.15);color:#E879F9;font-weight:600">events</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,45,85,.15);color:#FF2D55;font-weight:600">sports</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(244,114,182,.15);color:#F472B6;font-weight:600">weddings</span>
         </div>
         <div style="font-size:10px;color:var(--muted);margin-top:7px;font-style:italic">Partial matches and keywords are auto-detected (e.g. "Landscaping", "Architecture", "Restaurant / Bar").</div>
       </div>
@@ -17511,6 +17512,7 @@ const OTHER_TYPES = [
   { id:'retail',      label:'Retail',                       color:'#F5C842' },
   { id:'events',      label:'Events',                       color:'#E879F9' },
   { id:'sports',      label:'Sports',                       color:'#FF2D55' },
+  { id:'weddings',    label:'Weddings',                     color:'#F472B6' },
 ];
 
 // Normalize a freeform type string to the nearest OTHER_TYPES id
@@ -17529,7 +17531,8 @@ function normalizeOtherType(raw){
   if(/interior|designer|builder|renovation|reno/.test(s)) return 'interior';
   if(/restaurant|café|cafe|dining|food|bar\b/.test(s))  return 'restaurants';
   if(/retail|store|shop|boutique/.test(s))              return 'retail';
-  if(/event|entertain|wedding|concert/.test(s))         return 'events';
+  if(/wedding|bridal|bride|groom/.test(s))               return 'weddings';
+  if(/event|entertain|concert/.test(s))                  return 'events';
   if(/sport|rec(reation)?|athlet/.test(s))              return 'sports';
   return raw; // keep original if no match — fall through to unclassified badge style
 }
