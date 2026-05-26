@@ -11966,8 +11966,13 @@ function saveLcChannels(ch){
 
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
 function getLcMessages(channelId){
-  // Each channel has its OWN localStorage key — completely isolated
-  try{return JSON.parse(localStorage.getItem('dronehub_lc_msgs_'+channelId)||'[]');}catch(e){return[];}
+  // Each channel has its OWN localStorage key — completely isolated.
+  // STRICT filter: only return messages explicitly tagged to this channel.
+  // Any message without channelId or with a different channelId is silently dropped.
+  try{
+    const all=JSON.parse(localStorage.getItem('dronehub_lc_msgs_'+channelId)||'[]');
+    return all.filter(m=>m.channelId===channelId);
+  }catch(e){return[];}
 }
 
 function lcResetAllMessages(){
@@ -12000,7 +12005,7 @@ function lcCleanCorruptMessages(){
   // ALWAYS wipe the welcome channel's message store — it renders a static photo, never messages
   localStorage.removeItem('dronehub_lc_msgs_lc_welcome');
   // Assign channelId to any per-channel messages that are missing it (one-time migration)
-  const _cleanKey='dh_lc_channelid_migrated_v3';
+  const _cleanKey='dh_lc_channelid_migrated_v4';
   if(!sessionStorage.getItem(_cleanKey)){
     sessionStorage.setItem(_cleanKey,'1');
     try{
@@ -12009,14 +12014,11 @@ function lcCleanCorruptMessages(){
         if(ch.id==='lc_welcome') return; // welcome has no messages, already wiped above
         const key='dronehub_lc_msgs_'+ch.id;
         const msgs=JSON.parse(localStorage.getItem(key)||'[]');
-        let changed=false;
-        // Remove messages tagged to a different channel, assign channelId to untagged ones
-        const clean=msgs.filter(m=>{
-          if(m.channelId&&m.channelId!==ch.id){changed=true;return false;}
-          if(!m.channelId){m.channelId=ch.id;changed=true;}
-          return true;
-        });
-        if(changed)try{localStorage.setItem(key,JSON.stringify(clean));}catch(e){}
+        // STRICT: only keep messages explicitly tagged to this channel.
+        // Drop untagged messages (they have no provenance and could be from any channel).
+        // Drop messages tagged to a different channel (crossover from old bugs).
+        const clean=msgs.filter(m=>m.channelId===ch.id);
+        if(clean.length!==msgs.length)try{localStorage.setItem(key,JSON.stringify(clean));}catch(e){}
       });
     }catch(e){}
   }
@@ -12300,10 +12302,9 @@ function lcOpenChannel(channelId){
         if(lcActiveChannel!==channelId) return;
         if(fb?.msgs){
           try{
-            // Strict channel isolation: exclude messages explicitly tagged to a different channel
-            const msgs=JSON.parse(fb.msgs).filter(m=>!m.channelId||m.channelId===channelId);
-            // Tag legacy messages with channelId so they won't bleed on next sync
-            msgs.forEach(m=>{if(!m.channelId)m.channelId=channelId;});
+            // Strict channel isolation: ONLY keep messages explicitly tagged to this channel.
+            // No more "legacy" promotion — untagged messages are dropped.
+            const msgs=JSON.parse(fb.msgs).filter(m=>m.channelId===channelId);
             localStorage.setItem('dronehub_lc_msgs_'+channelId,JSON.stringify(msgs));
             lcRenderMessages();
             lcScrollToBottom();
@@ -12328,7 +12329,9 @@ function lcOpenChannel(channelId){
   // Show delete button only for admins
   const delBtn=document.getElementById('lc-delete-channel-btn');
   if(delBtn){const s=gateGetSession();delBtn.style.display=(s?.type==='admin'||s?.role==='admin')?'inline-block':'none';}
-  document.getElementById('lc-empty-state').style.display='none';
+  // lc-empty-state is replaced by innerHTML once any channel renders — always null-safe
+  const _eEl=document.getElementById('lc-empty-state');
+  if(_eEl) _eEl.style.display='none';
   document.getElementById('lc-msg-input').placeholder='Message #'+ch.name+'…';
 
   // Member count badge
