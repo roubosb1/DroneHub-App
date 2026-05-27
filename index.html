@@ -18433,6 +18433,14 @@ function salesLoad(){
   return _salesData || [];
 }
 
+// Ensure _salesData is populated before any write operation.
+// Call with `await salesEnsureLoaded()` at the top of any function that
+// calls salesLoad() and then salesSave() — prevents overwriting Firebase
+// with [] when the page just loaded and Firebase hasn't synced yet.
+async function salesEnsureLoaded(){
+  if(_salesData === null) await salesSyncFirebase();
+}
+
 function salesSave(arr){
   const now = Date.now();
   _salesData = arr;
@@ -18713,10 +18721,11 @@ function salesSelectedIds(){
   return Array.from(document.querySelectorAll('.sales-row-check:checked')).map(cb=>cb.dataset.id);
 }
 
-function salesMoveSelected(){
+async function salesMoveSelected(){
   const ids  = salesSelectedIds();
   const dest = document.getElementById('sales-move-target')?.value;
   if(!dest || !ids.length) return;
+  await salesEnsureLoaded();
   const all  = salesLoad();
   ids.forEach(id=>{ const c = all.find(x=>x.id===id); if(c) c.list = dest; });
   salesSave(all);
@@ -18728,25 +18737,28 @@ function salesMoveSelected(){
   renderSalesTable();
 }
 
-function salesUnsubSelected(){
+async function salesUnsubSelected(){
   const ids = salesSelectedIds();
   if(!ids.length) return;
+  await salesEnsureLoaded();
   const all = salesLoad();
   ids.forEach(id=>{ const c = all.find(x=>x.id===id); if(c) c.unsubscribed = true; });
   salesSave(all);
   renderSalesTable();
 }
 
-function salesDeleteSelected(){
+async function salesDeleteSelected(){
   const ids = salesSelectedIds();
   if(!ids.length) return;
   if(!confirm(`Delete ${ids.length} contact(s)? This cannot be undone.`)) return;
+  await salesEnsureLoaded();
   const all = salesLoad().filter(c=>!ids.includes(c.id));
   salesSave(all);
   renderSalesTable();
 }
 
-function salesToggleUnsub(id){
+async function salesToggleUnsub(id){
+  await salesEnsureLoaded();
   const all = salesLoad();
   const c   = all.find(x=>x.id===id);
   if(!c) return;
@@ -18755,7 +18767,8 @@ function salesToggleUnsub(id){
   renderSalesTable();
 }
 
-function salesToggleDNE(id){
+async function salesToggleDNE(id){
+  await salesEnsureLoaded();
   const all = salesLoad();
   const c   = all.find(x=>x.id===id);
   if(!c) return;
@@ -18764,7 +18777,8 @@ function salesToggleDNE(id){
   renderSalesTable();
 }
 
-function salesToggleClientType(id){
+async function salesToggleClientType(id){
+  await salesEnsureLoaded();
   const all = salesLoad();
   const c   = all.find(x=>x.id===id);
   if(!c) return;
@@ -18774,7 +18788,7 @@ function salesToggleClientType(id){
   renderSalesTable();
 }
 
-function salesQuickMove(id){
+async function salesQuickMove(id){
   const dest = prompt('Move to list:\n1=Real Estate, 2=Resorts, 3=Golf, 4=Other, 5=Warm Leads, 6=Existing Clients\nType the list name:');
   if(!dest) return;
   const map = {'real estate':'realestate','realestate':'realestate','1':'realestate',
@@ -18785,13 +18799,15 @@ function salesQuickMove(id){
     'clients':'clients','existing clients':'clients','6':'clients'};
   const listId = map[dest.trim().toLowerCase()];
   if(!listId){ alert('Unknown list — please try again.'); return; }
+  await salesEnsureLoaded();
   const all = salesLoad();
   const c = all.find(x=>x.id===id);
   if(c){ c.list = listId; salesSave(all); if(listId==='clients'){syncSalesCRMToClient(c);if(typeof renderClients==='function')renderClients();} renderSalesTable(); }
 }
 
-function salesDeleteContact(id){
+async function salesDeleteContact(id){
   if(!confirm('Delete this contact?')) return;
+  await salesEnsureLoaded();
   const all = salesLoad().filter(c=>c.id!==id);
   salesSave(all);
   renderSalesTable();
@@ -18919,10 +18935,11 @@ function closeSalesAddModal(){ document.getElementById('sales-add-modal')?.class
 
 function salesEditContact(id){ openSalesAddModal(id); }
 
-function saveSalesContact(){
+async function saveSalesContact(){
   const email = document.getElementById('sc-email').value.trim();
   const err   = document.getElementById('sc-err');
 
+  await salesEnsureLoaded();
   const all = salesLoad();
 
   if(salesEditingId){
