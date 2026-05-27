@@ -1148,6 +1148,7 @@ button{font-family:var(--font);}
   <div class="card">
     <div class="section-label">Assign contractors</div>
     <div class="svc-row"><span class="svc-name" style="min-width:110px;flex:none">Videographer</span><select id="sel-videographer" onchange="onContractorChange()" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select><span class="svc-price" id="vid-drive-hint" style="min-width:110px;text-align:right"></span></div>
+    <div class="svc-row" style="opacity:.85"><span class="svc-name" style="min-width:110px;flex:none;font-size:13px;color:#A8B4D0">✂️ Video editor</span><select id="sel-video-editor" onchange="editors.video=this.value;calc()" style="flex:1;padding:6px 10px;border:0.5px solid rgba(91,141,239,.4);border-radius:8px;font-size:13px;background:#1C2333;color:#E8ECF8"></select><span style="min-width:110px;text-align:right;font-size:10px;color:#7A8AAA;padding-left:6px">internal — no paystub</span></div>
     <div class="svc-row"><span class="svc-name" style="min-width:110px;flex:none">Photographer</span><select id="sel-photographer" onchange="onContractorChange()" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select><span class="svc-price" id="photo-drive-hint" style="min-width:110px;text-align:right"></span></div>
     <div class="svc-row"><span class="svc-name" style="min-width:110px;flex:none">Floor plan</span><select id="sel-floorplan" onchange="onContractorChange()" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select><span class="svc-price" id="fp-drive-hint" style="min-width:110px;text-align:right"></span></div>
     <div class="note" id="contractor-note" style="margin-top:6px"></div>
@@ -4194,19 +4195,27 @@ function buildVideographerOptions(selectedName){
 }
 
 function buildEditorOptions(selectedName){
-  const editors=getTeamEditors();
-  if(editors.length===0){
+  // Normalise: tracker stores 'DroneHub' or 'dronehub' — treat both as DroneHub
+  const isDronehub=selectedName==='DroneHub'||selectedName==='dronehub';
+  const teamEditors=getTeamEditors();
+  // DroneHub is always the first option (generic pool, Adrian assigns later)
+  const dhOpt=`<option value="DroneHub"${isDronehub?' selected':''}>DroneHub — assign later</option>`;
+  if(teamEditors.length===0){
     // Fall back to legacy if no team members yet
-    return EDITOR_OPTIONS_LEGACY.map(k=>
-      `<option value="${EDITOR_NAMES_LEGACY[k]}"${selectedName===EDITOR_NAMES_LEGACY[k]?' selected':''}>${EDITOR_NAMES_LEGACY[k]}</option>`
-    ).join('');
+    return dhOpt+
+      EDITOR_OPTIONS_LEGACY.filter(k=>k!=='dronehub').map(k=>
+        `<option value="${EDITOR_NAMES_LEGACY[k]}"${!isDronehub&&selectedName===EDITOR_NAMES_LEGACY[k]?' selected':''}>${EDITOR_NAMES_LEGACY[k]}</option>`
+      ).join('');
   }
   return '<option value="">— Unassigned —</option>'+
-    editors.map(e=>`<option value="${e.name}"${selectedName===e.name?' selected':''}>${e.name}${e.role?' ('+e.role+')':''}</option>`).join('');
+    dhOpt+
+    teamEditors.map(e=>`<option value="${e.name}"${!isDronehub&&selectedName===e.name?' selected':''}>${e.name}${e.role?' ('+e.role+')':''}</option>`).join('');
 }
 
 // Editor assignments per service (set in cost model)
-const editors={video:'',photo:'',extvideo:'',extphoto:'',randomvideo:'',randomphoto:'',rush:'',custom:''};
+// Default video/photo editor to 'dronehub' so jobs go to the DroneHub pool
+// until Adrian assigns a real editor in the project tracker.
+const editors={video:'dronehub',photo:'dronehub',extvideo:'',extphoto:'',randomvideo:'',randomphoto:'',rush:'',custom:''};
 
 // Saved jobs stored in memory (persists during session)
 
@@ -4915,10 +4924,10 @@ function renderCostModel(grand,driveCost,lines){
     const vidShootName=ds.vidKey?cName(ds.vidKey):'(no videographer selected)';
     addPayout(vidShootKey,vidShootName,{label:'Video shoot',fee:videoShooterFee});
     if(ds.vidKey) payouts[vidShootKey].driveFee+=vidDriveReimb;
-    // Edit fee goes ONLY to the assigned editor — never falls back to the shooter
-    const vidEdKey=editors.video||'__unassigned_editor__';
-    const vidEdName=editors.video?cName(editors.video):'(no editor assigned)';
-    addEdit(vidEdKey,vidEdName,{label:'Video editing (40%)',fee:videoEditorFee});
+    // Editor is tracked for scheduling but NOT paid via per-job paystub — salaried/hourly
+    const vidEdName=editors.video?cName(editors.video):'(to be assigned)';
+    payouts[vidShootKey]._vidEditorName=vidEdName;
+    payouts[vidShootKey]._vidEditBudget=videoEditorFee;
   }
   if(svc.photo){
     // Show photo costs even if no photographer assigned yet
@@ -4926,10 +4935,10 @@ function renderCostModel(grand,driveCost,lines){
     const phoShootName=phoShootKey==='__unassigned_photo__'?'(no photographer selected)':cName(phoShootKey);
     addPayout(phoShootKey,phoShootName,{label:'Photo shoot',fee:photoShooterFee});
     if(ds.phoKey&&!ds.sameShooter) payouts[phoShootKey].driveFee+=phoDriveReimb;
-    // Edit fee goes ONLY to the assigned photo editor — never falls back to the shooter
-    const phoEdKey=editors.photo||'__unassigned_editor__';
-    const phoEdName=editors.photo?cName(editors.photo):'(no editor assigned)';
-    addEdit(phoEdKey,phoEdName,{label:'Photo editing (40%)',fee:photoEditorFee});
+    // Photo editing is also internal cost — no per-job paystub
+    const phoEdName=editors.photo?cName(editors.photo):'(to be assigned)';
+    payouts[phoShootKey]._phoEditorName=phoEdName;
+    payouts[phoShootKey]._phoEditBudget=photoEditorFee;
   }
 
   const FLOORPLAN_PAYOUT=30, EXTERIOR_PAYOUT=150;
@@ -5101,10 +5110,29 @@ function renderCostModel(grand,driveCost,lines){
     const shootTotal=p.lines.reduce((s,l)=>s+l.fee,0);
     const driveTotal=p.driveFee||0;
     const invoiceTotal=shootTotal+driveTotal;
+    // editLines here are only hourly/random edits — core video/photo editing is internal (no paystub)
     const editTotal=p.editLines.reduce((s,l)=>s+l.fee,0);
-    totalPaidOut+=invoiceTotal+editTotal;
+    totalPaidOut+=invoiceTotal+editTotal; // edit budget for core video/photo is NOT included (salaried/hourly)
 
     if(invoiceTotal>0){
+      // Build editor info sections for video/photo (shown as internal cost, not a paystub)
+      const vidEditorSection=p._vidEditorName?`
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.1)">
+          <div style="font-size:10px;font-weight:700;color:#7A8AAA;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">✂️ Video editing (internal — no paystub)</div>
+          <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
+            <span style="color:#A8B4D0">${p._vidEditorName}</span>
+            <span style="color:#7A8AAA;font-size:11px">paid separately · ${fmt(p._vidEditBudget)} budget</span>
+          </div>
+        </div>`:'';
+      const phoEditorSection=p._phoEditorName?`
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.1)">
+          <div style="font-size:10px;font-weight:700;color:#7A8AAA;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">✂️ Photo editing (internal — no paystub)</div>
+          <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
+            <span style="color:#A8B4D0">${p._phoEditorName}</span>
+            <span style="color:#7A8AAA;font-size:11px">paid separately · ${fmt(p._phoEditBudget)} budget</span>
+          </div>
+        </div>`:'';
+
       cardsHtml+=`<div class="metric" style="border:1.5px solid #E1F5EE;grid-column:span 2">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
           <div style="font-size:13px;font-weight:600">${p.name}</div>
@@ -5125,10 +5153,12 @@ function renderCostModel(grand,driveCost,lines){
             <span>Drive reimbursement</span><span style="font-weight:500">${fmt(driveTotal)}</span>
           </div>`:''}
           ${driveTotal===0&&p.lines.every(l=>!flatFeeLabels.some(f=>l.label.startsWith(f)))?`<div style="font-size:10px;color:#7A8AAA;padding-top:2px">Within free zone — no drive charge</div>`:''}
+          ${vidEditorSection}${phoEditorSection}
         </div>
       </div>`;
     }
 
+    // Edit cards (hourly/random shoots only — core video/photo editing is internal)
     if(editTotal>0){
       cardsHtml+=`<div class="metric" style="border:1.5px solid #E6F1FB;grid-column:span 2">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
@@ -5155,6 +5185,20 @@ function renderCostModel(grand,driveCost,lines){
 }
 
 // ─── CONTRACTOR DROPDOWNS (dynamic) ─────────────────────────────────────────
+function populateVideoEditorDropdown(){
+  const edSel=document.getElementById('sel-video-editor');
+  if(!edSel) return;
+  const prev=edSel.value||editors.video||'dronehub';
+  // Always lead with DroneHub, then all team editors
+  edSel.innerHTML=
+    `<option value="dronehub">DroneHub — assign later in tracker</option>`+
+    buildEditorOptions(prev).replace(/<option value="">.*?<\/option>/,''); // strip blank unassigned
+  // Restore previous selection
+  if(prev&&edSel.querySelector(`option[value="${prev}"]`)) edSel.value=prev;
+  else edSel.value='dronehub';
+  editors.video=edSel.value;
+}
+
 function populateContractorDropdowns(){
   const vidSel=document.getElementById('sel-videographer');
   const phoSel=document.getElementById('sel-photographer');
@@ -5173,6 +5217,7 @@ function populateContractorDropdowns(){
   if(prevVid&&vidSel.querySelector(`option[value="${prevVid}"]`)) vidSel.value=prevVid;
   if(prevPho&&phoSel.querySelector(`option[value="${prevPho}"]`)) phoSel.value=prevPho;
   if(prevFp&&fpSel.querySelector(`option[value="${prevFp}"]`)) fpSel.value=prevFp;
+  populateVideoEditorDropdown();
   renderEditorSelectors();
 }
 
@@ -8325,8 +8370,9 @@ function renderEditorSelectors(){
       <div class="svc-row" style="padding:5px 0">
         <span class="svc-name" style="min-width:160px;flex:none;font-size:12px">${s.label}</span>
         <select id="ed-${s.key}" onchange="editors['${s.key}']=this.value;calc()" style="flex:1;padding:5px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+          <option value="dronehub"${'dronehub'===editors[s.key]?' selected':''}>DroneHub — assign later in tracker</option>
           <option value="">— Same as shooter —</option>
-          ${EDITOR_OPTIONS.map(k=>`<option value="${k}"${editors[k]===k||editors[s.key]===k?' selected':''}>${EDITOR_NAMES[k]}</option>`).join('')}
+          ${EDITOR_OPTIONS.filter(k=>k!=='dronehub').map(k=>`<option value="${k}"${editors[s.key]===k?' selected':''}>${EDITOR_NAMES[k]}</option>`).join('')}
         </select>
       </div>`).join('')
     : '<div style="font-size:12px;color:#7A8AAA">No services selected yet.</div>';
@@ -8454,11 +8500,13 @@ function saveJob(){
   saveJobsToStorage();
 
   // ── AUTO-POPULATE TRACKER STAGE ──────────────────────────────────────────
-  // Find the videographer (shooter) and editor from payouts
+  // Find the videographer (shooter) from payouts
   const shooterEntry=Object.values(payoutSnapshot).find(p=>p.entries?.some(e=>e.role?.includes('shoot')));
-  const editorEntry=Object.values(payoutSnapshot).find(p=>p.entries?.some(e=>e.role?.includes('editing')));
   const videographerName=shooterEntry?.name||'';
-  const editorName=editorEntry?.name||videographerName;
+  // Editor comes from the editors object directly (no per-job paystub — salaried/hourly)
+  const _vidEdKey=isUS?'':editors.video;
+  const cNameSnapshot=k=>CONTRACTORS[k]?.name||EDITOR_NAMES[k]||k||'';
+  const editorName=_vidEdKey?cNameSnapshot(_vidEdKey):'';
 
   setTrackerStage(job.id,{
     stage:'ready',
@@ -8582,6 +8630,12 @@ function saveJob(){
   refreshPayrollPeriods();
   renderJobs();
   renderTracker();
+  // Reset editors back to DroneHub default so the next quote starts clean
+  editors.video='dronehub'; editors.photo='dronehub';
+  editors.extvideo=''; editors.extphoto=''; editors.randomvideo=''; editors.randomphoto=''; editors.rush=''; editors.custom='';
+  const _postSaveEdSel=document.getElementById('sel-video-editor');
+  if(_postSaveEdSel) _postSaveEdSel.value='dronehub';
+  renderEditorSelectors();
 }
 
 function buildPayoutSnapshot(lines,ds){
@@ -8603,10 +8657,9 @@ function buildPayoutSnapshot(lines,ds){
     });
     const vRev=vGrossedBase*(1-MARGIN);
     const shooterFee=vRev*0.600;
-    const editorFee=vRev*0.400;
     addContractor(ds.vidKey,'Video shoot',shooterFee,0,ds.vidDrive.contractorCharge||0,0,'');
-    const edKey=editors.video||'__unassigned_editor__';
-    addContractor(edKey,'Video editing',0,editorFee,0,0,'');
+    // Video editing is an internal cost (salaried/hourly) — no per-job paystub entry
+    // Editor is stored on job.editors.video for tracker tracking only
   }
   // Photo
   if(svc.photo&&ds.phoKey){
@@ -8617,11 +8670,9 @@ function buildPayoutSnapshot(lines,ds){
     });
     const pRev=pGrossedBase;
     const shooterFee=pRev*0.600;
-    const editorFee=pRev*0.400;
     const pKey=ds.sameShooter?ds.vidKey:ds.phoKey;
     addContractor(pKey,'Photo shoot',shooterFee,0,ds.sameShooter?0:ds.phoDrive.contractorCharge||0,0,'');
-    const pedKey=editors.photo||'__unassigned_editor__';
-    addContractor(pedKey,'Photo editing',0,editorFee,0,0,'');
+    // Photo editing is also internal cost — no per-job paystub entry
   }
   // Random video
   if(svc.randomvideo&&ds.vidKey){
@@ -8646,7 +8697,7 @@ function buildPayoutSnapshot(lines,ds){
 }
 
 function updateJobStatus(id,newStatus){
-  const job=savedJobs.find(j=>j.id===id);
+  const job=savedJobs.find(j=>String(j.id)===String(id));
   if(!job) return;
   job.status=newStatus;
   saveJobsToStorage();
@@ -9381,7 +9432,7 @@ function closeEditJob(){
 }
 
 function recalcEdit(){
-  const job=savedJobs.find(j=>j.id===editingJobId);
+  const job=savedJobs.find(j=>String(j.id)===String(editingJobId));
   if(!job) return;
 
   const sqft=job.sqft||0;
@@ -9443,7 +9494,7 @@ function recalcEdit(){
 }
 
 function saveEditJob(){
-  const job=savedJobs.find(j=>j.id===editingJobId);
+  const job=savedJobs.find(j=>String(j.id)===String(editingJobId));
   if(!job) return;
 
   const s={};
@@ -11371,43 +11422,74 @@ function cpViewInvoice(jobId){
   const bname=biz.name||'DroneHub Media';
   const fmtC=n=>(job.currency||'CAD').toUpperCase()+' $'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  // ── Build line items (same logic as openInvoice) ───────────────────────────
+  // ── Build line items ──────────────────────────────────────────────────────
+  const _isUsdPortalInv=(job.currency||'cad').toLowerCase()==='usd';
   const svcs=job.services||{};
   const hrs=job.hours||{};
   const sqft=job.sqft||0;
   const driveCost=job.driveCost||0;
   const lines=[];
-  let vidDriveBaked=0,phoDriveBaked=0;
-  if(driveCost>0){
-    const hasVid=svcs.video||svcs.randomvideo,hasPho=svcs.photo||svcs.randomphoto;
-    if(hasVid&&hasPho){vidDriveBaked=driveCost*0.6;phoDriveBaked=driveCost*0.4;}
-    else if(hasVid) vidDriveBaked=driveCost;
-    else if(hasPho) phoDriveBaked=driveCost;
-  }
-  if(svcs.video&&svcs.photo){
-    const vt=Math.ceil(baseVideoRate(sqft)/(1-MARGIN))+Math.ceil(vidDriveBaked);
-    const pt=photoBase(sqft,true)+Math.ceil(phoDriveBaked);
-    lines.push({desc:'Video production',qty:1,unit:vt,total:vt});
-    lines.push({desc:'Photography',qty:1,unit:pt,total:pt});
+
+  if(_isUsdPortalInv){
+    // US market jobs — build lines from usData
+    const ud=job.usData||{};
+    const p=US_MARKET_PRICING[ud.market]||US_MARKET_PRICING['other_us'];
+    const tierLabels={under4k:'Under 4,000 sqft',over4k:'4,000–8,000 sqft',over8k:'Over 8,000 sqft'};
+    const socialLabels={r1:'1 Reel',r2:'2 Reels',r3:'3 Reels',r5:'5 Reels',fullDay:'Full Day Social'};
+    if(ud.pkgType==='listing'&&ud.listingTier){
+      const basePrice=p.listing[ud.listingTier]||job.grand;
+      lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier}`,qty:1,unit:basePrice,total:basePrice});
+      if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
+      if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
+      if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
+      if(ud.offSeason&&p.offSeasonDiscount) lines.push({desc:'Off-season discount',qty:1,unit:-p.offSeasonDiscount,total:-p.offSeasonDiscount});
+    } else if(ud.pkgType==='social'&&ud.socialTier){
+      const basePrice=p.social[ud.socialTier]||job.grand;
+      lines.push({desc:`Social Media Package — ${socialLabels[ud.socialTier]||ud.socialTier}`,qty:1,unit:basePrice,total:basePrice});
+      if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
+    } else if(ud.pkgType==='agent'){
+      const basePrice=p.agentPromo||job.grand;
+      lines.push({desc:'Agent Promo Package',qty:1,unit:basePrice,total:basePrice});
+    } else if(ud.pkgType==='day'){
+      const dayPrice=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
+      lines.push({desc:`${ud.dayType==='half'?'Half':'Full'} Day Rate`,qty:1,unit:dayPrice,total:dayPrice});
+      if((ud.reelCount||0)>0) lines.push({desc:'Social Reels',qty:ud.reelCount,unit:US_SOCIAL_DAY.reelRate,total:ud.reelCount*US_SOCIAL_DAY.reelRate});
+    } else {
+      if(job.grand>0) lines.push({desc:'Media Package',qty:1,unit:job.grand,total:job.grand});
+    }
   } else {
-    if(svcs.video){const vt=Math.ceil(baseVideoRate(sqft)/(1-MARGIN))+Math.ceil(vidDriveBaked);lines.push({desc:'Video production',qty:1,unit:vt,total:vt});}
-    if(svcs.photo){const pt=photoBase(sqft,false)+Math.ceil(phoDriveBaked);lines.push({desc:'Photography',qty:1,unit:pt,total:pt});}
+    // Canada jobs — build from services
+    let vidDriveBaked=0,phoDriveBaked=0;
+    if(driveCost>0){
+      const hasVid=svcs.video||svcs.randomvideo,hasPho=svcs.photo||svcs.randomphoto;
+      if(hasVid&&hasPho){vidDriveBaked=driveCost*0.6;phoDriveBaked=driveCost*0.4;}
+      else if(hasVid) vidDriveBaked=driveCost;
+      else if(hasPho) phoDriveBaked=driveCost;
+    }
+    if(svcs.video&&svcs.photo){
+      const vt=Math.ceil(baseVideoRate(sqft)/(1-MARGIN))+Math.ceil(vidDriveBaked);
+      const pt=photoBase(sqft,true)+Math.ceil(phoDriveBaked);
+      lines.push({desc:'Video production',qty:1,unit:vt,total:vt});
+      lines.push({desc:'Photography',qty:1,unit:pt,total:pt});
+    } else {
+      if(svcs.video){const vt=Math.ceil(baseVideoRate(sqft)/(1-MARGIN))+Math.ceil(vidDriveBaked);lines.push({desc:'Video production',qty:1,unit:vt,total:vt});}
+      if(svcs.photo){const pt=photoBase(sqft,false)+Math.ceil(phoDriveBaked);lines.push({desc:'Photography',qty:1,unit:pt,total:pt});}
+    }
+    if(svcs.tvideo&&svcs.tphoto) lines.push({desc:'Twilight session — video & photography',qty:1,unit:TWILIGHT_BOTH,total:TWILIGHT_BOTH});
+    else if(svcs.tvideo) lines.push({desc:'Twilight video session',qty:1,unit:TWILIGHT_VIDEO,total:TWILIGHT_VIDEO});
+    else if(svcs.tphoto) lines.push({desc:'Twilight photography session',qty:1,unit:TWILIGHT_PHOTO,total:TWILIGHT_PHOTO});
+    if(svcs.reel){const q=hrs.reel||1;lines.push({desc:'Social media reels',qty:q,unit:150,total:150*q});}
+    if(svcs.extvideo) lines.push({desc:'Exterior video shoot',qty:1,unit:150,total:150});
+    if(svcs.extphoto) lines.push({desc:'Exterior photo shoot',qty:1,unit:150,total:150});
+    if(svcs.floorplan) lines.push({desc:'Floor plan',qty:1,unit:150,total:150});
+    if(svcs.randomvideo){const h=hrs.randomvideo||1;const u=RANDOM_VIDEO_RATE_CLIENT+(Math.ceil(vidDriveBaked)/h);lines.push({desc:'Video production (hourly)',qty:h,unit:Math.ceil(u),total:Math.ceil(u)*h});}
+    if(svcs.randomphoto){const h=hrs.randomphoto||1;const u=RANDOM_PHOTO_RATE_CLIENT+(Math.ceil(phoDriveBaked)/h);lines.push({desc:'Photography (hourly)',qty:h,unit:Math.ceil(u),total:Math.ceil(u)*h});}
+    if(svcs.rush) lines.push({desc:'Rush order',qty:1,unit:RUSH_FEE,total:RUSH_FEE});
+    if(svcs.custom&&job.customPrice>0) lines.push({desc:job.customDesc||'Custom service',qty:1,unit:job.customPrice,total:job.customPrice});
+    (job.extraServices||[]).forEach(xs=>{if(xs.clientPrice>0) lines.push({desc:xs.name,qty:1,unit:xs.clientPrice,total:xs.clientPrice});});
   }
-  if(svcs.tvideo&&svcs.tphoto) lines.push({desc:'Twilight session — video & photography',qty:1,unit:TWILIGHT_BOTH,total:TWILIGHT_BOTH});
-  else if(svcs.tvideo) lines.push({desc:'Twilight video session',qty:1,unit:TWILIGHT_VIDEO,total:TWILIGHT_VIDEO});
-  else if(svcs.tphoto) lines.push({desc:'Twilight photography session',qty:1,unit:TWILIGHT_PHOTO,total:TWILIGHT_PHOTO});
-  if(svcs.reel){const q=hrs.reel||1;lines.push({desc:'Social media reels',qty:q,unit:150,total:150*q});}
-  if(svcs.extvideo) lines.push({desc:'Exterior video shoot',qty:1,unit:150,total:150});
-  if(svcs.extphoto) lines.push({desc:'Exterior photo shoot',qty:1,unit:150,total:150});
-  if(svcs.floorplan) lines.push({desc:'Floor plan',qty:1,unit:150,total:150});
-  if(svcs.randomvideo){const h=hrs.randomvideo||1;const u=RANDOM_VIDEO_RATE_CLIENT+(Math.ceil(vidDriveBaked)/h);lines.push({desc:'Video production (hourly)',qty:h,unit:Math.ceil(u),total:Math.ceil(u)*h});}
-  if(svcs.randomphoto){const h=hrs.randomphoto||1;const u=RANDOM_PHOTO_RATE_CLIENT+(Math.ceil(phoDriveBaked)/h);lines.push({desc:'Photography (hourly)',qty:h,unit:Math.ceil(u),total:Math.ceil(u)*h});}
-  if(svcs.rush) lines.push({desc:'Rush order',qty:1,unit:RUSH_FEE,total:RUSH_FEE});
-  if(svcs.custom&&job.customPrice>0) lines.push({desc:job.customDesc||'Custom service',qty:1,unit:job.customPrice,total:job.customPrice});
-  (job.extraServices||[]).forEach(xs=>{if(xs.clientPrice>0) lines.push({desc:xs.name,qty:1,unit:xs.clientPrice,total:xs.clientPrice});});
 
   // Fallback: if no lines built (old job format), derive from grand total
-  const _isUsdPortalInv=(job.currency||'cad').toLowerCase()==='usd';
   const subtotal=lines.length?lines.reduce((s,l)=>s+l.total,0):(_isUsdPortalInv?job.grand:Math.round(job.grand/1.13));
   const hst=_isUsdPortalInv?0:(lines.length?parseFloat((subtotal*0.13).toFixed(2)):job.grand-subtotal);
   const grandTotal=subtotal+hst;
@@ -12026,38 +12108,9 @@ function openInvoiceJob(jobId){
   const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
 
-  // Restore contractors from payout names
-  const nameToKey=name=>Object.entries(CONTRACTORS).find(([k,c])=>c.name===name)?.[0]||'';
-  if(job.payouts){
-    const vidEntry=Object.entries(job.payouts).find(([k,p])=>(p.lines||[]).some(l=>(l.label||'').includes('Video')));
-    const phoEntry=Object.entries(job.payouts).find(([k,p])=>(p.lines||[]).some(l=>(l.label||'').includes('Photo')));
-    const fpEntry=Object.entries(job.payouts).find(([k,p])=>(p.lines||[]).some(l=>(l.label||'').includes('Floor')));
-    const vk=vidEntry?nameToKey(vidEntry[1].name):'';
-    const pk=phoEntry?nameToKey(phoEntry[1].name):'';
-    const fk=fpEntry?nameToKey(fpEntry[1].name):'';
-    if(vk){const s=document.getElementById('sel-videographer');if(s)s.value=vk;}
-    if(pk){const s=document.getElementById('sel-photographer');if(s)s.value=pk;}
-    if(fk){const s=document.getElementById('sel-floorplan');if(s)s.value=fk;}
-  }
+  const isUSJob = job.market && job.market !== 'canada';
 
-  // Restore sqft
-  const sqftSlider=document.getElementById('sqftSlider');
-  if(sqftSlider&&job.sqft){sqftSlider.value=job.sqft;const sv=document.getElementById('sqftVal');if(sv)sv.textContent=Number(job.sqft).toLocaleString()+' sqft';}
-
-  // Restore services
-  const svcs=job.services||{};const hrs=job.hours||{};
-  Object.keys(svc).forEach(k=>{svc[k]=!!svcs[k];});
-  Object.keys(qty).forEach(k=>{qty[k]=hrs[k]||1;});
-  const togMap={video:'tog-video',photo:'tog-photo',tvideo:'tog-tvideo',tphoto:'tog-tphoto',
-    reel:'tog-reel',extphoto:'tog-extphoto',extvideo:'tog-extvideo',
-    floorplan:'tog-floorplan',randomvideo:'tog-randomvideo',randomphoto:'tog-randomphoto',
-    rush:'tog-rush',custom:'tog-custom'};
-  Object.entries(togMap).forEach(([k,id])=>{
-    const btn=document.getElementById(id);
-    if(btn){btn.classList.toggle('on',!!svc[k]);btn.textContent=svc[k]?'On':'Add';}
-  });
-
-  // Restore client
+  // ── Restore client ──────────────────────────────────────────────────────────
   if(job.clientId){
     selectedClientId=job.clientId;
     const c=clients.find(c=>c.id===job.clientId);
@@ -12069,36 +12122,114 @@ function openInvoiceJob(jobId){
     }
   }
 
-  // Restore job fields
+  // ── Restore shared job fields ───────────────────────────────────────────────
   const fields={
     'job-name-input':job.name,'job-date-input':job.date,
     'job-time-input':job.shootTime,'job-duration-input':job.duration,
-    'job-notes-input':job.notes,'job-currency-input':job.currency||'cad'
+    'job-notes-input':job.notes,'job-currency-input':job.currency||(isUSJob?'usd':'cad')
   };
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val!=null)el.value=val;});
 
-  // Restore address
+  // ── Restore address ─────────────────────────────────────────────────────────
   if(job.address&&job.address!=='(no address)'){
     propAddrText=job.address;
     const ad=document.getElementById('propAddrDisplay');if(ad)ad.textContent=job.address;
   }
 
-  // Restore editors
+  // ── Restore market selector ─────────────────────────────────────────────────
+  const mktSel=document.getElementById('job-market-input');
+  if(mktSel) mktSel.value=job.market||'canada';
+
+  // ── Restore editors ─────────────────────────────────────────────────────────
   if(job.editors) Object.entries(job.editors).forEach(([k,v])=>{editors[k]=v||'';});
+  const _edSel=document.getElementById('sel-video-editor');
+  if(_edSel){
+    const _edVal=editors.video||'dronehub';
+    if(!_edSel.querySelector(`option[value="${_edVal}"]`)) populateVideoEditorDropdown();
+    _edSel.value=_edVal;
+    editors.video=_edVal;
+  }
 
-  onContractorChange();calc();
+  if(isUSJob){
+    // ── US market job: restore usQuoteState from job.usData ──────────────────
+    const ud=job.usData||{};
+    usQuoteState.market      = job.market;
+    usQuoteState.pkgType     = ud.pkgType     || 'listing';
+    usQuoteState.listingTier = ud.listingTier || null;
+    usQuoteState.socialTier  = ud.socialTier  || null;
+    usQuoteState.dayType     = ud.dayType     || null;
+    usQuoteState.reelCount   = ud.reelCount   || 0;
+    usQuoteState.reelsTBD    = ud.reelsTBD    || false;
+    usQuoteState.offSeason   = ud.offSeason   || false;
+    usQuoteState.addons      = Object.assign({sunrise:false,photoHDR:false,photoFlash:false}, ud.addons||{});
 
-  // Navigate to Quote Builder
+    // Sync DOM checkboxes so calcUS() reads correct values
+    const sunEl=document.getElementById('us-addon-sunrise');
+    const hdrEl=document.getElementById('us-addon-photoHDR');
+    const flEl =document.getElementById('us-addon-photoFlash');
+    const osEl =document.getElementById('us-offseason-check');
+    if(sunEl) sunEl.checked = !!usQuoteState.addons.sunrise;
+    if(hdrEl) hdrEl.checked = !!usQuoteState.addons.photoHDR;
+    if(flEl)  flEl.checked  = !!usQuoteState.addons.photoFlash;
+    if(osEl)  osEl.checked  = !!usQuoteState.offSeason;
+
+    // Sync reel count display
+    const rcEl=document.getElementById('us-reel-count-display');
+    if(rcEl) rcEl.textContent=usQuoteState.reelCount||0;
+
+    // Switch to US panels and render
+    onMarketChange(job.market);
+    onContractorChange();
+
+  } else {
+    // ── Canada job: restore contractors from payout names ────────────────────
+    const nameToKey=name=>Object.entries(CONTRACTORS).find(([k,c])=>c.name===name)?.[0]||'';
+    if(job.payouts){
+      const vidEntry=Object.entries(job.payouts).find(([k,p])=>(p.lines||[]).some(l=>(l.label||'').includes('Video')));
+      const phoEntry=Object.entries(job.payouts).find(([k,p])=>(p.lines||[]).some(l=>(l.label||'').includes('Photo')));
+      const fpEntry=Object.entries(job.payouts).find(([k,p])=>(p.lines||[]).some(l=>(l.label||'').includes('Floor')));
+      const vk=vidEntry?nameToKey(vidEntry[1].name):'';
+      const pk=phoEntry?nameToKey(phoEntry[1].name):'';
+      const fk=fpEntry?nameToKey(fpEntry[1].name):'';
+      if(vk){const s=document.getElementById('sel-videographer');if(s)s.value=vk;}
+      if(pk){const s=document.getElementById('sel-photographer');if(s)s.value=pk;}
+      if(fk){const s=document.getElementById('sel-floorplan');if(s)s.value=fk;}
+    }
+
+    // Restore sqft
+    const sqftSlider=document.getElementById('sqftSlider');
+    if(sqftSlider&&job.sqft){sqftSlider.value=job.sqft;const sv=document.getElementById('sqftVal');if(sv)sv.textContent=Number(job.sqft).toLocaleString()+' sqft';}
+
+    // Restore services
+    const svcs=job.services||{};const hrs=job.hours||{};
+    Object.keys(svc).forEach(k=>{svc[k]=!!svcs[k];});
+    Object.keys(qty).forEach(k=>{qty[k]=hrs[k]||1;});
+    const togMap={video:'tog-video',photo:'tog-photo',tvideo:'tog-tvideo',tphoto:'tog-tphoto',
+      reel:'tog-reel',extphoto:'tog-extphoto',extvideo:'tog-extvideo',
+      floorplan:'tog-floorplan',randomvideo:'tog-randomvideo',randomphoto:'tog-randomphoto',
+      rush:'tog-rush',custom:'tog-custom'};
+    Object.entries(togMap).forEach(([k,id])=>{
+      const btn=document.getElementById(id);
+      if(btn){btn.classList.toggle('on',!!svc[k]);btn.textContent=svc[k]?'On':'Add';}
+    });
+
+    // Make sure Canada panels are visible
+    onMarketChange('canada');
+    onContractorChange();calc();
+  }
+
+  // ── Navigate to Quote Builder ───────────────────────────────────────────────
   document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',i===0);});
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('pane-quote')?.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
 
+  const toastMarket=isUSJob?'US — '+job.market:'Canada';
   const toast=document.createElement('div');
   toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#242D42;border:1px solid #5B8DEF;color:#E8ECF8;padding:10px 22px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4);white-space:nowrap';
-  toast.textContent='✓ "'+job.name+'" loaded — switch to Cost Model to see full breakdown';
+  toast.textContent='✏ "'+job.name+'" loaded ('+toastMarket+') — edit and save to update';
   document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(),4000);
+  setTimeout(()=>toast.remove(),5000);
 }
 
 
@@ -16493,12 +16624,15 @@ function renderTracker(){
     const client=clients.find(c=>c.id===j.clientId);
     const pid=ts.projectId||getProjectId(j);
     const videographer=ts.videographer||getJobCreator(j)||'TBD';
-    const editor=ts.claimedBy||'ASSIGN';
+    const _rawEditor=ts.claimedBy||'';
+    const _isDhEditor=_rawEditor==='DroneHub'||_rawEditor==='dronehub';
+    const editor=_rawEditor||'ASSIGN';
     const editStatus=ts.editStatus||'ready';
     const ss=STATUS_STYLES[editStatus]||STATUS_STYLES.ready;
     const isRush=ts.rush||false;
     const rowBg=isRush?'rgba(240,82,82,.06)':idx%2===0?'rgba(255,255,255,.02)':'transparent';
     const rushBadge=isRush?'<span style="background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px">🚨 RUSH</span>':'';
+    const dhEditorBadge=_isDhEditor?'<span style="background:rgba(240,82,82,.18);color:#FF7070;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px;border:1px solid rgba(240,82,82,.3)">⚠ ASSIGN</span>':'';
     const filmHrs=ts.approxFilmHours||j.duration||'';
     const editHrs=ts.approxEditHours||'';
     const dueDate=ts.completionDate||'';
@@ -16534,7 +16668,7 @@ function renderTracker(){
           :'<span style="font-size:16px;color:var(--border-bright)">☐</span>'}
       </td>
       <td style="padding:8px 10px;text-align:center">
-        <span style="background:${vidColor(editor)};color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">${editor}</span>
+        <span style="background:${_isDhEditor?'rgba(240,82,82,.2)':vidColor(editor)};color:${_isDhEditor?'#FF7070':'#fff'};border:${_isDhEditor?'1px solid rgba(240,82,82,.4)':'none'};padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">${_isDhEditor?'DroneHub':editor}</span>${dhEditorBadge}
       </td>
       <td style="padding:8px 10px;text-align:center">
         <span style="background:${ss.bg};color:${ss.color};border:1px solid ${ss.color}44;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap">${ss.label}</span>${draftCharge}
@@ -16618,8 +16752,8 @@ function openTrackerModal(jobId){
         <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Team assignment</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
           <div>
-            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Assigned editor</label>
-            <select id="tm-assigned" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${contractorOpts}</select>
+            <label style="font-size:10px;font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;color:${(ts.claimedBy==='DroneHub'||ts.claimedBy==='dronehub'||!ts.claimedBy)?'#FF7070':'var(--muted)'}">Assigned editor ${(ts.claimedBy==='DroneHub'||ts.claimedBy==='dronehub'||!ts.claimedBy)?'⚠ needs assignment':''}</label>
+            <select id="tm-assigned" style="width:100%;padding:6px 8px;border:1px solid ${(ts.claimedBy==='DroneHub'||ts.claimedBy==='dronehub'||!ts.claimedBy)?'rgba(240,82,82,.5)':'var(--border-bright)'};border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${contractorOpts}</select>
           </div>
           <div>
             <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Videographer</label>
@@ -17736,27 +17870,31 @@ function tpClaimProject(jobId){
     setTrackerStage(jobId,{...ts,videographer:member.name,stage:'in_progress',claimedAt:new Date().toISOString().slice(0,10)});
   }
 
-  // Find the job and update payouts so paystub auto-generates
-  const j=savedJobs.find(jb=>String(jb.id)===jobId);
+  // Find the job and update payouts — shooters get an auto-entry; editors do NOT
+  // (editors are paid salary/hourly, not per-job percentage — paystub is created
+  //  later when actual hours are logged in the tracker modal)
+  const j=savedJobs.find(jb=>String(jb.id)===String(jobId));
   if(j){
-    // Update job payouts to include this person
     if(!j.payouts) j.payouts={};
-    const existingEntry=Object.values(j.payouts).find(p=>p.name===member.name);
-    if(!existingEntry){
-      // Recalculate payout for this person based on their role
-      const pool=j.grand*0.5;
-      const newPayout={
-        name:member.name,
-        entries:[{
-          role:isEditor?'Video editing':'Video shoot',
-          shootFee:isEditor?0:Math.round(pool*0.600),
-          editFee:isEditor?Math.round(pool*0.400):0,
-          driveFee:0,miscFee:0
-        }]
-      };
-      j.payouts[member.name]=newPayout;
-      saveJobsToStorage();
+    if(!isEditor){
+      // Only auto-create payout for shooters
+      const existingEntry=Object.values(j.payouts).find(p=>p.name===member.name);
+      if(!existingEntry){
+        const pool=j.grand*0.5;
+        const newPayout={
+          name:member.name,
+          entries:[{
+            role:'Video shoot',
+            shootFee:Math.round(pool*0.600),
+            editFee:0,
+            driveFee:0,miscFee:0
+          }]
+        };
+        j.payouts[member.name]=newPayout;
+        saveJobsToStorage();
+      }
     }
+    // If isEditor: no auto-payout — log hours in tracker to generate pay
 
     // Notify admin via LouChat #projects
     const channels=getLcChannels();
@@ -17764,7 +17902,7 @@ function tpClaimProject(jobId){
     if(projectsCh){
       saveLcMessage(projectsCh.id,{
         id:Date.now(),author:'DroneHub System',
-        text:`🎯 **${member.name}** has claimed a project as ${isEditor?'✂️ Editor':'🎬 Shooter'}\n📍 **${j.name}**\n🗓 ${j.date}${j.shootTime?' at '+j.shootTime:''}\nPayroll entry created automatically.`,
+        text:`🎯 **${member.name}** has claimed a project as ${isEditor?'✂️ Editor':'🎬 Shooter'}\n📍 **${j.name}**\n🗓 ${j.date}${j.shootTime?' at '+j.shootTime:''}\n${isEditor?'⏱ Log editing hours in the tracker to generate pay.':'Payroll entry created automatically.'}`,
         ts:new Date().toISOString(),reactions:{},attachments:[]
       });
     }
@@ -18258,14 +18396,43 @@ function applySalesSortHeaders(){
 }
 
 function salesLoad(){
-  try{ return JSON.parse(localStorage.getItem('dronehub_sales')||'[]'); }
+  try{
+    const raw = localStorage.getItem('dronehub_sales');
+    if(raw) return JSON.parse(raw);
+    // localStorage empty (quota was exceeded on last save) — return empty for now;
+    // salesSyncFirebase() will repopulate from cloud on next tick
+    return [];
+  }
   catch(e){ return []; }
 }
 function salesSave(arr){
   const now = Date.now();
-  localStorage.setItem('dronehub_sales', JSON.stringify(arr));
-  localStorage.setItem('dronehub_sales_updatedAt', String(now));
-  if(_fbToken()) fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
+  // Strip null/undefined fields to reduce storage footprint
+  const compact = arr.map(c=>{
+    const o={};
+    Object.entries(c).forEach(([k,v])=>{ if(v!=null && v!=='' && v!==false && v!==undefined) o[k]=v; });
+    return o;
+  });
+  const serialised = JSON.stringify(compact);
+  let localStorageFailed = false;
+  try {
+    localStorage.setItem('dronehub_sales', serialised);
+    localStorage.setItem('dronehub_sales_updatedAt', String(now));
+  } catch(e) {
+    if(e.name==='QuotaExceededError'||String(e).includes('quota')||String(e).includes('exceeded')){
+      localStorageFailed = true;
+      console.warn('salesSave: localStorage quota exceeded — syncing to Firebase only');
+    } else { throw e; }
+  }
+  // Always sync to Firebase regardless of localStorage result
+  if(_fbToken()) fbSet('orgs', ORG_ID+':sales', {data: serialised, updatedAt: now}).catch(()=>{});
+  if(localStorageFailed){
+    // Signal callers that local storage is full but cloud save succeeded
+    const err = new Error('localStorage quota exceeded — data saved to cloud');
+    err.name = 'QuotaExceededError';
+    err.cloudSaved = true;
+    throw err;
+  }
 }
 
 async function salesSyncFirebase(){
@@ -19057,14 +19224,20 @@ function processSalesImportFile(file, listId, overwriteDupes){
         });
         added++;
       });
-      // Save with explicit quota-exceeded handling
+      // Save — handle quota exceeded gracefully (cloud save still proceeds)
+      let _quotaWarning = false;
       try{
         salesSave(all);
       } catch(qe){
         if(qe.name==='QuotaExceededError'||String(qe).includes('quota')){
-          alert('⚠️ Storage limit reached — the contacts could not be saved.\nTry deleting unused data or splitting the import into smaller batches.');
+          if(qe.cloudSaved){
+            // Firebase got the data — continue and show a soft warning at the end
+            _quotaWarning = true;
+          } else {
+            alert('⚠️ Storage limit reached — the contacts could not be saved.\nTry deleting unused data or splitting the import into smaller batches.');
+            return;
+          }
         } else { throw qe; }
-        return;
       }
       closeSalesImportModal();
       setSalesList(listId);
@@ -19076,6 +19249,7 @@ function processSalesImportFile(file, listId, overwriteDupes){
       if(updated)    parts.push(`${updated} existing contact${updated!==1?'s':''} updated`);
       if(dupSkipped) parts.push(`${dupSkipped} skipped — already in system (upload with "Update existing" checked to overwrite)`);
       if(blankRows)  parts.push(`${blankRows} empty row${blankRows!==1?'s':''} ignored`);
+      if(_quotaWarning) parts.push(`⚠️ Local cache full — contacts saved to cloud. Reload the page to see the full list.`);
       alert(`${added||updated?'✅':'⚠️'} Import into ${label}${ctNote}:\n${parts.join('\n')}`);
     } catch(err){ alert('Error reading file: ' + err.message); }
   };
