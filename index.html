@@ -5778,10 +5778,11 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':pricing',       ls:'dronehub_pricing_config',    apply:d=>{
       try{_pricingConfig=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_pricing_config',d);
     }},
-    // Sales contacts — Firebase only (no localStorage, no size limit)
-    {fb:ORG_ID+':sales', ls:null, apply:d=>{
-      try{ _salesData=JSON.parse(d); _salesUpdatedAt=Date.now(); }catch(e){}
-    }},
+    // Sales contacts — one doc per list (avoids Firestore 1MB limit)
+    ...['realestate','golf','resorts','other','warm','clients'].map(l=>({
+      fb: ORG_ID+':sales_'+l, ls: null,
+      apply: d=>{ try{ _salesByList[l]=JSON.parse(d); _salesUpdatedAt[l]=Date.now(); }catch(e){} }
+    })),
   ];
 
   let restored=0;
@@ -18423,85 +18424,132 @@ function applySalesSortHeaders(){
   });
 }
 
-// ── In-memory contacts store — no localStorage dependency ────────────────────
-// All reads go through salesLoad(), all writes go through salesSave().
-// Firebase is the only persistence layer. localStorage is not used for contacts.
-let _salesData = null; // null = not yet loaded from Firebase
-let _salesUpdatedAt = 0;
+// ── In-memory contacts store — split by list, one Firebase doc per list ──────
+// Firebase keys: dronehub_main:sales_realestate, :sales_golf, :sales_resorts,
+//                :sales_other, :sales_warm, :sales_clients
+// This avoids Firestore's 1MB per-document limit and keeps lists independent.
 
+const SALES_LISTS = ['realestate','golf','resorts','other','warm','clients'];
+
+// Per-list in-memory cache: { realestate: [...], golf: [...], ... }
+// null means "not yet loaded from Firebase"
+let _salesByList = { realestate:null, golf:null, resorts:null, other:null, warm:null, clients:null };
+let _salesUpdatedAt = {}; // { listId: timestamp }
+
+function _salesFbKey(listId){ return ORG_ID + ':sales_' + listId; }
+
+// Returns all contacts across all lists (for operations that need the full set)
 function salesLoad(){
-  return _salesData || [];
+  return SALES_LISTS.flatMap(l => _salesByList[l] || []);
 }
 
-// Ensure _salesData is populated before any write operation.
-// Call with `await salesEnsureLoaded()` at the top of any function that
-// calls salesLoad() and then salesSave() — prevents overwriting Firebase
-// with [] when the page just loaded and Firebase hasn't synced yet.
-async function salesEnsureLoaded(){
-  if(_salesData === null) await salesSyncFirebase();
+// Returns contacts for a specific list only
+function salesLoadList(listId){
+  return _salesByList[listId] || [];
 }
 
-function salesSave(arr){
+// Save an entire list to memory + Firebase
+function salesSaveList(listId, arr){
   const now = Date.now();
-  _salesData = arr;
-  _salesUpdatedAt = now;
-  // Persist to Firebase — retry once if token not yet available
-  const doSync = () => fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
+  _salesByList[listId] = arr;
+  _salesUpdatedAt[listId] = now;
+  const doSync = () => fbSet('orgs', _salesFbKey(listId), {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
   if(_fbToken()){
     doSync();
   } else {
-    // Token not ready yet — retry after 2s (covers fast actions right at login)
     setTimeout(()=>{ if(_fbToken()) doSync(); }, 2000);
   }
 }
 
-async function salesMigrateLocalStorage(){
-  // One-time migration: if localStorage still has contacts, merge them into Firebase
-  // so nothing is lost when we stop using localStorage.
-  const raw = localStorage.getItem('dronehub_sales');
-  if(!raw || raw === '[]') return;
-  let local;
-  try{ local = JSON.parse(raw); } catch(e){ return; }
-  if(!local.length) return;
-
-  // Merge with whatever Firebase already has (dedupe by id)
-  const fbRec = await fbGet('orgs', ORG_ID+':sales').catch(()=>null);
-  let fbContacts = [];
-  try{ if(fbRec?.data) fbContacts = JSON.parse(fbRec.data); } catch(e){}
-
-  const merged = [...fbContacts];
-  const existingIds = new Set(fbContacts.map(c=>c.id));
-  let added = 0;
-  local.forEach(c=>{ if(c.id && !existingIds.has(c.id)){ merged.push(c); added++; } });
-
-  if(added > 0 || merged.length > fbContacts.length){
-    // Push merged set to Firebase
-    const now = Date.now();
-    await fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(merged), updatedAt: now}).catch(()=>{});
-    _salesData = merged;
-    _salesUpdatedAt = now;
-    console.log(`salesMigrateLocalStorage: migrated ${added} contacts from localStorage to Firebase (total: ${merged.length})`);
-  }
-  // Clear localStorage entry now that data is safely in Firebase
-  localStorage.removeItem('dronehub_sales');
-  localStorage.removeItem('dronehub_sales_updatedAt');
+// Save the full cross-list array back by splitting into per-list buckets
+// Used by legacy callers that operate on the full array
+function salesSave(arr){
+  // Group by list
+  const byList = {};
+  SALES_LISTS.forEach(l=>{ byList[l]=[]; });
+  arr.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
+  SALES_LISTS.forEach(l=> salesSaveList(l, byList[l]));
 }
 
-async function salesSyncFirebase(){
-  if(!_fbToken()) return;
-  // Run one-time localStorage migration first
-  await salesMigrateLocalStorage();
+// Ensure a specific list is loaded. If listId is omitted, loads all lists.
+async function salesEnsureLoaded(listId){
+  if(listId){
+    if(_salesByList[listId] === null) await salesSyncFirebase(listId);
+  } else {
+    const missing = SALES_LISTS.filter(l=>_salesByList[l]===null);
+    if(missing.length) await salesSyncFirebase();
+  }
+}
+
+async function salesMigrateLocalStorage(){
+  // One-time migration: split the old monolithic dronehub_main:sales document
+  // into per-list documents.
+  const raw = localStorage.getItem('dronehub_sales');
+  let legacyFb = null;
+  // Also check if Firebase still has the old monolithic doc
   try{
-    const fb = await fbGet('orgs', ORG_ID+':sales');
-    if(fb?.data){
-      const remoteTs = fb.updatedAt || 0;
-      // Only overwrite in-memory data if Firebase is newer than our last local save
-      if(remoteTs > _salesUpdatedAt){
-        _salesData = JSON.parse(fb.data);
-        _salesUpdatedAt = remoteTs;
-      }
-    }
+    const fb = await fbGet('orgs', ORG_ID+':sales').catch(()=>null);
+    if(fb?.data) legacyFb = JSON.parse(fb.data);
   }catch(e){}
+
+  let local = [];
+  try{ if(raw && raw!=='[]') local = JSON.parse(raw); }catch(e){}
+
+  // Merge localStorage + legacy Firebase into one set (dedupe by id)
+  const allLegacy = [...(legacyFb||[])];
+  const existingIds = new Set(allLegacy.map(c=>c.id));
+  local.forEach(c=>{ if(c.id && !existingIds.has(c.id)){ allLegacy.push(c); existingIds.add(c.id); }});
+
+  if(!allLegacy.length) return; // nothing to migrate
+
+  // Split by list and write each to its own Firebase doc
+  const byList = {};
+  SALES_LISTS.forEach(l=>{ byList[l]=[]; });
+  allLegacy.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
+
+  const now = Date.now();
+  for(const l of SALES_LISTS){
+    if(byList[l].length){
+      await fbSet('orgs', _salesFbKey(l), {data: JSON.stringify(byList[l]), updatedAt: now}).catch(()=>{});
+      _salesByList[l] = byList[l];
+      _salesUpdatedAt[l] = now;
+    }
+  }
+
+  console.log(`salesMigrateLocalStorage: split ${allLegacy.length} contacts into per-list Firebase docs`);
+
+  // Clean up old sources
+  localStorage.removeItem('dronehub_sales');
+  localStorage.removeItem('dronehub_sales_updatedAt');
+  // Delete the old monolithic Firebase doc (best-effort)
+  if(legacyFb) fbSet('orgs', ORG_ID+':sales', {data:'[]', updatedAt:0}).catch(()=>{});
+}
+
+// Sync one or all lists from Firebase
+async function salesSyncFirebase(listId){
+  if(!_fbToken()) return;
+  // Run one-time migration from old monolithic doc on first sync
+  const needsMigration = SALES_LISTS.some(l=>_salesByList[l]===null);
+  if(needsMigration) await salesMigrateLocalStorage();
+
+  const listsToSync = listId ? [listId] : SALES_LISTS;
+  for(const l of listsToSync){
+    try{
+      const fb = await fbGet('orgs', _salesFbKey(l));
+      if(fb?.data){
+        const remoteTs = fb.updatedAt || 0;
+        if(remoteTs > (_salesUpdatedAt[l]||0)){
+          _salesByList[l] = JSON.parse(fb.data);
+          _salesUpdatedAt[l] = remoteTs;
+        }
+      } else {
+        // Doc doesn't exist yet — initialise as empty
+        if(_salesByList[l] === null) _salesByList[l] = [];
+      }
+    }catch(e){
+      if(_salesByList[l] === null) _salesByList[l] = [];
+    }
+  }
 }
 
 function setSalesList(listId){
