@@ -5773,11 +5773,15 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':pricing',       ls:'dronehub_pricing_config',    apply:d=>{
       try{_pricingConfig=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_pricing_config',d);
     }},
+    // Sales contacts — Firebase only (no localStorage, no size limit)
+    {fb:ORG_ID+':sales', ls:null, apply:d=>{
+      try{ _salesData=JSON.parse(d); _salesUpdatedAt=Date.now(); }catch(e){}
+    }},
   ];
 
   let restored=0;
   for(const k of keys){
-    const local=localStorage.getItem(k.ls);
+    const local=k.ls ? localStorage.getItem(k.ls) : null;
     const localEmpty=!local||local==='[]'||local==='{}';
 
     try{
@@ -5786,14 +5790,14 @@ async function restoreFromFirebase(forceAll=false){
       const fbTime=fb.updatedAt||0;
 
       // Always restore these critical keys from Firebase
-      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users'];
+      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users',':sales'];
       const isAlwaysSync=alwaysSync.some(s=>k.fb.endsWith(s));
 
       // Restore from Firebase if:
       // 1. forceAll=true (called on login — Firebase is always source of truth), OR
-      // 2. localStorage is empty, OR
+      // 2. localStorage is empty (or ls:null for Firebase-only keys), OR
       // 3. Firebase has newer data than our last local save, OR
-      // 4. It's team/auth data (always sync)
+      // 4. It's team/auth/contacts data (always sync)
       if(forceAll||localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isAlwaysSync){
         k.apply(fb.data);
         restored++;
@@ -18395,43 +18399,23 @@ function applySalesSortHeaders(){
   });
 }
 
+// ── In-memory contacts store — no localStorage dependency ────────────────────
+// All reads go through salesLoad(), all writes go through salesSave().
+// Firebase is the only persistence layer. localStorage is not used for contacts.
+let _salesData = null; // null = not yet loaded from Firebase
+let _salesUpdatedAt = 0;
+
 function salesLoad(){
-  try{
-    const raw = localStorage.getItem('dronehub_sales');
-    if(raw) return JSON.parse(raw);
-    // localStorage empty (quota was exceeded on last save) — return empty for now;
-    // salesSyncFirebase() will repopulate from cloud on next tick
-    return [];
-  }
-  catch(e){ return []; }
+  return _salesData || [];
 }
+
 function salesSave(arr){
   const now = Date.now();
-  // Strip null/undefined fields to reduce storage footprint
-  const compact = arr.map(c=>{
-    const o={};
-    Object.entries(c).forEach(([k,v])=>{ if(v!=null && v!=='' && v!==false && v!==undefined) o[k]=v; });
-    return o;
-  });
-  const serialised = JSON.stringify(compact);
-  let localStorageFailed = false;
-  try {
-    localStorage.setItem('dronehub_sales', serialised);
-    localStorage.setItem('dronehub_sales_updatedAt', String(now));
-  } catch(e) {
-    if(e.name==='QuotaExceededError'||String(e).includes('quota')||String(e).includes('exceeded')){
-      localStorageFailed = true;
-      console.warn('salesSave: localStorage quota exceeded — syncing to Firebase only');
-    } else { throw e; }
-  }
-  // Always sync to Firebase regardless of localStorage result
-  if(_fbToken()) fbSet('orgs', ORG_ID+':sales', {data: serialised, updatedAt: now}).catch(()=>{});
-  if(localStorageFailed){
-    // Signal callers that local storage is full but cloud save succeeded
-    const err = new Error('localStorage quota exceeded — data saved to cloud');
-    err.name = 'QuotaExceededError';
-    err.cloudSaved = true;
-    throw err;
+  _salesData = arr;
+  _salesUpdatedAt = now;
+  // Persist to Firebase only — no localStorage (no size limits)
+  if(_fbToken()){
+    fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
   }
 }
 
@@ -18440,14 +18424,11 @@ async function salesSyncFirebase(){
   try{
     const fb = await fbGet('orgs', ORG_ID+':sales');
     if(fb?.data){
-      // Only overwrite local data if Firebase has a newer timestamp.
-      // This prevents a slow Firebase read from erasing a just-completed import.
-      const localTs = parseInt(localStorage.getItem('dronehub_sales_updatedAt')||'0', 10);
       const remoteTs = fb.updatedAt || 0;
-      if(remoteTs > localTs){
-        const remote = JSON.parse(fb.data);
-        localStorage.setItem('dronehub_sales', JSON.stringify(remote));
-        localStorage.setItem('dronehub_sales_updatedAt', String(remoteTs));
+      // Only overwrite in-memory data if Firebase is newer than our last local save
+      if(remoteTs > _salesUpdatedAt){
+        _salesData = JSON.parse(fb.data);
+        _salesUpdatedAt = remoteTs;
       }
     }
   }catch(e){}
@@ -19224,21 +19205,8 @@ function processSalesImportFile(file, listId, overwriteDupes){
         });
         added++;
       });
-      // Save — handle quota exceeded gracefully (cloud save still proceeds)
-      let _quotaWarning = false;
-      try{
-        salesSave(all);
-      } catch(qe){
-        if(qe.name==='QuotaExceededError'||String(qe).includes('quota')){
-          if(qe.cloudSaved){
-            // Firebase got the data — continue and show a soft warning at the end
-            _quotaWarning = true;
-          } else {
-            alert('⚠️ Storage limit reached — the contacts could not be saved.\nTry deleting unused data or splitting the import into smaller batches.');
-            return;
-          }
-        } else { throw qe; }
-      }
+      // Save to Firebase (in-memory + cloud — no localStorage size limits)
+      salesSave(all);
       closeSalesImportModal();
       setSalesList(listId);
       renderSalesTable();
@@ -19249,7 +19217,6 @@ function processSalesImportFile(file, listId, overwriteDupes){
       if(updated)    parts.push(`${updated} existing contact${updated!==1?'s':''} updated`);
       if(dupSkipped) parts.push(`${dupSkipped} skipped — already in system (upload with "Update existing" checked to overwrite)`);
       if(blankRows)  parts.push(`${blankRows} empty row${blankRows!==1?'s':''} ignored`);
-      if(_quotaWarning) parts.push(`⚠️ Local cache full — contacts saved to cloud. Reload the page to see the full list.`);
       alert(`${added||updated?'✅':'⚠️'} Import into ${label}${ctNote}:\n${parts.join('\n')}`);
     } catch(err){ alert('Error reading file: ' + err.message); }
   };
