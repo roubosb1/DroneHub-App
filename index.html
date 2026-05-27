@@ -17020,16 +17020,37 @@ function renderTracker(){
 }
 
 function openTrackerModal(jobId){
-  const job=savedJobs.find(j=>String(j.id)===String(jobId));
+  let job=savedJobs.find(j=>String(j.id)===String(jobId));
+  // For imported / standalone projects, build a synthetic job object
+  if(!job){
+    const sp=getStandaloneProjects().find(s=>String(s.id)===String(jobId));
+    if(sp){
+      job={
+        id:sp.id,
+        name:sp.address||sp.clientName||sp.projectId||'Imported Project',
+        address:sp.address||'',
+        clientName:sp.clientName||'',
+        date:sp.date||'',
+        duration:sp.approxFilmHours||'',
+        clientId:null,
+        payouts:{},
+        services:{},
+        editors:{},
+        grand:0,
+        isStandalone:true,
+        _sp:sp,
+      };
+    }
+  }
   if(!job) return;
   const ts=getTrackerStage(jobId);
   const pid=ts.projectId||getProjectId(job);
   const client=job.clientId?clients.find(c=>c.id===job.clientId):null;
   const fmtN=n=>'$'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  // Derive shooter from payouts
+  // Derive shooter from payouts (standalone jobs use tracker videographer)
   const vidPayout=Object.values(job.payouts||{}).find(p=>(p.lines||[]).some(l=>l.label?.includes('Video')));
-  const videographer=vidPayout?.name||ts.claimedBy||'—';
+  const videographer=vidPayout?.name||ts.videographer||ts.claimedBy||'—';
 
   // Draft charge calc
   const draftCount=parseInt(ts.draftCount||0);
@@ -17360,6 +17381,36 @@ function saveTrackerModal(jobId, modal){
   if(!_saveIsTeam&&job&&stageUpdate.extraDraftCharge>0){
     job.customAdj=(job.customAdj||0);
     // Store draft charge separately — will be added to next invoice
+  }
+
+  // For standalone/imported projects: persist edits to address, client name, and date
+  if(!job){
+    const standaloneArr=getStandaloneProjects();
+    const spIdx=standaloneArr.findIndex(s=>String(s.id)===String(jobId));
+    if(spIdx>=0){
+      const sp=standaloneArr[spIdx];
+      const newAddress=document.getElementById('tm-address')?.value;
+      const newClient=document.getElementById('tm-client-name')?.value;
+      const newDate=document.getElementById('tm-shoot-date')?.value;
+      if(newAddress!==undefined) sp.address=newAddress;
+      if(newClient!==undefined) sp.clientName=newClient;
+      if(newDate!==undefined) sp.date=newDate;
+      sp.videographer=stageUpdate.videographer||sp.videographer||'';
+      sp.stage=stageUpdate.stage||sp.stage||'footage_pending';
+      sp.editStatus=stageUpdate.editStatus||sp.editStatus||'ready';
+      sp.claimedBy=stageUpdate.claimedBy||sp.claimedBy||'';
+      sp.notes=stageUpdate.notes||sp.notes||'';
+      sp.filemailLink=stageUpdate.filemailLink||sp.filemailLink||'';
+      sp.frameioLink=stageUpdate.frameioLink||sp.frameioLink||'';
+      sp.downloadLink=stageUpdate.downloadLink||sp.downloadLink||'';
+      sp.approxEditHours=stageUpdate.approxEditHours||sp.approxEditHours||'';
+      sp.approxFilmHours=stageUpdate.approxFilmHours||sp.approxFilmHours||'';
+      sp.completionDate=stageUpdate.completionDate||sp.completionDate||'';
+      sp.filesReceived=stageUpdate.filesReceived;
+      sp.rush=stageUpdate.rush;
+      sp.projectId=stageUpdate.projectId||sp.projectId||'';
+      saveStandaloneProjects(standaloneArr);
+    }
   }
 
   setTrackerStage(jobId, stageUpdate);
