@@ -254,6 +254,13 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 #pane-tracker.tracker-light #tracker-table tbody a{filter:brightness(.8)}
 #pane-tracker.tracker-light #tracker-table tbody tr button{filter:brightness(.95)}
 #pane-tracker.tracker-light .tracker-cell-edit::placeholder{color:#9ca3af!important}
+/* Light mode: utility header buttons */
+#pane-tracker.tracker-light #tracker-light-btn,
+#pane-tracker.tracker-light #tracker-refresh-btn{background:#e8eaf2!important;color:#374151!important;border-color:#c8cce0!important}
+/* Light mode: client autocomplete dropdown */
+#pane-tracker.tracker-light #tracker-client-dropdown{background:#fff!important;border-color:#c8cce0!important;box-shadow:0 8px 24px rgba(0,0,0,.12)!important}
+#pane-tracker.tracker-light #tracker-client-dropdown div{color:#1a1a2e!important}
+#pane-tracker.tracker-light #tracker-client-dropdown div:hover{background:#e8eaf2!important}
 /* Inline editable tracker cells */
 .tracker-cell-edit{background:transparent;border:none;outline:none;color:inherit;font-size:inherit;font-family:inherit;width:100%;cursor:text}
 .tracker-cell-edit:focus{background:rgba(91,141,239,.1);border-radius:4px;outline:1px solid rgba(91,141,239,.5)}
@@ -1743,7 +1750,7 @@ button{font-family:var(--font);}
         <button onclick="clearAllStandaloneProjects()" title="Delete all imported standalone projects" style="padding:6px 12px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">🗑 Clear imported</button>
         <button onclick="openTrackerAddModal()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add project</button>
         <button id="tracker-light-btn" onclick="trackerToggleLightMode()" title="Toggle light mode" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">☀️</button>
-        <button onclick="renderTracker()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">↺</button>
+        <button id="tracker-refresh-btn" onclick="renderTracker()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">↺</button>
       </div>
     </div>
 
@@ -14529,9 +14536,10 @@ function trackerSetTab(tab){
     if(key===tab){
       btn.style.background=styles[key].active;
       btn.style.color=styles[key].color;
+      btn.style.borderLeft='';
     } else {
-      btn.style.background='transparent';
-      btn.style.color='var(--muted)';
+      btn.style.background=_trackerLightMode?'#e8eaf2':'transparent';
+      btn.style.color=_trackerLightMode?'#6b7280':'var(--muted)';
     }
   });
   renderTracker();
@@ -14548,9 +14556,9 @@ function trackerToggleMine(){
       btn.style.borderColor = 'var(--blue)';
       btn.textContent = '👤 My Projects ✓';
     } else {
-      btn.style.background = 'var(--navy-lift)';
-      btn.style.color = 'var(--muted)';
-      btn.style.borderColor = 'var(--border)';
+      btn.style.background = _trackerLightMode ? '#e8eaf2' : 'var(--navy-lift)';
+      btn.style.color = _trackerLightMode ? '#6b7280' : 'var(--muted)';
+      btn.style.borderColor = _trackerLightMode ? '#c8cce0' : 'var(--border)';
       btn.textContent = '👤 My Projects';
     }
   }
@@ -17299,11 +17307,11 @@ function renderTracker(){
       </td>
       <td style="padding:8px 10px">
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
-          <button onclick="openTrackerModal('${j.id}')" title="Edit project details" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(245,166,35,.4);background:rgba(245,166,35,.08);color:var(--amber);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;margin-bottom:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
-          ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:#22D97A;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${filemaLink}">📦 Filemail ↗</a>`:''}
-          ${dlLink?`<a href="${dlLink}" target="_blank" style="color:#5B8DEF;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${dlLink}">☁ Drive ↗</a>`:''}
-          ${dbxLink?`<a href="${dbxLink}" target="_blank" style="color:#0061FF;font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${dbxLink}">📦 Dropbox ↗</a>`:''}
-          <button onclick="openVdProfile('${j.id}','team')" title="Video Draft Review" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Review</button>
+          <button onclick="openTrackerModal('${j.id}')" title="Edit project details" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(245,166,35,${_lm?.5:.4});background:rgba(245,166,35,${_lm?.15:.08});color:${_lm?'#92400e':'var(--amber)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;margin-bottom:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
+          ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:${_lm?'#047857':'#22D97A'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${filemaLink}">📦 Filemail ↗</a>`:''}
+          ${dlLink?`<a href="${dlLink}" target="_blank" style="color:${_lm?'#1d4ed8':'#5B8DEF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${dlLink}">☁ Drive ↗</a>`:''}
+          ${dbxLink?`<a href="${dbxLink}" target="_blank" style="color:${_lm?'#0044cc':'#0061FF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="${dbxLink}">📦 Dropbox ↗</a>`:''}
+          <button onclick="openVdProfile('${j.id}','team')" title="Video Draft Review" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(91,141,239,${_lm?.5:.4});background:rgba(91,141,239,${_lm?.15:.08});color:${_lm?'#1d4ed8':'var(--blue-bright)'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Review</button>
         </div>
       </td>
     </tr>`;
@@ -17470,6 +17478,21 @@ function trackerToggleLightMode(){
     pane?.classList.remove('tracker-light');
     if(btn) btn.textContent = '☀️';
     btn?.setAttribute('title','Switch to light mode');
+  }
+  // Fix inactive tab buttons immediately (active tab keeps its gradient)
+  ['upcoming','active','completed'].forEach(t=>{
+    const tb=document.getElementById('tracker-tab-'+t);
+    if(tb && !(tb.style.background||'').includes('gradient')){
+      tb.style.background=_trackerLightMode?'#e8eaf2':'transparent';
+      tb.style.color=_trackerLightMode?'#6b7280':'var(--muted)';
+    }
+  });
+  // Fix My Projects button if not active
+  const mineBtn=document.getElementById('tracker-mine-btn');
+  if(mineBtn && !_trackerMineOnly){
+    mineBtn.style.background=_trackerLightMode?'#e8eaf2':'var(--navy-lift)';
+    mineBtn.style.color=_trackerLightMode?'#6b7280':'var(--muted)';
+    mineBtn.style.borderColor=_trackerLightMode?'#c8cce0':'var(--border)';
   }
   renderTracker();
 }
