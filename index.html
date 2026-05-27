@@ -5809,6 +5809,8 @@ async function restoreFromFirebase(forceAll=false){
     console.log('Restored '+restored+' collections from Firebase');
     renderJobs();renderClients();renderTeam();renderPayroll();renderTracker();
   }
+  // Migrate any contacts still in localStorage → Firebase (runs silently, one-time)
+  if(_fbToken()) salesMigrateLocalStorage().catch(()=>{});
 }
 
 
@@ -18419,8 +18421,42 @@ function salesSave(arr){
   }
 }
 
+async function salesMigrateLocalStorage(){
+  // One-time migration: if localStorage still has contacts, merge them into Firebase
+  // so nothing is lost when we stop using localStorage.
+  const raw = localStorage.getItem('dronehub_sales');
+  if(!raw || raw === '[]') return;
+  let local;
+  try{ local = JSON.parse(raw); } catch(e){ return; }
+  if(!local.length) return;
+
+  // Merge with whatever Firebase already has (dedupe by id)
+  const fbRec = await fbGet('orgs', ORG_ID+':sales').catch(()=>null);
+  let fbContacts = [];
+  try{ if(fbRec?.data) fbContacts = JSON.parse(fbRec.data); } catch(e){}
+
+  const merged = [...fbContacts];
+  const existingIds = new Set(fbContacts.map(c=>c.id));
+  let added = 0;
+  local.forEach(c=>{ if(c.id && !existingIds.has(c.id)){ merged.push(c); added++; } });
+
+  if(added > 0 || merged.length > fbContacts.length){
+    // Push merged set to Firebase
+    const now = Date.now();
+    await fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(merged), updatedAt: now}).catch(()=>{});
+    _salesData = merged;
+    _salesUpdatedAt = now;
+    console.log(`salesMigrateLocalStorage: migrated ${added} contacts from localStorage to Firebase (total: ${merged.length})`);
+  }
+  // Clear localStorage entry now that data is safely in Firebase
+  localStorage.removeItem('dronehub_sales');
+  localStorage.removeItem('dronehub_sales_updatedAt');
+}
+
 async function salesSyncFirebase(){
   if(!_fbToken()) return;
+  // Run one-time localStorage migration first
+  await salesMigrateLocalStorage();
   try{
     const fb = await fbGet('orgs', ORG_ID+':sales');
     if(fb?.data){
