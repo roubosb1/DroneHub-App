@@ -6496,7 +6496,7 @@ function nextInvoiceNum(){
 }
 
 function openInvoice(jobId){
-  const job=savedJobs.find(j=>j.id===jobId);
+  const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
   const client=job.clientId?clients.find(c=>c.id===job.clientId):null;
   const biz=bizForCurrency(job.currency);
@@ -9303,7 +9303,7 @@ function renderPayrollStub(contractor,period){
 let editingJobId=null;
 
 function openEditJob(jobId){
-  const job=savedJobs.find(j=>j.id===jobId);
+  const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
   editingJobId=jobId;
 
@@ -11989,7 +11989,7 @@ function renderInvoiceTracker(){
 
 // Load a saved job back into the Quote Builder + Cost Model for viewing / editing
 function openInvoiceJob(jobId){
-  const job=savedJobs.find(j=>j.id===jobId);
+  const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
 
   // Restore contractors from payout names
@@ -12069,7 +12069,7 @@ function openInvoiceJob(jobId){
 
 
 function markInvoicePaid(jobId){
-  const job=savedJobs.find(j=>j.id===jobId);
+  const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job) return;
   job.markedPaid=true;
   job.paidAt=new Date().toISOString().slice(0,10);
@@ -12082,7 +12082,7 @@ function markInvoicePaid(jobId){
 let reminderJobId=null;
 
 function openReminder(jobId){
-  const job=savedJobs.find(j=>j.id===jobId);
+  const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job) return;
   reminderJobId=jobId;
   const fmtN=n=>'$'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -15060,7 +15060,7 @@ function checkStripePaymentReturn(){
   if(payStatus==='success'&&jobId){
     // Allow Firebase to sync first, then mark paid
     const doMark=()=>{
-      const job=savedJobs.find(j=>j.id===jobId);
+      const job=savedJobs.find(j=>String(j.id)===String(jobId));
       if(job&&!job.markedPaid){
         job.markedPaid=true;
         job.paidAt=new Date().toISOString().slice(0,10);
@@ -16858,7 +16858,7 @@ function saveTrackerModal(jobId, modal){
   }
 
   // Apply draft surcharge to job if > 2 drafts (admin-only)
-  const job=savedJobs.find(j=>j.id===jobId);
+  const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!_saveIsTeam&&job&&stageUpdate.extraDraftCharge>0){
     job.customAdj=(job.customAdj||0);
     // Store draft charge separately — will be added to next invoice
