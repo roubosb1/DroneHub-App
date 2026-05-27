@@ -223,6 +223,24 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 #pane-tracker,#pane-louchat,#pane-jobs,#pane-clients,#pane-calendar,#pane-sales{max-width:100%;}
 /* Give tracker full bleed — remove the .wrap horizontal padding for it */
 .wrap:has(#pane-tracker.active){padding-left:0;padding-right:0;}
+/* ── Tracker table scroll container: both axes so sticky thead works ── */
+#tracker-scroll-container{overflow:auto;width:100%;max-height:calc(100vh - 230px);padding:0 20px;box-sizing:border-box;}
+#tracker-scroll-container::-webkit-scrollbar{width:7px;height:7px}
+#tracker-scroll-container::-webkit-scrollbar-track{background:transparent}
+#tracker-scroll-container::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px}
+#tracker-scroll-container::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.22)}
+/* Sticky th cells */
+#tracker-table thead th{position:sticky;top:0;background:#0D1117;z-index:4}
+/* ── Tracker light mode ── */
+#pane-tracker.tracker-light{background:#f0f2f5}
+#pane-tracker.tracker-light #tracker-scroll-container{background:#f0f2f5}
+#pane-tracker.tracker-light #tracker-table{background:#fff;color:#1a1a2e}
+#pane-tracker.tracker-light #tracker-table thead th{background:#e8eaf0;color:#333;border-bottom-color:#aaa}
+#pane-tracker.tracker-light #tracker-table tbody tr:hover{background:rgba(91,141,239,.08)!important}
+#pane-tracker.tracker-light #tracker-table td{color:#1a1a2e;border-bottom-color:rgba(0,0,0,.08)!important}
+/* Inline editable tracker cells */
+.tracker-cell-edit{background:transparent;border:none;outline:none;color:inherit;font-size:inherit;font-family:inherit;width:100%;cursor:text}
+.tracker-cell-edit:focus{background:rgba(91,141,239,.1);border-radius:4px;outline:1px solid rgba(91,141,239,.5)}
 /* LouChat: no bottom padding, no pane min-height — container fills exact remaining space */
 .wrap:has(#pane-louchat.active){padding-bottom:0;}
 #pane-louchat.active{min-height:0;}
@@ -1702,12 +1720,13 @@ button{font-family:var(--font);}
           📋 Project Tracker
           <span id="tracker-row-count" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--navy-lift);color:var(--muted)"></span>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">Click any row to open · Fields save automatically</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Click ✏ Edit to open a project · Cells save on blur · Status updates instantly</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="openTrackerImportModal()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">⬆ Import CSV / Sheets</button>
         <button onclick="clearAllStandaloneProjects()" title="Delete all imported standalone projects" style="padding:6px 12px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">🗑 Clear imported</button>
         <button onclick="openTrackerAddModal()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add project</button>
+        <button id="tracker-light-btn" onclick="trackerToggleLightMode()" title="Toggle light mode" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">☀️</button>
         <button onclick="renderTracker()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">↺</button>
       </div>
     </div>
@@ -1778,10 +1797,10 @@ button{font-family:var(--font);}
   </div>
 
   <!-- Spreadsheet table -->
-  <div style="overflow-x:auto;width:100%;padding:0 20px;box-sizing:border-box">
+  <div id="tracker-scroll-container">
     <table id="tracker-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1400px">
       <thead>
-        <tr style="background:#0D1117;position:sticky;top:0;z-index:5">
+        <tr>
           <th id="tracker-col-pid" style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Project ID</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:140px">Client / Realtor</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Company / Team</th>
@@ -16949,6 +16968,27 @@ function renderTracker(){
   const pidHeader=document.getElementById('tracker-col-pid');
   if(pidHeader) pidHeader.textContent=_trackerTab==='upcoming'?'Queue':'Project ID';
 
+  // Per-status row accent colors (subtle background wash)
+  const ROW_ACCENT={
+    footage_pending:'rgba(168,180,208,.05)',
+    ready:'rgba(122,171,255,.06)',
+    draft1_progress:'rgba(52,211,153,.07)',
+    draft1:'rgba(34,217,122,.07)',
+    draft2_ready:'rgba(96,200,255,.06)',
+    draft2_progress:'rgba(252,211,77,.07)',
+    draft2:'rgba(245,166,35,.07)',
+    draft3_ready:'rgba(96,200,255,.06)',
+    draft3_progress:'rgba(251,146,60,.07)',
+    draft3:'rgba(240,82,82,.07)',
+    draft_plus_ready:'rgba(96,200,255,.06)',
+    draft_plus:'rgba(248,113,113,.08)',
+    finals_sent:'rgba(34,217,122,.09)',
+    in_progress:'rgba(91,141,239,.07)',
+    review:'rgba(167,139,250,.08)',
+  };
+
+  const today=new Date().toISOString().slice(0,10);
+
   tbody.innerHTML=jobs.map((j,idx)=>{
     const ts=getTrackerStage(j.id);
     const client=clients.find(c=>c.id===j.clientId);
@@ -16960,12 +17000,20 @@ function renderTracker(){
     const editStatus=ts.editStatus||'ready';
     const ss=STATUS_STYLES[editStatus]||STATUS_STYLES.ready;
     const isRush=ts.rush||false;
-    const rowBg=isRush?'rgba(240,82,82,.06)':idx%2===0?'rgba(255,255,255,.02)':'transparent';
+    const dueDate=ts.completionDate||'';
+    const isOverdue=dueDate&&dueDate<today&&!COMPLETED_STATUSES.includes(editStatus);
+
+    // Row background: rush > overdue > status accent
+    const rowBg=isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(ROW_ACCENT[editStatus]||'rgba(255,255,255,.01)');
+    const hoverBg=isRush?'rgba(240,82,82,.18)':isOverdue?'rgba(240,82,82,.15)':'rgba(91,141,239,.1)';
+    const borderColor=isRush?'rgba(240,82,82,.3)':isOverdue?'rgba(240,82,82,.2)':(ss.color+'28');
+    const leftAccent=isRush||isOverdue?`border-left:3px solid ${isRush?'var(--red)':ss.color};`:`border-left:3px solid ${ss.color}44;`;
+
     const rushBadge=isRush?'<span style="background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px">🚨 RUSH</span>':'';
+    const overdueBadge=isOverdue?'<span style="background:rgba(240,82,82,.18);color:#F05252;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">⚠ OVERDUE</span>':'';
     const dhEditorBadge=_isDhEditor?'<span style="background:rgba(240,82,82,.18);color:#FF7070;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px;border:1px solid rgba(240,82,82,.3)">⚠ ASSIGN</span>':'';
     const filmHrs=ts.approxFilmHours||j.duration||'';
     const editHrs=ts.approxEditHours||'';
-    const dueDate=ts.completionDate||'';
     const notes=ts.notes||'';
     const filemaLink=ts.filemailLink||'';
     const dlLink=ts.downloadLink||'';
@@ -16986,31 +17034,61 @@ function renderTracker(){
     // Build inline edit-status dropdown options
     const editStatusSelectOpts = EDIT_STATUS_OPTS.map(s=>`<option value="${s.key}"${editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
 
-    return `<tr style="background:${rowBg};border-bottom:1px solid ${isRush?'rgba(240,82,82,.2)':'rgba(255,255,255,.04)'};transition:background .1s;${isRush?'border-left:3px solid var(--red);':''}" onmouseover="this.style.background='${isRush?'rgba(240,82,82,.12)':'rgba(91,141,239,.08)'}'" onmouseout="this.style.background='${rowBg}'">
+    // Due date cell: red if overdue
+    const dueDateColor=isOverdue?'#F05252':dueDate?'var(--amber)':'var(--muted)';
+    const dueDateWeight=dueDate?'700':'400';
+
+    return `<tr data-job-id="${j.id}" style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
       ${queueCell}
-      <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">${clientName}${rushBadge}</td>
+      <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">${clientName}${rushBadge}${overdueBadge}</td>
       <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${company}</td>
       <td style="padding:8px 10px;color:var(--offwhite);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.address||''}">${j.address||j.name||''}</td>
       <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${j.date||''}</td>
-      <td style="padding:8px 10px;text-align:center">
-        <span style="background:${vidColor(videographer)};color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">${videographer}</span>
+      <td style="padding:6px 8px;text-align:center">
+        <input class="tracker-cell-edit" value="${videographer}" title="Videographer — click to edit" placeholder="TBD"
+          onblur="trackerInlineSave('${j.id}','videographer',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${videographer}';this.blur()}"
+          style="text-align:center;width:90px;font-size:11px;font-weight:700;color:${vidColor(videographer)};background:${vidColor(videographer)}22;border-radius:8px;padding:2px 6px">
       </td>
-      <td style="padding:8px 10px;text-align:center">
+      <td style="padding:8px 10px;text-align:center;cursor:pointer" onclick="trackerToggleFiles('${j.id}')" title="Click to toggle files received">
         ${ts.filesReceived
-          ?'<span style="font-size:16px;color:#22D97A">☑</span>'
-          :'<span style="font-size:16px;color:var(--border-bright)">☐</span>'}
+          ?'<span style="font-size:18px;color:#22D97A;user-select:none" title="Files received — click to toggle">☑</span>'
+          :'<span style="font-size:18px;color:rgba(255,255,255,.25);user-select:none" title="Files not yet received — click to toggle">☐</span>'}
       </td>
-      <td style="padding:8px 10px;text-align:center">
-        <span style="background:${_isDhEditor?'rgba(240,82,82,.2)':vidColor(editor)};color:${_isDhEditor?'#FF7070':'#fff'};border:${_isDhEditor?'1px solid rgba(240,82,82,.4)':'none'};padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">${_isDhEditor?'DroneHub':editor}</span>${dhEditorBadge}
+      <td style="padding:6px 8px;text-align:center">
+        <input class="tracker-cell-edit" value="${_isDhEditor?'DroneHub':_rawEditor}" title="Assigned Editor — click to edit" placeholder="ASSIGN"
+          onblur="trackerInlineSave('${j.id}','claimedBy',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${_isDhEditor?'DroneHub':_rawEditor}';this.blur()}"
+          style="text-align:center;width:90px;font-size:11px;font-weight:700;color:${_isDhEditor?'#FF7070':'#fff'};background:${_isDhEditor?'rgba(240,82,82,.2)':vidColor(editor)+'33'};border-radius:8px;padding:2px 6px">${dhEditorBadge}
       </td>
       <td style="padding:6px 8px;text-align:center">
         <select onchange="trackerSetEditStatus('${j.id}',this.value)" title="Change edit status" style="padding:4px 6px;border-radius:6px;border:1px solid ${ss.color}55;background:${ss.bg};color:${ss.color};font-size:11px;font-weight:700;cursor:pointer;max-width:170px;outline:none">${editStatusSelectOpts}</select>${draftCharge}
       </td>
-      <td style="padding:8px 10px;text-align:center;color:var(--muted)">${editHrs}</td>
-      <td style="padding:8px 10px;text-align:center;color:var(--muted)">${filmHrs}</td>
-      <td style="padding:8px 10px;text-align:center;color:${dueDate?'var(--amber)':'var(--muted)'};white-space:nowrap;font-weight:${dueDate?'600':'400'}">${dueDate||'—'}</td>
+      <td style="padding:6px 8px;text-align:center">
+        <input class="tracker-cell-edit" value="${editHrs}" title="Approx Edit Hours" placeholder="—"
+          onblur="trackerInlineSave('${j.id}','approxEditHours',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${editHrs}';this.blur()}"
+          style="text-align:center;width:48px;color:var(--muted)">
+      </td>
+      <td style="padding:6px 8px;text-align:center">
+        <input class="tracker-cell-edit" value="${filmHrs}" title="Approx Film Hours" placeholder="—"
+          onblur="trackerInlineSave('${j.id}','approxFilmHours',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${filmHrs}';this.blur()}"
+          style="text-align:center;width:48px;color:var(--muted)">
+      </td>
+      <td style="padding:6px 8px;text-align:center;white-space:nowrap">
+        <input type="date" class="tracker-cell-edit" value="${dueDate}" title="${isOverdue?'⚠ OVERDUE: ':''}Due / Priority Date"
+          onblur="trackerInlineSave('${j.id}','completionDate',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')this.blur()"
+          style="text-align:center;width:120px;color:${dueDateColor};font-weight:${dueDateWeight};background:${isOverdue?'rgba(240,82,82,.1)':'transparent'};border-radius:4px">
+      </td>
       <td style="padding:8px 10px;text-align:center;color:var(--muted);white-space:nowrap">${ts.completionDate||'—'}</td>
-      <td style="padding:8px 10px;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${notes}">${notes||'—'}</td>
+      <td style="padding:6px 8px;max-width:260px">
+        <input class="tracker-cell-edit" value="${notes.replace(/"/g,'&quot;')}" title="Notes — click to edit" placeholder="Add notes…"
+          onblur="trackerInlineSave('${j.id}','notes',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}"
+          style="width:100%;font-size:11px;color:var(--muted)">
+      </td>
       <td style="padding:8px 10px">
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
           <button onclick="openTrackerModal('${j.id}')" title="Edit project details" style="padding:3px 8px;border-radius:8px;border:1px solid rgba(245,166,35,.4);background:rgba(245,166,35,.08);color:var(--amber);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;margin-bottom:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
@@ -17029,6 +17107,47 @@ function trackerSetEditStatus(jobId, newStatus){
   setTrackerStage(jobId, { ...existing, editStatus: newStatus });
   // Re-render so the row moves to the correct tab if needed
   renderTracker();
+}
+
+// Toggle Files Received directly from the table (no modal needed)
+function trackerToggleFiles(jobId){
+  const existing = getTrackerStage(jobId);
+  setTrackerStage(jobId, { ...existing, filesReceived: !existing.filesReceived });
+  renderTracker();
+}
+
+// Save a single tracker field inline (called onblur from editable cells)
+function trackerInlineSave(jobId, field, value){
+  const existing = getTrackerStage(jobId);
+  if(existing[field] === value) return; // no change
+  setTrackerStage(jobId, { ...existing, [field]: value });
+  // Sync back to standalone project if applicable
+  const standaloneArr = getStandaloneProjects();
+  const spIdx = standaloneArr.findIndex(s=>String(s.id)===String(jobId));
+  if(spIdx >= 0){
+    standaloneArr[spIdx][field] = value;
+    saveStandaloneProjects(standaloneArr);
+  }
+  // Re-render only if the field affects sorting/grouping (not for minor text fields)
+  const reRenderFields = ['editStatus','rush','completionDate'];
+  if(reRenderFields.includes(field)) renderTracker();
+}
+
+// Toggle light/dark mode for the tracker pane
+let _trackerLightMode = false;
+function trackerToggleLightMode(){
+  _trackerLightMode = !_trackerLightMode;
+  const pane = document.getElementById('pane-tracker');
+  const btn = document.getElementById('tracker-light-btn');
+  if(_trackerLightMode){
+    pane?.classList.add('tracker-light');
+    if(btn) btn.textContent = '🌙';
+    btn?.setAttribute('title','Switch to dark mode');
+  } else {
+    pane?.classList.remove('tracker-light');
+    if(btn) btn.textContent = '☀️';
+    btn?.setAttribute('title','Switch to light mode');
+  }
 }
 
 function openTrackerModal(jobId){
