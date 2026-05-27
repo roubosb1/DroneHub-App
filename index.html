@@ -18430,9 +18430,13 @@ function salesSave(arr){
   const now = Date.now();
   _salesData = arr;
   _salesUpdatedAt = now;
-  // Persist to Firebase only — no localStorage (no size limits)
+  // Persist to Firebase — retry once if token not yet available
+  const doSync = () => fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
   if(_fbToken()){
-    fbSet('orgs', ORG_ID+':sales', {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
+    doSync();
+  } else {
+    // Token not ready yet — retry after 2s (covers fast actions right at login)
+    setTimeout(()=>{ if(_fbToken()) doSync(); }, 2000);
   }
 }
 
