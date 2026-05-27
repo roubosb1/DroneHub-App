@@ -4353,11 +4353,14 @@ const FREE_RADIUS_KM=40;
 
 // Contractor definitions — editable via Settings, persisted in localStorage
 const CONTRACTOR_DEFAULTS={
+  bailey:{name:'Bailey Roubos',addr:'177 Lakeshore Road W, Port Colborne, ON L3K 2S2',lat:42.8778,lng:-79.2598,email:'baileyroubos@gmail.com',phone:'',role:'Videographer / Photographer / Floor plan',rate:80,notes:'US base: 5217 Old Spicewood Springs Rd, Austin TX 78731 — drive calc not applied for US shoots'},
   brad:{name:'Brad Loiselle',addr:'1 Armour Dr, Welland, ON',lat:42.9848,lng:-79.2482,email:'',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
   akbar:{name:'Akbar Omar',addr:'9 Spall Ct, Toronto, ON',lat:43.7315,lng:-79.6254,email:'',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
   steve:{name:'Steve Calaguiro',addr:'5623 Woodland Blvd, Niagara Falls, ON',lat:43.0896,lng:-79.0849,email:'',phone:'',role:'Photographer / Floor plan',rate:40,notes:''},
 };
 let CONTRACTORS=JSON.parse(localStorage.getItem('dronehub_contractors')||JSON.stringify(CONTRACTOR_DEFAULTS));
+// Ensure any newly hardcoded defaults are always present (won't overwrite user edits)
+Object.keys(CONTRACTOR_DEFAULTS).forEach(k=>{if(!CONTRACTORS[k]) CONTRACTORS[k]=CONTRACTOR_DEFAULTS[k];});
 function saveContractors(){try{localStorage.setItem('dronehub_contractors',JSON.stringify(CONTRACTORS));}catch(e){}fbSet('orgs',ORG_ID+':contractors',{data:JSON.stringify(CONTRACTORS),updatedAt:Date.now()});}
 
 // Property coords — set when address is looked up
