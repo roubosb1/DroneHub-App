@@ -8816,7 +8816,14 @@ function openJobDetail(jobId){
     const rows=[];
     Object.values(job.payouts||{}).forEach(p=>{
       let total=0;
-      (p.entries||[]).forEach(e=>{total+=e.shootFee||0;total+=e.editFee||0;total+=e.driveFee||0;});
+      (p.entries||[]).forEach(e=>{
+        total+=e.shootFee||0;
+        // editFee on a shoot entry belongs to the assigned editor (internal cost) — never add to shooter
+        const isShootEntry=(e.role||'').toLowerCase().includes('shoot');
+        if(!isShootEntry) total+=e.editFee||0;
+        total+=e.driveFee||0;
+        total+=e.miscFee||0;
+      });
       if(!p.entries?.length){(p.lines||[]).forEach(l=>total+=l.fee||0);(p.editLines||[]).forEach(l=>total+=l.fee||0);}
       if(p.name&&total>0) rows.push({name:p.name,total});
     });
@@ -8873,8 +8880,8 @@ function openJobDetail(jobId){
           <div style="display:flex;justify-content:space-between;padding:3px 0">Profit 21%<span>${fmt(grand*0.21)}</span></div>
           <div style="display:flex;justify-content:space-between;padding:3px 0">CC/Non-pay 5%<span>${fmt(grand*0.05)}</span></div>
           <div style="display:flex;justify-content:space-between;padding:3px 0">Sales 7%<span>${fmt(grand*0.07)}</span></div>
+          ${j.commissionAmt>0?`<div style="display:flex;justify-content:space-between;padding:3px 0 3px 14px;color:var(--offwhite)">↳ ${j.commissionSalesperson||'Mackenzie'} (${j.commissionPct}%)<span>${fmt(j.commissionAmt)}</span></div>`:''}
           <div style="display:flex;justify-content:space-between;padding:3px 0">Admin 17%<span>${fmt(grand*0.17)}</span></div>
-          ${j.commissionAmt>0?`<div style="display:flex;justify-content:space-between;padding:3px 0;color:var(--offwhite)">↳ Mackenzie (${j.commissionPct}%)<span>${fmt(j.commissionAmt)}</span></div>`:''}
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--offwhite);padding:8px 0;border-top:1px solid var(--border);margin-bottom:4px">
           Contractor pool (50%)<span style="color:var(--blue-bright)">${fmt(grand*0.5)}</span>
