@@ -3264,29 +3264,37 @@ button{font-family:var(--font);}
         </div>
       </div>
 
-      <!-- Other-tab Type hint — shown only when Other is selected -->
-      <div id="import-other-type-hint" style="display:none;margin-top:10px;background:rgba(91,141,239,.07);border:1px solid rgba(91,141,239,.25);border-radius:10px;padding:12px 14px">
-        <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📋 Other list — Type column</div>
-        <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px">
-          Add a column named <strong style="color:var(--offwhite)">Type</strong> (or Field, Industry, Category, Job Type) to automatically classify contacts into job categories.
+      <!-- Other-tab: business type selector — shown only when Other is selected -->
+      <div id="import-other-type-hint" style="display:none;margin-top:10px;background:rgba(245,166,35,.05);border:1px solid rgba(245,166,35,.3);border-radius:10px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">📋 Other — Business Type</div>
+
+        <!-- Default type picker -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--offwhite);font-weight:600;margin-bottom:6px">Set default type for this upload:</div>
+          <select id="import-other-default-type" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);cursor:pointer">
+            <option value="">Auto-detect from file (uses Type column if present)</option>
+            <option value="landscape">Landscaping</option>
+            <option value="construction">Construction</option>
+            <option value="architects">Architects</option>
+            <option value="interior">Interior Designers</option>
+            <option value="builders">Builders</option>
+            <option value="restaurants">Restaurants</option>
+            <option value="retail">Retail</option>
+            <option value="events">Events</option>
+            <option value="sports">Sports</option>
+            <option value="weddings">Weddings</option>
+            <option value="automotive">Automotive</option>
+            <option value="hospitality">Hospitality</option>
+            <option value="healthcare">Healthcare</option>
+          </select>
+          <div style="font-size:10px;color:var(--muted);margin-top:5px">If your file has a <strong style="color:var(--offwhite)">Type</strong> / <strong style="color:var(--offwhite)">Business Type</strong> column, each row will use that value. Rows without a type get the default above.</div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px">
-          <span style="font-size:10px;color:var(--muted);font-weight:700;align-self:center;margin-right:2px">Accepted values:</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.15);color:#22D97A;font-weight:600">landscape</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(249,115,22,.15);color:#F97316;font-weight:600">construction</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(91,141,239,.15);color:#5B7FDB;font-weight:600">architects</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(167,139,250,.15);color:#A78BFA;font-weight:600">interior</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(192,132,252,.15);color:#C084FC;font-weight:600">builders</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(251,146,60,.15);color:#FB923C;font-weight:600">restaurants</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(245,200,66,.15);color:#F5C842;font-weight:600">retail</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(232,121,249,.15);color:#E879F9;font-weight:600">events</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,45,85,.15);color:#FF2D55;font-weight:600">sports</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(244,114,182,.15);color:#F472B6;font-weight:600">weddings</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(96,165,250,.15);color:#60A5FA;font-weight:600">automotive</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(52,211,153,.15);color:#34D399;font-weight:600">hospitality</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(248,113,113,.15);color:#F87171;font-weight:600">healthcare</span>
+
+        <!-- Recognised column names note -->
+        <div style="font-size:10px;color:var(--muted);border-top:1px solid rgba(255,255,255,.06);padding-top:8px">
+          <strong style="color:var(--offwhite)">Recognised type column names:</strong> Type, Business Type, Type of Business, Industry, Category, Field, Sector, Job Type
+          <br><span style="font-style:italic">Values like "Landscaping", "Construction Co.", "Restaurant / Bar" are auto-matched.</span>
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:7px;font-style:italic">Partial matches and keywords are auto-detected (e.g. "Landscaping", "Architecture", "Restaurant / Bar").</div>
       </div>
 
     </div>
@@ -19316,6 +19324,9 @@ function openImportModal(){
   document.getElementById('import-filename').textContent = '';
   const ow = document.getElementById('import-overwrite-dupes');
   if(ow) ow.checked = false;
+  // Reset default type dropdown
+  const dt = document.getElementById('import-other-default-type');
+  if(dt) dt.value = '';
   modal.style.display = 'flex';
 }
 
@@ -19354,6 +19365,10 @@ function getImportSelectedList(){
   return checked ? checked.value : salesActiveList;
 }
 
+function _getImportDefaultType(){
+  return document.getElementById('import-other-default-type')?.value || '';
+}
+
 function onImportDrop(e){
   e.preventDefault();
   document.getElementById('sales-import-dropzone').style.borderColor = 'var(--border)';
@@ -19362,7 +19377,7 @@ function onImportDrop(e){
   const fn = document.getElementById('import-filename');
   if(fn) fn.textContent = '📄 ' + file.name;
   const overwrite = !!document.getElementById('import-overwrite-dupes')?.checked;
-  processSalesImportFile(file, getImportSelectedList(), overwrite);
+  processSalesImportFile(file, getImportSelectedList(), overwrite, _getImportDefaultType());
 }
 
 function runSalesImport(input){
@@ -19371,10 +19386,10 @@ function runSalesImport(input){
   const fn = document.getElementById('import-filename');
   if(fn) fn.textContent = '📄 ' + file.name;
   const overwrite = !!document.getElementById('import-overwrite-dupes')?.checked;
-  processSalesImportFile(file, getImportSelectedList(), overwrite);
+  processSalesImportFile(file, getImportSelectedList(), overwrite, _getImportDefaultType());
 }
 
-function processSalesImportFile(file, listId, overwriteDupes){
+function processSalesImportFile(file, listId, overwriteDupes, defaultOtherType){
   // Resolve clients-active / clients-past into list='clients' + clientType
   let importClientType = undefined;
   if(listId === 'clients-active'){ importClientType = 'active'; listId = 'clients'; }
@@ -19395,19 +19410,26 @@ function processSalesImportFile(file, listId, overwriteDupes){
       let added = 0, updated = 0, blankRows = 0, dupSkipped = 0;
       rows.forEach(row=>{
         const r = {};
-        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_\-\/]/g,'')] = row[k]; });
+        Object.keys(row).forEach(k=>{ r[k.toLowerCase().replace(/[\s_\-\/\.\(\)]/g,'')] = String(row[k]); });
         const {firstName, lastName} = splitSalesName(
           String(r.firstname||r.fname||r.name||'').trim(),
           String(r.lastname||r.lname||'').trim()
         );
-        const company   = String(r.company||r.organisation||r.organization||r.brokerage||'').trim();
-        const email     = String(r.email||r['e-mail']||r.emailaddress||'').trim().toLowerCase();
-        const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
-        const city      = String(r.city||r.cityregion||r.region||r.location||r.market||r.area||r.territory||'').trim();
-        const notes     = String(r.notes||r.note||r.comments||'').trim();
+        const company   = String(r.company||r.organisation||r.organization||r.brokerage||r.businessname||r.business||'').trim();
+        const email     = String(r.email||r['e-mail']||r.emailaddress||r.emailaddr||'').trim().toLowerCase();
+        const phone     = String(r.phone||r.telephone||r.mobile||r.cell||r.phonenumber||r.contactnumber||'').trim();
+        const city      = String(r.city||r.cityregion||r.region||r.location||r.market||r.area||r.territory||r.province||r.state||'').trim();
+        const notes     = String(r.notes||r.note||r.comments||r.comment||r.memo||'').trim();
         const status    = String(r.status||'new').toLowerCase();
-        const rawField  = listId==='other' ? String(r.type||r.field||r.industry||r.category||r.sector||r.jobtype||r['job type']||r['job_type']||'').trim() : '';
-        const field     = listId==='other' ? normalizeOtherType(rawField) : '';
+        // Type column: check many possible column name variations (Mackenzie's sheets may use "Business Type" etc.)
+        const rawField  = listId==='other' ? String(
+          r.type||r.businesstype||r.typeofbusiness||r.businesscategory||r.companytype||
+          r.industrytype||r.industrysector||r.industry||r.category||r.field||
+          r.sector||r.jobtype||r.profession||r.trade||''
+        ).trim() : '';
+        // normalizeOtherType returns '' for unknown/empty — fall back to the default type chosen in the modal
+        const detectedField = listId==='other' ? normalizeOtherType(rawField) : '';
+        const field = detectedField || (listId==='other' ? (defaultOtherType||'') : '');
         const doNotEmail= String(r.donotemail||r['do not email']||r.optout||r['opt out']||'').trim().toLowerCase();
         // Client type: use import-level default, allow row override via 'clienttype'/'type' column
         let rowClientType = undefined;
