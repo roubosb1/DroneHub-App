@@ -4479,6 +4479,54 @@ function syncClientToSalesCRM(client){
   salesSave(all);
 }
 
+// Bulk sync ALL clients → Sales CRM Existing Clients list (fills in missing entries)
+function syncAllClientsToCRM(){
+  if(!clients||!clients.length) return;
+  const all=salesLoad();
+  let changed=false;
+  clients.forEach(client=>{
+    if(!client||client._deleted) return;
+    // Find by back-link, then by email
+    let idx=all.findIndex(c=>c._clientId===client.id);
+    if(idx<0 && client.email) idx=all.findIndex(c=>c.list==='clients'&&c.email&&c.email.toLowerCase()===client.email.toLowerCase());
+    const nameParts=(client.name||'').trim().split(/\s+/);
+    const firstName=nameParts[0]||'';
+    const lastName=nameParts.slice(1).join(' ');
+    if(idx>=0){
+      const c=all[idx];
+      // Ensure the contact is in the clients list and has the back-link
+      if(c.list!=='clients'){ c.list='clients'; changed=true; }
+      if(!c._clientId){ c._clientId=client.id; changed=true; }
+      if(!c.firstName&&firstName){ c.firstName=firstName; changed=true; }
+      if(!c.lastName&&lastName){ c.lastName=lastName; changed=true; }
+      if(!c.company&&client.company){ c.company=client.company; changed=true; }
+      if(!c.phone&&client.phone){ c.phone=client.phone; changed=true; }
+      if(!c.email&&client.email){ c.email=client.email; changed=true; }
+    } else {
+      // Client has no CRM entry — create one
+      const newContact={
+        id:'sc_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+        firstName, lastName,
+        company:client.company||'',
+        phone:client.phone||'',
+        email:client.email||'',
+        list:'clients', status:'client',
+        notes:'', clientType:client.status==='inactive'?'past':'active',
+        _clientTypeManual:false, doNotEmail:false, unsubscribed:false,
+        createdAt:client.createdAt||new Date().toISOString(),
+        _clientId:client.id,
+      };
+      all.push(newContact);
+      client._salesId=newContact.id;
+      changed=true;
+    }
+  });
+  if(changed){
+    salesSave(all);
+    saveClientsToStorage(); // persist any new _salesId back-links
+  }
+}
+
 // Sync a CRM contact (list='clients') → create/update matching client record
 function syncSalesCRMToClient(contact){
   if(!contact||contact.list!=='clients') return;
@@ -18789,8 +18837,9 @@ function setSalesList(listId){
   // Reset select-all checkbox
   const sa = document.getElementById('sales-select-all');
   if(sa) sa.checked = false;
-  // Auto-detect client types when entering clients tab
+  // Auto-detect client types and sync from main Clients tab when entering clients list
   if(listId === 'clients'){
+    syncAllClientsToCRM(); // pull all clients → Existing Clients list
     const allContacts = salesLoad();
     if(salesAutoDetectClientTypes(allContacts)) salesSave(allContacts);
   }
@@ -18798,6 +18847,8 @@ function setSalesList(listId){
 }
 
 function renderSales(){
+  // Always sync main Clients → Existing Clients list so nothing is missed
+  syncAllClientsToCRM();
   salesSyncFirebase().then(()=>renderSalesTable());
   dealsSyncFirebase && dealsSyncFirebase().then(()=>{ if(salesView==='pipeline') renderDealsTable(); }).catch(()=>{});
   renderSalesTable(); // immediate
