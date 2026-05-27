@@ -149,6 +149,25 @@ function getAvatarHtml(name,email,size=36,fontSize=12){
   const bg=colors[(name||'').charCodeAt(0)%colors.length];
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
 }
+function renderAppHeader(){
+  const session=gateGetSession&&gateGetSession();
+  if(!session) return;
+  const userDisplay=document.getElementById('app-user-display');
+  if(!userDisplay) return;
+  const isAdmin=session.type==='admin'||session.role==='admin';
+  const displayName=session.email==='roubosb1@gmail.com'?'Bailey Roubos':(session.name||session.email);
+  const avatarHtml=getAvatarHtml(displayName,session.email,28,10);
+  if(isAdmin){
+    const PRESET_JOB_TITLES_local=typeof PRESET_JOB_TITLES!=='undefined'?PRESET_JOB_TITLES:{};
+    const title=session.jobTitle||PRESET_JOB_TITLES_local[session.email]?.title||'Admin';
+    userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span></div></div>`;
+  } else {
+    const role=session.role||'contractor';
+    const roleLabels={admin:'Admin',editor:'Editor',videographer:'Videographer',sales:'Sales',contractor:'Contractor (Photographer/Videographer)'};
+    const displayTitle=session.jobTitle||roleLabels[role]||role;
+    userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${session.name||session.email}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${displayTitle}</span></div></div>`;
+  }
+}
 
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -15112,7 +15131,7 @@ async function gateEnterApp(session){
     const _lsEmptyTeam = clients.length === 0 && savedJobs.length === 0;
     if(_fbToken() && _lsEmptyTeam) await restoreFromFirebase(true).catch(()=>{});
     gateShowTeamView(session);
-    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); }).catch(()=>{});
+    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); }).catch(()=>{});
     return;
   }
 
@@ -15142,6 +15161,8 @@ async function gateEnterApp(session){
     // Ensure any hardcoded contractor defaults (e.g. Bailey) are written to Firebase
     // if they weren't already there (saveContractors is a no-op if nothing changed)
     saveContractors();
+    // Re-render header avatar now that photos are synced from Firebase
+    renderAppHeader();
   }).catch(()=>{});
 }
 
