@@ -4408,26 +4408,29 @@ function buildDriveSummary(){
   const vidDrive=vidKey?contractorDrive(vidKey):{km:0,excessKm:0,clientCharge:0,contractorCharge:0,isFree:true};
   const phoDrive=(phoKey&&!sameShooter)?contractorDrive(phoKey):{km:0,excessKm:0,clientCharge:0,contractorCharge:0,isFree:true};
   const fpDrive=fpKey?contractorDrive(fpKey):{km:0,excessKm:0,clientCharge:0,contractorCharge:0,isFree:true};
+  // US market jobs: drive is absorbed into package price — never billed to client
+  const isUsMarket=(document.getElementById('job-market-input')?.value||'canada')!=='canada';
+  const cc=isUsMarket?0:1; // client charge multiplier: 0 for US, 1 for Canada
   return{
-    vidKey, phoKey, fpKey, sameShooter,
+    vidKey, phoKey, fpKey, sameShooter, isUsMarket,
     vidDrive, phoDrive, fpDrive,
-    vidClientCharge:   svc.video?vidDrive.clientCharge:0,
-    phoClientCharge:   (svc.photo&&!sameShooter)?phoDrive.clientCharge:0,
+    vidClientCharge:   svc.video?vidDrive.clientCharge*cc:0,
+    phoClientCharge:   (svc.photo&&!sameShooter)?phoDrive.clientCharge*cc:0,
     fpClientCharge:    0,  // floor plan has no drive charge — contractor is already on site
     fpContractorCharge:0,  // floor plan drive not reimbursed separately
     // Exterior shoots use the same contractor as their respective type
-    extVideoClientCharge: svc.extvideo&&vidKey?vidDrive.clientCharge:0,
-    extPhotoClientCharge: svc.extphoto&&phoKey?(sameShooter?0:phoDrive.clientCharge):0,
+    extVideoClientCharge: svc.extvideo&&vidKey?vidDrive.clientCharge*cc:0,
+    extPhotoClientCharge: svc.extphoto&&phoKey?(sameShooter?0:phoDrive.clientCharge*cc):0,
     extVideoContractorCharge: svc.extvideo&&vidKey?vidDrive.contractorCharge:0,
     extPhotoContractorCharge: svc.extphoto&&phoKey&&!sameShooter?phoDrive.contractorCharge:0,
     // Random shoots also tied to their respective contractor
-    randVideoClientCharge: svc.randomvideo&&vidKey?vidDrive.clientCharge:0,
-    randPhotoClientCharge: svc.randomphoto&&phoKey&&!sameShooter?phoDrive.clientCharge:0,
+    randVideoClientCharge: svc.randomvideo&&vidKey?vidDrive.clientCharge*cc:0,
+    randPhotoClientCharge: svc.randomphoto&&phoKey&&!sameShooter?phoDrive.clientCharge*cc:0,
     randVideoContractorCharge: svc.randomvideo&&vidKey?vidDrive.contractorCharge:0,
     randPhotoContractorCharge: svc.randomphoto&&phoKey&&!sameShooter?phoDrive.contractorCharge:0,
     vidContractorCharge:svc.video?vidDrive.contractorCharge:0,
     phoContractorCharge:(svc.photo&&!sameShooter)?phoDrive.contractorCharge:0,
-    totalClientCharge:  (svc.video?vidDrive.clientCharge:0)+(svc.photo&&!sameShooter?phoDrive.clientCharge:0)+(svc.extvideo&&vidKey?vidDrive.clientCharge:0)+(svc.extphoto&&phoKey&&!sameShooter?phoDrive.clientCharge:0)+(svc.randomvideo&&vidKey?vidDrive.clientCharge:0)+(svc.randomphoto&&phoKey&&!sameShooter?phoDrive.clientCharge:0),
+    totalClientCharge: isUsMarket?0:(svc.video?vidDrive.clientCharge:0)+(svc.photo&&!sameShooter?phoDrive.clientCharge:0)+(svc.extvideo&&vidKey?vidDrive.clientCharge:0)+(svc.extphoto&&phoKey&&!sameShooter?phoDrive.clientCharge:0)+(svc.randomvideo&&vidKey?vidDrive.clientCharge:0)+(svc.randomphoto&&phoKey&&!sameShooter?phoDrive.clientCharge:0),
   };
 }
 
@@ -4471,17 +4474,20 @@ function onContractorChange(){
 function refreshAddrPanel(){
   const ds=buildDriveSummary();
   let breakdown='';
+  const driveLabel=(d)=>ds.isUsMarket
+    ?'<span style="color:#22D97A">included in package (US market)</span>'
+    :(d.isFree?'<span style="color:#22D97A">free zone</span>':`<span style="color:#F5A623">${d.excessKm} km excess → +${fmt(d.clientCharge)}</span>`);
   if(ds.vidKey&&svc.video){
     const d=ds.vidDrive;
-    breakdown+=`<div style="font-size:11px;color:#A8B4D0;padding:2px 0">${(CONTRACTORS[ds.vidKey]?.name||EDITOR_NAMES[ds.vidKey]||ds.vidKey||'Unknown')} (video): ${d.km} km from home → ${d.isFree?'<span style="color:#22D97A">free zone</span>':`<span style="color:#F5A623">${d.excessKm} km excess → +${fmt(d.clientCharge)}</span>`}</div>`;
+    breakdown+=`<div style="font-size:11px;color:#A8B4D0;padding:2px 0">${(CONTRACTORS[ds.vidKey]?.name||EDITOR_NAMES[ds.vidKey]||ds.vidKey||'Unknown')} (video): ${d.km} km from home → ${driveLabel(d)}</div>`;
   }
   if(ds.phoKey&&svc.photo&&!ds.sameShooter){
     const d=ds.phoDrive;
-    breakdown+=`<div style="font-size:11px;color:#A8B4D0;padding:2px 0">${(CONTRACTORS[ds.phoKey]?.name||EDITOR_NAMES[ds.phoKey]||ds.phoKey||'Unknown')} (photo): ${d.km} km from home → ${d.isFree?'<span style="color:#22D97A">free zone</span>':`<span style="color:#F5A623">${d.excessKm} km excess → +${fmt(d.clientCharge)}</span>`}</div>`;
+    breakdown+=`<div style="font-size:11px;color:#A8B4D0;padding:2px 0">${(CONTRACTORS[ds.phoKey]?.name||EDITOR_NAMES[ds.phoKey]||ds.phoKey||'Unknown')} (photo): ${d.km} km from home → ${driveLabel(d)}</div>`;
   }
   if(ds.sameShooter&&ds.vidKey&&svc.video&&svc.photo){
     const d=ds.vidDrive;
-    breakdown+=`<div style="font-size:11px;color:#A8B4D0;padding:2px 0">${(CONTRACTORS[ds.vidKey]?.name||EDITOR_NAMES[ds.vidKey]||ds.vidKey||'Unknown')} (video + photo): ${d.km} km → ${d.isFree?'<span style="color:#22D97A">free zone</span>':`<span style="color:#F5A623">${d.excessKm} km excess → +${fmt(d.clientCharge)}</span>`}</div>`;
+    breakdown+=`<div style="font-size:11px;color:#A8B4D0;padding:2px 0">${(CONTRACTORS[ds.vidKey]?.name||EDITOR_NAMES[ds.vidKey]||ds.vidKey||'Unknown')} (video + photo): ${d.km} km → ${driveLabel(d)}</div>`;
   }
   if(ds.fpKey&&svc.floorplan){
     const d=ds.fpDrive;
