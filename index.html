@@ -17055,7 +17055,6 @@ function renderTracker(){
 
     const rushBadge=isRush?'<span style="background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px">🚨 RUSH</span>':'';
     const overdueBadge=isOverdue?'<span style="background:rgba(240,82,82,.18);color:#F05252;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">⚠ OVERDUE</span>':'';
-    const dhEditorBadge=_isDhEditor?'<span style="background:rgba(240,82,82,.18);color:#FF7070;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px;border:1px solid rgba(240,82,82,.3)">⚠ ASSIGN</span>':'';
     const filmHrs=ts.approxFilmHours||j.duration||'';
     const editHrs=ts.approxEditHours||'';
     const notes=ts.notes||'';
@@ -17100,10 +17099,10 @@ function renderTracker(){
           :'<span style="font-size:18px;color:rgba(255,255,255,.25);user-select:none" title="Files not yet received — click to toggle">☐</span>'}
       </td>
       <td style="padding:6px 8px;text-align:center">
-        <input class="tracker-cell-edit" value="${_isDhEditor?'DroneHub':_rawEditor}" title="Assigned Editor — click to edit" placeholder="ASSIGN"
-          onblur="trackerInlineSave('${j.id}','claimedBy',this.value)"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${_isDhEditor?'DroneHub':_rawEditor}';this.blur()}"
-          style="text-align:center;width:90px;font-size:11px;font-weight:700;color:${_isDhEditor?'#FF7070':'#fff'};background:${_isDhEditor?'rgba(240,82,82,.2)':vidColor(editor)+'33'};border-radius:8px;padding:2px 6px">${dhEditorBadge}
+        <select onchange="trackerInlineSave('${j.id}','claimedBy',this.value);renderTracker()" title="Assign Editor"
+          style="padding:3px 6px;border-radius:6px;border:1px solid ${_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${_isDhEditor?'#FF7070':'#fff'};font-size:11px;font-weight:700;cursor:pointer;max-width:160px;outline:none">
+          ${buildEditorOptions(_rawEditor||'DroneHub')}
+        </select>
       </td>
       <td style="padding:6px 8px;text-align:center">
         <select onchange="trackerSetEditStatus('${j.id}',this.value)" title="Change edit status" style="padding:4px 6px;border-radius:6px;border:1px solid ${ss.color}55;background:${ss.bg};color:${ss.color};font-size:11px;font-weight:700;cursor:pointer;max-width:170px;outline:none">${editStatusSelectOpts}</select>${draftCharge}
