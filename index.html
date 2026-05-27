@@ -18391,7 +18391,7 @@ if(_fbToken()) setTimeout(()=>restoreFromFirebase(),1000);
 // SALES CRM
 // ══════════════════════════════════════════════════════
 
-const SALES_LISTS = [
+const SALES_LIST_DEFS = [
   {id:'realestate', label:'🏠 Real Estate'},
   {id:'resorts',    label:'🏨 Resorts'},
   {id:'golf',       label:'⛳ Golf Courses'},
@@ -19218,7 +19218,7 @@ function importSalesExcel(input){
       });
       salesSave(all);
       renderSalesTable();
-      alert(`✅ Imported ${added} contacts into ${SALES_LISTS.find(l=>l.id===listId)?.label||listId}.\n(Duplicates by email were skipped.)`);
+      alert(`✅ Imported ${added} contacts into ${SALES_LIST_DEFS.find(l=>l.id===listId)?.label||listId}.\n(Duplicates by email were skipped.)`);
     } catch(err){
       alert('Error reading file: ' + err.message);
     }
@@ -19689,7 +19689,7 @@ importSalesExcel = function(input){
       });
       salesSave(all);
       renderSalesTable();
-      alert(`✅ Imported ${added} contacts into ${SALES_LISTS.find(l=>l.id===listId)?.label||listId}.\n(Duplicates by email were skipped.)`);
+      alert(`✅ Imported ${added} contacts into ${SALES_LIST_DEFS.find(l=>l.id===listId)?.label||listId}.\n(Duplicates by email were skipped.)`);
     } catch(err){ alert('Error reading file: ' + err.message); }
     input.value = '';
   };
