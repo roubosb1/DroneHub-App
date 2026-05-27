@@ -19451,7 +19451,7 @@ function setSalesList(listId){
   salesActiveList = listId;
   try{localStorage.setItem('dronehub_sales_list', listId);}catch(e){}
   if(listId !== 'clients') _salesClientSub = 'all';
-  if(listId !== 'other')   _salesOtherType  = 'all';
+  _salesOtherType = 'all'; // reset type filter on every tab switch
   document.querySelectorAll('.sales-list-tab').forEach(b=>{
     b.classList.toggle('active', b.id === 'sltab-'+listId);
   });
@@ -19542,40 +19542,45 @@ function renderSalesTable(){
           ${lbl} <span style="opacity:.65">(${cnt})</span>
         </button>`).join('')}
     </div>`;
-  } else if(salesActiveList === 'other' && subFilterEl){
-    // Build type filter pills for the Other tab — always show all types
+  } else if(subFilterEl){
+    // Build type filter pills for any list that has at least one typed contact
     const typeCounts = {};
     list.forEach(c=>{ const k = normalizeOtherType(c.field||'')||''; typeCounts[k] = (typeCounts[k]||0)+1; });
+    const typedCount = Object.entries(typeCounts).filter(([k])=>k&&OTHER_TYPES.find(t=>t.id===k)).reduce((s,[,v])=>s+v,0);
     const unclassifiedCount = (typeCounts['']||0) + Object.entries(typeCounts).filter(([k])=>k&&!OTHER_TYPES.find(t=>t.id===k)).reduce((s,[,v])=>s+v,0);
-    subFilterEl.style.display = '';
-    subFilterEl.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 0 4px">
-      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px;white-space:nowrap">Type:</span>
-      <button onclick="_salesOtherType='all';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='all'?'var(--blue-bright)':'var(--border)'};background:${_salesOtherType==='all'?'rgba(91,141,239,.15)':'var(--navy-lift)'};color:${_salesOtherType==='all'?'var(--blue-bright)':'var(--muted)'}">
-        All <span style="opacity:.65">(${list.length})</span>
-      </button>
-      ${OTHER_TYPES.map(t=>{
-        const cnt = typeCounts[t.id]||0;
-        const isActive = _salesOtherType===t.id;
-        return `<button onclick="_salesOtherType='${t.id}';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${isActive?t.color:'var(--border)'};background:${isActive?t.color+'22':'var(--navy-lift)'};color:${isActive?t.color:cnt>0?'var(--text-secondary)':'var(--muted)'};opacity:${cnt===0&&!isActive?'.5':'1'}">
-          ${t.label}${cnt>0?` <span style="opacity:.65">(${cnt})</span>`:''}
-        </button>`;
-      }).join('')}
-      ${unclassifiedCount>0?`<button onclick="_salesOtherType='__unset__';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='__unset__'?'var(--muted)':'var(--border)'};background:${_salesOtherType==='__unset__'?'rgba(168,180,208,.12)':'var(--navy-lift)'};color:var(--muted)">
-        Unclassified <span style="opacity:.65">(${unclassifiedCount})</span>
-      </button>`:''}
-      ${unclassifiedCount>0?`<button onclick="salesAutoClassifyOther()" title="Auto-detect business type from company name for all unclassified contacts" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);margin-left:6px">
-        ✨ Auto-classify ${unclassifiedCount}
-      </button>`:''}
-    </div>`;
-  } else if(subFilterEl){
-    subFilterEl.style.display = 'none';
+    if(typedCount === 0 && unclassifiedCount === list.length){
+      // No contacts in this list have a type — hide sub-filter
+      subFilterEl.style.display = 'none';
+    } else {
+      subFilterEl.style.display = '';
+      subFilterEl.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 0 4px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px;white-space:nowrap">Type:</span>
+        <button onclick="_salesOtherType='all';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='all'?'var(--blue-bright)':'var(--border)'};background:${_salesOtherType==='all'?'rgba(91,141,239,.15)':'var(--navy-lift)'};color:${_salesOtherType==='all'?'var(--blue-bright)':'var(--muted)'}">
+          All <span style="opacity:.65">(${list.length})</span>
+        </button>
+        ${OTHER_TYPES.filter(t=>(typeCounts[t.id]||0)>0).map(t=>{
+          const cnt = typeCounts[t.id]||0;
+          const isActive = _salesOtherType===t.id;
+          return `<button onclick="_salesOtherType='${t.id}';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${isActive?t.color:'var(--border)'};background:${isActive?t.color+'22':'var(--navy-lift)'};color:${isActive?t.color:'var(--muted)'}">
+            ${t.label} <span style="opacity:.65">(${cnt})</span>
+          </button>`;
+        }).join('')}
+        ${unclassifiedCount>0?`<button onclick="_salesOtherType='__unset__';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='__unset__'?'var(--muted)':'var(--border)'};background:${_salesOtherType==='__unset__'?'rgba(168,180,208,.12)':'var(--navy-lift)'};color:var(--muted)">
+          Unclassified <span style="opacity:.65">(${unclassifiedCount})</span>
+        </button>`:''}
+        ${unclassifiedCount>0?`<button onclick="salesAutoClassifyOther()" title="Auto-detect business type from company name for all unclassified contacts" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);margin-left:6px">
+          ✨ Auto-classify ${unclassifiedCount}
+        </button>`:''}
+      </div>`;
+    }
   }
 
   // Apply sub-filter
   let subList = list;
   if(salesActiveList==='clients' && _salesClientSub!=='all'){
     subList = list.filter(c=>(c.clientType||'active')===_salesClientSub);
-  } else if(salesActiveList==='other' && _salesOtherType!=='all'){
+  } else if(_salesOtherType!=='all'){
+    // Type filter applies on any list tab
     if(_salesOtherType==='__unset__'){
       subList = list.filter(c=>!OTHER_TYPES.find(t=>t.id===normalizeOtherType(c.field||'')));
     } else {
@@ -20027,6 +20032,8 @@ function importSalesExcel(input){
         const phone     = String(r.phone||r.telephone||r.mobile||r.cell||'').trim();
         const notes     = String(r.notes||r.note||r.comments||'').trim();
         const status    = String(r.status||'new').toLowerCase();
+        const rawType   = String(r.type||r.field||r.industry||r.category||r.jobtype||r.businesstype||r.sector||'').trim();
+        const field     = rawType ? (normalizeOtherType(rawType)||rawType) : undefined;
 
         if(!firstName && !lastName && !email) return; // skip blank rows
 
@@ -20036,6 +20043,7 @@ function importSalesExcel(input){
         all.push({
           id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
           firstName, lastName, company, phone, email, notes,
+          field: field||undefined,
           list: listId,
           status: ['new','contacted','warm','client'].includes(status) ? status : 'new',
           unsubscribed: false,
@@ -20532,11 +20540,14 @@ importSalesExcel = function(input){
         const city      = String(r.city||r.cityregion||r.region||r.location||r.market||r.area||r.territory||'').trim();
         const notes     = String(r.notes||r.note||r.comments||'').trim();
         const status    = String(r.status||'new').toLowerCase();
+        const rawType   = String(r.type||r.field||r.industry||r.category||r.jobtype||r.businesstype||r.sector||'').trim();
+        const field     = rawType ? (normalizeOtherType(rawType)||rawType) : undefined;
         if(!firstName && !lastName && !email) return;
         if(email && all.some(c=>c.email && c.email.toLowerCase()===email)) return;
         all.push({
           id: 'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
           firstName, lastName, company, phone, email, city, notes,
+          field: field||undefined,
           list: listId,
           status: ['new','contacted','warm','client'].includes(status) ? status : 'new',
           unsubscribed: false,
