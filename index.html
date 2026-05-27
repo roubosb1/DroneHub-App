@@ -232,12 +232,28 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 /* Sticky th cells */
 #tracker-table thead th{position:sticky;top:0;background:#0D1117;z-index:4}
 /* ── Tracker light mode ── */
-#pane-tracker.tracker-light{background:#f0f2f5}
-#pane-tracker.tracker-light #tracker-scroll-container{background:#f0f2f5}
-#pane-tracker.tracker-light #tracker-table{background:#fff;color:#1a1a2e}
-#pane-tracker.tracker-light #tracker-table thead th{background:#e8eaf0;color:#333;border-bottom-color:#aaa}
-#pane-tracker.tracker-light #tracker-table tbody tr:hover{background:rgba(91,141,239,.08)!important}
-#pane-tracker.tracker-light #tracker-table td{color:#1a1a2e;border-bottom-color:rgba(0,0,0,.08)!important}
+#pane-tracker.tracker-light{background:#f0f2f7}
+#pane-tracker.tracker-light #tracker-scroll-container{background:#f0f2f7}
+/* Header bar */
+#pane-tracker.tracker-light>div:first-child{background:#fff!important;border-bottom-color:#d0d4e8!important}
+#pane-tracker.tracker-light>div:first-child span,
+#pane-tracker.tracker-light>div:first-child div{color:#1a1a2e}
+/* Filter/search inputs inside header */
+#pane-tracker.tracker-light>div:first-child input,
+#pane-tracker.tracker-light>div:first-child select{background:#f0f2f8!important;border-color:#c8cce0!important;color:#1a1a2e!important}
+/* Light scrollbar */
+#pane-tracker.tracker-light #tracker-scroll-container::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18)}
+/* Sticky th */
+#pane-tracker.tracker-light #tracker-table thead th{background:#e4e7f2!important;color:#222!important;border-bottom-color:#a0a8cc!important}
+/* Inline editable inputs inside table */
+#pane-tracker.tracker-light .tracker-cell-edit{color:#1a1a2e!important}
+#pane-tracker.tracker-light .tracker-cell-edit:focus{background:rgba(91,141,239,.12)!important}
+/* Selects inside table */
+#pane-tracker.tracker-light #tracker-table select{background:#f0f2f8!important;color:#1a1a2e!important}
+#pane-tracker.tracker-light #tracker-table tbody td{color:#374151}
+#pane-tracker.tracker-light #tracker-table tbody a{filter:brightness(.8)}
+#pane-tracker.tracker-light #tracker-table tbody tr button{filter:brightness(.95)}
+#pane-tracker.tracker-light .tracker-cell-edit::placeholder{color:#9ca3af!important}
 /* Inline editable tracker cells */
 .tracker-cell-edit{background:transparent;border:none;outline:none;color:inherit;font-size:inherit;font-family:inherit;width:100%;cursor:text}
 .tracker-cell-edit:focus{background:rgba(91,141,239,.1);border-radius:4px;outline:1px solid rgba(91,141,239,.5)}
@@ -17075,25 +17091,46 @@ function renderTracker(){
 
   if(countEl) countEl.textContent=jobs.length+' project'+(jobs.length===1?'':'s');
 
+  const _lm=_trackerLightMode; // local alias for light-mode flag
+
+  // Dark-mode status badge styles
   const STATUS_STYLES={
-    footage_pending:  {bg:'#2d2d2d',color:'#A8B4D0',label:'Footage Pending'},
-    ready:            {bg:'#1a3a5c',color:'#7AABFF',label:'Ready to Start'},
-    draft1_progress:  {bg:'#1a2a1a',color:'#34D399',label:'D1 - In Progress'},
-    draft1:           {bg:'#1a3a2a',color:'#22D97A',label:'D1 - Sent'},
-    draft2_ready:     {bg:'#1a3a5c',color:'#60C8FF',label:'D2 - Ready to Start'},
-    draft2_progress:  {bg:'#2a2a1a',color:'#FCD34D',label:'D2 - In Progress'},
-    draft2:           {bg:'#2a2a1a',color:'#F5A623',label:'D2 - Sent'},
-    draft3_ready:     {bg:'#1a3a5c',color:'#60C8FF',label:'D3 - Ready to Start'},
-    draft3_progress:  {bg:'#2a1a1a',color:'#FB923C',label:'D3 - In Progress'},
-    draft3:           {bg:'#2a1a1a',color:'#F05252',label:'D3 - Sent'},
-    draft_plus_ready: {bg:'#1a3a5c',color:'#60C8FF',label:'D+ - Ready to Start'},
-    draft_plus:       {bg:'#3a1a1a',color:'#F87171',label:'Draft + - In Progress'},
-    finals_sent:      {bg:'#0d2d1a',color:'#22D97A',label:'Finals Sent ✓'},
-    in_progress:      {bg:'#1a2a3a',color:'#5B8DEF',label:'In Progress'},
-    review:           {bg:'#2a1a3a',color:'#A78BFA',label:'In Review'},
+    footage_pending:  {bg:'#2d2d2d',     color:'#A8B4D0',label:'Footage Pending'},
+    ready:            {bg:'#1a3a5c',     color:'#7AABFF', label:'Ready to Start'},
+    draft1_progress:  {bg:'#1a2a1a',     color:'#34D399', label:'D1 - In Progress'},
+    draft1:           {bg:'#1a3a2a',     color:'#22D97A', label:'D1 - Sent'},
+    draft2_ready:     {bg:'#1a3a5c',     color:'#60C8FF', label:'D2 - Ready to Start'},
+    draft2_progress:  {bg:'#2a2a1a',     color:'#FCD34D', label:'D2 - In Progress'},
+    draft2:           {bg:'#2a2a1a',     color:'#F5A623', label:'D2 - Sent'},
+    draft3_ready:     {bg:'#1a3a5c',     color:'#60C8FF', label:'D3 - Ready to Start'},
+    draft3_progress:  {bg:'#2a1a1a',     color:'#FB923C', label:'D3 - In Progress'},
+    draft3:           {bg:'#2a1a1a',     color:'#F05252', label:'D3 - Sent'},
+    draft_plus_ready: {bg:'#1a3a5c',     color:'#60C8FF', label:'D+ - Ready to Start'},
+    draft_plus:       {bg:'#3a1a1a',     color:'#F87171', label:'Draft + - In Progress'},
+    finals_sent:      {bg:'#0d2d1a',     color:'#22D97A', label:'Finals Sent ✓'},
+    in_progress:      {bg:'#1a2a3a',     color:'#5B8DEF', label:'In Progress'},
+    review:           {bg:'#2a1a3a',     color:'#A78BFA', label:'In Review'},
+  };
+  // Light-mode status badge styles (solid pastel chips with dark text)
+  const STATUS_STYLES_LIGHT={
+    footage_pending:  {bg:'#e8eaf2',color:'#4a5568',label:'Footage Pending'},
+    ready:            {bg:'#dbeafe',color:'#1d4ed8',label:'Ready to Start'},
+    draft1_progress:  {bg:'#d1fae5',color:'#065f46',label:'D1 - In Progress'},
+    draft1:           {bg:'#d1fae5',color:'#065f46',label:'D1 - Sent'},
+    draft2_ready:     {bg:'#dbeafe',color:'#1d4ed8',label:'D2 - Ready to Start'},
+    draft2_progress:  {bg:'#fef9c3',color:'#92400e',label:'D2 - In Progress'},
+    draft2:           {bg:'#fef9c3',color:'#92400e',label:'D2 - Sent'},
+    draft3_ready:     {bg:'#dbeafe',color:'#1d4ed8',label:'D3 - Ready to Start'},
+    draft3_progress:  {bg:'#ffedd5',color:'#9a3412',label:'D3 - In Progress'},
+    draft3:           {bg:'#fee2e2',color:'#991b1b',label:'D3 - Sent'},
+    draft_plus_ready: {bg:'#dbeafe',color:'#1d4ed8',label:'D+ - Ready to Start'},
+    draft_plus:       {bg:'#fee2e2',color:'#991b1b',label:'Draft + - In Progress'},
+    finals_sent:      {bg:'#d1fae5',color:'#065f46',label:'Finals Sent ✓'},
+    in_progress:      {bg:'#dbeafe',color:'#1e40af',label:'In Progress'},
+    review:           {bg:'#ede9fe',color:'#5b21b6',label:'In Review'},
   };
 
-  // Videographer color pills (reuse CREATOR_COLORS)
+  // Videographer color pills
   const VID_COLORS=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9','#14B8A6','#FB923C'];
   function vidColor(name){
     if(!name) return '#555';
@@ -17108,28 +17145,30 @@ function renderTracker(){
   }
   if(emptyState) emptyState.style.display='none';
 
-  // Alternate row colors like the screenshot
-  // Update first column header
   const pidHeader=document.getElementById('tracker-col-pid');
   if(pidHeader) pidHeader.textContent=_trackerTab==='upcoming'?'Queue':'Project ID';
 
-  // Per-status row accent colors (subtle background wash)
+  // Per-status row accent colors — dark mode
   const ROW_ACCENT={
-    footage_pending:'rgba(168,180,208,.05)',
-    ready:'rgba(122,171,255,.06)',
-    draft1_progress:'rgba(52,211,153,.07)',
-    draft1:'rgba(34,217,122,.07)',
-    draft2_ready:'rgba(96,200,255,.06)',
-    draft2_progress:'rgba(252,211,77,.07)',
-    draft2:'rgba(245,166,35,.07)',
-    draft3_ready:'rgba(96,200,255,.06)',
-    draft3_progress:'rgba(251,146,60,.07)',
-    draft3:'rgba(240,82,82,.07)',
-    draft_plus_ready:'rgba(96,200,255,.06)',
-    draft_plus:'rgba(248,113,113,.08)',
-    finals_sent:'rgba(34,217,122,.09)',
-    in_progress:'rgba(91,141,239,.07)',
+    footage_pending:'rgba(168,180,208,.05)', ready:'rgba(122,171,255,.06)',
+    draft1_progress:'rgba(52,211,153,.07)',  draft1:'rgba(34,217,122,.07)',
+    draft2_ready:'rgba(96,200,255,.06)',     draft2_progress:'rgba(252,211,77,.07)',
+    draft2:'rgba(245,166,35,.07)',           draft3_ready:'rgba(96,200,255,.06)',
+    draft3_progress:'rgba(251,146,60,.07)', draft3:'rgba(240,82,82,.07)',
+    draft_plus_ready:'rgba(96,200,255,.06)',draft_plus:'rgba(248,113,113,.08)',
+    finals_sent:'rgba(34,217,122,.09)',     in_progress:'rgba(91,141,239,.07)',
     review:'rgba(167,139,250,.08)',
+  };
+  // Per-status row accent colors — light mode (gentle tints on white)
+  const ROW_ACCENT_LIGHT={
+    footage_pending:'#f8f8fc', ready:'#eff6ff',
+    draft1_progress:'#f0fdf4',  draft1:'#f0fdf4',
+    draft2_ready:'#eff6ff',     draft2_progress:'#fefce8',
+    draft2:'#fefce8',           draft3_ready:'#eff6ff',
+    draft3_progress:'#fff7ed', draft3:'#fff1f2',
+    draft_plus_ready:'#eff6ff',draft_plus:'#fff1f2',
+    finals_sent:'#f0fdf4',     in_progress:'#eff6ff',
+    review:'#f5f3ff',
   };
 
   const today=new Date().toISOString().slice(0,10);
@@ -17143,19 +17182,32 @@ function renderTracker(){
     const _isDhEditor=_rawEditor==='DroneHub'||_rawEditor==='dronehub';
     const editor=_rawEditor||'ASSIGN';
     const editStatus=ts.editStatus||'ready';
-    const ss=STATUS_STYLES[editStatus]||STATUS_STYLES.ready;
+    const ss=(_lm?STATUS_STYLES_LIGHT:STATUS_STYLES)[editStatus]||(_lm?STATUS_STYLES_LIGHT:STATUS_STYLES).ready;
     const isRush=ts.rush||false;
     const dueDate=ts.completionDate||'';
     const isOverdue=dueDate&&dueDate<today&&!COMPLETED_STATUSES.includes(editStatus);
 
-    // Row background: rush > overdue > status accent
-    const rowBg=isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(ROW_ACCENT[editStatus]||'rgba(255,255,255,.01)');
-    const hoverBg=isRush?'rgba(240,82,82,.18)':isOverdue?'rgba(240,82,82,.15)':'rgba(91,141,239,.1)';
-    const borderColor=isRush?'rgba(240,82,82,.3)':isOverdue?'rgba(240,82,82,.2)':(ss.color+'28');
-    const leftAccent=isRush||isOverdue?`border-left:3px solid ${isRush?'var(--red)':ss.color};`:`border-left:3px solid ${ss.color}44;`;
+    // Row background: light vs dark mode, rush > overdue > status accent
+    const rowBg=_lm
+      ?(isRush?'#fef2f2':isOverdue?'#fff1f2':(ROW_ACCENT_LIGHT[editStatus]||'#ffffff'))
+      :(isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(ROW_ACCENT[editStatus]||'rgba(255,255,255,.01)'));
+    const hoverBg=_lm
+      ?(isRush?'#fee2e2':isOverdue?'#fee2e2':'#e0e7ff')
+      :(isRush?'rgba(240,82,82,.18)':isOverdue?'rgba(240,82,82,.15)':'rgba(91,141,239,.1)');
+    const borderColor=_lm
+      ?(isRush?'#fca5a5':isOverdue?'#fca5a5':'rgba(0,0,0,.07)')
+      :(isRush?'rgba(240,82,82,.3)':isOverdue?'rgba(240,82,82,.2)':(ss.color+'28'));
+    const leftAccent=isRush||isOverdue
+      ?`border-left:3px solid ${isRush?'#ef4444':'#f97316'};`
+      :_lm?`border-left:3px solid ${ss.color}99;`:`border-left:3px solid ${ss.color}44;`;
 
-    const rushBadge=isRush?'<span style="background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px">🚨 RUSH</span>':'';
-    const overdueBadge=isOverdue?'<span style="background:rgba(240,82,82,.18);color:#F05252;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">⚠ OVERDUE</span>':'';
+    // Text colors
+    const txtPrimary=_lm?'#111827':'var(--white)';
+    const txtMuted=_lm?'#6b7280':'var(--muted)';
+    const txtSub=_lm?'#9ca3af':'var(--muted)';
+
+    const rushBadge=isRush?'<span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px">🚨 RUSH</span>':'';
+    const overdueBadge=isOverdue?`<span style="background:${_lm?'#fee2e2':'rgba(240,82,82,.18)'};color:#dc2626;padding:1px 5px;border-radius:6px;font-size:9px;font-weight:700;margin-left:4px">⚠ OVERDUE</span>`:'';
     const filmHrs=ts.approxFilmHours||j.duration||'';
     const editHrs=ts.approxEditHours||'';
     const notes=ts.notes||'';
@@ -17168,26 +17220,26 @@ function renderTracker(){
 
     // Queue number for Upcoming tab
     const queueCell=_trackerTab==='upcoming'
-      ?`<td style="padding:8px 10px;white-space:nowrap">
+      ?`<td style="padding:8px 10px;white-space:nowrap;background:${rowBg}">
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-            <span style="font-size:9px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.06em">Up Next</span>
-            <span style="font-size:18px;font-weight:900;color:${isRush?'var(--red)':'var(--amber)'};line-height:1">${idx+1}</span>
+            <span style="font-size:9px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.06em">Up Next</span>
+            <span style="font-size:18px;font-weight:900;color:${isRush?'#ef4444':'#D97706'};line-height:1">${idx+1}</span>
           </div>
         </td>`
-      :`<td style="padding:8px 10px;color:#A8B4D0;font-family:monospace;font-size:11px;white-space:nowrap">${pid}</td>`;
+      :`<td style="padding:8px 10px;color:${_lm?'#6b7280':'#A8B4D0'};font-family:monospace;font-size:11px;white-space:nowrap">${pid}</td>`;
 
     // Build inline edit-status dropdown options
     const editStatusSelectOpts = EDIT_STATUS_OPTS.map(s=>`<option value="${s.key}"${editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
 
     // Due date cell: red if overdue
-    const dueDateColor=isOverdue?'#F05252':dueDate?'var(--amber)':'var(--muted)';
+    const dueDateColor=isOverdue?'#dc2626':dueDate?(_lm?'#b45309':'var(--amber)'):txtMuted;
     const dueDateWeight=dueDate?'700':'400';
 
     return `<tr data-job-id="${j.id}" style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
       ${queueCell}
-      <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">
+      <td style="padding:8px 10px;color:${txtPrimary};font-weight:600;white-space:nowrap">
         ${clientName}${rushBadge}${overdueBadge}
-        ${company?`<div style="font-size:10px;color:var(--muted);font-weight:400;margin-top:1px">${company}</div>`:''}
+        ${company?`<div style="font-size:10px;color:${txtSub};font-weight:400;margin-top:1px">${company}</div>`:''}
       </td>
       <td style="padding:6px 8px;max-width:240px">
         <input class="tracker-cell-edit" value="${(j.address||j.name||'').replace(/"/g,'&quot;')}"
@@ -17195,9 +17247,9 @@ function renderTracker(){
           placeholder="Enter address…"
           onblur="trackerInlineSaveAddress('${j.id}',this.value)"
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}"
-          style="width:100%;color:var(--offwhite);font-size:12px;font-weight:500">
+          style="width:100%;color:${txtPrimary};font-size:12px;font-weight:500">
       </td>
-      <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${j.date||''}</td>
+      <td style="padding:8px 10px;color:${txtMuted};white-space:nowrap">${j.date||''}</td>
       <td style="padding:6px 8px;text-align:center">
         ${j.isStandalone
           ? `<select onchange="trackerInlineSave('${j.id}','videographer',this.value);renderTracker()" title="Assign videographer"
@@ -17209,11 +17261,11 @@ function renderTracker(){
       <td style="padding:8px 10px;text-align:center;cursor:pointer" onclick="trackerToggleFiles('${j.id}')" title="Click to toggle files received">
         ${ts.filesReceived
           ?'<span style="font-size:18px;color:#22D97A;user-select:none" title="Files received — click to toggle">☑</span>'
-          :'<span style="font-size:18px;color:rgba(255,255,255,.25);user-select:none" title="Files not yet received — click to toggle">☐</span>'}
+          :`<span style="font-size:18px;color:${_lm?'rgba(0,0,0,.2)':'rgba(255,255,255,.25)'};user-select:none" title="Files not yet received — click to toggle">☐</span>`}
       </td>
       <td style="padding:6px 8px;text-align:center">
         <select onchange="trackerInlineSave('${j.id}','claimedBy',this.value);renderTracker()" title="Assign Editor"
-          style="padding:3px 6px;border-radius:6px;border:1px solid ${_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${_isDhEditor?'#FF7070':'#fff'};font-size:11px;font-weight:700;cursor:pointer;max-width:160px;outline:none">
+          style="padding:3px 6px;border-radius:6px;border:1px solid ${_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${_isDhEditor?'#FF7070':_lm?vidColor(editor):'#fff'};font-size:11px;font-weight:700;cursor:pointer;max-width:160px;outline:none">
           ${buildEditorOptions(_rawEditor||'DroneHub')}
         </select>
       </td>
@@ -17224,13 +17276,13 @@ function renderTracker(){
         <input class="tracker-cell-edit" value="${editHrs}" title="Approx Edit Hours" placeholder="—"
           onblur="trackerInlineSave('${j.id}','approxEditHours',this.value)"
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${editHrs}';this.blur()}"
-          style="text-align:center;width:48px;color:var(--muted)">
+          style="text-align:center;width:48px;color:${txtMuted}">
       </td>
       <td style="padding:6px 8px;text-align:center">
         <input class="tracker-cell-edit" value="${filmHrs}" title="Approx Film Hours" placeholder="—"
           onblur="trackerInlineSave('${j.id}','approxFilmHours',this.value)"
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${filmHrs}';this.blur()}"
-          style="text-align:center;width:48px;color:var(--muted)">
+          style="text-align:center;width:48px;color:${txtMuted}">
       </td>
       <td style="padding:6px 8px;text-align:center;white-space:nowrap">
         <input type="date" class="tracker-cell-edit" value="${dueDate}" title="${isOverdue?'⚠ OVERDUE: ':''}Due / Priority Date"
@@ -17238,12 +17290,12 @@ function renderTracker(){
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')this.blur()"
           style="text-align:center;width:120px;color:${dueDateColor};font-weight:${dueDateWeight};background:${isOverdue?'rgba(240,82,82,.1)':'transparent'};border-radius:4px">
       </td>
-      <td style="padding:8px 10px;text-align:center;color:var(--muted);white-space:nowrap">${ts.completionDate||'—'}</td>
+      <td style="padding:8px 10px;text-align:center;color:${txtMuted};white-space:nowrap">${ts.completionDate||'—'}</td>
       <td style="padding:6px 8px;max-width:260px">
         <input class="tracker-cell-edit" value="${notes.replace(/"/g,'&quot;')}" title="Notes — click to edit" placeholder="Add notes…"
           onblur="trackerInlineSave('${j.id}','notes',this.value)"
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}"
-          style="width:100%;font-size:11px;color:var(--muted)">
+          style="width:100%;font-size:11px;color:${txtMuted}">
       </td>
       <td style="padding:8px 10px">
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
@@ -17419,6 +17471,7 @@ function trackerToggleLightMode(){
     if(btn) btn.textContent = '☀️';
     btn?.setAttribute('title','Switch to light mode');
   }
+  renderTracker();
 }
 
 function openTrackerModal(jobId){
