@@ -1789,6 +1789,12 @@ button{font-family:var(--font);}
           </optgroup>
         </select>
 
+        <!-- My Projects toggle -->
+        <button id="tracker-mine-btn" onclick="trackerToggleMine()" title="Show only projects assigned to me"
+          style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s">
+          👤 My Projects
+        </button>
+
         <!-- General keyword search -->
         <input type="text" id="tracker-search" placeholder="🔍 Search address / editor…" oninput="renderTracker()"
           style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);width:180px">
@@ -14411,6 +14417,7 @@ function lcMarkMentionsRead(){
 // ── TRACKER TAB STATE ────────────────────────────────────────────────────────
 let _trackerTab='upcoming'; // 'upcoming' | 'active' | 'completed'
 let _trackerClientFilter=''; // selected client name
+let _trackerMineOnly=false;  // show only rows assigned to the current user
 
 function trackerSetTab(tab){
   _trackerTab=tab;
@@ -14433,6 +14440,26 @@ function trackerSetTab(tab){
       btn.style.color='var(--muted)';
     }
   });
+  renderTracker();
+}
+
+// ── MY PROJECTS FILTER ───────────────────────────────────────────────────────
+function trackerToggleMine(){
+  _trackerMineOnly = !_trackerMineOnly;
+  const btn = document.getElementById('tracker-mine-btn');
+  if(btn){
+    if(_trackerMineOnly){
+      btn.style.background = 'linear-gradient(135deg,var(--blue),#3B6FD4)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--blue)';
+      btn.textContent = '👤 My Projects ✓';
+    } else {
+      btn.style.background = 'var(--navy-lift)';
+      btn.style.color = 'var(--muted)';
+      btn.style.borderColor = 'var(--border)';
+      btn.textContent = '👤 My Projects';
+    }
+  }
   renderTracker();
 }
 
@@ -16887,6 +16914,23 @@ function renderTracker(){
       const name=(c?.name||j.clientName||'').toLowerCase();
       return name===cf||name.includes(cf);
     });
+  }
+
+  // "My Projects" filter — match claimedBy or videographer against current session name/email
+  if(_trackerMineOnly){
+    const sess=gateGetSession&&gateGetSession();
+    if(sess){
+      const myName=(sess.name||'').toLowerCase().trim();
+      const myEmail=(sess.email||'').toLowerCase().trim();
+      const myFirst=myName.split(' ')[0]; // first name is usually what's stored in claimedBy
+      jobs=jobs.filter(j=>{
+        const ts=getTrackerStage(j.id);
+        const claimed=(ts.claimedBy||'').toLowerCase().trim();
+        const vid=(ts.videographer||'').toLowerCase().trim();
+        // Match on full name, email prefix, or first name (editors are often stored as first name)
+        return [myName,myEmail,myFirst].some(m=>m&&(claimed===m||claimed.includes(m)||vid===m||vid.includes(m)));
+      });
+    }
   }
 
   if(filterStatus) jobs=jobs.filter(j=>getTrackerStage(j.id).editStatus===filterStatus);
