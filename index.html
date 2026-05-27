@@ -1426,23 +1426,15 @@ button{font-family:var(--font);}
             <div style="color:var(--blue-bright);font-size:18px;font-weight:900;margin-top:4px">$4,000</div>
           </button>
         </div>
-        <!-- Post-shoot reel count -->
-        <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Post-Shoot Reels <span style="color:var(--blue-bright);font-weight:600;font-size:10px;text-transform:none">+$100 each</span></div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:6px">
-              <button onclick="changeUSReelCount(-1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">−</button>
-              <span id="us-reel-count-display" style="font-size:20px;font-weight:900;color:var(--blue-bright);min-width:28px;text-align:center">0</span>
-              <button onclick="changeUSReelCount(1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
-              <span style="font-size:12px;color:var(--muted)">reels</span>
-            </div>
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer">
-              <input type="checkbox" id="us-reels-tbd" onchange="toggleUSReelsTBD(this.checked)" style="accent-color:var(--blue)">
-              TBD after shoot
-            </label>
-          </div>
-          <div id="us-reel-tbd-note" style="display:none;margin-top:8px;font-size:11px;color:var(--amber);font-style:italic">⚠ Reel count not set — invoice will be updated after shoot</div>
+        <!-- Multi-location reel tracker -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;margin-top:4px">
+          Locations <span style="color:var(--blue-bright);font-weight:600;font-size:10px;text-transform:none;letter-spacing:0">· $100 per reel</span>
         </div>
+        <div id="us-day-locations" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+        <button onclick="addUSLocation()" style="width:100%;padding:9px;border-radius:10px;border:1px dashed rgba(91,141,239,.4);background:rgba(91,141,239,.05);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Location
+        </button>
       </div>
 
       <!-- ADD-ONS (always visible when US panel is shown) -->
@@ -4234,8 +4226,9 @@ let usQuoteState={
   listingTier:null,     // 'under4k' | 'over4k' | 'over8k'
   socialTier:null,      // 'r1'|'r2'|'r3'|'r5'|'fullDay'
   dayType:null,         // 'half'|'full'
-  reelCount:0,
-  reelsTBD:false,
+  reelCount:0,          // legacy single-count (kept for old job compatibility)
+  reelsTBD:false,       // legacy flag
+  dayLocations:[],      // [{address:string, reelCount:number}] — multi-location reel tracker
   addons:{ sunrise:false, photoHDR:false, photoFlash:false },
   offSeason:false,
 };
@@ -6828,7 +6821,15 @@ function openInvoice(jobId){
     } else if(ud.pkgType==='day'){
       const dayPrice=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
       lines.push({desc:`${ud.dayType==='half'?'Half':'Full'} Day Rate`,qty:1,unit:dayPrice,total:dayPrice});
-      if((ud.reelCount||0)>0) lines.push({desc:'Social Reels',qty:ud.reelCount,unit:US_SOCIAL_DAY.reelRate,total:ud.reelCount*US_SOCIAL_DAY.reelRate});
+      if(ud.dayLocations && ud.dayLocations.length){
+        ud.dayLocations.forEach((loc,i)=>{
+          const addr=(loc.address||`Location ${i+1}`).trim();
+          const reels=loc.reelCount||0;
+          if(reels>0) lines.push({desc:`${addr} — Social Reels`,qty:reels,unit:US_SOCIAL_DAY.reelRate,total:reels*US_SOCIAL_DAY.reelRate});
+        });
+      } else if((ud.reelCount||0)>0){
+        lines.push({desc:'Social Reels',qty:ud.reelCount,unit:US_SOCIAL_DAY.reelRate,total:ud.reelCount*US_SOCIAL_DAY.reelRate});
+      }
     } else {
       // Fallback: use grand as a single line item
       if(job.grand>0) lines.push({desc:pkgLabels[ud.pkgType]||'Media Package',qty:1,unit:job.grand,total:job.grand});
@@ -8692,6 +8693,7 @@ function saveJob(){
       dayType:usQuoteState.dayType,
       reelCount:usQuoteState.reelCount,
       reelsTBD:usQuoteState.reelsTBD,
+      dayLocations:(usQuoteState.dayLocations||[]).map(l=>({...l})),
       addons:{...usQuoteState.addons},
       offSeason:usQuoteState.offSeason,
     };
@@ -9937,7 +9939,7 @@ function onMarketChange(market){
     renderUSServicePanel(market);
     calcUS();
   } else {
-    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, reelsTBD:false, addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
+    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, reelsTBD:false, dayLocations:[], addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
     calc();
   }
 }
@@ -9957,6 +9959,8 @@ function renderUSServicePanel(market){
     const el = document.getElementById('us-panel-'+k);
     if(el) el.style.display = usQuoteState.pkgType===k ? '' : 'none';
   });
+  // Render location list whenever the day panel is visible
+  if(usQuoteState.pkgType==='day') renderUSDayLocations();
 
   // Update listing tier prices
   if(p.listing){
@@ -10039,22 +10043,67 @@ function selectUSDayType(type){
   calcUS();
 }
 
+// Legacy single-counter (kept for old saved jobs)
 function changeUSReelCount(delta){
-  if(usQuoteState.reelsTBD) return;
   usQuoteState.reelCount = Math.max(0, (usQuoteState.reelCount||0)+delta);
   const el = document.getElementById('us-reel-count-display');
   if(el) el.textContent = usQuoteState.reelCount;
   calcUS();
 }
+function toggleUSReelsTBD(checked){ usQuoteState.reelsTBD = checked; calcUS(); }
 
-function toggleUSReelsTBD(checked){
-  usQuoteState.reelsTBD = checked;
-  const countEl = document.getElementById('us-reel-count-display');
-  const noteEl  = document.getElementById('us-reel-tbd-note');
-  const minusBtn = countEl?.previousElementSibling;
-  const plusBtn  = countEl?.nextElementSibling;
-  if(countEl) countEl.style.opacity = checked ? '0.3' : '1';
-  if(noteEl)  noteEl.style.display = checked ? '' : 'none';
+// ── Multi-location reel tracking for Social Day Rate ──────────────────────────
+function renderUSDayLocations(){
+  const container = document.getElementById('us-day-locations');
+  if(!container) return;
+  if(!usQuoteState.dayLocations) usQuoteState.dayLocations = [];
+  const locs = usQuoteState.dayLocations;
+  if(!locs.length){
+    container.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;font-style:italic">No locations yet — click Add Location to begin.</div>';
+    return;
+  }
+  const btnStyle = 'width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0';
+  container.innerHTML = locs.map((loc, i) => {
+    const reels = loc.reelCount || 0;
+    const cost  = reels * 100;
+    return `<div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">Location ${i+1}</div>
+        ${locs.length>1?`<button onclick="removeUSLocation(${i})" title="Remove this location" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(240,82,82,.4);background:rgba(240,82,82,.08);color:#FF7070;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">✕</button>`:''}
+      </div>
+      <input type="text" value="${(loc.address||'').replace(/"/g,'&quot;')}" oninput="usQuoteState.dayLocations[${i}].address=this.value" placeholder="Address or location name…" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-card);color:var(--white);font-size:12px;box-sizing:border-box;margin-bottom:10px;outline:none">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-size:11px;color:var(--muted);font-weight:600">Reels:</div>
+        <button onclick="changeUSLocationReels(${i},-1)" style="${btnStyle}">−</button>
+        <span style="font-size:18px;font-weight:900;color:var(--blue-bright);min-width:22px;text-align:center">${reels}</span>
+        <button onclick="changeUSLocationReels(${i},1)" style="${btnStyle}">+</button>
+        <span style="font-size:11px;color:var(--muted)">${reels===1?'reel':'reels'}</span>
+        ${cost>0?`<span style="font-size:11px;color:var(--green);font-weight:700;margin-left:4px">+$${cost.toLocaleString()}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addUSLocation(){
+  if(!usQuoteState.dayLocations) usQuoteState.dayLocations = [];
+  usQuoteState.dayLocations.push({address:'', reelCount:0});
+  renderUSDayLocations();
+  calcUS();
+}
+
+function removeUSLocation(idx){
+  if(!usQuoteState.dayLocations) return;
+  usQuoteState.dayLocations.splice(idx,1);
+  renderUSDayLocations();
+  calcUS();
+}
+
+function changeUSLocationReels(idx, delta){
+  if(!usQuoteState.dayLocations) return;
+  const loc = usQuoteState.dayLocations[idx];
+  if(!loc) return;
+  loc.reelCount = Math.max(0, (loc.reelCount||0)+delta);
+  renderUSDayLocations();
   calcUS();
 }
 
@@ -10083,7 +10132,12 @@ function getUSGrand(){
     case 'day':
       if(!usQuoteState.dayType) return 0;
       base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
-      if(!usQuoteState.reelsTBD){
+      // Sum reels across all locations (multi-location system)
+      if(usQuoteState.dayLocations && usQuoteState.dayLocations.length){
+        const totalReels = usQuoteState.dayLocations.reduce((s,l)=>s+(l.reelCount||0),0);
+        base += totalReels * US_SOCIAL_DAY.reelRate;
+      } else if(!usQuoteState.reelsTBD){
+        // Legacy fallback for old saved jobs
         base += (usQuoteState.reelCount||0) * US_SOCIAL_DAY.reelRate;
       }
       break;
@@ -10152,10 +10206,21 @@ function renderUSQuote(market, grand){
     case 'day':{
       const base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
       lines.push({ label:(usQuoteState.dayType==='half'?'Half Day':'Full Day')+' Social Shoot', amount: base });
-      if(!usQuoteState.reelsTBD && usQuoteState.reelCount>0){
+      // Multi-location reels
+      if(usQuoteState.dayLocations && usQuoteState.dayLocations.length){
+        usQuoteState.dayLocations.forEach((loc,i)=>{
+          const addr = loc.address ? loc.address.trim() : `Location ${i+1}`;
+          const reels = loc.reelCount || 0;
+          if(reels > 0){
+            lines.push({ label:`${addr} — ${reels} reel${reels===1?'':'s'} × $100`, amount: reels * US_SOCIAL_DAY.reelRate });
+          } else {
+            lines.push({ label:`${addr}`, amount: 0, note:'0 reels', color:'var(--muted)' });
+          }
+        });
+      } else if(!usQuoteState.reelsTBD && usQuoteState.reelCount>0){
+        // Legacy fallback
         lines.push({ label:`Post-shoot reels (${usQuoteState.reelCount} × $100)`, amount: usQuoteState.reelCount * US_SOCIAL_DAY.reelRate });
-      }
-      if(usQuoteState.reelsTBD){
+      } else if(usQuoteState.reelsTBD){
         lines.push({ label:'Post-shoot reels', amount: 0, note:'TBD — invoice updated after shoot', color:'var(--amber)' });
       }
       break;
@@ -11705,7 +11770,15 @@ function cpViewInvoice(jobId){
     } else if(ud.pkgType==='day'){
       const dayPrice=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
       lines.push({desc:`${ud.dayType==='half'?'Half':'Full'} Day Rate`,qty:1,unit:dayPrice,total:dayPrice});
-      if((ud.reelCount||0)>0) lines.push({desc:'Social Reels',qty:ud.reelCount,unit:US_SOCIAL_DAY.reelRate,total:ud.reelCount*US_SOCIAL_DAY.reelRate});
+      if(ud.dayLocations && ud.dayLocations.length){
+        ud.dayLocations.forEach((loc,i)=>{
+          const addr=(loc.address||`Location ${i+1}`).trim();
+          const reels=loc.reelCount||0;
+          if(reels>0) lines.push({desc:`${addr} — Social Reels`,qty:reels,unit:US_SOCIAL_DAY.reelRate,total:reels*US_SOCIAL_DAY.reelRate});
+        });
+      } else if((ud.reelCount||0)>0){
+        lines.push({desc:'Social Reels',qty:ud.reelCount,unit:US_SOCIAL_DAY.reelRate,total:ud.reelCount*US_SOCIAL_DAY.reelRate});
+      }
     } else {
       if(job.grand>0) lines.push({desc:'Media Package',qty:1,unit:job.grand,total:job.grand});
     }
@@ -12412,6 +12485,7 @@ function openInvoiceJob(jobId){
     usQuoteState.dayType     = ud.dayType     || null;
     usQuoteState.reelCount   = ud.reelCount   || 0;
     usQuoteState.reelsTBD    = ud.reelsTBD    || false;
+    usQuoteState.dayLocations= (ud.dayLocations||[]).map(l=>({...l}));
     usQuoteState.offSeason   = ud.offSeason   || false;
     usQuoteState.addons      = Object.assign({sunrise:false,photoHDR:false,photoFlash:false}, ud.addons||{});
 
@@ -12425,9 +12499,8 @@ function openInvoiceJob(jobId){
     if(flEl)  flEl.checked  = !!usQuoteState.addons.photoFlash;
     if(osEl)  osEl.checked  = !!usQuoteState.offSeason;
 
-    // Sync reel count display
-    const rcEl=document.getElementById('us-reel-count-display');
-    if(rcEl) rcEl.textContent=usQuoteState.reelCount||0;
+    // Render location list if in day rate mode
+    if(usQuoteState.pkgType==='day') renderUSDayLocations();
 
     // Switch to US panels and render
     onMarketChange(job.market);
