@@ -8802,33 +8802,33 @@ function jobDetailReassign(jobId){
     j.editors.video=editor;
     j.editors.photo=photoEditor;
 
-    // Move edit-type payout entries to the newly assigned editors
-    const moveEditEntries=(oldKey,newKey,rolePattern)=>{
-      if(!oldKey||!newKey||oldKey===newKey) return;
-      if(!j.payouts) return;
-      const oldPayout=j.payouts[oldKey]||j.payouts['__unassigned_editor__'];
-      const newName=newKey;
-      if(!oldPayout) return;
-      const toMove=(oldPayout.entries||[]).filter(e=>rolePattern.test(e.role||''));
-      if(!toMove.length) return;
-      if(!j.payouts[newName]) j.payouts[newName]={name:newName,entries:[]};
-      toMove.forEach(e=>j.payouts[newName].entries.push({...e}));
-      // Remove moved entries from old key
-      oldPayout.entries=(oldPayout.entries||[]).filter(e=>!rolePattern.test(e.role||''));
-      // Also handle old editLines format
-      const toMoveLines=(oldPayout.editLines||[]).filter(l=>rolePattern.test(l.label||''));
-      if(toMoveLines.length){
-        if(!j.payouts[newName].editLines) j.payouts[newName].editLines=[];
-        toMoveLines.forEach(l=>j.payouts[newName].editLines.push({...l}));
-        oldPayout.editLines=(oldPayout.editLines||[]).filter(l=>!rolePattern.test(l.label||''));
-      }
+    // Sweep ALL payout entries matching a pattern across every contractor key
+    // and consolidate them under the newly assigned editor.
+    // This handles legacy jobs where edit fees were baked onto the shooter's key.
+    const reassignEditEntries=(newName,rolePattern)=>{
+      if(!newName||!j.payouts) return;
+      if(!j.payouts[newName]) j.payouts[newName]={name:newName,entries:[],editLines:[]};
+      Object.keys(j.payouts).forEach(key=>{
+        if(key===newName) return; // already correct
+        const p=j.payouts[key];
+        // entries[] format (new)
+        const toMove=(p.entries||[]).filter(e=>rolePattern.test(e.role||''));
+        if(toMove.length){
+          if(!j.payouts[newName].entries) j.payouts[newName].entries=[];
+          toMove.forEach(e=>j.payouts[newName].entries.push({...e}));
+          p.entries=p.entries.filter(e=>!rolePattern.test(e.role||''));
+        }
+        // editLines[] format (legacy)
+        const toMoveLines=(p.editLines||[]).filter(l=>rolePattern.test(l.label||''));
+        if(toMoveLines.length){
+          if(!j.payouts[newName].editLines) j.payouts[newName].editLines=[];
+          toMoveLines.forEach(l=>j.payouts[newName].editLines.push({...l}));
+          p.editLines=p.editLines.filter(l=>!rolePattern.test(l.label||''));
+        }
+      });
     };
-    if(editor && editor!==(oldVidEditor||'__unassigned_editor__')){
-      moveEditEntries(oldVidEditor||'__unassigned_editor__', editor, /video.edit|editing.*video|video.*edit/i);
-    }
-    if(photoEditor && photoEditor!==(oldPhoEditor||'__unassigned_editor__')){
-      moveEditEntries(oldPhoEditor||'__unassigned_editor__', photoEditor, /photo.edit|editing.*photo|photo.*edit/i);
-    }
+    if(editor) reassignEditEntries(editor, /video.edit|video edit|editing.*video/i);
+    if(photoEditor) reassignEditEntries(photoEditor, /photo.edit|photo edit|editing.*photo/i);
     saveJobsToStorage();
   }
 
