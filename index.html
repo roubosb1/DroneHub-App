@@ -2950,6 +2950,23 @@ button{font-family:var(--font);}
       </div>
     </div>
 
+    <!-- Top bulk actions bar — appears when contacts are selected -->
+    <div id="sales-bulk-actions-top" style="display:none;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding:8px 14px;background:rgba(91,141,239,.07);border:1px solid rgba(91,141,239,.2);border-radius:10px">
+      <span style="font-size:12px;font-weight:700;color:var(--blue-bright)" id="sales-selected-label-top"></span>
+      <select id="sales-move-target-top" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--navy-lift);color:var(--white);font-size:12px">
+        <option value="">Move to list…</option>
+        <option value="realestate">🏠 Real Estate</option>
+        <option value="resorts">🏨 Resorts</option>
+        <option value="golf">⛳ Golf Courses</option>
+        <option value="other">📋 Other</option>
+        <option value="warm">🔥 Warm Leads</option>
+        <option value="clients">✅ Existing Clients</option>
+      </select>
+      <button onclick="salesMoveSelected()" class="sales-action-btn" style="border-color:var(--blue);color:var(--blue-bright)">Move</button>
+      <button onclick="salesUnsubSelected()" class="sales-action-btn" style="border-color:var(--amber);color:var(--amber)">Unsubscribe</button>
+      <button onclick="salesDeleteSelected()" class="sales-action-btn" style="border-color:#FF7070;color:#FF7070;font-weight:700">🗑 Delete</button>
+    </div>
+
     <!-- List tab switcher -->
     <div class="sales-list-tabs">
       <button class="sales-list-tab active" id="sltab-realestate" onclick="setSalesList('realestate')" style="display:flex;align-items:center;gap:5px">
@@ -18871,14 +18888,22 @@ function escSalesAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'
 
 function salesCheckChanged(){
   const checked = document.querySelectorAll('.sales-row-check:checked');
+  const n = checked.length;
+  // Bottom bar
   const bulk = document.getElementById('sales-bulk-actions');
   const selLabel = document.getElementById('sales-selected-label');
-  if(bulk) bulk.style.display = checked.length ? 'flex' : 'none';
-  if(selLabel) selLabel.textContent = `${checked.length} selected`;
+  if(bulk) bulk.style.display = n ? 'flex' : 'none';
+  if(selLabel) selLabel.textContent = `${n} selected`;
+  // Top bar
+  const bulkTop = document.getElementById('sales-bulk-actions-top');
+  const selLabelTop = document.getElementById('sales-selected-label-top');
+  if(bulkTop) bulkTop.style.display = n ? 'flex' : 'none';
+  if(selLabelTop) selLabelTop.textContent = `${n} selected`;
+  // Sync select-all checkbox state
   const sa = document.getElementById('sales-select-all');
   const all = document.querySelectorAll('.sales-row-check');
-  if(sa) sa.indeterminate = checked.length > 0 && checked.length < all.length;
-  if(sa && checked.length === all.length && all.length > 0) sa.checked = true;
+  if(sa) sa.indeterminate = n > 0 && n < all.length;
+  if(sa && n === all.length && all.length > 0) sa.checked = true;
 }
 
 function salesToggleAll(checked){
@@ -18892,7 +18917,8 @@ function salesSelectedIds(){
 
 async function salesMoveSelected(){
   const ids  = salesSelectedIds();
-  const dest = document.getElementById('sales-move-target')?.value;
+  const dest = document.getElementById('sales-move-target-top')?.value ||
+               document.getElementById('sales-move-target')?.value;
   if(!dest || !ids.length) return;
   await salesEnsureLoaded();
   const all  = salesLoad();
