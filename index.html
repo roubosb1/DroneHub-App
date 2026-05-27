@@ -1764,11 +1764,11 @@ button{font-family:var(--font);}
           📋 Upcoming
         </button>
         <button id="tracker-tab-active" onclick="trackerSetTab('active')"
-          style="padding:7px 18px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s">
+          style="padding:7px 18px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:rgba(91,141,239,.1);color:var(--blue-bright);transition:all .15s">
           🔄 In Progress
         </button>
         <button id="tracker-tab-completed" onclick="trackerSetTab('completed')"
-          style="padding:7px 18px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s">
+          style="padding:7px 18px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:rgba(34,217,122,.1);color:var(--green);transition:all .15s">
           ✅ Completed
         </button>
       </div>
@@ -14527,19 +14527,36 @@ function trackerSetTab(tab){
   const completedBtn=document.getElementById('tracker-tab-completed');
   const btns={upcoming:upcomingBtn,active:activeBtn,completed:completedBtn};
   const styles={
-    upcoming:{active:'linear-gradient(135deg,var(--amber),#D97706)',color:'#fff'},
-    active:{active:'linear-gradient(135deg,var(--blue),#3B6FD4)',color:'#fff'},
-    completed:{active:'linear-gradient(135deg,var(--green),#16A34A)',color:'#fff'},
+    upcoming:{
+      active:'linear-gradient(135deg,var(--amber),#D97706)', activeColor:'#fff',
+      inactiveBg:_trackerLightMode?'rgba(245,166,35,.12)':'rgba(245,166,35,.1)',
+      inactiveColor:_trackerLightMode?'#b45309':'var(--amber)',
+      inactiveBorder:_trackerLightMode?'rgba(245,166,35,.5)':'rgba(245,166,35,.3)',
+    },
+    active:{
+      active:'linear-gradient(135deg,var(--blue),#3B6FD4)', activeColor:'#fff',
+      inactiveBg:_trackerLightMode?'rgba(91,141,239,.12)':'rgba(91,141,239,.1)',
+      inactiveColor:_trackerLightMode?'#2563eb':'var(--blue-bright)',
+      inactiveBorder:_trackerLightMode?'rgba(91,141,239,.5)':'rgba(91,141,239,.3)',
+    },
+    completed:{
+      active:'linear-gradient(135deg,var(--green),#16A34A)', activeColor:'#fff',
+      inactiveBg:_trackerLightMode?'rgba(34,217,122,.12)':'rgba(34,217,122,.1)',
+      inactiveColor:_trackerLightMode?'#047857':'var(--green)',
+      inactiveBorder:_trackerLightMode?'rgba(34,217,122,.5)':'rgba(34,217,122,.3)',
+    },
   };
   Object.entries(btns).forEach(([key,btn])=>{
     if(!btn) return;
     if(key===tab){
       btn.style.background=styles[key].active;
-      btn.style.color=styles[key].color;
+      btn.style.color=styles[key].activeColor;
+      btn.style.borderColor='transparent';
       btn.style.borderLeft='';
     } else {
-      btn.style.background=_trackerLightMode?'#e8eaf2':'transparent';
-      btn.style.color=_trackerLightMode?'#6b7280':'var(--muted)';
+      btn.style.background=styles[key].inactiveBg;
+      btn.style.color=styles[key].inactiveColor;
+      btn.style.borderColor=styles[key].inactiveBorder;
     }
   });
   renderTracker();
@@ -17479,14 +17496,6 @@ function trackerToggleLightMode(){
     if(btn) btn.textContent = '☀️';
     btn?.setAttribute('title','Switch to light mode');
   }
-  // Fix inactive tab buttons immediately (active tab keeps its gradient)
-  ['upcoming','active','completed'].forEach(t=>{
-    const tb=document.getElementById('tracker-tab-'+t);
-    if(tb && !(tb.style.background||'').includes('gradient')){
-      tb.style.background=_trackerLightMode?'#e8eaf2':'transparent';
-      tb.style.color=_trackerLightMode?'#6b7280':'var(--muted)';
-    }
-  });
   // Fix My Projects button if not active
   const mineBtn=document.getElementById('tracker-mine-btn');
   if(mineBtn && !_trackerMineOnly){
@@ -17494,7 +17503,8 @@ function trackerToggleLightMode(){
     mineBtn.style.color=_trackerLightMode?'#6b7280':'var(--muted)';
     mineBtn.style.borderColor=_trackerLightMode?'#c8cce0':'var(--border)';
   }
-  renderTracker();
+  // trackerSetTab re-applies per-tab colors and calls renderTracker()
+  trackerSetTab(_trackerTab);
 }
 
 function openTrackerModal(jobId){
