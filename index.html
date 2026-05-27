@@ -5863,24 +5863,87 @@ function renderVacationTracker(){
 let _tpMemberId = null;
 let _tpTab = 'overview';
 
-// Portfolio storage helpers
-function tpPortfolioLoad(memberId){
-  try{ return JSON.parse(localStorage.getItem('dh_portfolio_'+memberId)||'[]'); }catch(e){ return []; }
-}
-function tpPortfolioSave(memberId, arr){
-  try{ localStorage.setItem('dh_portfolio_'+memberId, JSON.stringify(arr)); }catch(e){}
-  fbSet('orgs', ORG_ID+':portfolio_'+memberId, {data:JSON.stringify(arr), updatedAt:Date.now()});
-}
-async function tpPortfolioLoad_fb(memberId){
+// ── Profile storage: each member has one dedicated Firebase document ──────────
+// Doc path: orgs / {orgId}:profile_{memberId}
+// Shape:    { memberId, memberName, portfolio:[], bio:'', skills:[], updatedAt }
+
+function tpProfileLsKey(memberId){ return 'dh_profile_'+memberId; }
+
+function tpProfileLoad(memberId){
+  // 1. Try new profile key
   try{
-    const r = await fbGet('orgs', ORG_ID+':portfolio_'+memberId);
-    if(r?.data){
-      const arr = JSON.parse(r.data);
-      try{ localStorage.setItem('dh_portfolio_'+memberId, JSON.stringify(arr)); }catch(e){}
-      return arr;
+    const raw = localStorage.getItem(tpProfileLsKey(memberId));
+    if(raw){ const p=JSON.parse(raw); if(p && (p.portfolio||p.memberId)) return p; }
+  }catch(e){}
+  // 2. Migration: check old per-portfolio key
+  try{
+    const old = localStorage.getItem('dh_portfolio_'+memberId);
+    if(old){
+      const portfolio = JSON.parse(old);
+      const profile = { memberId, portfolio: Array.isArray(portfolio)?portfolio:[], updatedAt: Date.now() };
+      try{ localStorage.setItem(tpProfileLsKey(memberId), JSON.stringify(profile)); }catch(e){}
+      return profile;
     }
   }catch(e){}
-  return tpPortfolioLoad(memberId);
+  return { memberId, portfolio: [], updatedAt: 0 };
+}
+
+function tpProfileSave(memberId, updates){
+  const member = getAdminTeamMembers().find(m=>m.id===memberId);
+  const current = tpProfileLoad(memberId);
+  const full = {
+    memberId,
+    memberName: member?.name || current.memberName || '',
+    portfolio: [],
+    ...current,
+    ...updates,
+    updatedAt: Date.now(),
+  };
+  try{ localStorage.setItem(tpProfileLsKey(memberId), JSON.stringify(full)); }catch(e){}
+  if(_fbToken()) fbSet('orgs', ORG_ID+':profile_'+memberId, full).catch(()=>{});
+}
+
+async function tpProfileLoad_fb(memberId){
+  try{
+    const r = await fbGet('orgs', ORG_ID+':profile_'+memberId);
+    if(r && typeof r==='object'){
+      // Unwrap legacy .data wrapper if present
+      const profile = (r.data && typeof r.data==='string') ? JSON.parse(r.data) : r;
+      if(profile && (profile.portfolio || profile.memberId)){
+        // Prefer remote if it has more portfolio items or is newer
+        const local = tpProfileLoad(memberId);
+        const useRemote = !local.updatedAt || (profile.updatedAt||0) >= (local.updatedAt||0) ||
+                          (profile.portfolio||[]).length >= (local.portfolio||[]).length;
+        if(useRemote){
+          try{ localStorage.setItem(tpProfileLsKey(memberId), JSON.stringify(profile)); }catch(e){}
+          return profile;
+        }
+        return local;
+      }
+    }
+  }catch(e){}
+  // Migration from old portfolio_ doc
+  try{
+    const old = await fbGet('orgs', ORG_ID+':portfolio_'+memberId);
+    if(old?.data){
+      const portfolio = JSON.parse(old.data);
+      const member = getAdminTeamMembers().find(m=>m.id===memberId);
+      const profile = { memberId, memberName: member?.name||'', portfolio: Array.isArray(portfolio)?portfolio:[], updatedAt: old.updatedAt||Date.now() };
+      // Write to new location and save locally
+      try{ localStorage.setItem(tpProfileLsKey(memberId), JSON.stringify(profile)); }catch(e){}
+      if(_fbToken()) fbSet('orgs', ORG_ID+':profile_'+memberId, profile).catch(()=>{});
+      return profile;
+    }
+  }catch(e){}
+  return tpProfileLoad(memberId);
+}
+
+// ── Portfolio accessors (built on top of profile doc) ────────────────────────
+function tpPortfolioLoad(memberId){ return tpProfileLoad(memberId).portfolio || []; }
+function tpPortfolioSave(memberId, arr){ tpProfileSave(memberId, { portfolio: arr }); }
+async function tpPortfolioLoad_fb(memberId){
+  const profile = await tpProfileLoad_fb(memberId);
+  return profile.portfolio || [];
 }
 
 // Resolve 'me' → actual member id from session
@@ -5904,8 +5967,12 @@ function openTeamMemberProfile(memberId){
   const modal = document.getElementById('team-profile-modal');
   if(modal) modal.classList.add('open');
   tpRender();
-  // Async load portfolio from Firebase
-  tpPortfolioLoad_fb(resolvedId).then(()=>{ if(_tpTab==='portfolio') tpRenderPortfolio(); });
+  // Always refresh full profile from Firebase on open
+  if(_fbToken()){
+    tpProfileLoad_fb(resolvedId).then(()=>{
+      tpRender(); // re-render with fresh data (overview stats, header)
+    }).catch(()=>{});
+  }
 }
 function closeTeamMemberProfile(){
   document.getElementById('team-profile-modal')?.classList.remove('open');
@@ -5917,6 +5984,10 @@ function tpSwitchTab(tab){
     b.classList.toggle('active', b.id==='tp-tab-'+tab);
   });
   tpRenderContent();
+  // Reload profile from Firebase when switching to portfolio tab
+  if(tab === 'portfolio' && _tpMemberId && _fbToken()){
+    tpProfileLoad_fb(_tpMemberId).then(()=>tpRenderPortfolio()).catch(()=>{});
+  }
 }
 
 function tpRender(){
@@ -6123,10 +6194,19 @@ function tpRenderPortfolio(){
   const canEdit = isAdmin || isOwn;
   const items = tpPortfolioLoad(member.id);
 
+  const profile = tpProfileLoad(member.id);
+  const lastSync = profile.updatedAt ? new Date(profile.updatedAt).toLocaleString() : 'Not yet synced';
+
   content.innerHTML = `
     ${canEdit?`
     <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:14px">🎬 Add Work Sample</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--white)">🎬 Add Work Sample</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:var(--muted)">Last saved: ${lastSync}</span>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.12);color:var(--green);border:1px solid rgba(34,217,122,.3)">🔥 Firebase</span>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Title</div>
@@ -6178,15 +6258,17 @@ function tpAddPortfolioItem(){
   const desc  = document.getElementById('tp-pf-desc')?.value.trim()||'';
   if(!title){ showDhToast('Portfolio','Please enter a title.','⚠️','var(--amber)',3000); return; }
   if(!url){ showDhToast('Portfolio','Please enter a link to the work.','⚠️','var(--amber)',3000); return; }
-  const items = tpPortfolioLoad(_tpMemberId);
-  items.unshift({
-    id:'pf_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
-    title, url, type, description:desc,
+  const newItem = {
+    id: 'pf_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    title, url, type, description: desc,
     date: new Date().toISOString().slice(0,10),
     addedAt: new Date().toISOString(),
-  });
+  };
+  const items = tpPortfolioLoad(_tpMemberId);
+  items.unshift(newItem);
+  // Save to localStorage + Firebase profile doc immediately
   tpPortfolioSave(_tpMemberId, items);
-  showDhToast('Portfolio','Work sample added ✓','✅','var(--green)',2500);
+  showDhToast('Portfolio','Saved to your profile ✓','✅','var(--green)',2500);
   tpRenderPortfolio();
 }
 
@@ -6194,6 +6276,7 @@ function tpRemovePortfolioItem(itemId){
   if(!confirm('Remove this portfolio item?')) return;
   const items = tpPortfolioLoad(_tpMemberId).filter(i=>i.id!==itemId);
   tpPortfolioSave(_tpMemberId, items);
+  showDhToast('Portfolio','Item removed','🗑️','var(--muted)',2000);
   tpRenderPortfolio();
 }
 
@@ -6517,6 +6600,23 @@ async function restoreFromFirebase(forceAll=false){
   }
   // Migrate any contacts still in localStorage → Firebase (runs silently, one-time)
   if(_fbToken()) salesMigrateLocalStorage().catch(()=>{});
+  // Load all team member profiles (portfolio, bio, etc.) from Firebase
+  if(_fbToken()) restoreTeamProfiles().catch(()=>{});
+}
+
+// Fetch every team member's profile document from Firebase and cache locally.
+// Called on startup after the main sync so profile data is ready before any
+// profile modal is opened.
+async function restoreTeamProfiles(){
+  if(!_fbToken()) return;
+  const members = getAdminTeamMembers();
+  if(!members.length) return;
+  await Promise.allSettled(
+    members.map(m =>
+      tpProfileLoad_fb(m.id).catch(()=>{})
+    )
+  );
+  console.log('Loaded '+members.length+' team member profile(s) from Firebase');
 }
 
 
