@@ -4742,11 +4742,6 @@ function showPane(id,ev){
     document.querySelectorAll('.sales-list-tab').forEach(b=>{
       b.classList.toggle('active', b.id === 'sltab-'+salesActiveList);
     });
-    // Start live-sync polling so new uploads from other users appear automatically
-    salesStartLiveSync();
-  } else {
-    // Stop polling when navigating away from Sales
-    salesStopLiveSync();
   }
   if(id==='social'){ renderSocial(); }
   if(id==='platform'){ renderPlatformDashboard(); }
@@ -15317,6 +15312,8 @@ async function gateShowAdminView(session){
   showPane(savedPane||'quote');
   // Auto-mark invoice paid if returning from Stripe success
   checkStripePaymentReturn();
+  // Start background live-sync so contacts update automatically when others upload
+  salesInitLiveSync();
 }
 
 function gateShowTeamView(session){
@@ -15384,6 +15381,7 @@ function gateShowTeamView(session){
   const avatarHtml2=getAvatarHtml(session.name,session.email,28,10);
   if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml2}<div><span style="color:var(--white);font-weight:700">${session.name}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${displayTitle}</span></div></div>`;
   checkStripePaymentReturn();
+  salesInitLiveSync();
 }
 
 // ── STRIPE PAYMENT RETURN HANDLER ─────────────────────────────────────────────
@@ -18707,47 +18705,39 @@ async function salesSyncFirebase(listId){
 }
 
 // ── Live-sync polling ────────────────────────────────────────────────────────
-// Checks Firebase for contact updates every 20 s while the Sales pane is open.
-// Only re-renders if a newer timestamp is found — zero UI flicker on no-change.
-let _salesPollTimer = null;
-
-async function _salesPollTick(){
+// Runs every 15 s regardless of which pane is open.
+// Only fetches & re-renders when the Sales pane is active AND Firebase has a
+// newer timestamp than what's already in memory — zero flicker otherwise.
+async function _salesLiveSyncTick(){
   if(!_fbToken()) return;
-  // Only do work when Sales pane is visible
   const salesPane = document.getElementById('pane-sales');
-  if(!salesPane?.classList.contains('active')) return;
+  if(!salesPane?.classList.contains('active')) return; // not on Sales page, skip
 
-  // Snapshot timestamps before sync
   const prevTs = Object.assign({}, _salesUpdatedAt);
+  let changed = false;
 
-  // Sync the currently-viewed list first (fastest visible update), then the rest
-  const listsToCheck = [salesActiveList, ...SALES_LISTS.filter(l=>l!==salesActiveList)];
-  for(const l of listsToCheck){
+  // Check current list first for fast visible update, then background-sync others
+  const ordered = [salesActiveList, ...SALES_LISTS.filter(l => l !== salesActiveList)];
+  for(const l of ordered){
     try{
-      const fb = await fbGet('orgs', _salesFbKey(l));
-      if(fb?.data){
-        const remoteTs = fb.updatedAt || 0;
-        if(remoteTs > (_salesUpdatedAt[l]||0)){
-          _salesByList[l] = JSON.parse(fb.data);
+      const doc = await fbGet('orgs', _salesFbKey(l));
+      if(doc?.data){
+        const remoteTs = doc.updatedAt || 0;
+        if(remoteTs > (_salesUpdatedAt[l] || 0)){
+          _salesByList[l] = JSON.parse(doc.data);
           _salesUpdatedAt[l] = remoteTs;
+          if(l === salesActiveList) changed = true;
         }
       }
     }catch(e){}
   }
 
-  // Re-render only if the current list actually changed
-  if((_salesUpdatedAt[salesActiveList]||0) > (prevTs[salesActiveList]||0)){
-    renderSalesTable();
-  }
+  if(changed) renderSalesTable();
 }
 
-function salesStartLiveSync(){
-  if(_salesPollTimer) return; // already running
-  _salesPollTimer = setInterval(_salesPollTick, 20000); // every 20 s
-}
-
-function salesStopLiveSync(){
-  if(_salesPollTimer){ clearInterval(_salesPollTimer); _salesPollTimer = null; }
+// Start once after login — never stopped; pane-visibility check inside the tick
+function salesInitLiveSync(){
+  setInterval(_salesLiveSyncTick, 15000); // every 15 s
 }
 
 function setSalesList(listId){
