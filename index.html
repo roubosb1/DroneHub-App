@@ -4742,6 +4742,11 @@ function showPane(id,ev){
     document.querySelectorAll('.sales-list-tab').forEach(b=>{
       b.classList.toggle('active', b.id === 'sltab-'+salesActiveList);
     });
+    // Start live-sync polling so new uploads from other users appear automatically
+    salesStartLiveSync();
+  } else {
+    // Stop polling when navigating away from Sales
+    salesStopLiveSync();
   }
   if(id==='social'){ renderSocial(); }
   if(id==='platform'){ renderPlatformDashboard(); }
@@ -18699,6 +18704,50 @@ async function salesSyncFirebase(listId){
       if(_salesByList[l] === null) _salesByList[l] = [];
     }
   }
+}
+
+// ── Live-sync polling ────────────────────────────────────────────────────────
+// Checks Firebase for contact updates every 20 s while the Sales pane is open.
+// Only re-renders if a newer timestamp is found — zero UI flicker on no-change.
+let _salesPollTimer = null;
+
+async function _salesPollTick(){
+  if(!_fbToken()) return;
+  // Only do work when Sales pane is visible
+  const salesPane = document.getElementById('pane-sales');
+  if(!salesPane?.classList.contains('active')) return;
+
+  // Snapshot timestamps before sync
+  const prevTs = Object.assign({}, _salesUpdatedAt);
+
+  // Sync the currently-viewed list first (fastest visible update), then the rest
+  const listsToCheck = [salesActiveList, ...SALES_LISTS.filter(l=>l!==salesActiveList)];
+  for(const l of listsToCheck){
+    try{
+      const fb = await fbGet('orgs', _salesFbKey(l));
+      if(fb?.data){
+        const remoteTs = fb.updatedAt || 0;
+        if(remoteTs > (_salesUpdatedAt[l]||0)){
+          _salesByList[l] = JSON.parse(fb.data);
+          _salesUpdatedAt[l] = remoteTs;
+        }
+      }
+    }catch(e){}
+  }
+
+  // Re-render only if the current list actually changed
+  if((_salesUpdatedAt[salesActiveList]||0) > (prevTs[salesActiveList]||0)){
+    renderSalesTable();
+  }
+}
+
+function salesStartLiveSync(){
+  if(_salesPollTimer) return; // already running
+  _salesPollTimer = setInterval(_salesPollTick, 20000); // every 20 s
+}
+
+function salesStopLiveSync(){
+  if(_salesPollTimer){ clearInterval(_salesPollTimer); _salesPollTimer = null; }
 }
 
 function setSalesList(listId){
