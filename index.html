@@ -236,11 +236,14 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 #pane-tracker.tracker-light #tracker-scroll-container{background:#f0f2f7}
 /* Header bar */
 #pane-tracker.tracker-light>div:first-child{background:#fff!important;border-bottom-color:#d0d4e8!important}
+/* Title + subtitle text — force dark so white-on-white is fixed */
 #pane-tracker.tracker-light>div:first-child span,
-#pane-tracker.tracker-light>div:first-child div{color:#1a1a2e}
-/* Filter/search inputs inside header */
+#pane-tracker.tracker-light>div:first-child div{color:#1a1a2e!important}
+/* Row-count badge */
+#pane-tracker.tracker-light #tracker-row-count{background:#e4e7f2!important;color:#374151!important}
+/* Filter/search inputs & status dropdown inside header */
 #pane-tracker.tracker-light>div:first-child input,
-#pane-tracker.tracker-light>div:first-child select{background:#f0f2f8!important;border-color:#c8cce0!important;color:#1a1a2e!important}
+#pane-tracker.tracker-light #tracker-filter-status{background:#f0f2f8!important;border-color:#c8cce0!important;color:#1a1a2e!important}
 /* Light scrollbar */
 #pane-tracker.tracker-light #tracker-scroll-container::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18)}
 /* Sticky th */
@@ -248,8 +251,9 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 /* Inline editable inputs inside table */
 #pane-tracker.tracker-light .tracker-cell-edit{color:#1a1a2e!important}
 #pane-tracker.tracker-light .tracker-cell-edit:focus{background:rgba(91,141,239,.12)!important}
-/* Selects inside table */
-#pane-tracker.tracker-light #tracker-table select{background:#f0f2f8!important;color:#1a1a2e!important}
+/* Table selects: do NOT override bg/color — let inline tinted styles show through.
+   Only boost border contrast so the colored outlines are visible on white. */
+#pane-tracker.tracker-light #tracker-table select{border-width:1.5px!important;font-weight:700!important}
 #pane-tracker.tracker-light #tracker-table tbody td{color:#374151}
 #pane-tracker.tracker-light #tracker-table tbody a{filter:brightness(.8)}
 #pane-tracker.tracker-light #tracker-table tbody tr button{filter:brightness(.95)}
