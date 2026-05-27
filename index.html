@@ -5975,6 +5975,15 @@ async function restoreFromFirebase(forceAll=false){
     }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
+    {fb:ORG_ID+':tracker_meta', ls:'dronehub_tracker_id_counter', apply:d=>{
+      try{
+        const remote=typeof d==='object'?d:JSON.parse(d||'{}');
+        const remoteN=parseInt(remote.idCounter||0);
+        const localN=parseInt(localStorage.getItem('dronehub_tracker_id_counter')||'0');
+        // Take the higher of local vs remote so no ID is ever re-used
+        if(remoteN>localN) localStorage.setItem('dronehub_tracker_id_counter',String(remoteN));
+      }catch(e){}
+    }},
     {fb:ORG_ID+':lc_channels',ls:'dronehub_lc_channels',apply:d=>{localStorage.setItem('dronehub_lc_channels',d);}},
     // NOTE: lc_msgs are loaded per-channel when opening each channel, not bulk restored
     {fb:ORG_ID+':contractors',    ls:'dronehub_contractors',       apply:d=>{
@@ -16924,11 +16933,33 @@ function setTrackerStage(jobId,update){
 }
 
 // Generate project ID from job
+// ── Sequential project IDs (DH-0001, DH-0002 …) ─────────────────────────────
+// The counter is stored in localStorage and mirrored to Firebase.
+// Once a project is assigned an ID it never changes, even if the address does.
+function _trackerNextIdNum(){
+  return parseInt(localStorage.getItem('dronehub_tracker_id_counter')||'0');
+}
+function _trackerIncrementId(){
+  const n=_trackerNextIdNum()+1;
+  localStorage.setItem('dronehub_tracker_id_counter',String(n));
+  fbSet('orgs',ORG_ID+':tracker_meta',{idCounter:n,updatedAt:Date.now()});
+  return n;
+}
+// Returns the project's stored ID, assigning a new sequential one if needed.
+function ensureProjectId(jobId, ts){
+  if(ts.projectId) return ts.projectId;
+  const num=_trackerIncrementId();
+  const pid='DH-'+String(num).padStart(4,'0');
+  // Persist without triggering a full re-render (write directly to localStorage+Firebase)
+  const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
+  stages[jobId]={...(stages[jobId]||ts),projectId:pid};
+  try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
+  fbSet('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()});
+  return pid;
+}
 function getProjectId(job){
   const ts=getTrackerStage(job.id);
-  if(ts.projectId) return ts.projectId;
-  const pid='DH-'+job.date?.replace(/-/g,'').slice(2)+(job.id%1000).toString().padStart(3,'0');
-  return pid;
+  return ensureProjectId(job.id, ts);
 }
 
 function renderTracker(){
@@ -17157,7 +17188,14 @@ function renderTracker(){
       ${queueCell}
       <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">${clientName}${rushBadge}${overdueBadge}</td>
       <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${company}</td>
-      <td style="padding:8px 10px;color:var(--offwhite);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${j.address||''}">${j.address||j.name||''}</td>
+      <td style="padding:6px 8px;max-width:240px">
+        <input class="tracker-cell-edit" value="${(j.address||j.name||'').replace(/"/g,'&quot;')}"
+          title="Property address / project name — click to edit"
+          placeholder="Enter address…"
+          onblur="trackerInlineSaveAddress('${j.id}',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}"
+          style="width:100%;color:var(--offwhite);font-size:12px;font-weight:500">
+      </td>
       <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${j.date||''}</td>
       <td style="padding:6px 8px;text-align:center">
         <input class="tracker-cell-edit" value="${videographer}" title="Videographer — click to edit" placeholder="TBD"
@@ -17304,6 +17342,63 @@ function trackerInlineSave(jobId, field, value){
   // Re-render only if the field affects sorting/grouping (not for minor text fields)
   const reRenderFields = ['editStatus','rush','completionDate'];
   if(reRenderFields.includes(field)) renderTracker();
+}
+
+// Save an edited address/project name back to the source record
+// (regular job in savedJobs, or standalone project) + any linked client record
+function trackerInlineSaveAddress(jobId, newAddress){
+  newAddress = (newAddress||'').trim();
+  if(!newAddress) return; // don't blank out an address
+
+  // ── Regular saved job ───────────────────────────────────────────────────
+  const jobIdx = savedJobs.findIndex(j=>String(j.id)===String(jobId));
+  if(jobIdx >= 0){
+    const job = savedJobs[jobIdx];
+    if((job.address||job.name||'') === newAddress) return; // no change
+    job.address = newAddress;
+    // Also update .name if that's what was being used as the display label
+    if(!job.address && job.name) job.name = newAddress;
+    saveJobsToStorage();
+
+    // Update linked client completed-project entry if it exists
+    if(job.clientId){
+      const client = clients.find(c=>c.id===job.clientId);
+      if(client?.completedProjects){
+        const cp = client.completedProjects.find(p=>String(p.jobId)===String(jobId));
+        if(cp){
+          cp.address = newAddress;
+          saveClientsToStorage();
+          fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+        }
+      }
+    }
+    renderTracker();
+    return;
+  }
+
+  // ── Standalone / imported project ───────────────────────────────────────
+  const standaloneArr = getStandaloneProjects();
+  const spIdx = standaloneArr.findIndex(s=>String(s.id)===String(jobId));
+  if(spIdx >= 0){
+    if(standaloneArr[spIdx].address === newAddress) return;
+    standaloneArr[spIdx].address = newAddress;
+    saveStandaloneProjects(standaloneArr);
+
+    // Try to update linked client record by name match
+    const clientName = (standaloneArr[spIdx].clientName||'').toLowerCase().trim();
+    if(clientName){
+      const client = clients.find(c=>(c.name||'').toLowerCase().trim()===clientName);
+      if(client?.completedProjects){
+        const cp = client.completedProjects.find(p=>String(p.jobId)===String(jobId));
+        if(cp){
+          cp.address = newAddress;
+          saveClientsToStorage();
+          fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+        }
+      }
+    }
+    renderTracker();
+  }
 }
 
 // Toggle light/dark mode for the tracker pane
