@@ -1586,7 +1586,7 @@ button{font-family:var(--font);}
 
     <div id="model-live-body">
       <!-- Revenue line -->
-      <div class="brow"><span style="font-weight:500">Client invoice (before HST)</span><span id="ml-grand" style="font-weight:500">—</span></div>
+      <div class="brow"><span id="ml-grand-label" style="font-weight:500">Client invoice (before HST)</span><span id="ml-grand" style="font-weight:500">—</span></div>
       <div class="divider"></div>
 
       <div class="section-label">Your overhead — 50%</div>
@@ -4834,7 +4834,8 @@ function renderBreakdown(lines,grand,driveCost,bdId,noteId,gridId){
       bd+=`<div class="brow sub-item"><span>Subtotal</span><span>${fmt(l.total)}</span></div>`;
     }
   });
-  bd+=`<div class="brow total"><span>Total (before HST)</span><span>${fmt(grand)}</span></div>`;
+  const _isUsBreakdown=(document.getElementById('job-market-input')?.value||'canada')!=='canada';
+  bd+=`<div class="brow total"><span>Total${_isUsBreakdown?'':' (before HST)'}</span><span>${fmt(grand)}</span></div>`;
   document.getElementById(bdId).innerHTML=bd;
   if(noteId) document.getElementById(noteId).innerHTML='';
 }
@@ -4845,6 +4846,10 @@ function renderCostModel(grand,driveCost,lines){
   const hasCoreShoot=lines.some(l=>!l.flat);
   document.getElementById('model-no-quote').style.display=hasAny?'none':'block';
   document.getElementById('model-live-body').style.opacity=hasAny?'1':'0.35';
+  // Update invoice label based on market (no HST for US jobs)
+  const _cmIsUs=(document.getElementById('job-market-input')?.value||'canada')!=='canada';
+  const _cmLabel=document.getElementById('ml-grand-label');
+  if(_cmLabel) _cmLabel.textContent=_cmIsUs?'Client invoice':'Client invoice (before HST)';
   if(!hasAny)return;
 
   const ds=buildDriveSummary();
@@ -7902,7 +7907,7 @@ async function renderClientPortal(id, activeTab){
       if(!byYear[yr]) byYear[yr]={jobs:[],total:0,hst:0};
       byYear[yr].jobs.push(j);
       byYear[yr].total+=j.grand;
-      byYear[yr].hst+=j.grand*0.13;
+      if((j.currency||'cad').toLowerCase()==='cad') byYear[yr].hst+=j.grand*0.13;
     });
     const years=Object.keys(byYear).sort().reverse();
     const grandTotal=Object.values(byYear).reduce((s,y)=>s+y.total,0);
@@ -8509,7 +8514,8 @@ function saveJob(){
     const client=clients.find(c=>c.id===job.clientId);
     if(client?.email){
       const{lines:quoteLines,grand:quoteGrand}=buildQuote(sqft,svc,qty);
-      const hst=parseFloat((quoteGrand*0.13).toFixed(2));
+      const _qIsUs=(document.getElementById('job-market-input')?.value||'canada')!=='canada';
+      const hst=_qIsUs?0:parseFloat((quoteGrand*0.13).toFixed(2));
       const total=quoteGrand+hst;
       const svcList=Object.entries(svc).filter(([k,v])=>v&&['video','photo','tvideo','tphoto','reel','extphoto','extvideo','floorplan','custom'].includes(k))
         .map(([k])=>({video:'Aerial Video',photo:'Aerial Photography',tvideo:'Twilight Video',tphoto:'Twilight Photography',reel:'Social Media Reel',extphoto:'Exterior Photography',extvideo:'Exterior Video',floorplan:'Floor Plan',custom:job.customDesc||'Custom Service'}[k]||k)).join(', ');
@@ -8520,7 +8526,7 @@ function saveJob(){
           to_name:client.name||client.email,
           company_name:biz.name||'DroneHub Media Company',
           invoice_number:'QUOTE-'+job.id.toString().slice(-6),
-          invoice_total:'$'+total.toFixed(2)+' (incl. HST)',
+          invoice_total:'$'+total.toFixed(2)+(_qIsUs?'':' (incl. HST)'),
           job_name:job.name||job.address,
           job_date:job.date,
           payment_link:'',
@@ -9071,12 +9077,15 @@ function renderPayroll(){
 
   // Period summary
   const totalRev=jobs.reduce((s,j)=>s+j.grand,0);
+  const totalRevCad=jobs.filter(j=>(j.currency||'cad').toLowerCase()==='cad').reduce((s,j)=>s+j.grand,0);
+  const totalRevUsd=jobs.filter(j=>(j.currency||'cad').toLowerCase()==='usd').reduce((s,j)=>s+j.grand,0);
   const totalSalesComm=savedJobs.filter(j=>j.period===period&&(j.commissionPct||0)>0)
     .reduce((s,j)=>s+(j.commissionAmt||Math.ceil(j.grand*((j.commissionPct||0)/100))),0);
   summary.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap">
     <div class="metric"><div class="mlabel">Jobs</div><div class="mval">${jobs.length}</div></div>
     <div class="metric"><div class="mlabel">Total invoiced</div><div class="mval">${fmt(totalRev)}</div></div>
-    <div class="metric"><div class="mlabel">With HST</div><div class="mval">${fmt(totalRev*1.13)}</div></div>
+    ${totalRevCad>0?`<div class="metric"><div class="mlabel">CAD w/ HST</div><div class="mval">${fmt(totalRevCad*1.13)}</div></div>`:''}
+    ${totalRevUsd>0?`<div class="metric"><div class="mlabel">USD (no HST)</div><div class="mval">${fmt(totalRevUsd)}</div></div>`:''}
     ${totalSalesComm>0?`<div class="metric"><div class="mlabel">💼 Sales commission</div><div class="mval">${fmt(totalSalesComm)}</div></div>`:''}
   </div>`;
 
@@ -10640,7 +10649,7 @@ async function cpShowTab(tab){
       if(!byYear[yr]) byYear[yr]={jobs:[],total:0,hst:0};
       byYear[yr].jobs.push(j);
       byYear[yr].total+=j.grand;
-      byYear[yr].hst+=j.grand*0.13;
+      if((j.currency||'cad').toLowerCase()==='cad') byYear[yr].hst+=j.grand*0.13;
     });
     const years=Object.keys(byYear).sort().reverse();
     const grandTotal=Object.values(byYear).reduce((s,y)=>s+y.total,0);
