@@ -5707,6 +5707,21 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':team_members',   ls:'dronehub_team_members',      apply:d=>{localStorage.setItem('dronehub_team_members',d);}},
     {fb:ORG_ID+':2fa',            ls:'dronehub_2fa',               apply:d=>{localStorage.setItem('dronehub_2fa',d);}},
     {fb:ORG_ID+':photos',         ls:'dronehub_photos',            apply:d=>{localStorage.setItem('dronehub_photos',d);}},
+    // Calendar events — previously only synced when opening the Calendar tab
+    {fb:ORG_ID+':cal_events',    ls:'dronehub_cal_events',        apply:d=>{
+      try{const arr=JSON.parse(d);const local=JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');
+      if(arr.length>=local.length) localStorage.setItem('dronehub_cal_events',JSON.stringify(arr));}catch(e){}
+    }},
+    // Vacation allocations — previously had no restore at all
+    {fb:ORG_ID+':vac_alloc',     ls:'dronehub_vac_alloc',         apply:d=>{localStorage.setItem('dronehub_vac_alloc',d);}},
+    // US business settings — needed for US invoices and Stripe
+    {fb:ORG_ID+':settings_us',   ls:'dronehub_settings_us',       apply:d=>{
+      try{bizSettingsUs=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_settings_us',d);
+    }},
+    // Custom pricing config — used by quote builder
+    {fb:ORG_ID+':pricing',       ls:'dronehub_pricing_config',    apply:d=>{
+      try{_pricingConfig=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_pricing_config',d);
+    }},
   ];
 
   let restored=0;
