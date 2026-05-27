@@ -20446,13 +20446,23 @@ saveSalesContact = function(){
       all[idx].status    = document.getElementById('sc-status').value;
       all[idx].notes     = document.getElementById('sc-notes').value.trim();
       all[idx].updatedAt = new Date().toISOString();
+      // Save client type when editing an Existing Client contact
+      if(all[idx].list === 'clients'){
+        const ctChecked = document.querySelector('input[name="sc-clienttype"]:checked')?.value || 'active';
+        all[idx].clientType = ctChecked;
+        all[idx]._clientTypeManual = true;
+      }
     }
     salesSave(all);
+    if(idx>=0 && all[idx].list==='clients') syncSalesCRMToClient(all[idx]);
     closeSalesAddModal();
     renderSalesTable();
+    if(typeof renderClients==='function') renderClients();
     return;
   }
 
+  const _newList = document.getElementById('sc-list').value;
+  const _newCt = _newList==='clients' ? (document.querySelector('input[name="sc-clienttype"]:checked')?.value||'active') : undefined;
   const contact = {
     id:        'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
     firstName: document.getElementById('sc-fname').value.trim(),
@@ -20461,9 +20471,11 @@ saveSalesContact = function(){
     phone:     document.getElementById('sc-phone').value.trim(),
     email:     email,
     city:      document.getElementById('sc-city')?.value.trim()||'',
-    list:      document.getElementById('sc-list').value,
+    list:      _newList,
     status:    document.getElementById('sc-status').value,
     notes:     document.getElementById('sc-notes').value.trim(),
+    clientType: _newCt,
+    _clientTypeManual: _newList==='clients' ? true : undefined,
     unsubscribed: false,
     createdAt: new Date().toISOString(),
   };
@@ -20473,9 +20485,11 @@ saveSalesContact = function(){
   }
   all.push(contact);
   salesSave(all);
+  if(contact.list==='clients') syncSalesCRMToClient(contact);
   closeSalesAddModal();
   setSalesList(contact.list);
   renderSalesTable();
+  if(contact.list==='clients' && typeof renderClients==='function') renderClients();
 };
 
 // patch openSalesAddModal to clear city
