@@ -18991,7 +18991,7 @@ function importSalesExcel(input){
   if(!file) return;
   const listId = salesActiveList;
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     try{
       const wb = XLSX.read(e.target.result, {type:'binary'});
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -18999,6 +18999,8 @@ function importSalesExcel(input){
 
       if(!rows.length){ alert('No data found in the file.'); return; }
 
+      // Always fetch fresh from Firebase before merging
+      await salesSyncFirebase();
       const all = salesLoad();
       let added = 0;
       rows.forEach(row=>{
@@ -19194,12 +19196,16 @@ function processSalesImportFile(file, listId, overwriteDupes){
   if(listId === 'clients-past'){   importClientType = 'past';   listId = 'clients'; }
   const LIST_LABELS = {realestate:'Real Estate',resorts:'Resorts',golf:'Golf Courses',other:'Other',warm:'Warm Leads',clients:'Existing Clients'};
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     try{
       const wb = XLSX.read(e.target.result, {type:'binary'});
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
       if(!rows.length){ alert('No data found in the file.'); return; }
+
+      // Always fetch the latest from Firebase before merging so we never
+      // overwrite contacts that haven't been loaded into memory yet
+      await salesSyncFirebase();
       const all = salesLoad();
       let added = 0, updated = 0, blankRows = 0, dupSkipped = 0;
       rows.forEach(row=>{
@@ -19463,12 +19469,14 @@ importSalesExcel = function(input){
   if(!file) return;
   const listId = salesActiveList;
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     try{
       const wb = XLSX.read(e.target.result, {type:'binary'});
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
       if(!rows.length){ alert('No data found in the file.'); return; }
+      // Always fetch fresh from Firebase before merging
+      await salesSyncFirebase();
       const all = salesLoad();
       let added = 0;
       rows.forEach(row=>{
