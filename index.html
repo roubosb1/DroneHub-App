@@ -1808,8 +1808,7 @@ button{font-family:var(--font);}
       <thead>
         <tr>
           <th id="tracker-col-pid" style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Project ID</th>
-          <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:140px">Client / Realtor</th>
-          <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Company / Team</th>
+          <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:140px">Client</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:200px">Property Address / Project Name</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:100px">Shoot Date</th>
           <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:90px">Videographer</th>
@@ -17186,8 +17185,10 @@ function renderTracker(){
 
     return `<tr data-job-id="${j.id}" style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
       ${queueCell}
-      <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">${clientName}${rushBadge}${overdueBadge}</td>
-      <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${company}</td>
+      <td style="padding:8px 10px;color:var(--white);font-weight:600;white-space:nowrap">
+        ${clientName}${rushBadge}${overdueBadge}
+        ${company?`<div style="font-size:10px;color:var(--muted);font-weight:400;margin-top:1px">${company}</div>`:''}
+      </td>
       <td style="padding:6px 8px;max-width:240px">
         <input class="tracker-cell-edit" value="${(j.address||j.name||'').replace(/"/g,'&quot;')}"
           title="Property address / project name — click to edit"
