@@ -126,8 +126,17 @@ async function dhDecryptMsgs(msgs){
 }
 
 // ── PROFILE PHOTOS ────────────────────────────────────────────────────────────
-function saveProfilePhoto(email,dataUrl){
-  const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+async function saveProfilePhoto(email,dataUrl){
+  // Fetch latest photos from Firebase first so we don't overwrite other people's photos
+  let photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  try{
+    const fbDoc=await fbGet('orgs',ORG_ID+':photos');
+    if(fbDoc?.data){
+      const fbPhotos=JSON.parse(fbDoc.data);
+      // Merge: Firebase wins for other users, local wins for this user
+      Object.assign(photos,fbPhotos);
+    }
+  }catch(e){}
   photos[email.toLowerCase()]=dataUrl;
   localStorage.setItem('dronehub_photos',JSON.stringify(photos));
   fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
@@ -3029,7 +3038,7 @@ button{font-family:var(--font);}
               <th style="width:36px"><input type="checkbox" id="sales-select-all" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
               <th class="sortable" id="sth-name"    onclick="setSalesSort('name')"    >Name<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-company" onclick="setSalesSort('company')" >Company<span class="sort-arrow">↕</span></th>
-              <th id="sth-field" style="display:none">Type</th>
+              <th class="sortable" id="sth-field" onclick="setSalesSort('field')" style="display:none">Type<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-city"    onclick="setSalesSort('city')"    >City / Region<span class="sort-arrow">↕</span></th>
               <th>Phone</th>
               <th class="sortable" id="sth-email"   onclick="setSalesSort('email')"   >Email<span class="sort-arrow">↕</span></th>
@@ -5930,7 +5939,15 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{localStorage.setItem('dronehub_standalone_projects',d);}},
     {fb:ORG_ID+':team_members',   ls:'dronehub_team_members',      apply:d=>{localStorage.setItem('dronehub_team_members',d);}},
     {fb:ORG_ID+':2fa',            ls:'dronehub_2fa',               apply:d=>{localStorage.setItem('dronehub_2fa',d);}},
-    {fb:ORG_ID+':photos',         ls:'dronehub_photos',            apply:d=>{localStorage.setItem('dronehub_photos',d);}},
+    {fb:ORG_ID+':photos',         ls:'dronehub_photos',            apply:d=>{
+      // Merge Firebase photos with local — never lose someone else's photo
+      try{
+        const local=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+        const remote=JSON.parse(d||'{}');
+        const merged=Object.assign({},local,remote); // remote wins on conflict
+        localStorage.setItem('dronehub_photos',JSON.stringify(merged));
+      }catch(e){localStorage.setItem('dronehub_photos',d);}
+    }},
     // Calendar events — previously only synced when opening the Calendar tab
     {fb:ORG_ID+':cal_events',    ls:'dronehub_cal_events',        apply:d=>{
       try{const arr=JSON.parse(d);const local=JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');
@@ -18787,6 +18804,35 @@ function renderSales(){
   if(salesView==='pipeline') renderDealsTable();
 }
 
+// Auto-classify unclassified Other contacts by inferring type from company name
+function salesAutoClassifyOther(){
+  const all = salesLoad();
+  let changed = 0;
+  all.forEach(c=>{
+    if(c.list !== 'other') return;
+    if(c.field && OTHER_TYPES.find(t=>t.id===normalizeOtherType(c.field))) return; // already classified
+    // Try to infer from company name or existing field value
+    const guessStr = [c.company||'', c.field||''].join(' ').trim();
+    const guessed = normalizeOtherType(guessStr);
+    if(guessed){
+      c.field = guessed;
+      changed++;
+    }
+  });
+  if(changed > 0){
+    salesSave(all);
+    renderSalesTable();
+    // Brief toast
+    const t=document.createElement('div');
+    t.textContent=`✅ Auto-classified ${changed} contact${changed===1?'':'s'}`;
+    Object.assign(t.style,{position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#22D97A',color:'#0D1117',padding:'10px 22px',borderRadius:'24px',fontWeight:'700',fontSize:'13px',zIndex:'9999',boxShadow:'0 4px 20px rgba(0,0,0,.4)'});
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(),3000);
+  } else {
+    alert('No contacts could be automatically classified from their company name.');
+  }
+}
+
 function salesAutoDetectClientTypes(allContacts){
   // Returns true if any record was changed (so caller can save)
   const oneYearAgo = new Date();
@@ -18844,6 +18890,9 @@ function renderSalesTable(){
       }).join('')}
       ${unclassifiedCount>0?`<button onclick="_salesOtherType='__unset__';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesOtherType==='__unset__'?'var(--muted)':'var(--border)'};background:${_salesOtherType==='__unset__'?'rgba(168,180,208,.12)':'var(--navy-lift)'};color:var(--muted)">
         Unclassified <span style="opacity:.65">(${unclassifiedCount})</span>
+      </button>`:''}
+      ${unclassifiedCount>0?`<button onclick="salesAutoClassifyOther()" title="Auto-detect business type from company name for all unclassified contacts" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);margin-left:6px">
+        ✨ Auto-classify ${unclassifiedCount}
       </button>`:''}
     </div>`;
   } else if(subFilterEl){
