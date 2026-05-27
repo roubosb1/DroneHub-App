@@ -4801,12 +4801,13 @@ function buildQuote(sqft,s,q){
 }
 
 function renderBreakdown(lines,grand,driveCost,bdId,noteId,gridId){
-  const hst=grand*0.13,withHst=grand+hst;
+  const isUsQuote=(document.getElementById('job-market-input')?.value||'canada')!=='canada';
+  const hst=isUsQuote?0:grand*0.13,withHst=grand+hst;
   if(gridId){
     document.getElementById(gridId).innerHTML=`
-      <div class="metric"><div class="mlabel">Before HST</div><div class="mval">${fmt(grand)}</div></div>
-      <div class="metric"><div class="mlabel">HST (13%)</div><div class="mval">${fmt(hst)}</div></div>
-      <div class="metric"><div class="mlabel">Total with HST</div><div class="mval">${fmt(withHst)}</div></div>
+      <div class="metric"><div class="mlabel">${isUsQuote?'Invoice total':'Before HST'}</div><div class="mval">${fmt(grand)}</div></div>
+      ${isUsQuote?'':`<div class="metric"><div class="mlabel">HST (13%)</div><div class="mval">${fmt(hst)}</div></div>`}
+      ${isUsQuote?'':`<div class="metric"><div class="mlabel">Total with HST</div><div class="mval">${fmt(withHst)}</div></div>`}
       <div class="metric"><div class="mlabel">Drive cost</div><div class="mval">${fmt(driveCost)}</div><div class="msub">${driveCost>0?'contractor drive':'free zone'}</div></div>`;
   }
   let bd='';
@@ -6563,9 +6564,10 @@ function openInvoice(jobId){
   });
 
   const subtotal=lines.reduce((s,l)=>s+l.total,0);
-  const hst=parseFloat((subtotal*0.13).toFixed(2));
-  const grandTotal=subtotal+hst;
   const jobCurrency=(job.currency||'cad').toUpperCase();
+  const isUsdInvoice=jobCurrency==='USD';
+  const hst=isUsdInvoice?0:parseFloat((subtotal*0.13).toFixed(2));
+  const grandTotal=subtotal+hst;
   const fmtN=n=>jobCurrency+' $'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   // ── INTEREST SCHEDULE ───────────────────────────────────────────────────────
@@ -6710,8 +6712,8 @@ function openInvoice(jobId){
     <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
       <div style="min-width:220px">
         <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:#A8B4D0">Subtotal</span><span>${fmtN(subtotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:0.5px solid #e0ddd5"><span style="color:#A8B4D0">HST (13%)</span><span>${fmtN(hst)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:17px;font-weight:700"><span>Total due</span><span style="color:#22D97A">${fmtN(grandTotal)}</span></div>
+        ${isUsdInvoice?'':`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:0.5px solid #e0ddd5"><span style="color:#A8B4D0">HST (13%)</span><span>${fmtN(hst)}</span></div>`}
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:17px;font-weight:700;${isUsdInvoice?'border-top:0.5px solid #e0ddd5;margin-top:5px;':''}"><span>Total due</span><span style="color:#22D97A">${fmtN(grandTotal)}</span></div>
       </div>
     </div>
     <div style="border-top:0.5px solid #e0ddd5;padding-top:20px">
@@ -8762,7 +8764,7 @@ function openJobDetail(jobId){
       <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">Cost model breakdown</div>
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px">
-          <span style="color:var(--white)">Client invoice (before HST)</span><span style="color:var(--green)">${fmt(grand)}</span>
+          <span style="color:var(--white)">Client invoice${isUsdJob?'':' (before HST)'}</span><span style="color:var(--green)">${fmt(grand)}</span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;padding:3px 0">Profit 21%<span>${fmt(grand*0.21)}</span></div>
@@ -8775,9 +8777,9 @@ function openJobDetail(jobId){
           Contractor pool (50%)<span style="color:var(--blue-bright)">${fmt(grand*0.5)}</span>
         </div>
         ${payoutRows.map(p=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:var(--muted)">${p.name}<span style="color:var(--white);font-weight:600">${fmt(p.total)}</span></div>`).join('')}
-        <div style="display:flex;justify-content:space-between;font-size:11px;padding:6px 0 3px;color:var(--muted);border-top:1px solid var(--border);margin-top:6px">
+        ${isUsdJob?'':`<div style="display:flex;justify-content:space-between;font-size:11px;padding:6px 0 3px;color:var(--muted);border-top:1px solid var(--border);margin-top:6px">
           With HST (13%)<span style="color:var(--offwhite)">${fmt(grand*1.13)}</span>
-        </div>
+        </div>`}
       </div>
 
       <!-- Reassign contractors -->
@@ -11361,9 +11363,10 @@ function cpViewInvoice(jobId){
   (job.extraServices||[]).forEach(xs=>{if(xs.clientPrice>0) lines.push({desc:xs.name,qty:1,unit:xs.clientPrice,total:xs.clientPrice});});
 
   // Fallback: if no lines built (old job format), derive from grand total
-  const subtotal=lines.length?lines.reduce((s,l)=>s+l.total,0):Math.round(job.grand/1.13);
-  const hst=lines.length?parseFloat((subtotal*0.13).toFixed(2)):job.grand-subtotal;
-  const grandTotal=lines.length?subtotal+hst:job.grand;
+  const _isUsdPortalInv=(job.currency||'cad').toLowerCase()==='usd';
+  const subtotal=lines.length?lines.reduce((s,l)=>s+l.total,0):(_isUsdPortalInv?job.grand:Math.round(job.grand/1.13));
+  const hst=_isUsdPortalInv?0:(lines.length?parseFloat((subtotal*0.13).toFixed(2)):job.grand-subtotal);
+  const grandTotal=subtotal+hst;
 
   // ── Dates ─────────────────────────────────────────────────────────────────
   const issueDate=job.invoicedAt
@@ -11436,7 +11439,7 @@ function cpViewInvoice(jobId){
     </table>`:''}
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;border-top:1px solid rgba(58,72,144,.6);padding-top:16px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;width:240px;font-size:13px;color:#A8B4D0"><span>Subtotal</span><span>${fmtC(subtotal)}</span></div>
-      <div style="display:flex;justify-content:space-between;width:240px;font-size:13px;color:#A8B4D0"><span>HST (13%)</span><span>${fmtC(hst)}</span></div>
+      ${_isUsdPortalInv?'':`<div style="display:flex;justify-content:space-between;width:240px;font-size:13px;color:#A8B4D0"><span>HST (13%)</span><span>${fmtC(hst)}</span></div>`}
       <div style="display:flex;justify-content:space-between;width:240px;font-size:18px;font-weight:800;color:#E8EAF0;margin-top:8px;padding-top:10px;border-top:1px solid rgba(58,72,144,.5)"><span>Total</span><span style="color:#22D97A">${fmtC(grandTotal)}</span></div>
     </div>
     ${payBtn}
