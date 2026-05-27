@@ -1800,15 +1800,27 @@ button{font-family:var(--font);}
 <!-- FINANCE -->
 <div id="pane-finance" class="pane">
 
-  <!-- Finance / Payroll sub-tab switcher -->
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)">
-    <button id="fin-sub-tab-overview" onclick="setFinanceSubTab('overview')" style="padding:10px 22px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+  <!-- Finance sub-tab switcher -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
+    <button id="fin-sub-tab-overview" onclick="setFinanceSubTab('overview')" style="padding:10px 20px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Finance
+      Overview
     </button>
-    <button id="fin-sub-tab-payroll" onclick="setFinanceSubTab('payroll')" style="padding:10px 22px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+    <button id="fin-sub-tab-invoices" onclick="setFinanceSubTab('invoices')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Invoices
+    </button>
+    <button id="fin-sub-tab-payroll" onclick="setFinanceSubTab('payroll')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       Payroll
+    </button>
+    <button id="fin-sub-tab-contractors" onclick="setFinanceSubTab('contractors')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>
+      Contractors
+    </button>
+    <button id="fin-sub-tab-expenses" onclick="setFinanceSubTab('expenses')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Expenses
     </button>
   </div>
 
@@ -1831,7 +1843,34 @@ button{font-family:var(--font);}
   <!-- Summary metrics row -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="finance-metrics"></div>
 
-  <!-- INVOICES SECTION -->
+  <!-- Year selector -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div style="font-size:14px;font-weight:500">Revenue tracker</div>
+    <select id="finance-year-sel" onchange="renderFinance()" style="padding:5px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select>
+    <div style="display:flex;gap:6px;margin-left:auto">
+      <button onclick="setFinanceView('bar')" id="btn-bar" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer">Bar</button>
+      <button onclick="setFinanceView('line')" id="btn-line" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer">Line</button>
+    </div>
+  </div>
+
+  <!-- Revenue chart -->
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;gap:20px;margin-bottom:12px;font-size:12px;color:#A8B4D0;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Revenue (excl. HST)</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#E85D3A;display:inline-block"></span>Expenses</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#5B7FDB;display:inline-block"></span>Net profit</span>
+    </div>
+    <div style="position:relative;width:100%;height:280px">
+      <canvas id="finance-chart" role="img" aria-label="Monthly revenue, expenses, and net profit bar chart"></canvas>
+    </div>
+  </div>
+
+  </div><!-- end finance-sub-overview -->
+
+  <!-- ── INVOICES SUB-VIEW ── -->
+  <div id="finance-sub-invoices" style="display:none">
+
+  <!-- Invoice tracker -->
   <div class="card" style="margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div class="section-label" style="margin-bottom:0">Invoice tracker</div>
@@ -1845,7 +1884,7 @@ button{font-family:var(--font);}
     <div id="invoice-tracker-list"></div>
   </div>
 
-  <!-- Reminder modal -->
+  <!-- Reminder modal (fixed overlay, lives here but works globally) -->
   <div id="reminder-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3000;overflow-y:auto" onclick="if(event.target===this)closeReminder()">
     <div style="background:#1C2333;max-width:520px;margin:40px auto;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.5);border:1px solid #3A4890" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:#161D4A;border-bottom:1px solid var(--border)">
@@ -1875,27 +1914,46 @@ button{font-family:var(--font);}
     </div>
   </div>
 
-  <!-- Year selector -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <div style="font-size:14px;font-weight:500">Revenue tracker</div>
-    <select id="finance-year-sel" onchange="renderFinance()" style="padding:5px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select>
-    <div style="display:flex;gap:6px;margin-left:auto">
-      <button onclick="setFinanceView('bar')" id="btn-bar" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer">Bar</button>
-      <button onclick="setFinanceView('line')" id="btn-line" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer">Line</button>
-    </div>
-  </div>
+  </div><!-- end finance-sub-invoices -->
 
-  <!-- Revenue chart -->
-  <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;gap:20px;margin-bottom:12px;font-size:12px;color:#A8B4D0;flex-wrap:wrap">
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Revenue (excl. HST)</span>
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#E85D3A;display:inline-block"></span>Expenses</span>
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:2px;background:#5B7FDB;display:inline-block"></span>Net profit</span>
+  <!-- ── PAYROLL SUB-VIEW ── -->
+  <div id="finance-sub-payroll" style="display:none">
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px">Payroll period</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <select id="payroll-period-sel" onchange="renderPayroll()" style="padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;flex:1;min-width:200px">
+          <option value="">— Select payroll period —</option>
+        </select>
+        <button onclick="exportPayroll()" style="padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#E6F1FB;color:#0C447C;cursor:pointer">Export CSV</button>
+      </div>
+      <div id="payroll-period-summary"></div>
     </div>
-    <div style="position:relative;width:100%;height:280px">
-      <canvas id="finance-chart" role="img" aria-label="Monthly revenue, expenses, and net profit bar chart"></canvas>
+    <div id="payroll-contractor-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div id="payroll-contractor-content"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="section-label" style="margin-bottom:8px">All saved jobs</div>
+      <div id="payroll-all-jobs" style="font-size:12px;color:#A8B4D0"></div>
+      <button onclick="clearAllJobs()" style="margin-top:10px;padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:rgba(240,82,82,.1);color:#F05252;cursor:pointer">Clear all saved jobs</button>
     </div>
-  </div>
+  </div><!-- end finance-sub-payroll -->
+
+  <!-- ── CONTRACTORS SUB-VIEW ── -->
+  <div id="finance-sub-contractors" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:14px;font-weight:600;color:var(--offwhite)">Contractor payouts — all time</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="contractor-filter-market" onchange="renderContractorBreakdown()" style="padding:5px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
+          <option value="all">All markets</option>
+          <option value="canada">🇨🇦 Canada</option>
+          <option value="usa">🇺🇸 United States</option>
+        </select>
+      </div>
+    </div>
+    <div id="contractor-breakdown-content"></div>
+  </div><!-- end finance-sub-contractors -->
+
+  <!-- ── EXPENSES SUB-VIEW ── -->
+  <div id="finance-sub-expenses" style="display:none">
 
   <!-- Expense tracker -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
@@ -2028,28 +2086,7 @@ button{font-family:var(--font);}
     </div>
   </div>
 
-  </div><!-- end finance-sub-overview -->
-
-  <!-- ── PAYROLL SUB-VIEW ── -->
-  <div id="finance-sub-payroll" style="display:none">
-    <div class="card">
-      <div class="section-label" style="margin-bottom:10px">Payroll period</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-        <select id="payroll-period-sel" onchange="renderPayroll()" style="padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;flex:1;min-width:200px">
-          <option value="">— Select payroll period —</option>
-        </select>
-        <button onclick="exportPayroll()" style="padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#E6F1FB;color:#0C447C;cursor:pointer">Export CSV</button>
-      </div>
-      <div id="payroll-period-summary"></div>
-    </div>
-    <div id="payroll-contractor-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-    <div id="payroll-contractor-content"></div>
-    <div class="card" style="margin-top:12px">
-      <div class="section-label" style="margin-bottom:8px">All saved jobs</div>
-      <div id="payroll-all-jobs" style="font-size:12px;color:#A8B4D0"></div>
-      <button onclick="clearAllJobs()" style="margin-top:10px;padding:6px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:rgba(240,82,82,.1);color:#F05252;cursor:pointer">Clear all saved jobs</button>
-    </div>
-  </div><!-- end finance-sub-payroll -->
+  </div><!-- end finance-sub-expenses -->
 
 </div><!-- end pane-finance -->
 
@@ -4230,17 +4267,87 @@ let savedJobs=JSON.parse(localStorage.getItem('dronehub_jobs')||'[]');
 let financeMarket='canada';
 
 function setFinanceSubTab(sub){
-  const overview = document.getElementById('finance-sub-overview');
-  const payroll  = document.getElementById('finance-sub-payroll');
-  const tabO     = document.getElementById('fin-sub-tab-overview');
-  const tabP     = document.getElementById('fin-sub-tab-payroll');
-  if(!overview || !payroll) return;
-  const showPayroll = sub === 'payroll';
-  overview.style.display = showPayroll ? 'none' : '';
-  payroll.style.display  = showPayroll ? ''     : 'none';
-  if(tabO){ tabO.style.borderBottomColor = showPayroll ? 'transparent' : 'var(--blue-bright)'; tabO.style.color = showPayroll ? 'var(--muted)' : 'var(--blue-bright)'; }
-  if(tabP){ tabP.style.borderBottomColor = showPayroll ? 'var(--blue-bright)' : 'transparent'; tabP.style.color = showPayroll ? 'var(--blue-bright)' : 'var(--muted)'; }
-  if(showPayroll){ refreshPayrollPeriods(); renderPayroll(); }
+  const tabs = ['overview','invoices','payroll','contractors','expenses'];
+  tabs.forEach(t=>{
+    const pane = document.getElementById('finance-sub-'+t);
+    const btn  = document.getElementById('fin-sub-tab-'+t);
+    const active = t === sub;
+    if(pane) pane.style.display = active ? '' : 'none';
+    if(btn){
+      btn.style.borderBottomColor = active ? 'var(--blue-bright)' : 'transparent';
+      btn.style.color = active ? 'var(--blue-bright)' : 'var(--muted)';
+    }
+  });
+  if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); }
+  if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
+  if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderExpenseCatChart && renderExpenseCatChart(); }
+  if(sub === 'contractors'){ renderContractorBreakdown(); }
+}
+
+function renderContractorBreakdown(){
+  const el = document.getElementById('contractor-breakdown-content');
+  if(!el) return;
+  const marketFilter = (document.getElementById('contractor-filter-market')||{}).value || 'all';
+
+  // Build map: contractorName → { total, jobs: [{id, client, date, amount, market}] }
+  const map = {};
+  (savedJobs||[]).forEach(j=>{
+    const m = j.market === 'canada' ? 'canada' : 'usa';
+    if(marketFilter !== 'all' && m !== marketFilter) return;
+    const rows = calcPay(j);
+    rows.forEach(r=>{
+      if(!r.name || r.total <= 0) return;
+      if(!map[r.name]) map[r.name] = { total:0, jobs:[] };
+      map[r.name].total += r.total;
+      map[r.name].jobs.push({
+        id: j.id,
+        client: j.clientName || j.address || 'Unknown client',
+        date: j.date || '',
+        amount: r.total,
+        market: m
+      });
+    });
+  });
+
+  const sorted = Object.entries(map).sort((a,b)=>b[1].total - a[1].total);
+
+  if(!sorted.length){
+    el.innerHTML = '<div class="card" style="color:var(--muted);font-size:13px;text-align:center;padding:32px">No contractor payout data found for completed jobs.</div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(([name, data])=>{
+    const jobRows = data.jobs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(jb=>`
+      <tr>
+        <td style="padding:5px 10px;font-size:11px;color:var(--muted)">${jb.date||'—'}</td>
+        <td style="padding:5px 10px;font-size:11px;color:var(--offwhite)">${jb.client}</td>
+        <td style="padding:5px 10px;font-size:11px;color:var(--muted);text-align:center">${jb.market==='usa'?'🇺🇸':'🇨🇦'}</td>
+        <td style="padding:5px 10px;font-size:11px;color:var(--green);text-align:right;font-weight:600">$${jb.amount.toFixed(2)}</td>
+      </tr>`).join('');
+    return `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--offwhite)">${name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${data.jobs.length} job${data.jobs.length!==1?'s':''}</div>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:var(--green)">$${data.total.toFixed(2)}</div>
+      </div>
+      <div style="display:none;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Date</th>
+              <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Client</th>
+              <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:center;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Market</th>
+              <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:right;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Paid</th>
+            </tr>
+          </thead>
+          <tbody>${jobRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function setFinanceMarket(m){
@@ -4586,9 +4693,15 @@ function showPane(id,ev){
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){
     renderFinance();
-    // If payroll sub-tab was last active, refresh payroll too
-    const activeSub = document.getElementById('finance-sub-payroll')?.style.display;
-    if(activeSub && activeSub!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
+    // Re-render whichever sub-tab is currently visible
+    const payrollVis = document.getElementById('finance-sub-payroll')?.style.display;
+    if(payrollVis && payrollVis!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
+    const contractorsVis = document.getElementById('finance-sub-contractors')?.style.display;
+    if(contractorsVis && contractorsVis!=='none'){ renderContractorBreakdown(); }
+    const invoicesVis = document.getElementById('finance-sub-invoices')?.style.display;
+    if(invoicesVis && invoicesVis!=='none'){ renderInvoiceTracker && renderInvoiceTracker(); }
+    const expensesVis = document.getElementById('finance-sub-expenses')?.style.display;
+    if(expensesVis && expensesVis!=='none'){ renderExpenseList && renderExpenseList(); renderExpenseCatChart && renderExpenseCatChart(); }
   }
   if(id==='sales'){
     renderSales();
