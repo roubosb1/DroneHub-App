@@ -6513,6 +6513,39 @@ function openInvoice(jobId){
   const driveCost=job.driveCost||0;
   const lines=[];
 
+  // ── US MARKET JOBS — build lines from usData, not services ───────────────
+  const _isUsInvBuild=(job.currency||'cad').toLowerCase()==='usd';
+  if(_isUsInvBuild){
+    const ud=job.usData||{};
+    const p=US_MARKET_PRICING[ud.market]||US_MARKET_PRICING['other_us'];
+    const pkgLabels={listing:'Real Estate Listing Package',social:'Social Media Package',agent:'Agent Promo Package',day:'Day Rate Package'};
+    const tierLabels={under4k:'Under 4,000 sqft',over4k:'4,000–8,000 sqft',over8k:'Over 8,000 sqft'};
+    const socialLabels={r1:'1 Reel',r2:'2 Reels',r3:'3 Reels',r5:'5 Reels',fullDay:'Full Day Social'};
+    if(ud.pkgType==='listing'&&ud.listingTier){
+      const basePrice=p.listing[ud.listingTier]||job.grand;
+      lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier}`,qty:1,unit:basePrice,total:basePrice});
+      if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
+      if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
+      if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
+      if(ud.offSeason&&p.offSeasonDiscount) lines.push({desc:'Off-season discount',qty:1,unit:-p.offSeasonDiscount,total:-p.offSeasonDiscount});
+    } else if(ud.pkgType==='social'&&ud.socialTier){
+      const basePrice=p.social[ud.socialTier]||job.grand;
+      lines.push({desc:`Social Media Package — ${socialLabels[ud.socialTier]||ud.socialTier}`,qty:1,unit:basePrice,total:basePrice});
+      if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
+    } else if(ud.pkgType==='agent'){
+      const basePrice=p.agentPromo||job.grand;
+      lines.push({desc:'Agent Promo Package',qty:1,unit:basePrice,total:basePrice});
+    } else if(ud.pkgType==='day'){
+      const dayPrice=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
+      lines.push({desc:`${ud.dayType==='half'?'Half':'Full'} Day Rate`,qty:1,unit:dayPrice,total:dayPrice});
+      if((ud.reelCount||0)>0) lines.push({desc:'Social Reels',qty:ud.reelCount,unit:US_SOCIAL_DAY.reelRate,total:ud.reelCount*US_SOCIAL_DAY.reelRate});
+    } else {
+      // Fallback: use grand as a single line item
+      if(job.grand>0) lines.push({desc:pkgLabels[ud.pkgType]||'Media Package',qty:1,unit:job.grand,total:job.grand});
+    }
+  } else {
+  // ── CANADA JOBS — existing line-item builder ──────────────────────────────
+
   // Drive cost is baked silently into video/photo — never shown as a separate line
   let vidDriveBaked=0, phoDriveBaked=0;
   if(driveCost>0){
@@ -6567,6 +6600,7 @@ function openInvoice(jobId){
   (job.extraServices||[]).forEach(xs=>{
     if(xs.clientPrice>0) lines.push({desc:xs.name,qty:1,unit:xs.clientPrice,total:xs.clientPrice});
   });
+  } // end Canada jobs
 
   const subtotal=lines.reduce((s,l)=>s+l.total,0);
   const jobCurrency=(job.currency||'cad').toUpperCase();
