@@ -271,6 +271,12 @@ body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var
 /* LouChat: no bottom padding, no pane min-height — container fills exact remaining space */
 .wrap:has(#pane-louchat.active){padding-bottom:0;}
 #pane-louchat.active{min-height:0;}
+/* Team member profile modal */
+#team-profile-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:4000;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+#team-profile-modal.open{display:flex}
+#team-profile-box{background:var(--navy-card);border:1px solid var(--border-bright);border-radius:18px;width:100%;max-width:860px;overflow:hidden;margin:auto}
+.tp-tab-btn{padding:9px 20px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+.tp-tab-btn.active{color:var(--white);border-bottom-color:var(--blue)}
 h1{font-size:16px;font-weight:600;margin-bottom:1.25rem;color:var(--white)}
 .section-label{font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
 .card{background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:12px;transition:border-color .2s;overflow:hidden}
@@ -1184,6 +1190,7 @@ button{font-family:var(--font);}
   <div id="header-right" style="margin-left:auto;display:flex;align-items:center;gap:20px">
     <div id="header-user-wrap" style="display:flex;align-items:center;gap:10px">
       <span id="app-user-display" style="font-size:12px;color:var(--muted)"></span>
+      <button onclick="openTeamMemberProfile('me')" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">👤 My Profile</button>
       <div style="position:relative">
         <button id="notif-bell-btn" onclick="toggleNotificationPanel()" style="position:relative;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -2440,6 +2447,24 @@ button{font-family:var(--font);}
 
 <!-- pane-payroll kept as empty hidden stub so existing code referencing it doesn't error -->
 <div id="pane-payroll" style="display:none"></div>
+
+<!-- TEAM MEMBER PROFILE MODAL -->
+<div id="team-profile-modal" onclick="if(event.target===this)closeTeamMemberProfile()">
+  <div id="team-profile-box" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div id="tp-header" style="background:linear-gradient(135deg,var(--navy-mid),#0D1438);padding:24px 28px;border-bottom:1px solid var(--border)"></div>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:var(--navy-mid)">
+      <button class="tp-tab-btn active" id="tp-tab-overview" onclick="tpSwitchTab('overview')">📊 Overview</button>
+      <button class="tp-tab-btn" id="tp-tab-timeoff" onclick="tpSwitchTab('timeoff')">✈️ Time Off</button>
+      <button class="tp-tab-btn" id="tp-tab-portfolio" onclick="tpSwitchTab('portfolio')">🎬 Portfolio</button>
+      <button class="tp-tab-btn" id="tp-tab-work" onclick="tpSwitchTab('work')">📋 My Work</button>
+      <button onclick="closeTeamMemberProfile()" style="margin-left:auto;border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px;padding:0 4px;align-self:center">✕</button>
+    </div>
+    <!-- Content -->
+    <div id="tp-content" style="padding:24px 28px;min-height:300px;max-height:70vh;overflow-y:auto"></div>
+  </div>
+</div>
 
 <!-- SETTINGS -->
 <div id="pane-settings" class="pane">
@@ -5790,15 +5815,13 @@ function renderVacationTracker(){
   let members=getAdminTeamMembers();
   const allocs=vacationAllocLoad();
   if(!members.length){panel.innerHTML='<div style="font-size:12px;color:var(--muted)">No team members yet.</div>';return;}
-  // Non-admins only see their own row
+  // Non-admins: redirect to their own profile page
   if(!isAdmin && session){
-    const myEmail=(session.email||'').toLowerCase().trim();
-    const myName=(session.name||'').toLowerCase().trim();
-    members=members.filter(m=>
-      (m.email&&m.email.toLowerCase().trim()===myEmail)||
-      (m.name&&m.name.toLowerCase().trim()===myName)
-    );
-    if(!members.length){panel.innerHTML='<div style="font-size:12px;color:var(--muted)">No vacation data found for your account.</div>';return;}
+    panel.innerHTML=`<div style="padding:12px 0;display:flex;align-items:center;gap:10px">
+      <span style="font-size:12px;color:var(--muted)">View and manage your time off from your profile page.</span>
+      <button onclick="openTeamMemberProfile('me')" style="padding:5px 14px;border-radius:8px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer">👤 My Profile</button>
+    </div>`;
+    return;
   }
   panel.innerHTML=members.map(m=>{
     const alloc=allocs.find(a=>a.memberId===m.id&&a.year===year)||{allocatedDays:14,manualAdjust:0};
@@ -5834,6 +5857,397 @@ function renderVacationTracker(){
       </div>
     </div>`;
   }).join('');
+}
+
+// ── TEAM MEMBER PROFILE ──────────────────────────────────────────────────────
+let _tpMemberId = null;
+let _tpTab = 'overview';
+
+// Portfolio storage helpers
+function tpPortfolioLoad(memberId){
+  try{ return JSON.parse(localStorage.getItem('dh_portfolio_'+memberId)||'[]'); }catch(e){ return []; }
+}
+function tpPortfolioSave(memberId, arr){
+  try{ localStorage.setItem('dh_portfolio_'+memberId, JSON.stringify(arr)); }catch(e){}
+  fbSet('orgs', ORG_ID+':portfolio_'+memberId, {data:JSON.stringify(arr), updatedAt:Date.now()});
+}
+async function tpPortfolioLoad_fb(memberId){
+  try{
+    const r = await fbGet('orgs', ORG_ID+':portfolio_'+memberId);
+    if(r?.data){
+      const arr = JSON.parse(r.data);
+      try{ localStorage.setItem('dh_portfolio_'+memberId, JSON.stringify(arr)); }catch(e){}
+      return arr;
+    }
+  }catch(e){}
+  return tpPortfolioLoad(memberId);
+}
+
+// Resolve 'me' → actual member id from session
+function tpResolveMemberId(id){
+  if(id !== 'me') return id;
+  const s = gateGetSession();
+  if(!s) return null;
+  const members = getAdminTeamMembers();
+  const m = members.find(m =>
+    (m.email && m.email.toLowerCase() === (s.email||'').toLowerCase()) ||
+    (m.name  && m.name.toLowerCase()  === (s.name||'').toLowerCase())
+  );
+  return m ? m.id : null;
+}
+
+function openTeamMemberProfile(memberId){
+  const resolvedId = tpResolveMemberId(memberId);
+  if(!resolvedId){ showDhToast('Profile','Could not find your team profile.','⚠️','var(--amber)',3000); return; }
+  _tpMemberId = resolvedId;
+  _tpTab = 'overview';
+  const modal = document.getElementById('team-profile-modal');
+  if(modal) modal.classList.add('open');
+  tpRender();
+  // Async load portfolio from Firebase
+  tpPortfolioLoad_fb(resolvedId).then(()=>{ if(_tpTab==='portfolio') tpRenderPortfolio(); });
+}
+function closeTeamMemberProfile(){
+  document.getElementById('team-profile-modal')?.classList.remove('open');
+  _tpMemberId = null;
+}
+function tpSwitchTab(tab){
+  _tpTab = tab;
+  document.querySelectorAll('.tp-tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.id==='tp-tab-'+tab);
+  });
+  tpRenderContent();
+}
+
+function tpRender(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const session = gateGetSession();
+  const isAdmin = !session || session.type==='admin' || session.role==='admin';
+  const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
+                (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
+  const role = TEAM_ROLES.find(r=>r.key===member.role)||TEAM_ROLES[4];
+
+  // Header
+  const header = document.getElementById('tp-header');
+  if(header){
+    const vacYear = new Date().getFullYear();
+    const allocs = vacationAllocLoad();
+    const alloc = allocs.find(a=>a.memberId===member.id&&a.year===vacYear)||{allocatedDays:14};
+    const used = vacationDaysUsed(member.name, vacYear);
+    const remaining = alloc.allocatedDays - used;
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        ${getAvatarHtml(member.name,member.email,64,20)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:22px;font-weight:800;color:var(--white)">${member.name}</div>
+          <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;margin:4px 0">
+            <span>${role.icon}</span><span style="font-size:11px;font-weight:700;color:${role.color}">${role.label}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${member.email||''}${member.phone?' · '+member.phone:''}</div>
+        </div>
+        <div style="display:flex;gap:12px;flex-shrink:0">
+          <div style="text-align:center;padding:10px 16px;background:rgba(0,0,0,.25);border-radius:10px">
+            <div style="font-size:20px;font-weight:800;color:${remaining<=0?'var(--red)':remaining<=3?'var(--amber)':'var(--green)'}">${remaining}</div>
+            <div style="font-size:10px;color:var(--muted)">Vacation Days Left</div>
+          </div>
+          <div style="text-align:center;padding:10px 16px;background:rgba(0,0,0,.25);border-radius:10px">
+            <div style="font-size:20px;font-weight:800;color:var(--blue-bright)">${used}</div>
+            <div style="font-size:10px;color:var(--muted)">Days Taken</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  tpRenderContent();
+}
+
+function tpRenderContent(){
+  if(_tpTab==='overview')   tpRenderOverview();
+  else if(_tpTab==='timeoff')   tpRenderTimeOff();
+  else if(_tpTab==='portfolio') tpRenderPortfolio();
+  else if(_tpTab==='work')      tpRenderMyWork();
+}
+
+function tpRenderOverview(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const content = document.getElementById('tp-content');
+  if(!content) return;
+  // Completed projects count
+  const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
+  const completedByMe = Object.values(trackerData).filter(ts=>
+    (ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()) &&
+    ts.editStatus === 'finals_sent'
+  ).length;
+  const activeByMe = Object.values(trackerData).filter(ts=>
+    (ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()) &&
+    ts.editStatus !== 'finals_sent' && ts.editStatus !== 'footage_pending'
+  ).length;
+  const totalEditHrs = Object.values(trackerData)
+    .filter(ts=>(ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()))
+    .reduce((s,ts)=>s+(parseFloat(ts.approxEditHours)||0),0);
+  const portfolio = tpPortfolioLoad(member.id);
+
+  content.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px">
+      ${[
+        ['📋','Active Projects',activeByMe,'var(--blue-bright)'],
+        ['✅','Completed',completedByMe,'var(--green)'],
+        ['⏱','Total Edit Hours',totalEditHrs.toFixed(1),'var(--amber)'],
+        ['🎬','Portfolio Items',portfolio.length,'#A78BFA'],
+      ].map(([icon,lbl,val,color])=>`
+        <div style="padding:14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;text-align:center">
+          <div style="font-size:22px;margin-bottom:4px">${icon}</div>
+          <div style="font-size:22px;font-weight:800;color:${color}">${val}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${lbl}</div>
+        </div>`).join('')}
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:12px">Quick Actions</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="tpSwitchTab('timeoff')" style="padding:8px 18px;border-radius:10px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer">✈️ Request Time Off</button>
+      <button onclick="tpSwitchTab('portfolio')" style="padding:8px 18px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">🎬 Add Portfolio Work</button>
+      <button onclick="tpSwitchTab('work')" style="padding:8px 18px;border-radius:10px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">📋 View My Projects</button>
+    </div>`;
+}
+
+function tpRenderTimeOff(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const content = document.getElementById('tp-content');
+  if(!content) return;
+  const session = gateGetSession();
+  const isAdmin = !session || session.type==='admin' || session.role==='admin';
+  const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
+                (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
+  const canEdit = isAdmin || isOwn;
+
+  // Existing time off events
+  const evts = calEventsLoad().filter(e=>
+    (e.type==='vacation'||e.type==='sick') &&
+    e.memberName===member.name
+  ).sort((a,b)=>(a.start||a.date||'').localeCompare(b.start||b.date||''));
+  const upcoming = evts.filter(e=>(e.end||e.start||e.date||'')>=new Date().toISOString().slice(0,10));
+  const past = evts.filter(e=>(e.end||e.start||e.date||'')<new Date().toISOString().slice(0,10));
+
+  content.innerHTML = `
+    ${canEdit?`
+    <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:14px">📅 Request Time Off</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Start Date</div>
+          <input type="date" id="tp-toff-start" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">End Date</div>
+          <input type="date" id="tp-toff-end" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:var(--navy-lift);font-size:12px;font-weight:700;color:var(--muted)" id="tp-toff-lbl-vac">
+          <input type="radio" name="tp-toff-type" value="vacation" checked onchange="document.getElementById('tp-toff-lbl-vac').style.borderColor=this.checked?'#A78BFA':'var(--border)';document.getElementById('tp-toff-lbl-sick').style.borderColor='var(--border)'"> ✈️ Vacation
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:var(--navy-lift);font-size:12px;font-weight:700;color:var(--muted)" id="tp-toff-lbl-sick">
+          <input type="radio" name="tp-toff-type" value="sick" onchange="document.getElementById('tp-toff-lbl-sick').style.borderColor=this.checked?'var(--red)':'var(--border)';document.getElementById('tp-toff-lbl-vac').style.borderColor='var(--border)'"> 🤒 Sick Day
+        </label>
+      </div>
+      <input id="tp-toff-note" type="text" placeholder="Optional note (e.g. Family trip, Doctor appointment…)" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;margin-bottom:12px">
+      <button onclick="tpSubmitTimeOff()" style="padding:8px 22px;border-radius:10px;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.15);color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer">Submit Request</button>
+    </div>`:''}
+    <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px">📅 Upcoming (${upcoming.length})</div>
+    ${upcoming.length?upcoming.map(e=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
+        <div>
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${e.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${e.type==='vacation'?'#A78BFA':'var(--red)'}">
+            ${e.type==='vacation'?'✈️ Vacation':'🤒 Sick'}
+          </span>
+          <span style="font-size:12px;color:var(--white);margin-left:8px">${e.start||e.date||''} → ${e.end||e.start||e.date||''}</span>
+          ${e.title?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${e.title}</div>`:''}
+        </div>
+        ${canEdit?`<button onclick="tpDeleteTimeOff('${e.id}')" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕ Cancel</button>`:''}
+      </div>`).join(''):`<div style="font-size:12px;color:var(--muted);padding:10px 0">No upcoming time off.</div>`}
+    ${past.length?`
+    <div style="font-size:13px;font-weight:700;color:var(--white);margin-top:20px;margin-bottom:10px">Past (${past.length})</div>
+    ${past.slice(-5).reverse().map(e=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;opacity:.7">
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted)">${e.type==='vacation'?'✈️':'🤒'}</span>
+        <span style="font-size:12px;color:var(--offwhite)">${e.start||e.date||''} → ${e.end||e.start||e.date||''}</span>
+      </div>`).join('')}`:''}`;
+}
+
+function tpSubmitTimeOff(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const start = document.getElementById('tp-toff-start')?.value;
+  const end   = document.getElementById('tp-toff-end')?.value || start;
+  const type  = document.querySelector('input[name="tp-toff-type"]:checked')?.value || 'vacation';
+  const note  = document.getElementById('tp-toff-note')?.value.trim()||'';
+  if(!start){ showDhToast('Time Off','Please enter a start date.','⚠️','var(--amber)',3000); return; }
+  if(end < start){ showDhToast('Time Off','End date must be on or after start date.','⚠️','var(--amber)',3000); return; }
+  // Check overlap
+  const overlaps = vacationOverlapCheck(start, end, member.name);
+  const evt = {
+    id: 'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    type, memberName: member.name,
+    start, end,
+    title: (note || (type==='vacation'?member.name+' – Vacation':member.name+' – Sick')),
+    color: type==='vacation'?'#A78BFA':'#FF7070',
+    allDay: true,
+  };
+  const evts = calEventsLoad();
+  evts.push(evt);
+  calEventsSave(evts);
+  showDhToast('Time Off','Request submitted ✓','✅','var(--green)',3000);
+  if(overlaps.length) showDhToast('Overlap Warning',overlaps.join(', ')+' also off during this period','⚠️','var(--amber)',5000);
+  tpRender(); // refresh header stats
+  tpSwitchTab('timeoff');
+}
+
+function tpDeleteTimeOff(evtId){
+  if(!confirm('Cancel this time off request?')) return;
+  const evts = calEventsLoad().filter(e=>e.id!==evtId);
+  calEventsSave(evts);
+  tpRender();
+  tpSwitchTab('timeoff');
+}
+
+function tpRenderPortfolio(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const content = document.getElementById('tp-content');
+  if(!content) return;
+  const session = gateGetSession();
+  const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
+                (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
+  const isAdmin = !session || session.type==='admin' || session.role==='admin';
+  const canEdit = isAdmin || isOwn;
+  const items = tpPortfolioLoad(member.id);
+
+  content.innerHTML = `
+    ${canEdit?`
+    <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:14px">🎬 Add Work Sample</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Title</div>
+          <input id="tp-pf-title" type="text" placeholder="e.g. Luxury Condo Walkthrough" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Type</div>
+          <select id="tp-pf-type" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+            <option value="video">🎥 Video Edit</option>
+            <option value="photo">📸 Photo Edit</option>
+            <option value="reel">📱 Social Reel</option>
+            <option value="other">📁 Other</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Link (Google Drive, Dropbox, Vimeo, YouTube, etc.)</div>
+        <input id="tp-pf-url" type="url" placeholder="https://..." style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Description (optional)</div>
+        <textarea id="tp-pf-desc" placeholder="Brief description of the project…" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+      <button onclick="tpAddPortfolioItem()" style="padding:8px 22px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">+ Add to Portfolio</button>
+    </div>`:''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+      ${items.length?items.map(item=>`
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:14px 14px 10px;flex:1">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(91,141,239,.15);color:var(--blue-bright)">${item.type==='video'?'🎥 Video':item.type==='photo'?'📸 Photo':item.type==='reel'?'📱 Reel':'📁 Other'}</span>
+              <span style="font-size:10px;color:var(--muted)">${item.date||''}</span>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">${item.title}</div>
+            ${item.description?`<div style="font-size:11px;color:var(--muted);line-height:1.4">${item.description}</div>`:''}
+          </div>
+          <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+            ${item.url?`<a href="${item.url}" target="_blank" style="flex:1;padding:5px 10px;border-radius:8px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;text-align:center">▶ View Work</a>`:''}
+            ${canEdit?`<button onclick="tpRemovePortfolioItem('${item.id}')" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>`:''}
+          </div>
+        </div>`).join(''):`<div style="font-size:12px;color:var(--muted);grid-column:1/-1;padding:20px 0">No portfolio items yet.${canEdit?' Use the form above to add your first work sample.':''}</div>`}
+    </div>`;
+}
+
+function tpAddPortfolioItem(){
+  const title = document.getElementById('tp-pf-title')?.value.trim();
+  const url   = document.getElementById('tp-pf-url')?.value.trim();
+  const type  = document.getElementById('tp-pf-type')?.value||'video';
+  const desc  = document.getElementById('tp-pf-desc')?.value.trim()||'';
+  if(!title){ showDhToast('Portfolio','Please enter a title.','⚠️','var(--amber)',3000); return; }
+  if(!url){ showDhToast('Portfolio','Please enter a link to the work.','⚠️','var(--amber)',3000); return; }
+  const items = tpPortfolioLoad(_tpMemberId);
+  items.unshift({
+    id:'pf_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    title, url, type, description:desc,
+    date: new Date().toISOString().slice(0,10),
+    addedAt: new Date().toISOString(),
+  });
+  tpPortfolioSave(_tpMemberId, items);
+  showDhToast('Portfolio','Work sample added ✓','✅','var(--green)',2500);
+  tpRenderPortfolio();
+}
+
+function tpRemovePortfolioItem(itemId){
+  if(!confirm('Remove this portfolio item?')) return;
+  const items = tpPortfolioLoad(_tpMemberId).filter(i=>i.id!==itemId);
+  tpPortfolioSave(_tpMemberId, items);
+  tpRenderPortfolio();
+}
+
+function tpRenderMyWork(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const content = document.getElementById('tp-content');
+  if(!content) return;
+  const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
+  const standaloneArr = getStandaloneProjects();
+  const allJobs = [...savedJobs, ...standaloneArr];
+  // Find all jobs assigned to this member
+  const myEntries = Object.entries(trackerData)
+    .filter(([jobId, ts])=>(ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()))
+    .map(([jobId, ts])=>{
+      const job = allJobs.find(j=>String(j.id)===String(jobId));
+      return { jobId, ts, job };
+    })
+    .sort((a,b)=>(b.ts.updatedAt||b.ts.completionDate||'').localeCompare(a.ts.updatedAt||a.ts.completionDate||''));
+  const statusLabels = {
+    footage_pending:'Footage Pending',ready:'Ready to Start',
+    draft1_progress:'D1 - In Progress',draft1:'D1 - Sent',
+    draft2_progress:'D2 - In Progress',draft2:'D2 - Sent',
+    draft3_progress:'D3 - In Progress',draft3:'D3 - Sent',
+    draft_plus_ready:'D+ Ready',draft_plus:'Draft + In Progress',
+    finals_sent:'Finals Sent ✓',in_progress:'In Progress',review:'In Review',
+  };
+  const statusColors = {
+    finals_sent:'var(--green)',draft1_progress:'var(--blue-bright)',draft2_progress:'var(--amber)',
+    draft3:'var(--red)',review:'#A78BFA',
+  };
+  content.innerHTML = myEntries.length?`
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">${myEntries.length} project${myEntries.length!==1?'s':''} assigned to ${member.name}</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+    ${myEntries.map(({jobId,ts,job})=>{
+      const status = ts.editStatus||'ready';
+      const sLabel = statusLabels[status]||status;
+      const sColor = statusColors[status]||'var(--muted)';
+      const addr = job?.address||job?.name||job?.clientName||'Project '+jobId;
+      const client = job?.clientName||'';
+      const date = job?.date||ts.completionDate||'';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${addr}</div>
+          ${client?`<div style="font-size:11px;color:var(--muted)">${client}</div>`:''}
+          ${date?`<div style="font-size:10px;color:var(--muted)">${date}</div>`:''}
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;background:${sColor}22;color:${sColor};white-space:nowrap;border:1px solid ${sColor}44">${sLabel}</span>
+        ${ts.projectId?`<span style="font-size:10px;color:var(--muted);font-family:monospace">${ts.projectId}</span>`:''}
+        ${ts.approxEditHours?`<span style="font-size:10px;color:var(--muted)">${ts.approxEditHours}h</span>`:''}
+      </div>`;
+    }).join('')}
+    </div>`
+    :`<div style="font-size:12px;color:var(--muted);padding:20px 0">No projects assigned to ${member.name} yet.</div>`;
 }
 
 function openVacAllocModal(memberId, memberName){
@@ -16280,6 +16694,7 @@ function _renderTeamUI(){
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px">${accessBadges}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px">
+        <button onclick="openTeamMemberProfile('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">👤 Profile</button>
         ${m.status==='invited'?`<button onclick="resendTeamInvite('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Resend invite</button>`:''}
         <button onclick="openEditTeamMemberModal('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
         <button onclick="adminLinkMember('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Link</button>
