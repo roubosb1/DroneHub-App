@@ -8728,6 +8728,7 @@ function openJobDetail(jobId){
   }
   const payoutRows=calcPay(j);
   const grand=j.grand||0;
+  const isUsdJob=(j.currency||'cad').toLowerCase()==='usd';
   const SVC_LABELS={video:'🎬 Video',photo:'📷 Photo',tvideo:'🌅 Twilight video',tphoto:'🌅 Twilight photo',reel:'📱 Reel',extphoto:'🏡 Ext. photo',extvideo:'🏡 Ext. video',floorplan:'📐 Floor plan'};
   const activeServices=Object.entries(j.services||{}).filter(([k,v])=>v&&SVC_LABELS[k]).map(([k])=>SVC_LABELS[k]);
 
