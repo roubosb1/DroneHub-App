@@ -3236,13 +3236,18 @@ button{font-family:var(--font);}
         <div style="display:flex;flex-wrap:wrap;gap:5px">
           <span style="font-size:10px;color:var(--muted);font-weight:700;align-self:center;margin-right:2px">Accepted values:</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.15);color:#22D97A;font-weight:600">landscape</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(249,115,22,.15);color:#F97316;font-weight:600">construction</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(91,141,239,.15);color:#5B7FDB;font-weight:600">architects</span>
-          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(167,139,250,.15);color:#A78BFA;font-weight:600">interior designers &amp; builders</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(167,139,250,.15);color:#A78BFA;font-weight:600">interior</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(192,132,252,.15);color:#C084FC;font-weight:600">builders</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(251,146,60,.15);color:#FB923C;font-weight:600">restaurants</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(245,200,66,.15);color:#F5C842;font-weight:600">retail</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(232,121,249,.15);color:#E879F9;font-weight:600">events</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(255,45,85,.15);color:#FF2D55;font-weight:600">sports</span>
           <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(244,114,182,.15);color:#F472B6;font-weight:600">weddings</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(96,165,250,.15);color:#60A5FA;font-weight:600">automotive</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(52,211,153,.15);color:#34D399;font-weight:600">hospitality</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(248,113,113,.15);color:#F87171;font-weight:600">healthcare</span>
         </div>
         <div style="font-size:10px;color:var(--muted);margin-top:7px;font-style:italic">Partial matches and keywords are auto-detected (e.g. "Landscaping", "Architecture", "Restaurant / Bar").</div>
       </div>
@@ -18281,7 +18286,8 @@ const OTHER_TYPES = [
   { id:'landscape',    label:'Landscaping',                  color:'#22D97A' },
   { id:'construction', label:'Construction',                 color:'#F97316' },
   { id:'architects',   label:'Architects',                   color:'#5B7FDB' },
-  { id:'interior',     label:'Interior Designers & Builders',color:'#A78BFA' },
+  { id:'interior',     label:'Interior Designers',           color:'#A78BFA' },
+  { id:'builders',     label:'Builders',                     color:'#C084FC' },
   { id:'restaurants',  label:'Restaurants',                  color:'#FB923C' },
   { id:'retail',       label:'Retail',                       color:'#F5C842' },
   { id:'events',       label:'Events',                       color:'#E879F9' },
@@ -18306,7 +18312,8 @@ function normalizeOtherType(raw){
   if(/landscap|garden|lawn|outdoor|turf/.test(s))              return 'landscape';
   if(/construct|contactor|general contractor|build|develop/.test(s)) return 'construction';
   if(/architect|arch\b/.test(s))                                return 'architects';
-  if(/interior|designer|interior build|renovation|reno/.test(s)) return 'interior';
+  if(/interior|designer/.test(s))                               return 'interior';
+  if(/\bbuilder|home build|custom home|renovation|reno/.test(s)) return 'builders';
   if(/restaurant|café|cafe|dining|food|bar\b/.test(s))          return 'restaurants';
   if(/retail|store|shop|boutique/.test(s))                      return 'retail';
   if(/wedding|bridal|bride|groom/.test(s))                      return 'weddings';
