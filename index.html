@@ -5662,7 +5662,17 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
     {fb:ORG_ID+':lc_channels',ls:'dronehub_lc_channels',apply:d=>{localStorage.setItem('dronehub_lc_channels',d);}},
     // NOTE: lc_msgs are loaded per-channel when opening each channel, not bulk restored
-    {fb:ORG_ID+':contractors',    ls:'dronehub_contractors',       apply:d=>{try{CONTRACTORS=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_contractors',d);}},
+    {fb:ORG_ID+':contractors',    ls:'dronehub_contractors',       apply:d=>{
+      try{
+        CONTRACTORS=JSON.parse(d);
+        // Re-merge hardcoded defaults so they're always present even after a Firebase restore
+        let changed=false;
+        Object.keys(CONTRACTOR_DEFAULTS).forEach(k=>{if(!CONTRACTORS[k]){CONTRACTORS[k]=CONTRACTOR_DEFAULTS[k];changed=true;}});
+        const merged=JSON.stringify(CONTRACTORS);
+        localStorage.setItem('dronehub_contractors',merged);
+        if(changed) saveContractors(); // push merged data back to Firebase
+      }catch(e){localStorage.setItem('dronehub_contractors',d);}
+    }},
     {fb:ORG_ID+':gate_users',     ls:'dronehub_gate_users',        apply:d=>{localStorage.setItem('dronehub_gate_users',d);}},
     {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
     {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
@@ -14748,6 +14758,9 @@ async function gateEnterApp(session){
   if(_fbToken()) restoreFromFirebase(true).then(()=>{
     renderClients();
     renderJobs();
+    // Ensure any hardcoded contractor defaults (e.g. Bailey) are written to Firebase
+    // if they weren't already there (saveContractors is a no-op if nothing changed)
+    saveContractors();
   }).catch(()=>{});
 }
 
