@@ -17199,10 +17199,12 @@ function renderTracker(){
       </td>
       <td style="padding:8px 10px;color:var(--muted);white-space:nowrap">${j.date||''}</td>
       <td style="padding:6px 8px;text-align:center">
-        <input class="tracker-cell-edit" value="${videographer}" title="Videographer — click to edit" placeholder="TBD"
-          onblur="trackerInlineSave('${j.id}','videographer',this.value)"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${videographer}';this.blur()}"
-          style="text-align:center;width:90px;font-size:11px;font-weight:700;color:${vidColor(videographer)};background:${vidColor(videographer)}22;border-radius:8px;padding:2px 6px">
+        ${j.isStandalone
+          ? `<select onchange="trackerInlineSave('${j.id}','videographer',this.value);renderTracker()" title="Assign videographer"
+               style="padding:3px 6px;border-radius:6px;border:1px solid ${vidColor(videographer)}66;background:${vidColor(videographer)}22;color:${vidColor(videographer)};font-size:11px;font-weight:700;cursor:pointer;max-width:140px;outline:none">
+               ${buildVideographerOptions(videographer)}
+             </select>`
+          : `<span style="background:${vidColor(videographer)};color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap" title="Locked — set during quoting">${videographer}</span>`}
       </td>
       <td style="padding:8px 10px;text-align:center;cursor:pointer" onclick="trackerToggleFiles('${j.id}')" title="Click to toggle files received">
         ${ts.filesReceived
