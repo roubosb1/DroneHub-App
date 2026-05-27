@@ -4729,8 +4729,19 @@ function showPane(id,ev){
     if(expensesVis && expensesVis!=='none'){ renderExpenseList && renderExpenseList(); renderExpenseCatChart && renderExpenseCatChart(); }
   }
   if(id==='sales'){
+    // Restore last sales sub-view and contact list tab from localStorage
+    try{
+      const sv = localStorage.getItem('dronehub_sales_view');
+      const sl = localStorage.getItem('dronehub_sales_list');
+      if(sv && ['jobs','clients','contacts','pipeline'].includes(sv)) salesView = sv;
+      if(sl && SALES_LISTS.includes(sl)) salesActiveList = sl;
+    }catch(e){}
     renderSales();
     setSalesView(salesView); // syncs button styles, panel visibility, and triggers the right render
+    // Sync list-tab button active state without triggering a second re-render
+    document.querySelectorAll('.sales-list-tab').forEach(b=>{
+      b.classList.toggle('active', b.id === 'sltab-'+salesActiveList);
+    });
   }
   if(id==='social'){ renderSocial(); }
   if(id==='platform'){ renderPlatformDashboard(); }
@@ -18692,6 +18703,7 @@ async function salesSyncFirebase(listId){
 
 function setSalesList(listId){
   salesActiveList = listId;
+  try{localStorage.setItem('dronehub_sales_list', listId);}catch(e){}
   if(listId !== 'clients') _salesClientSub = 'all';
   if(listId !== 'other')   _salesOtherType  = 'all';
   document.querySelectorAll('.sales-list-tab').forEach(b=>{
@@ -19523,6 +19535,8 @@ function processSalesImportFile(file, listId, overwriteDupes, defaultOtherType){
 // salesView declared early above (TDZ fix)
 function setSalesView(v){
   salesView = v;
+  try{localStorage.setItem('dronehub_sales_view', v);}catch(e){}
+
   const views = ['jobs','clients','contacts','pipeline'];
   views.forEach(id=>{
     const el = document.getElementById('sales-view-'+id);
