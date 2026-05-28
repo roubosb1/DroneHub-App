@@ -1428,6 +1428,7 @@ button{font-family:var(--font);}
         <button id="us-pkg-social" onclick="selectUSPkg('social')" class="us-pkg-btn">Social Reels</button>
         <button id="us-pkg-agent" onclick="selectUSPkg('agent')" class="us-pkg-btn">Agent Promo</button>
         <button id="us-pkg-day" onclick="selectUSPkg('day')" class="us-pkg-btn">Social Day Rate</button>
+        <button id="us-pkg-exterior" onclick="selectUSPkg('exterior')" class="us-pkg-btn">Exterior Only</button>
       </div>
 
       <!-- LISTING VIDEO sub-panel -->
@@ -1462,6 +1463,15 @@ button{font-family:var(--font);}
           <div style="font-size:22px;font-weight:900;color:var(--blue-bright)">$4,000</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">Agent Promo Package · USD · No HST</div>
           <div style="font-size:11px;color:var(--offwhite);margin-top:8px;line-height:1.5">Full personal brand shoot for real estate agents. Includes aerial + ground content, professional editing, and social-ready deliverables.</div>
+        </div>
+      </div>
+
+      <!-- EXTERIOR ONLY sub-panel -->
+      <div id="us-panel-exterior" style="display:none">
+        <div style="padding:16px;background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;margin-bottom:12px">
+          <div style="font-size:22px;font-weight:900;color:var(--blue-bright)">$750</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Exterior Only · USD · No HST</div>
+          <div style="font-size:11px;color:var(--offwhite);margin-top:8px;line-height:1.5">Aerial + exterior ground footage only. No interior shoot. Ideal for land, commercial, or quick exterior updates.</div>
         </div>
       </div>
 
@@ -4307,6 +4317,7 @@ const US_MARKET_PRICING={
     listing:{ under4k:1400, over4k:1600, over8k:2000 },
     social:{ r1:500, r2:900, r3:1200, r4:null, r5:null, fullDay:5000 },
     agentPromo:4000,
+    exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
     offSeasonDiscount:1000,
   },
@@ -4315,6 +4326,7 @@ const US_MARKET_PRICING={
     listing:{ under4k:1250, over4k:1600, over8k:2000 },
     social:{ r1:500, r2:800, r3:1000, r4:null, r5:null, fullDay:5000 },
     agentPromo:4000,
+    exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
     offSeasonDiscount:1000,
   },
@@ -4323,6 +4335,7 @@ const US_MARKET_PRICING={
     listing:{ under4k:1400, over4k:1600, over8k:2000 },
     social:{ r1:500, r2:900, r3:1200, r4:null, r5:null, fullDay:5000 },
     agentPromo:4000,
+    exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
     offSeasonDiscount:1000,
   },
@@ -4331,6 +4344,7 @@ const US_MARKET_PRICING={
     listing:{ under4k:1400, over4k:1600, over8k:2000 },
     social:{ r1:900, r2:null, r3:1500, r4:null, r5:2000, fullDay:5000 },
     agentPromo:4000,
+    exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
     offSeasonDiscount:1000,
   },
@@ -4339,6 +4353,7 @@ const US_MARKET_PRICING={
     listing:{ under4k:1400, over4k:1600, over8k:2000 },
     social:{ r1:500, r2:900, r3:1200, r4:null, r5:null, fullDay:5000 },
     agentPromo:4000,
+    exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
     offSeasonDiscount:1000,
   },
@@ -7461,7 +7476,7 @@ function openInvoice(jobId){
   if(_isUsInvBuild){
     const ud=job.usData||{};
     const p=US_MARKET_PRICING[ud.market]||US_MARKET_PRICING['other_us'];
-    const pkgLabels={listing:'Real Estate Listing Package',social:'Social Media Package',agent:'Agent Promo Package',day:'Day Rate Package'};
+    const pkgLabels={listing:'Real Estate Listing Package',social:'Social Media Package',agent:'Agent Promo Package',day:'Day Rate Package',exterior:'Exterior Only Package'};
     const tierLabels={under4k:'Under 4,000 sqft',over4k:'4,000–8,000 sqft',over8k:'Over 8,000 sqft'};
     const socialLabels={r1:'1 Reel',r2:'2 Reels',r3:'3 Reels',r5:'5 Reels',fullDay:'Full Day Social'};
     if(ud.pkgType==='listing'&&ud.listingTier){
@@ -7478,6 +7493,12 @@ function openInvoice(jobId){
     } else if(ud.pkgType==='agent'){
       const basePrice=p.agentPromo||job.grand;
       lines.push({desc:'Agent Promo Package',qty:1,unit:basePrice,total:basePrice});
+    } else if(ud.pkgType==='exterior'){
+      const basePrice=p.exteriorOnly||750;
+      lines.push({desc:'Exterior Only Package',qty:1,unit:basePrice,total:basePrice});
+      if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
+      if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
+      if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
     } else if(ud.pkgType==='day'){
       const dayPrice=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
       lines.push({desc:`${ud.dayType==='half'?'Half':'Full'} Day Rate`,qty:1,unit:dayPrice,total:dayPrice});
@@ -10466,10 +10487,11 @@ function _ejRenderUSPkgBtns(){
   const c=document.getElementById('ej-us-pkg-btns');
   if(!c) return;
   const pkgs=[
-    {key:'listing',label:'🏠 Listing'},
-    {key:'social', label:'📱 Social Reels'},
-    {key:'agent',  label:'🎬 Agent Promo'},
-    {key:'day',    label:'☀️ Day Rate'},
+    {key:'listing', label:'🏠 Listing'},
+    {key:'social',  label:'📱 Social Reels'},
+    {key:'agent',   label:'🎬 Agent Promo'},
+    {key:'day',     label:'☀️ Day Rate'},
+    {key:'exterior',label:'🏡 Exterior Only'},
   ];
   const active='padding:7px 14px;border-radius:8px;border:1px solid #5B8DEF;background:rgba(91,141,239,.25);color:#7AABFF;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px';
   const idle ='padding:7px 14px;border-radius:8px;border:1px solid #3A4460;background:rgba(91,141,239,.07);color:#A8B4D0;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px';
@@ -10570,6 +10592,10 @@ function recalcEditUS(){
     case 'agent':
       base=p.agentPromo||0;
       parts.push(`Agent Promo $${base.toLocaleString()}`);
+      break;
+    case 'exterior':
+      base=p.exteriorOnly||750;
+      parts.push(`Exterior Only $${base.toLocaleString()}`);
       break;
     case 'day':{
       // Day rate: reconstruct from stored usData (half/full + per-reel)
@@ -10706,6 +10732,9 @@ function saveEditJob(){
         break;
       case 'agent':
         total=p.agentPromo||0;
+        break;
+      case 'exterior':
+        total=p.exteriorOnly||750;
         break;
       case 'day':{
         const ud=job.usData||{};
@@ -10928,13 +10957,13 @@ function renderUSServicePanel(market){
   if(!p) return;
 
   // Update pkg button active state
-  ['listing','social','agent','day'].forEach(k=>{
+  ['listing','social','agent','day','exterior'].forEach(k=>{
     const btn = document.getElementById('us-pkg-'+k);
     if(btn){ btn.classList.toggle('us-pkg-active', usQuoteState.pkgType===k); }
   });
 
   // Show the correct sub-panel
-  ['listing','social','agent','day'].forEach(k=>{
+  ['listing','social','agent','day','exterior'].forEach(k=>{
     const el = document.getElementById('us-panel-'+k);
     if(el) el.style.display = usQuoteState.pkgType===k ? '' : 'none';
   });
@@ -11108,6 +11137,9 @@ function getUSGrand(){
     case 'agent':
       base = p.agentPromo;
       break;
+    case 'exterior':
+      base = p.exteriorOnly || 750;
+      break;
     case 'day':
       if(!usQuoteState.dayType) return 0;
       base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
@@ -11162,7 +11194,7 @@ function renderUSQuote(market, grand){
 
   // Build line items
   const lines = [];
-  const pkgLabels = { listing:'Listing Video Tour', social:'Social Reels Package', agent:'Agent Promo', day:'Social Day Rate' };
+  const pkgLabels = { listing:'Listing Video Tour', social:'Social Reels Package', agent:'Agent Promo', day:'Social Day Rate', exterior:'Exterior Only' };
 
   switch(usQuoteState.pkgType){
     case 'listing':{
@@ -11181,6 +11213,9 @@ function renderUSQuote(market, grand){
     }
     case 'agent':
       lines.push({ label:'Agent Promo Package', amount: p?.agentPromo||4000 });
+      break;
+    case 'exterior':
+      lines.push({ label:'Exterior Only Package', amount: p?.exteriorOnly||750 });
       break;
     case 'day':{
       const base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
@@ -12746,6 +12781,12 @@ function cpViewInvoice(jobId){
     } else if(ud.pkgType==='agent'){
       const basePrice=p.agentPromo||job.grand;
       lines.push({desc:'Agent Promo Package',qty:1,unit:basePrice,total:basePrice});
+    } else if(ud.pkgType==='exterior'){
+      const basePrice=p.exteriorOnly||750;
+      lines.push({desc:'Exterior Only Package',qty:1,unit:basePrice,total:basePrice});
+      if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
+      if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
+      if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
     } else if(ud.pkgType==='day'){
       const dayPrice=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
       lines.push({desc:`${ud.dayType==='half'?'Half':'Full'} Day Rate`,qty:1,unit:dayPrice,total:dayPrice});
