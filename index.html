@@ -73,20 +73,27 @@ async function fbDelete(col,docId){
 // Fetched from the server on login; only authenticated sessions can decrypt.
 // Format of an encrypted payload: {"v":1,"iv":"<hex>","ct":"<hex>"}
 // Legacy plaintext messages are detected and passed through untouched.
-let _msgKey=null; // CryptoKey object, set after login
+let _msgKey=null;         // CryptoKey object, set after login
+let _msgKeyLoading=null;  // single in-flight promise — prevents parallel fetches racing each other
 
 async function _loadMsgKey(){
   if(_msgKey) return _msgKey;
+  // If a fetch is already in flight, wait for it instead of firing a duplicate
+  if(_msgKeyLoading) return _msgKeyLoading;
   const tok=_fbToken(); if(!tok) return null;
-  try{
-    const r=await fetch('/.netlify/functions/get-msg-key',{headers:{'Authorization':'Bearer '+tok}});
-    if(!r.ok) return null;
-    const {key}=await r.json();
-    if(!key||key.length<64) return null;
-    const raw=new Uint8Array(key.match(/.{2}/g).map(b=>parseInt(b,16)));
-    _msgKey=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt','decrypt']);
-    return _msgKey;
-  }catch(e){return null;}
+  _msgKeyLoading=(async()=>{
+    try{
+      const r=await fetch('/.netlify/functions/get-msg-key',{headers:{'Authorization':'Bearer '+tok}});
+      if(!r.ok) return null;
+      const {key}=await r.json();
+      if(!key||key.length<64) return null;
+      const raw=new Uint8Array(key.match(/.{2}/g).map(b=>parseInt(b,16)));
+      _msgKey=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt','decrypt']);
+      return _msgKey;
+    }catch(e){return null;}
+    finally{_msgKeyLoading=null;}
+  })();
+  return _msgKeyLoading;
 }
 
 // Encrypt plaintext → encrypted payload string (or original text if key unavailable)
@@ -110,15 +117,20 @@ async function dhDecrypt(payload){
     const {v,iv,ct}=JSON.parse(payload);
     if(v!==1) return payload;
     const key=await _loadMsgKey();
-    if(!key) return '[🔒 Encrypted — sign in to read]';
+    if(!key){
+      // Distinguish: not logged in vs. logged in but key unavailable
+      return _fbToken() ? '[🔒 Decrypting…]' : '[🔒 Sign in to read]';
+    }
     const fromHex=h=>new Uint8Array(h.match(/.{2}/g).map(b=>parseInt(b,16)));
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromHex(iv)},key,fromHex(ct));
     return new TextDecoder().decode(plain);
   }catch(e){return '[🔒 Could not decrypt]';}
 }
 
-// Decrypt an array of message objects in parallel (preserves all other fields)
+// Decrypt an array of message objects in-series (avoids parallel fetch storm on first load)
 async function dhDecryptMsgs(msgs){
+  // Load the key once upfront so individual dhDecrypt calls all get the cached key
+  await _loadMsgKey().catch(()=>{});
   return Promise.all(msgs.map(async m=>{
     const text=await dhDecrypt(m.text);
     return {...m,text};
@@ -14587,6 +14599,8 @@ async function lcRenderMessages(){
   if(welcomeView) welcomeView.style.display='none';
   container.style.display='flex';
 
+  // Pre-load encryption key before decrypting (avoids "sign in" flash on first open)
+  if(!_msgKey && _fbToken()) await _loadMsgKey().catch(()=>{});
   // For non-welcome channels, decrypt messages now (async)
   const rawMsgs=getLcMessages(channelId);
   const msgs=await dhDecryptMsgs(rawMsgs);
