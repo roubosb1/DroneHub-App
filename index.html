@@ -6974,10 +6974,41 @@ async function calAddGcal(){
 }
 
 function calRemoveGcal(id){
-  if(!confirm('Remove this calendar link?')) return;
+  if(!confirm('Remove this calendar?')) return;
   saveGcalLinks(getGcalLinks().filter(l=>l.id!==id));
   renderCalLinkedList();
   renderCalendar();
+}
+
+// Sync just one calendar entry by id
+async function calSyncOne(id){
+  const links=getGcalLinks();
+  const link=links.find(l=>l.id===id);
+  if(!link?.icsUrl) return;
+  try{
+    const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl));
+    const json=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(json.error||'HTTP '+r.status);
+    link.events=json.events||[];
+    link.lastSync=new Date().toISOString();
+    link.syncError=null;
+  }catch(e){
+    link.syncError=e.message||'Sync failed';
+  }
+  saveGcalLinks(links);
+  renderCalLinkedList();
+  renderCalendar();
+}
+
+// Pre-select a person's name and focus the URL field so adding a second calendar is one click
+function calAddCalendarFor(name){
+  const sel=document.getElementById('cal-gcal-name');
+  if(sel){
+    populateCalNameDropdown();
+    sel.value=name;
+  }
+  const urlInput=document.getElementById('cal-gcal-url');
+  if(urlInput){urlInput.value='';urlInput.focus();}
 }
 
 // ── Fetch real events from all linked ICS calendars via server-side proxy ───
@@ -7011,21 +7042,44 @@ function renderCalLinkedList(){
   if(!el) return;
   const links=getGcalLinks();
   if(!links.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No calendars linked yet.</div>';return;}
-  el.innerHTML=links.map(l=>{
-    const col=getCreatorColor(l.creatorName);
-    const evtCount=(l.events||[]).length;
-    const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Never';
-    const statusDot=l.syncError?'🔴':evtCount>0?'🟢':'⚪';
-    const statusTip=l.syncError?l.syncError:`${evtCount} event${evtCount!==1?'s':''} · synced ${lastSync}`;
-    const label=l.calLabel||'Calendar';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid ${col.border}">
-      <span style="width:8px;height:8px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:${col.text}">${l.creatorName} <span style="font-weight:400;color:var(--muted);font-size:11px">· ${label}</span></div>
-        <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${statusTip}">${statusDot} ${statusTip}</div>
+
+  // Group by person name (preserving insertion order of first appearance)
+  const order=[];
+  const grouped={};
+  links.forEach(l=>{
+    if(!grouped[l.creatorName]){grouped[l.creatorName]=[];order.push(l.creatorName);}
+    grouped[l.creatorName].push(l);
+  });
+
+  el.innerHTML=order.map(name=>{
+    const col=getCreatorColor(name);
+    const personLinks=grouped[name];
+    const canAdd=personLinks.length<5;
+
+    const calRows=personLinks.map((l,i)=>{
+      const evtCount=(l.events||[]).length;
+      const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Never synced';
+      const dot=l.syncError?'#E85D5D':evtCount>0?'#22D97A':'#555E78';
+      const tip=l.syncError?l.syncError:`${evtCount} event${evtCount!==1?'s':''} · ${lastSync}`;
+      const label=l.calLabel||(i===0?'Primary':'Calendar '+(i+1));
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 28px">
+        <span style="width:6px;height:6px;border-radius:50%;background:${dot};flex-shrink:0"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:600;color:var(--offwhite)">${label}</div>
+          <div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${tip}">${tip}</div>
+        </div>
+        <button onclick="calSyncOne('${l.id}')" title="Refresh" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px">⟳</button>
+        <button onclick="calRemoveGcal('${l.id}')" title="Remove" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px" onmouseover="this.style.color='#E85D5D'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:var(--navy-lift);border:1px solid ${col.border};border-radius:10px;margin-bottom:8px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span style="width:9px;height:9px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
+        <div style="font-size:12px;font-weight:700;color:${col.text};flex:1">${name}</div>
+        ${canAdd?`<button onclick="calAddCalendarFor('${name}')" title="Add another calendar" style="border:none;background:rgba(91,141,239,.15);color:var(--blue-bright);cursor:pointer;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px">+ Add</button>`:''}
       </div>
-      <button onclick="syncGcalLinks(true)" title="Refresh now" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px">⟳</button>
-      <button onclick="calRemoveGcal('${l.id}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      ${calRows}
     </div>`;
   }).join('');
 }
