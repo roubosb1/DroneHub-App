@@ -138,21 +138,60 @@ async function dhDecryptMsgs(msgs){
 }
 
 // ── PROFILE PHOTOS ────────────────────────────────────────────────────────────
+// Resize a dataURL to a thumbnail (max 200×200) using canvas, then return JPEG dataURL
+// This keeps profile pics well under Firestore's 1 MB document limit (~5-15 KB each)
+function _resizePhoto(dataUrl,maxPx=200){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,maxPx/img.width,maxPx/img.height);
+      const w=Math.round(img.width*scale);
+      const h=Math.round(img.height*scale);
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg',0.82));
+    };
+    img.onerror=()=>resolve(dataUrl); // fallback: use original if canvas fails
+    img.src=dataUrl;
+  });
+}
+
 async function saveProfilePhoto(email,dataUrl){
-  // Fetch latest photos from Firebase first so we don't overwrite other people's photos
+  const key=email.toLowerCase();
+  // Compress to a thumbnail so we never hit Firestore's 1 MB document limit
+  const compressed=await _resizePhoto(dataUrl,200);
+  // ── 1. Update localStorage ──────────────────────────────────────────────
   let photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  // Merge with remote first so we don't overwrite other team members' photos
   try{
     const fbDoc=await fbGet('orgs',ORG_ID+':photos');
-    if(fbDoc?.data){
-      const fbPhotos=JSON.parse(fbDoc.data);
-      // Merge: Firebase wins for other users, local wins for this user
-      Object.assign(photos,fbPhotos);
+    if(fbDoc?.data) Object.assign(photos,JSON.parse(fbDoc.data));
+  }catch(e){}
+  photos[key]=compressed;
+  localStorage.setItem('dronehub_photos',JSON.stringify(photos));
+  // ── 2. Write to shared photos document (used by the startup sync) ───────
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()}).catch(()=>{});
+  // ── 3. Belt-and-suspenders: also write each person's photo to their own doc
+  // This way photos survive even if the shared doc fails to sync on another device
+  fbSet('orgs',ORG_ID+':photo_'+key,{photo:compressed,email:key,updatedAt:Date.now()}).catch(()=>{});
+}
+
+async function loadProfilePhotoFromFirebase(email){
+  // Try the per-user doc first (more reliable), then fall back to shared doc
+  const key=email.toLowerCase();
+  try{
+    const perDoc=await fbGet('orgs',ORG_ID+':photo_'+key);
+    if(perDoc?.photo){
+      const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+      photos[key]=perDoc.photo;
+      localStorage.setItem('dronehub_photos',JSON.stringify(photos));
+      return perDoc.photo;
     }
   }catch(e){}
-  photos[email.toLowerCase()]=dataUrl;
-  localStorage.setItem('dronehub_photos',JSON.stringify(photos));
-  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  return getProfilePhoto(email); // fall back to whatever is in localStorage
 }
+
 function getProfilePhoto(email){
   if(!email) return null;
   const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
@@ -1781,12 +1820,14 @@ button{font-family:var(--font);}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div id="tracker-mode-switcher" style="display:flex;gap:2px;padding:3px;background:var(--navy-mid);border-radius:10px;border:1px solid var(--border)">
           <button id="tracker-mode-video" onclick="trackerSetMode('video')"
-            style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#5B8DEF,#3B6FD4);color:#fff;transition:all .15s">
-            📹 Video
+            style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#5B8DEF,#3B6FD4);color:#fff;transition:all .15s;display:inline-flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            Video
           </button>
           <button id="tracker-mode-photo" onclick="trackerSetMode('photo')"
-            style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s">
-            📸 Photo
+            style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;display:inline-flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Photo
           </button>
         </div>
         <button onclick="_trackerMode==='photo'?openPhotoTrackerImportModal():openTrackerImportModal()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">⬆ Import CSV / Sheets</button>
@@ -6770,6 +6811,24 @@ async function restoreTeamProfiles(){
     // Sync their OAuth calendars in the background
     oauthMembers.forEach(({ member, profile }) => {
       gcalSyncAllForMember(member.id, member.name).catch(() => {});
+    });
+  }
+  // Restore any per-user photo docs that aren't already in localStorage
+  // This fills gaps left when a photo was too large for the shared doc
+  const photosLocal=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+  const emailsMissingPhoto=members.filter(m=>m.email&&!photosLocal[m.email.toLowerCase()]).map(m=>m.email.toLowerCase());
+  if(emailsMissingPhoto.length){
+    Promise.allSettled(emailsMissingPhoto.map(async email=>{
+      try{
+        const doc=await fbGet('orgs',ORG_ID+':photo_'+email);
+        if(doc?.photo){
+          const cur=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
+          cur[email]=doc.photo;
+          localStorage.setItem('dronehub_photos',JSON.stringify(cur));
+        }
+      }catch(e){}
+    })).then(()=>{
+      renderAppHeader&&renderAppHeader();
     });
   }
   console.log('Loaded '+members.length+' team member profile(s) from Firebase');
@@ -20043,31 +20102,37 @@ function tpShowTab(tab){
 function tpHandlePhotoUpload(input, email){
   const file=input.files?.[0];
   if(!file) return;
-  if(file.size>2*1024*1024){
+  if(file.size>10*1024*1024){
     const s=document.getElementById('tp-photo-status');
-    if(s){s.textContent='⚠ Photo must be under 2MB.';s.style.color='var(--amber)';s.style.display='block';}
+    if(s){s.textContent='⚠ Photo must be under 10MB.';s.style.color='var(--amber)';s.style.display='block';}
     return;
   }
+  const s=document.getElementById('tp-photo-status');
+  if(s){s.textContent='Compressing & saving…';s.style.color='var(--muted)';s.style.display='block';}
   const reader=new FileReader();
-  reader.onload=e=>{
+  reader.onload=async e=>{
     const dataUrl=e.target.result;
-    saveProfilePhoto(email,dataUrl);
-    // Update preview
+    // Show original preview immediately for responsiveness
     const preview=document.getElementById('tp-photo-preview');
     if(preview) preview.innerHTML=`<img src="${dataUrl}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
-    const s=document.getElementById('tp-photo-status');
-    if(s){s.textContent='✓ Photo saved!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>tpShowTab('profile'),1200);}
-    // Update header avatar if shown
+    // saveProfilePhoto now compresses to ~200px and writes to Firebase
+    await saveProfilePhoto(email,dataUrl);
+    // Show the compressed version in preview
+    const compressed=getProfilePhoto(email);
+    if(compressed&&preview) preview.innerHTML=`<img src="${compressed}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(s){s.textContent='✓ Photo saved to Firebase!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>tpShowTab('profile'),1200);}
     renderAppHeader&&renderAppHeader();
   };
   reader.readAsDataURL(file);
 }
 
 function tpRemovePhoto(email){
+  const key=email.toLowerCase();
   const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
-  delete photos[email.toLowerCase()];
+  delete photos[key];
   localStorage.setItem('dronehub_photos',JSON.stringify(photos));
-  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()}).catch(()=>{});
+  fbSet('orgs',ORG_ID+':photo_'+key,{photo:null,email:key,updatedAt:Date.now()}).catch(()=>{});
   tpShowTab('profile');
 }
 
@@ -20102,24 +20167,27 @@ function settingsHandlePhotoUpload(input){
   const email=session.email;
   const file=input.files?.[0];
   if(!file) return;
-  if(file.size>2*1024*1024){
+  if(file.size>10*1024*1024){
     const s=document.getElementById('settings-photo-status');
-    if(s){s.textContent='⚠ Photo must be under 2 MB.';s.style.color='var(--amber)';s.style.display='block';}
+    if(s){s.textContent='⚠ Photo must be under 10 MB.';s.style.color='var(--amber)';s.style.display='block';}
     input.value='';
     return;
   }
+  const s=document.getElementById('settings-photo-status');
+  if(s){s.textContent='Compressing & saving…';s.style.color='var(--muted)';s.style.display='block';}
   const reader=new FileReader();
-  reader.onload=e=>{
+  reader.onload=async e=>{
     const dataUrl=e.target.result;
-    saveProfilePhoto(email,dataUrl);
-    // Update preview in settings card
+    // Show original first for responsiveness, then update with compressed version
     const previewEl=document.getElementById('settings-photo-preview');
     if(previewEl) previewEl.innerHTML=`<img src="${dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    await saveProfilePhoto(email,dataUrl);
+    // Refresh preview with compressed version
+    const compressed=getProfilePhoto(email);
+    if(compressed&&previewEl) previewEl.innerHTML=`<img src="${compressed}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     const removeBtn=document.getElementById('settings-remove-photo-btn');
     if(removeBtn) removeBtn.style.display='inline-flex';
-    const s=document.getElementById('settings-photo-status');
-    if(s){s.textContent='✓ Photo saved!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>{if(s)s.style.display='none';},3000);}
-    // Refresh header avatar
+    if(s){s.textContent='✓ Photo saved to Firebase!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>{if(s)s.style.display='none';},3000);}
     renderAppHeader&&renderAppHeader();
   };
   reader.readAsDataURL(file);
@@ -20128,11 +20196,12 @@ function settingsHandlePhotoUpload(input){
 function settingsRemovePhoto(){
   const session=gateGetSession();
   if(!session||!session.email) return;
-  const email=session.email;
+  const key=session.email.toLowerCase();
   const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
-  delete photos[email.toLowerCase()];
+  delete photos[key];
   localStorage.setItem('dronehub_photos',JSON.stringify(photos));
-  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()}).catch(()=>{});
+  fbSet('orgs',ORG_ID+':photo_'+key,{photo:null,email:key,updatedAt:Date.now()}).catch(()=>{});
   renderSettingsProfile();
   renderAppHeader&&renderAppHeader();
 }
@@ -20511,8 +20580,9 @@ function renderTeamMemberSettings(){
         <div style="font-size:10px;color:var(--muted);margin-top:2px">${m.email} · ${m.role} · Joined ${m.createdAt||'—'}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <label title="Upload photo" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap">
-          📷 Photo
+        <label title="Upload photo" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Photo
           <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="teamMemberPhotoUpload(this,'${safeEmail}','${m.id}')">
         </label>
         ${hasPhoto?`<button onclick="teamMemberRemovePhoto('${safeEmail}','${m.id}')" title="Remove photo" style="padding:4px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">✕</button>`:''}
@@ -20526,25 +20596,30 @@ function renderTeamMemberSettings(){
 function teamMemberPhotoUpload(input, email, memberId){
   const file=input.files?.[0];
   if(!file) return;
-  if(file.size>2*1024*1024){alert('Photo must be under 2 MB.');input.value='';return;}
+  if(file.size>10*1024*1024){alert('Photo must be under 10 MB.');input.value='';return;}
   const reader=new FileReader();
-  reader.onload=e=>{
-    saveProfilePhoto(email,e.target.result);
-    // Update avatar in the row immediately
+  reader.onload=async e=>{
+    // Show immediately for responsiveness
     const avatarEl=document.getElementById('tm-avatar-'+memberId);
     if(avatarEl) avatarEl.innerHTML=`<img src="${e.target.result}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    // saveProfilePhoto compresses to 200px then writes to Firebase
+    await saveProfilePhoto(email,e.target.result);
+    // Update avatar with compressed version
+    const compressed=getProfilePhoto(email);
+    if(compressed&&avatarEl) avatarEl.innerHTML=`<img src="${compressed}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     renderAppHeader&&renderAppHeader();
-    // Re-render the list so the remove button appears
     renderTeamMemberSettings();
   };
   reader.readAsDataURL(file);
 }
 
 function teamMemberRemovePhoto(email, memberId){
+  const key=email.toLowerCase();
   const photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
-  delete photos[email.toLowerCase()];
+  delete photos[key];
   localStorage.setItem('dronehub_photos',JSON.stringify(photos));
-  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()});
+  fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()}).catch(()=>{});
+  fbSet('orgs',ORG_ID+':photo_'+key,{photo:null,email:key,updatedAt:Date.now()}).catch(()=>{});
   renderAppHeader&&renderAppHeader();
   renderTeamMemberSettings();
 }
