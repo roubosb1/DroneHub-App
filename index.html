@@ -2884,7 +2884,7 @@ button{font-family:var(--font);}
           <input type="url" id="cal-gcal-url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" style="padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
           <button onclick="calAddGcal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Link ✓</button>
         </div>
-        <div class="note" style="color:var(--amber)">⚠ Note: Due to browser security (CORS), ICS files must be fetched via a proxy or the Google Calendar embed API in production. For now, links are stored and displayed as a reference — full sync requires the mobile app or a server-side integration.</div>
+        <div class="note" style="color:var(--green)">✓ Events sync automatically via a secure server-side proxy — your full calendar will appear on the DroneHub calendar alongside your shoots.</div>
       </div>
     </div>
   </div>
@@ -4936,7 +4936,7 @@ function showPane(id,ev){
       renderTeam();
     },500);
   }
-  if(id==='calendar'){populateCalNameDropdown();renderCalendar();calEventsSyncFirebase().then(()=>renderCalendar());renderVacationTracker();}
+  if(id==='calendar'){populateCalNameDropdown();renderCalendar();calEventsSyncFirebase().then(()=>renderCalendar());renderVacationTracker();syncGcalLinks().catch(()=>{});}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();renderSettingsProfile();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){
@@ -6908,28 +6908,58 @@ function populateCalNameDropdown(){
   sel.innerHTML=opts.join('');
 }
 
-function calAddGcal(){
+async function calAddGcal(){
   const nameEl=document.getElementById('cal-gcal-name');
   const name=nameEl?.value.trim();
   const url=document.getElementById('cal-gcal-url')?.value.trim();
   if(!name||!url){alert('Please select a team member and enter a calendar URL.');return;}
   const links=getGcalLinks();
   const existing=links.findIndex(l=>l.creatorName===name);
-  const entry={id:'gcal_'+Date.now(),creatorName:name,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[]};
+  const entry={id:'gcal_'+Date.now(),creatorName:name,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[],lastSync:null,syncError:null};
   if(existing>=0) links[existing]=entry; else links.push(entry);
   saveGcalLinks(links);
   if(nameEl) nameEl.value='';
   document.getElementById('cal-gcal-url').value='';
   renderCalLinkedList();
-  renderCalendar();
-  alert('Calendar linked for '+name+'!\n\nNote: ICS events will sync when your app moves to a server-side backend. The link is saved and ready to connect.');
+  // Immediately fetch events from the newly linked calendar
+  await syncGcalLinks();
 }
+
 function calRemoveGcal(id){
   if(!confirm('Remove this calendar link?')) return;
   saveGcalLinks(getGcalLinks().filter(l=>l.id!==id));
   renderCalLinkedList();
   renderCalendar();
 }
+
+// ── Fetch real events from all linked ICS calendars via server-side proxy ───
+async function syncGcalLinks(showFeedback){
+  if(!_fbToken()) return;
+  const links=getGcalLinks();
+  if(!links.length) return;
+  let anyUpdated=false;
+  await Promise.allSettled(links.map(async link=>{
+    if(!link.icsUrl) return;
+    try{
+      const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl),{
+        headers:{'Authorization':'Bearer '+_fbToken()}
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const {events}=await r.json();
+      link.events=events||[];
+      link.lastSync=new Date().toISOString();
+      link.syncError=null;
+      anyUpdated=true;
+    }catch(e){
+      link.syncError=e.message||'Sync failed';
+    }
+  }));
+  saveGcalLinks(links);
+  renderCalLinkedList();
+  if(anyUpdated) renderCalendar();
+  if(showFeedback) alert('Calendar synced! '+links.reduce((n,l)=>n+(l.events?.length||0),0)+' events loaded.');
+}
+
 function renderCalLinkedList(){
   const el=document.getElementById('cal-linked-list');
   if(!el) return;
@@ -6937,12 +6967,17 @@ function renderCalLinkedList(){
   if(!links.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No calendars linked yet.</div>';return;}
   el.innerHTML=links.map(l=>{
     const col=getCreatorColor(l.creatorName);
+    const evtCount=(l.events||[]).length;
+    const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Never';
+    const statusDot=l.syncError?'🔴':evtCount>0?'🟢':'⚪';
+    const statusTip=l.syncError?l.syncError:`${evtCount} event${evtCount!==1?'s':''} · synced ${lastSync}`;
     return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid ${col.border}">
       <span style="width:8px;height:8px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;color:${col.text}">${l.creatorName}</div>
-        <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.icsUrl}</div>
+        <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${statusTip}">${statusDot} ${statusTip}</div>
       </div>
+      <button onclick="syncGcalLinks(true)" title="Refresh now" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px">⟳</button>
       <button onclick="calRemoveGcal('${l.id}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>
     </div>`;
   }).join('');
@@ -15710,7 +15745,7 @@ function gateInit(){
   if(session&&session.email){
     // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
     const _storedTok=sessionStorage.getItem('dh_token');
-    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);}
+    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);setTimeout(()=>syncGcalLinks().catch(()=>{}),4000);}
     gateEnterApp(session);
     return;
   }
