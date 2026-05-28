@@ -2884,7 +2884,32 @@ button{font-family:var(--font);}
           <input type="url" id="cal-gcal-url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" style="padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
           <button onclick="calAddGcal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Link ✓</button>
         </div>
-        <div class="note" style="color:var(--green)">✓ Events sync automatically via a secure server-side proxy — your full calendar will appear on the DroneHub calendar alongside your shoots.</div>
+        <div class="note" style="color:var(--green)">✓ Events sync automatically — your calendar will appear on the DroneHub calendar alongside your shoots.</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)">
+          💡 Team members can also connect directly from their profile — <strong style="color:var(--offwhite)">Profile → Calendar tab → Sign in with Google</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Google Calendar OAuth calendar-picker modal -->
+<div id="gcal-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:4500;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--navy-card);border-radius:16px;max-width:420px;width:100%;border:1px solid var(--border-bright);overflow:hidden" onclick="event.stopPropagation()">
+    <div style="background:var(--navy-mid);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--white)">📅 Select calendars to sync</div>
+        <div id="gcal-picker-email" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button onclick="document.getElementById('gcal-picker-modal').style.display='none'" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div style="padding:20px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Choose which calendars to overlay on the DroneHub team calendar. Events from all selected calendars will appear in your colour.</div>
+      <div id="gcal-picker-list" style="margin-bottom:16px;max-height:280px;overflow-y:auto"></div>
+      <div id="gcal-picker-status" style="font-size:11px;color:var(--muted);margin-bottom:12px;min-height:16px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('gcal-picker-modal').style.display='none'" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+        <button id="gcal-picker-save-btn" onclick="gcalPickerSave()" style="padding:8px 20px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Save &amp; Sync</button>
       </div>
     </div>
   </div>
@@ -6731,6 +6756,22 @@ async function restoreTeamProfiles(){
   if (changed) {
     try { localStorage.setItem('dronehub_gcal_links', JSON.stringify(links)); } catch(e) {}
   }
+  // Also rebuild OAuth gcal_links entries for members whose profile shows googleCalConnected
+  // This restores OAuth calendar entries after a page reload or on a new device
+  const oauthMembers = [];
+  profiles.forEach((result, i) => {
+    const profile = result.value;
+    if (!profile?.googleCalConnected) return;
+    const member = members[i];
+    const hasOauth = links.some(l => l.oauthMemberId === member.id);
+    if (!hasOauth) oauthMembers.push({ member, profile });
+  });
+  if (oauthMembers.length) {
+    // Sync their OAuth calendars in the background
+    oauthMembers.forEach(({ member, profile }) => {
+      gcalSyncAllForMember(member.id, member.name).catch(() => {});
+    });
+  }
   console.log('Loaded '+members.length+' team member profile(s) from Firebase');
 }
 
@@ -6984,12 +7025,27 @@ function calRemoveGcal(id){
 async function calSyncOne(id){
   const links=getGcalLinks();
   const link=links.find(l=>l.id===id);
-  if(!link?.icsUrl) return;
+  if(!link) return;
   try{
-    const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl));
-    const json=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(json.error||'HTTP '+r.status);
-    link.events=json.events||[];
+    if(link.oauthMemberId){
+      // Google OAuth entry
+      const tok=_fbToken();
+      if(!tok) throw new Error('Sign in required');
+      const r=await fetch('/.netlify/functions/google-cal',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+        body:JSON.stringify({action:'sync',memberId:link.oauthMemberId,calendarIds:[link.oauthCalendarId]}),
+      });
+      const json=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(json.error||'HTTP '+r.status);
+      link.events=json.events||[];
+    } else if(link.icsUrl){
+      // ICS URL entry
+      const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl));
+      const json=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(json.error||'HTTP '+r.status);
+      link.events=json.events||[];
+    } else return;
     link.lastSync=new Date().toISOString();
     link.syncError=null;
   }catch(e){
@@ -7011,12 +7067,34 @@ function calAddCalendarFor(name){
   if(urlInput){urlInput.value='';urlInput.focus();}
 }
 
-// ── Fetch real events from all linked ICS calendars via server-side proxy ───
+// ── Fetch real events from all linked calendars (ICS or Google OAuth) ────────
 async function syncGcalLinks(showFeedback){
   const links=getGcalLinks();
   if(!links.length) return;
   let anyUpdated=false;
   await Promise.allSettled(links.map(async link=>{
+    // ── Google OAuth entry ──
+    if(link.oauthMemberId){
+      try{
+        const tok=_fbToken();
+        if(!tok) return; // OAuth sync requires auth
+        const r=await fetch('/.netlify/functions/google-cal',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+          body:JSON.stringify({action:'sync',memberId:link.oauthMemberId,calendarIds:[link.oauthCalendarId]}),
+        });
+        const json=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(json.error||'HTTP '+r.status);
+        link.events=json.events||[];
+        link.lastSync=new Date().toISOString();
+        link.syncError=null;
+        anyUpdated=true;
+      }catch(e){
+        link.syncError=e.message||'Sync failed';
+      }
+      return;
+    }
+    // ── ICS URL entry ──
     if(!link.icsUrl) return;
     try{
       const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl));
@@ -15845,7 +15923,7 @@ function gateInit(){
   if(session&&session.email){
     // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
     const _storedTok=sessionStorage.getItem('dh_token');
-    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);setTimeout(()=>syncGcalLinks().catch(()=>{}),4000);}
+    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);setTimeout(()=>syncGcalLinks().catch(()=>{}),4000);setTimeout(()=>gcalCheckOAuthReturn().catch(()=>{}),1000);}
     gateEnterApp(session);
     return;
   }
@@ -19536,18 +19614,31 @@ function tpShowTab(tab){
       <div class="card" style="margin-top:14px">
         <div class="section-label" style="margin-bottom:8px">📅 My Google Calendar</div>
         ${(()=>{
-          const links=getGcalLinks();
-          const myLink=links.find(l=>l.creatorName===member.name);
-          return myLink
-            ?'<div style="font-size:12px;color:var(--green);margin-bottom:6px">✓ Calendar linked</div>'+
-             '<div style="font-size:10px;color:var(--muted);word-break:break-all;margin-bottom:8px">'+myLink.icsUrl.slice(0,70)+'…</div>'+
-             '<button onclick="tpUnlinkGcal(\''+member.name+'\')" style="padding:5px 12px;border-radius:10px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;cursor:pointer;font-weight:600">Unlink calendar</button>'
-            :'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Link your Google Calendar to show your availability on the team calendar.</div>'+
-             '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-             '<input type="url" id="tp-gcal-url-input" placeholder="Paste Google Calendar ICS URL…" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">'+
-             '<button onclick="tpLinkGcal(\''+member.id+'\',\''+member.name+'\')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Link ✓</button>'+
-             '</div>'+
-             '<div style="font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5">Google Calendar → ⚙ Settings → [Your calendar] → Integrate calendar → copy the ICS URL</div>';
+          const profile=tpProfileLoad(member.id);
+          const gcalConnected=profile?.googleCalConnected;
+          const gcalEmail=profile?.googleCalEmail||'';
+          const myOauthLinks=getGcalLinks().filter(l=>l.oauthMemberId===member.id);
+          const myIcsLink=getGcalLinks().find(l=>l.creatorName===member.name&&l.icsUrl);
+          if(gcalConnected){
+            const calCount=myOauthLinks.length||1;
+            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+              '<span style="font-size:16px">✅</span>'+
+              '<div><div style="font-size:12px;font-weight:700;color:var(--green)">Google Calendar connected</div>'+
+              '<div style="font-size:11px;color:var(--muted)">'+gcalEmail+(calCount?' · '+calCount+' calendar'+(calCount!==1?'s':'')+' syncing':'')+'</div></div>'+
+              '</div>'+
+              '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+              '<button onclick="gcalShowPicker(\''+member.id+'\',\''+member.name+'\')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">⚙ Manage calendars</button>'+
+              '<button onclick="gcalDisconnect(\''+member.id+'\',\''+member.name+'\')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Disconnect</button>'+
+              '</div>';
+          } else if(myIcsLink){
+            return '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">📎 ICS calendar linked</div>'+
+              '<button onclick="gcalConnectWithGoogle(\''+member.id+'\')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Upgrade to Google sign-in</button>';
+          } else {
+            return '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Connect your Google Calendar so your availability shows on the team calendar.</div>'+
+              '<button onclick="gcalConnectWithGoogle(\''+member.id+'\')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px">'+
+              '<svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>'+
+              'Sign in with Google</button>';
+          }
         })()}
       </div>`;
   }
@@ -19609,49 +19700,53 @@ function tpShowTab(tab){
     const now=new Date();
     const todayStr=now.toISOString().slice(0,10);
     const upcoming=myJobs.filter(j=>j.date&&j.date>=todayStr).sort((a,b)=>a.date.localeCompare(b.date));
-    const myLink=getGcalLinks().find(l=>l.creatorName===member.name);
     const col=getCreatorColor(member.name);
+    const _calProfile=tpProfileLoad(member.id);
+    const _gcalConnected=_calProfile?.googleCalConnected;
+    const _gcalEmail=_calProfile?.googleCalEmail||'';
+    const _myOauthLinks=getGcalLinks().filter(l=>l.oauthMemberId===member.id);
+    const _myIcsLink=getGcalLinks().find(l=>l.creatorName===member.name&&l.icsUrl);
 
-    // Google Calendar link card
-    const gcalCard=myLink
+    // Google Calendar connection card
+    const gcalCard=_gcalConnected
       ?`<div class="card" style="margin-bottom:14px;border-color:${col.border}">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
             <div>
               <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;display:flex;align-items:center;gap:8px">
                 <span style="width:10px;height:10px;border-radius:50%;background:${col.border};display:inline-block"></span>
-                📅 Google Calendar linked
+                ✅ Google Calendar connected
               </div>
-              <div style="font-size:11px;color:var(--muted);word-break:break-all;max-width:420px">${myLink.icsUrl.length>60?myLink.icsUrl.slice(0,60)+'…':myLink.icsUrl}</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${_gcalEmail}</div>
+              <div style="font-size:11px;color:var(--muted)">${_myOauthLinks.length||1} calendar${(_myOauthLinks.length||1)!==1?'s':''} syncing · events appear in <span style="color:${col.text};font-weight:700">your colour</span></div>
             </div>
-            <div style="display:flex;gap:8px">
-              <button onclick="tpUpdateGcal('${member.id}','${member.name}')" style="padding:6px 14px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">Update URL</button>
-              <button onclick="tpUnlinkGcal('${member.name}')" style="padding:6px 14px;border-radius:12px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Unlink</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="gcalShowPicker('${member.id}','${member.name}')" style="padding:6px 14px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">⚙ Manage</button>
+              <button onclick="gcalDisconnect('${member.id}','${member.name}')" style="padding:6px 14px;border-radius:12px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Disconnect</button>
             </div>
           </div>
-          <div style="margin-top:12px;padding:10px 12px;background:rgba(91,141,239,.06);border-radius:8px;border:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--offwhite);margin-bottom:4px">📌 How it works</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.7">Your Google Calendar events will overlay on the DroneHub team calendar in <span style="color:${col.text};font-weight:700">your colour</span>. Full live sync activates when the mobile app launches — your ICS link is saved and ready.</div>
-          </div>
+          ${_myOauthLinks.length?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+            ${_myOauthLinks.map(l=>{
+              const evtCount=(l.events||[]).length;
+              const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Never';
+              return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+                <span style="width:6px;height:6px;border-radius:50%;background:${l.syncError?'#E85D5D':evtCount>0?'#22D97A':'#555E78'};flex-shrink:0"></span>
+                <div style="flex:1;font-size:11px;color:var(--offwhite)">${l.calLabel||'Calendar'}</div>
+                <div style="font-size:10px;color:var(--muted)">${evtCount} events · ${lastSync}</div>
+                <button onclick="calSyncOne('${l.id}')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;padding:2px 4px">⟳</button>
+              </div>`;
+            }).join('')}
+          </div>`:''}
         </div>`
       :`<div class="card" style="margin-bottom:14px">
-          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:6px">📅 Link your Google Calendar</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">Connect your personal Google Calendar so your availability shows up on the DroneHub team calendar in <span style="color:${col.text};font-weight:700">your colour</span>. Admins can see when you're available or busy.</div>
-          <div style="margin-bottom:10px">
-            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Google Calendar ICS URL</label>
-            <input type="url" id="tp-cal-ics-input" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
-              style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
-          </div>
-          <button onclick="tpLinkGcal('${member.id}','${member.name}')" style="padding:8px 20px;border-radius:14px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Link calendar ✓</button>
-          <div style="margin-top:14px;padding:12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--offwhite);margin-bottom:6px">How to get your ICS URL:</div>
-            <ol style="font-size:11px;color:var(--muted);line-height:1.9;padding-left:16px;margin:0">
-              <li>Open <strong style="color:var(--offwhite)">Google Calendar</strong> on desktop</li>
-              <li>Click ⚙ <strong style="color:var(--offwhite)">Settings</strong> → find your calendar on the left</li>
-              <li>Scroll to <strong style="color:var(--offwhite)">"Integrate calendar"</strong></li>
-              <li>Copy the <strong style="color:var(--blue-bright)">Secret address in iCal format</strong> link</li>
-              <li>Paste it above and click Link calendar</li>
-            </ol>
-          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:6px">📅 Connect your Google Calendar</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.7">Connect your Google Calendar so your availability shows up on the DroneHub team calendar in <span style="color:${col.text};font-weight:700">your colour</span>. You can sync multiple calendars (travel, work, personal) under one name.</div>
+          <button onclick="gcalConnectWithGoogle('${member.id}')" style="padding:10px 20px;border-radius:12px;border:1px solid rgba(66,133,244,.5);background:rgba(66,133,244,.1);color:#4285F4;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;margin-bottom:14px">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>
+            Sign in with Google
+          </button>
+          ${_myIcsLink?`<div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
+            <strong style="color:var(--offwhite)">ICS URL also linked</strong> — signing in with Google will add more calendars. Both will appear on the team calendar.
+          </div>`:''}
         </div>`;
 
     // Month mini-calendar strip
@@ -20121,6 +20216,197 @@ function tpRemoveGcalById(id){
   if(!confirm('Remove this calendar?')) return;
   saveGcalLinks(getGcalLinks().filter(l=>l.id!==id));
   renderCalendar();
+}
+
+// ── Google Calendar OAuth integration ────────────────────────────────────────
+
+// Track which member's picker is open
+let _gcalPickerMemberId=null;
+let _gcalPickerMemberName=null;
+let _gcalPickerCalendars=[];
+
+// Redirect to Google OAuth (opens in same tab so hash return works)
+function gcalConnectWithGoogle(memberId){
+  if(!memberId){alert('Could not identify your team profile. Please log in and try again.');return;}
+  window.location.href='/.netlify/functions/google-cal-auth?step=init&memberId='+encodeURIComponent(memberId);
+}
+
+// Generic API call helper for google-cal.js
+async function gcalApiCall(action,memberId,extra){
+  const tok=_fbToken();
+  if(!tok) throw new Error('Not logged in');
+  const r=await fetch('/.netlify/functions/google-cal',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+    body:JSON.stringify({action,memberId,...extra}),
+  });
+  const json=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(json.error||'API error '+r.status);
+  return json;
+}
+
+// Called after OAuth redirect returns with #gcal-connected=memberId
+async function gcalCheckOAuthReturn(){
+  const hash=window.location.hash;
+  if(!hash) return;
+  if(hash.startsWith('#gcal-connected=')){
+    const params=new URLSearchParams(hash.slice(1));
+    const memberId=params.get('gcal-connected');
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+    if(!memberId) return;
+    showDhToast('Google Calendar','Connected! Loading your calendars…','📅','var(--blue-bright)',4000);
+    // Refresh the profile from Firebase so googleCalConnected shows true
+    await tpProfileLoad_fb(memberId).catch(()=>{});
+    // Show the calendar picker
+    const member=getAdminTeamMembers().find(m=>m.id===memberId)||getTeamMembers().find(m=>m.id===memberId);
+    if(member){
+      gcalShowPicker(memberId,member.name);
+    } else {
+      // Fallback: just sync and refresh calendar view
+      gcalSyncAllForMember(memberId,null).catch(()=>{});
+    }
+  } else if(hash.startsWith('#gcal-error=')){
+    const params=new URLSearchParams(hash.slice(1));
+    const errMsg=decodeURIComponent(params.get('gcal-error')||'Unknown error');
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+    showDhToast('Google Calendar Error',errMsg,'⚠️','var(--red)',6000);
+  } else if(hash==='#gcal-denied'){
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+    showDhToast('Google Calendar','Connection cancelled.','ℹ️','var(--muted)',3000);
+  }
+}
+
+// Show calendar picker modal — loads calendar list from Google API
+async function gcalShowPicker(memberId,memberName){
+  _gcalPickerMemberId=memberId;
+  _gcalPickerMemberName=memberName;
+  _gcalPickerCalendars=[];
+  const modal=document.getElementById('gcal-picker-modal');
+  const listEl=document.getElementById('gcal-picker-list');
+  const statusEl=document.getElementById('gcal-picker-status');
+  const emailEl=document.getElementById('gcal-picker-email');
+  if(!modal) return;
+  if(listEl) listEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Loading your calendars…</div>';
+  if(statusEl) statusEl.textContent='';
+  if(emailEl) emailEl.textContent='';
+  modal.style.display='flex';
+  try{
+    const data=await gcalApiCall('list',memberId,{});
+    _gcalPickerCalendars=data.calendars||[];
+    if(emailEl) emailEl.textContent=data.email||'';
+    if(!_gcalPickerCalendars.length){
+      if(listEl) listEl.innerHTML='<div style="color:var(--muted);font-size:12px">No calendars found in your Google account.</div>';
+      return;
+    }
+    if(listEl) listEl.innerHTML=_gcalPickerCalendars.map((cal,i)=>`
+      <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:var(--navy-lift);margin-bottom:6px;cursor:pointer;border:1px solid ${cal.selected?'var(--blue)':'var(--border)'}">
+        <input type="checkbox" id="gcal-pick-${i}" ${cal.selected?'checked':''} style="accent-color:${cal.colorHex};width:16px;height:16px;cursor:pointer" onchange="gcalPickerToggle(${i})">
+        <span style="width:10px;height:10px;border-radius:50%;background:${cal.colorHex};flex-shrink:0"></span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--offwhite)">${cal.name}</div>
+          ${cal.primary?'<div style="font-size:10px;color:var(--muted)">Primary calendar</div>':''}
+        </div>
+      </label>`).join('');
+  }catch(e){
+    if(listEl) listEl.innerHTML=`<div style="color:var(--red);font-size:12px;padding:10px">${e.message}</div>`;
+  }
+}
+
+function gcalPickerToggle(idx){
+  if(_gcalPickerCalendars[idx]) _gcalPickerCalendars[idx].selected=!_gcalPickerCalendars[idx].selected;
+  // Update border highlight
+  const lbl=document.getElementById('gcal-pick-'+idx)?.closest('label');
+  if(lbl) lbl.style.borderColor=_gcalPickerCalendars[idx]?.selected?'var(--blue)':'var(--border)';
+}
+
+// Save picker selection and sync
+async function gcalPickerSave(){
+  const memberId=_gcalPickerMemberId;
+  const memberName=_gcalPickerMemberName;
+  if(!memberId) return;
+  const selected=_gcalPickerCalendars.filter(c=>c.selected);
+  if(!selected.length){alert('Please select at least one calendar.');return;}
+  const statusEl=document.getElementById('gcal-picker-status');
+  const saveBtn=document.getElementById('gcal-picker-save-btn');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Syncing…';}
+  if(statusEl) statusEl.textContent='Saving selection and syncing events…';
+  try{
+    const calendarIds=selected.map(c=>c.id);
+    const data=await gcalApiCall('sync',memberId,{calendarIds});
+    // Build gcal_links entries for each selected calendar
+    const links=getGcalLinks().filter(l=>l.oauthMemberId!==memberId); // remove old OAuth entries for this member
+    selected.forEach(cal=>{
+      links.push({
+        id:'goauth_'+memberId+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+        creatorName:memberName,
+        calLabel:cal.name+(cal.primary?' (Primary)':''),
+        oauthMemberId:memberId,
+        oauthCalendarId:cal.id,
+        events:(data.events||[]).filter(e=>e.calendarId===cal.id),
+        lastSync:new Date().toISOString(),
+        syncError:null,
+        addedAt:new Date().toISOString().slice(0,10),
+      });
+    });
+    saveGcalLinks(links);
+    // Refresh profile locally
+    const profile=tpProfileLoad(memberId);
+    tpProfileSave(memberId,{...profile,googleCalConnected:true,googleCalSelectedIds:calendarIds});
+    document.getElementById('gcal-picker-modal').style.display='none';
+    renderCalLinkedList();
+    renderCalendar();
+    if(_tpMemberId===memberId) tpRender();
+    showDhToast('Google Calendar','Synced '+data.count+' events from '+selected.length+' calendar'+(selected.length!==1?'s':'')+'!','✅','var(--green)',4000);
+  }catch(e){
+    if(statusEl) statusEl.textContent='Error: '+e.message;
+    showDhToast('Sync failed',e.message,'⚠️','var(--red)',5000);
+  }finally{
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Save & Sync';}
+  }
+}
+
+// Sync all OAuth calendars for a member (background)
+async function gcalSyncAllForMember(memberId,memberName){
+  try{
+    const data=await gcalApiCall('sync',memberId,{});
+    const links=getGcalLinks();
+    const profile=tpProfileLoad(memberId);
+    const selectedIds=profile?.googleCalSelectedIds||['primary'];
+    // Remove stale OAuth entries, rebuild
+    const filtered=links.filter(l=>l.oauthMemberId!==memberId);
+    selectedIds.forEach(calId=>{
+      const existing=links.find(l=>l.oauthMemberId===memberId&&l.oauthCalendarId===calId);
+      filtered.push({
+        ...(existing||{id:'goauth_'+memberId+'_'+calId,creatorName:memberName||memberId,calLabel:calId,oauthMemberId:memberId,oauthCalendarId:calId,addedAt:new Date().toISOString().slice(0,10)}),
+        events:(data.events||[]).filter(e=>e.calendarId===calId),
+        lastSync:new Date().toISOString(),
+        syncError:null,
+      });
+    });
+    saveGcalLinks(filtered);
+    renderCalLinkedList();
+    renderCalendar();
+  }catch(e){
+    console.warn('[gcalSyncAllForMember]',e.message);
+  }
+}
+
+// Disconnect Google Calendar
+async function gcalDisconnect(memberId,memberName){
+  if(!confirm('Disconnect your Google Calendar? Your events will stop syncing.')) return;
+  try{
+    await gcalApiCall('disconnect',memberId,{});
+    // Remove OAuth entries from gcal_links
+    saveGcalLinks(getGcalLinks().filter(l=>l.oauthMemberId!==memberId));
+    // Update local profile cache
+    tpProfileSave(memberId,{googleCalConnected:false,googleCalEmail:null,googleCalSelectedIds:null});
+    renderCalLinkedList();
+    renderCalendar();
+    if(_tpMemberId===memberId) tpRender();
+    showDhToast('Google Calendar','Disconnected successfully.','✓','var(--muted)',3000);
+  }catch(e){
+    showDhToast('Error',e.message,'⚠️','var(--red)',4000);
+  }
 }
 
 function tpClaimProject(jobId){
