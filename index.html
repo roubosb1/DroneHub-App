@@ -6700,11 +6700,37 @@ async function restoreTeamProfiles(){
   if(!_fbToken()) return;
   const members = getAdminTeamMembers();
   if(!members.length) return;
-  await Promise.allSettled(
-    members.map(m =>
-      tpProfileLoad_fb(m.id).catch(()=>{})
-    )
+  const profiles = await Promise.allSettled(
+    members.map(m => tpProfileLoad_fb(m.id).catch(()=>null))
   );
+  // Merge any calendarUrls stored in profiles back into gcal_links
+  // This is the belt-and-suspenders restore — if gcal_links Firebase doc ever
+  // fails to sync, the per-profile backup still brings calendars back
+  const links = getGcalLinks();
+  let changed = false;
+  profiles.forEach((result, i) => {
+    const profile = result.value;
+    if (!profile?.calendarUrls?.length) return;
+    const member = members[i];
+    profile.calendarUrls.forEach((url, idx) => {
+      if (!url) return;
+      const already = links.find(l => l.creatorName === member.name && l.icsUrl === url);
+      if (!already) {
+        links.push({
+          id: 'gcal_profile_'+member.id+'_'+idx,
+          creatorName: member.name,
+          calLabel: 'Calendar '+(idx+1),
+          icsUrl: url,
+          addedAt: profile.updatedAt ? new Date(profile.updatedAt).toISOString().slice(0,10) : new Date().toISOString().slice(0,10),
+          events: [], lastSync: null, syncError: null,
+        });
+        changed = true;
+      }
+    });
+  });
+  if (changed) {
+    try { localStorage.setItem('dronehub_gcal_links', JSON.stringify(links)); } catch(e) {}
+  }
   console.log('Loaded '+members.length+' team member profile(s) from Firebase');
 }
 
@@ -6883,7 +6909,22 @@ function showWeatherHourly(dayIndex,label,clickedEl){
 }
 
 function getGcalLinks(){return JSON.parse(localStorage.getItem('dronehub_gcal_links')||'[]');}
-function saveGcalLinks(links){try{localStorage.setItem('dronehub_gcal_links',JSON.stringify(links));}catch(e){}fbSet('orgs',ORG_ID+':gcal_links',{data:JSON.stringify(links),updatedAt:Date.now()});}
+function saveGcalLinks(links){
+  try{localStorage.setItem('dronehub_gcal_links',JSON.stringify(links));}catch(e){}
+  // Primary Firebase save — shared org document
+  if(_fbToken()) fbSet('orgs',ORG_ID+':gcal_links',{data:JSON.stringify(links),updatedAt:Date.now()}).catch(()=>{});
+  // Belt-and-suspenders: also write each person's URLs into their profile doc
+  // so the calendar survives even if gcal_links fails to sync
+  const byName={};
+  links.forEach(l=>{if(l.creatorName)(byName[l.creatorName]=byName[l.creatorName]||[]).push(l.icsUrl);});
+  if(_fbToken()){
+    const allMembers=[...getAdminTeamMembers(),...getTeamMembers()];
+    Object.entries(byName).forEach(([name,urls])=>{
+      const m=allMembers.find(x=>x.name===name);
+      if(m) tpProfileSave(m.id,{calendarUrls:urls}).catch?.(()=>{});
+    });
+  }
+}
 
 function populateCalNameDropdown(){
   const sel=document.getElementById('cal-gcal-name');
@@ -6914,9 +6955,16 @@ async function calAddGcal(){
   const url=document.getElementById('cal-gcal-url')?.value.trim();
   if(!name||!url){alert('Please select a team member and enter a calendar URL.');return;}
   const links=getGcalLinks();
-  const existing=links.findIndex(l=>l.creatorName===name);
-  const entry={id:'gcal_'+Date.now(),creatorName:name,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[],lastSync:null,syncError:null};
-  if(existing>=0) links[existing]=entry; else links.push(entry);
+  // Don't allow duplicate URLs for the same person
+  if(links.find(l=>l.creatorName===name&&l.icsUrl===url)){
+    alert('This calendar URL is already linked for '+name+'.');return;
+  }
+  // Cap at 5 calendars per person
+  const existing=links.filter(l=>l.creatorName===name);
+  if(existing.length>=5){alert('Maximum 5 calendars per person.');return;}
+  const calNum=existing.length+1;
+  const entry={id:'gcal_'+Date.now(),creatorName:name,calLabel:'Calendar '+calNum,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[],lastSync:null,syncError:null};
+  links.push(entry);
   saveGcalLinks(links);
   if(nameEl) nameEl.value='';
   document.getElementById('cal-gcal-url').value='';
@@ -6969,10 +7017,11 @@ function renderCalLinkedList(){
     const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Never';
     const statusDot=l.syncError?'🔴':evtCount>0?'🟢':'⚪';
     const statusTip=l.syncError?l.syncError:`${evtCount} event${evtCount!==1?'s':''} · synced ${lastSync}`;
+    const label=l.calLabel||'Calendar';
     return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--navy-lift);border-radius:8px;margin-bottom:6px;border:1px solid ${col.border}">
       <span style="width:8px;height:8px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:${col.text}">${l.creatorName}</div>
+        <div style="font-size:12px;font-weight:600;color:${col.text}">${l.creatorName} <span style="font-weight:400;color:var(--muted);font-size:11px">· ${label}</span></div>
         <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${statusTip}">${statusDot} ${statusTip}</div>
       </div>
       <button onclick="syncGcalLinks(true)" title="Refresh now" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px">⟳</button>
@@ -19983,21 +20032,28 @@ function tpLinkGcal(memberId, memberName){
   const url=(document.getElementById('tp-cal-ics-input')||document.getElementById('tp-gcal-url-input'))?.value.trim();
   if(!url){alert('Please paste your Google Calendar ICS URL.');return;}
   const links=getGcalLinks();
-  const existing=links.findIndex(l=>l.creatorName===memberName);
-  const entry={id:'gcal_'+Date.now(),creatorName:memberName,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[]};
-  if(existing>=0) links[existing]=entry; else links.push(entry);
+  if(links.find(l=>l.creatorName===memberName&&l.icsUrl===url)){alert('This calendar is already linked.');return;}
+  const existing=links.filter(l=>l.creatorName===memberName);
+  if(existing.length>=5){alert('Maximum 5 calendars per person.');return;}
+  const calNum=existing.length+1;
+  links.push({id:'gcal_'+Date.now(),creatorName:memberName,calLabel:'Calendar '+calNum,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[],lastSync:null,syncError:null});
   saveGcalLinks(links);
+  syncGcalLinks().catch(()=>{});
   tpShowTab('calendar');
   renderCalendar();
 }
 function tpUpdateGcal(memberId, memberName){
-  const url=prompt('Paste your new Google Calendar ICS URL:',getGcalLinks().find(l=>l.creatorName===memberName)?.icsUrl||'');
-  if(!url) return;
+  // Update the most-recently added calendar for this person
   const links=getGcalLinks();
-  const existing=links.findIndex(l=>l.creatorName===memberName);
-  const entry={id:'gcal_'+(existing>=0?links[existing].id:Date.now()),creatorName:memberName,icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[]};
-  if(existing>=0) links[existing]=entry; else links.push(entry);
+  const myLinks=links.filter(l=>l.creatorName===memberName);
+  const target=myLinks[myLinks.length-1];
+  const url=prompt('Paste your new Google Calendar ICS URL:',target?.icsUrl||'');
+  if(!url) return;
+  const idx=links.findIndex(l=>l.id===target?.id);
+  if(idx>=0) links[idx]={...links[idx],icsUrl:url,events:[],lastSync:null,syncError:null};
+  else links.push({id:'gcal_'+Date.now(),creatorName:memberName,calLabel:'Calendar 1',icsUrl:url,addedAt:new Date().toISOString().slice(0,10),events:[],lastSync:null,syncError:null});
   saveGcalLinks(links);
+  syncGcalLinks().catch(()=>{});
   tpShowTab('calendar');
   renderCalendar();
 }
@@ -20008,6 +20064,11 @@ function tpUnlinkGcal(memberName){
   renderCalendar();
 }
 function tpRemoveGcal(memberName){tpUnlinkGcal(memberName);}
+function tpRemoveGcalById(id){
+  if(!confirm('Remove this calendar?')) return;
+  saveGcalLinks(getGcalLinks().filter(l=>l.id!==id));
+  renderCalendar();
+}
 
 function tpClaimProject(jobId){
   jobId=String(jobId);
