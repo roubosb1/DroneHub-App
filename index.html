@@ -7278,9 +7278,21 @@ let currentInvoiceData=null; // stores data for send button
 
 function fmtN(n){return '$'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
+// Guard: track the last invoice number that was sent and when, to prevent duplicate sends
+let _lastInvoiceSentKey = '';
+let _lastInvoiceSentAt  = 0;
+
 async function sendInvoiceEmail(){
   if(!currentInvoiceData){alert('No invoice loaded.');return;}
   const{clientEmail,clientName,invNum,grandTotal,jobName,jobDate,bname}=currentInvoiceData;
+
+  // Duplicate-send guard: block if the same invoice was already sent within the last 60 seconds
+  const sendKey = (currentInvoiceData.jobId||'')+'|'+(invNum||'');
+  const now = Date.now();
+  if(sendKey && sendKey===_lastInvoiceSentKey && (now-_lastInvoiceSentAt)<60000){
+    alert('This invoice was already sent recently. Please wait at least 60 seconds before sending again.');
+    return;
+  }
   const displayTotal=fmtN(grandTotal);
   const btn=document.getElementById('send-invoice-btn');
   const statusEl=document.getElementById('invoice-send-status');
@@ -7343,6 +7355,9 @@ async function sendInvoiceEmail(){
     job_date:jobDate,
     payment_link:paymentLink,
   },'Ch7hmj99uF1tLKhMj').then(()=>{
+    // Stamp the guard so rapid re-clicks can't send again for 60 s
+    _lastInvoiceSentKey = sendKey;
+    _lastInvoiceSentAt  = Date.now();
     if(btn){btn.textContent='✓ Sent!';setTimeout(()=>{btn.textContent='📧 Send to client';btn.disabled=false;},3000);}
     if(statusEl){
       statusEl.textContent='✓ Invoice emailed to '+clientEmail+' with direct payment link';
@@ -7652,8 +7667,13 @@ function openInvoice(jobId){
 
 function openAndSendInvoice(jobId){
   openInvoice(jobId);
-  // Wait for invoice to render then auto-trigger send
-  setTimeout(()=>sendInvoiceEmail(),300);
+  // Show a confirmation dialog BEFORE sending — prevents accidental mass-sends
+  setTimeout(()=>{
+    const d = currentInvoiceData;
+    if(!d) return;
+    const msg = `Send invoice ${d.invNum} to ${d.clientName||d.clientEmail}?\n\nAmount: ${fmtN(d.grandTotal)}\nEmail: ${d.clientEmail||'(no email on file)'}\n\nThis will email them immediately.`;
+    if(confirm(msg)) sendInvoiceEmail();
+  }, 350);
 }
 
 async function openStripeCheckout(amount, invoiceNumber, clientEmail, currency, jobId){
@@ -9681,7 +9701,7 @@ function renderJobs(){
       if(st==='confirmed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','quoted')">← Quoted</button>`);
       if(st==='completed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">← Confirmed</button>`);
       if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openInvoice('${j.id}')">📄 Invoice</button>`);
-      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();openAndSendInvoice('${j.id}')">📧 Send invoice</button>`);
+      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();this.disabled=true;this.textContent='Opening…';openAndSendInvoice('${j.id}');setTimeout(()=>{this.disabled=false;this.textContent='📧 Send invoice';},5000)">📧 Send invoice</button>`);
       actionBtns.push(`<button class="job-action-btn" style="border-color:#C87D1E;background:rgba(245,166,35,.1);color:#F5A623" onclick="event.stopPropagation();openEditJob('${j.id}')">✏ Edit</button>`);
       actionBtns.push(`<button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob('${j.id}')">Delete</button>`);
       const ts=getTrackerStage(j.id);
