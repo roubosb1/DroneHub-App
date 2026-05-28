@@ -97,24 +97,46 @@ function parseIcs(text) {
 }
 
 // ── HTTP fetch helper (Node built-in, no dependencies) ──────────────────────
-function fetchUrl(url) {
+function fetchUrl(url, redirectsLeft = 5) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
-    const req = mod.get(url, (res) => {
-      // Follow up to 3 redirects
+    const parsedUrl = new URL(url);
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; DroneHub-CalSync/1.0)',
+        'Accept': 'text/calendar, text/plain, */*',
+      },
+      timeout: 10000,
+    };
+    const req = mod.request(options, (res) => {
+      // Follow redirects
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-        return fetchUrl(res.headers.location).then(resolve).catch(reject);
+        if (redirectsLeft <= 0) return reject(new Error('Too many redirects'));
+        const next = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : `${parsedUrl.protocol}//${parsedUrl.host}${res.headers.location}`;
+        return fetchUrl(next, redirectsLeft - 1).then(resolve).catch(reject);
       }
       if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode}`));
+        return reject(new Error(`Google returned HTTP ${res.statusCode} — make sure you copied the Secret address (not the public one)`));
       }
       let body = '';
       res.setEncoding('utf8');
       res.on('data', chunk => { body += chunk; });
-      res.on('end', () => resolve(body));
+      res.on('end', () => {
+        // Sanity check: ICS files must start with BEGIN:VCALENDAR
+        if (!body.includes('BEGIN:VCALENDAR')) {
+          return reject(new Error('Response is not a valid ICS calendar file — check the URL is the Secret iCal address'));
+        }
+        resolve(body);
+      });
     });
     req.on('error', reject);
-    req.setTimeout(8000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+    req.end();
   });
 }
 
