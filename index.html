@@ -7358,9 +7358,18 @@ async function sendInvoiceEmail(){
     // Stamp the guard so rapid re-clicks can't send again for 60 s
     _lastInvoiceSentKey = sendKey;
     _lastInvoiceSentAt  = Date.now();
-    if(btn){btn.textContent='✓ Sent!';setTimeout(()=>{btn.textContent='📧 Send to client';btn.disabled=false;},3000);}
+    // Keep button permanently disabled after a successful send — prevents re-clicking
+    if(btn){
+      btn.textContent='✓ Sent';
+      btn.disabled=true;
+      btn.style.background='rgba(34,217,122,.08)';
+      btn.style.borderColor='rgba(34,217,122,.3)';
+      btn.style.color='#22D97A';
+      btn.style.cursor='not-allowed';
+      btn.title='Invoice already sent — close and re-open to send again';
+    }
     if(statusEl){
-      statusEl.textContent='✓ Invoice emailed to '+clientEmail+' with direct payment link';
+      statusEl.textContent='✓ Invoice emailed to '+clientEmail+' — close this window if you are done';
       statusEl.style.background='rgba(34,217,122,.1)';
       statusEl.style.color='#22D97A';
       statusEl.style.borderBottomColor='rgba(34,217,122,.2)';
