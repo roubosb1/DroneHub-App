@@ -7013,7 +7013,6 @@ function calAddCalendarFor(name){
 
 // ── Fetch real events from all linked ICS calendars via server-side proxy ───
 async function syncGcalLinks(showFeedback){
-  if(!_fbToken()) return;
   const links=getGcalLinks();
   if(!links.length) return;
   let anyUpdated=false;
