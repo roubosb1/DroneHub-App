@@ -9526,68 +9526,6 @@ function saveJob(){
     draftCount:0,extraDraftCharge:0,
   });
 
-  // ── POST TO #PROJECTS LOUCHAT CHANNEL ──────────────────────────────────────
-  lcEnsureDefaults();
-  const channels=getLcChannels();
-  const projectsCh=channels.find(c=>c.id==='lc_projects'||c.name==='projects');
-  if(projectsCh){
-    const svcsStr=Object.entries(svc).filter(([k,v])=>v&&['video','photo','tvideo','tphoto','reel','extphoto','extvideo','floorplan'].includes(k))
-      .map(([k])=>({video:'🎬 Video',photo:'📷 Photo',tvideo:'🌅 Twilight video',tphoto:'🌅 Twilight photo',reel:'📱 Social reels',extphoto:'🏡 Ext. photo',extvideo:'🏡 Ext. video',floorplan:'📐 Floor plan'}[k]||k)).join(', ');
-    const clientLabel=job.clientName?` for **${job.clientName}**`:'';
-    const assignees=[videographerName,editorName].filter((n,i,a)=>n&&a.indexOf(n)===i).join(' & ');
-    const msg={
-      id:Date.now(),
-      author:'DroneHub System',
-      text:`📋 **New shoot booked**${clientLabel}\n📍 ${job.address}\n📅 ${job.date}${job.shootTime?' at '+job.shootTime:''}\n🎬 Services: ${svcsStr||'See job details'}\n👤 Assigned: ${assignees||'TBD'}${job.status==='confirmed'?' ✓ Confirmed':' (quoted)'}`,
-      ts:new Date().toISOString(),
-      reactions:{},
-      attachments:[],
-    };
-    saveLcMessage(projectsCh.id,msg);
-  }
-
-  // ── NOTIFY EACH ASSIGNED CONTRACTOR IN THEIR PERSONAL CHANNEL ────────────
-  const notifiedContractors=new Set();
-  Object.values(payoutSnapshot).forEach(contractor=>{
-    const cname=contractor.name;
-    if(!cname||cname.includes('unassigned')||notifiedContractors.has(cname)) return;
-    notifiedContractors.add(cname);
-
-    // Find or create a personal channel for this contractor
-    let personalCh=channels.find(c=>
-      c.name.toLowerCase()===cname.toLowerCase().replace(/\s+/g,'-')||
-      c.name.toLowerCase().includes(cname.split(' ')[0].toLowerCase())&&c.type==='project'
-    );
-    if(!personalCh){
-      // Create a project-type channel named after them
-      const chName=cname.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-');
-      personalCh={
-        id:'lc_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
-        name:chName,
-        type:'project',
-        topic:cname+' — assigned shoots and updates',
-        ownerName:cname,
-        createdAt:new Date().toISOString().slice(0,10),
-        pinned:'',
-        members:[],
-      };
-      channels.push(personalCh);
-      saveLcChannels(channels);
-    }
-
-    // Build role labels only — no dollar amounts in chat (payout details are in the Payroll section)
-    const theirRoles=contractor.entries?.map(e=>e.role).filter(Boolean).join(', ') || 'Assigned';
-    const msg2={
-      id:Date.now()+Math.random(),
-      author:'DroneHub System',
-      text:`📅 **New shoot assigned to you**\n\n**${job.name}**\n📍 ${job.address}\n🗓 ${job.date}${job.shootTime?' at '+job.shootTime:''}\nRole: ${theirRoles}${job.notes?'\n\n📝 Notes: '+job.notes:''}`,
-      ts:new Date().toISOString(),
-      reactions:{},
-      attachments:[],
-    };
-    saveLcMessage(personalCh.id,msg2);
-  });
-
   // ── UPDATE CALENDAR ───────────────────────────────────────────────────────
   if(document.getElementById('pane-calendar')?.classList.contains('active')){
     populateCalNameDropdown();
