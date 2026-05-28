@@ -1,10 +1,11 @@
 /**
  * DroneHub ICS Proxy
  * GET /.netlify/functions/ics-proxy?url=<encoded ICS URL>
- * Header: Authorization: Bearer <session-token>
  *
  * Fetches a Google Calendar (or any) ICS feed server-side (bypassing browser
  * CORS restrictions) and returns the events as a JSON array.
+ * No auth token required — Google Calendar ICS URLs are already secret URLs
+ * with a private key embedded, so the URL itself is the credential.
  *
  * Each event object: { title, date, endDate, time, endTime, location, description, uid }
  * Dates are ISO strings (YYYY-MM-DD). Times are HH:MM (24-hr) or '' if all-day.
@@ -12,7 +13,6 @@
 
 const https = require('https');
 const http  = require('http');
-const { verifyToken } = require('./auth');
 
 // ── ICS parser ───────────────────────────────────────────────────────────────
 
@@ -126,18 +126,7 @@ exports.handler = async (event) => {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: { ...headers, 'Access-Control-Allow-Headers': 'Authorization' } };
-  }
-
-  // Auth check
-  const authHeader = event.headers['authorization'] || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) {
-    return { statusCode: 401, headers, body: JSON.stringify({ error: 'No token' }) };
-  }
-  const session = verifyToken(token);
-  if (!session) {
-    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired token' }) };
+    return { statusCode: 204, headers };
   }
 
   // Get ICS URL from query string

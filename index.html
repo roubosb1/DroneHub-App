@@ -6941,9 +6941,7 @@ async function syncGcalLinks(showFeedback){
   await Promise.allSettled(links.map(async link=>{
     if(!link.icsUrl) return;
     try{
-      const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl),{
-        headers:{'Authorization':'Bearer '+_fbToken()}
-      });
+      const r=await fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(link.icsUrl));
       if(!r.ok) throw new Error('HTTP '+r.status);
       const {events}=await r.json();
       link.events=events||[];
