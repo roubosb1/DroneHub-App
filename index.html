@@ -4155,32 +4155,73 @@ button{font-family:var(--font);}
         <div style="font-size:11px;color:#A8B4D0;margin-top:2px" id="ej-job-meta"></div>
       </div>
 
-      <!-- Core services -->
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#A8B4D0;margin-bottom:8px">Services</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-video" onchange="recalcEdit()"> Video production</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-photo" onchange="recalcEdit()"> Photography</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-tvideo" onchange="recalcEdit()"> Twilight video</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-tphoto" onchange="recalcEdit()"> Twilight photo</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-floorplan" onchange="recalcEdit()"> Floor plan</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-extphoto" onchange="recalcEdit()"> Exterior photo</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-extvideo" onchange="recalcEdit()"> Exterior video</label>
-        <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
-          <input type="checkbox" id="ej-svc-reel" onchange="recalcEdit()"> Social reels
-          <input type="number" id="ej-qty-reel" min="1" max="10" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto">
+      <!-- ── CANADIAN SERVICES (hidden for US market jobs) ── -->
+      <div id="ej-ca-section">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#A8B4D0;margin-bottom:8px">Services</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-video" onchange="recalcEdit()"> Video production</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-photo" onchange="recalcEdit()"> Photography</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-tvideo" onchange="recalcEdit()"> Twilight video</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-tphoto" onchange="recalcEdit()"> Twilight photo</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-floorplan" onchange="recalcEdit()"> Floor plan</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-extphoto" onchange="recalcEdit()"> Exterior photo</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-extvideo" onchange="recalcEdit()"> Exterior video</label>
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
+            <input type="checkbox" id="ej-svc-reel" onchange="recalcEdit()"> Social reels
+            <input type="number" id="ej-qty-reel" min="1" max="10" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto">
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#A8B4D0;margin-bottom:8px">Miscellaneous / hourly</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
+            <input type="checkbox" id="ej-svc-randomvideo" onchange="recalcEdit()"> Random video
+            <input type="number" id="ej-qty-randomvideo" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
+            <input type="checkbox" id="ej-svc-randomphoto" onchange="recalcEdit()"> Random photo
+            <input type="number" id="ej-qty-randomphoto" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
+          </div>
         </div>
       </div>
 
-      <!-- Miscellaneous hourly -->
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#A8B4D0;margin-bottom:8px">Miscellaneous / hourly</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
-          <input type="checkbox" id="ej-svc-randomvideo" onchange="recalcEdit()"> Random video
-          <input type="number" id="ej-qty-randomvideo" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
+      <!-- ── US MARKET PRICING (shown only for US market jobs) ── -->
+      <div id="ej-us-section" style="display:none">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#A8B4D0;margin-bottom:8px">US Market Pricing</div>
+        <div style="padding:10px 14px;background:rgba(91,141,239,.07);border:1px solid rgba(91,141,239,.25);border-radius:8px;margin-bottom:12px">
+          <span id="ej-us-market-label" style="font-size:12px;font-weight:700;color:#7AABFF"></span>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
-          <input type="checkbox" id="ej-svc-randomphoto" onchange="recalcEdit()"> Random photo
-          <input type="number" id="ej-qty-randomphoto" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
+        <!-- Package type -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#A8B4D0;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Package Type</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="ej-us-pkg-btns"></div>
+        </div>
+        <!-- Listing tier (shown when pkgType = listing) -->
+        <div id="ej-us-tier-row" style="margin-bottom:10px;display:none">
+          <div style="font-size:11px;color:#A8B4D0;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Property Size</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="ej-us-tier-btns"></div>
+        </div>
+        <!-- Social tier (shown when pkgType = social) -->
+        <div id="ej-us-social-row" style="margin-bottom:10px;display:none">
+          <div style="font-size:11px;color:#A8B4D0;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Social Package</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="ej-us-social-btns"></div>
+        </div>
+        <!-- Addons -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#A8B4D0;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Add-ons</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px">
+              <input type="checkbox" id="ej-us-sunrise" onchange="recalcEditUS()"> 🌅 Sunrise/Sunset (+$<span id="ej-us-sunrise-price"></span>)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px">
+              <input type="checkbox" id="ej-us-hdr" onchange="recalcEditUS()"> 📸 Photo HDR (+$<span id="ej-us-hdr-price"></span>)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px">
+              <input type="checkbox" id="ej-us-flash" onchange="recalcEditUS()"> ⚡ Flash Photo (+$<span id="ej-us-flash-price"></span>)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid rgba(34,217,122,.3);border-radius:8px;cursor:pointer;font-size:12px;background:rgba(34,217,122,.05)">
+              <input type="checkbox" id="ej-us-offseason" onchange="recalcEditUS()"> ❄️ Off-Season (-$<span id="ej-us-offseason-price"></span>)
+            </label>
+          </div>
         </div>
       </div>
 
@@ -10334,6 +10375,7 @@ function renderPayrollStub(contractor,period){
 
 // ─── EDIT JOB ────────────────────────────────────────────────────────────────
 let editingJobId=null;
+let _ejUsState={};   // tracks current US pricing selections in edit modal
 
 function openEditJob(jobId){
   const job=savedJobs.find(j=>String(j.id)===String(jobId));
@@ -10344,21 +10386,31 @@ function openEditJob(jobId){
   document.getElementById('ej-job-name').textContent=job.name;
   document.getElementById('ej-job-meta').textContent=`${job.date||''}${job.shootTime?' at '+job.shootTime:''} · ${job.address} · ${job.sqft?job.sqft.toLocaleString()+' sqft':''}`;
 
-  // Restore services
-  const svcs=job.services||{};
-  const hrs=job.hours||{};
-  ['video','photo','tvideo','tphoto','floorplan','extphoto','extvideo','reel','randomvideo','randomphoto'].forEach(k=>{
-    const cb=document.getElementById('ej-svc-'+k);
-    if(cb) cb.checked=!!svcs[k];
-  });
-  ['reel','randomvideo','randomphoto'].forEach(k=>{
-    const inp=document.getElementById('ej-qty-'+k);
-    if(inp) inp.value=hrs[k]||1;
-  });
+  // Determine if this is a US market job
+  const isUSJob=!!(job.usData||job.currency==='usd');
+  document.getElementById('ej-ca-section').style.display=isUSJob?'none':'';
+  document.getElementById('ej-us-section').style.display=isUSJob?'':'none';
 
-  // Rush & custom adj
-  const cb=document.getElementById('ej-svc-rush');
-  if(cb) cb.checked=!!(svcs.rush);
+  if(isUSJob){
+    // US market — populate US pricing section
+    _ejInitUSEdit(job);
+  } else {
+    // Canadian market — restore services
+    const svcs=job.services||{};
+    const hrs=job.hours||{};
+    ['video','photo','tvideo','tphoto','floorplan','extphoto','extvideo','reel','randomvideo','randomphoto'].forEach(k=>{
+      const cb=document.getElementById('ej-svc-'+k);
+      if(cb) cb.checked=!!svcs[k];
+    });
+    ['reel','randomvideo','randomphoto'].forEach(k=>{
+      const inp=document.getElementById('ej-qty-'+k);
+      if(inp) inp.value=hrs[k]||1;
+    });
+    // Rush & custom adj
+    const cb=document.getElementById('ej-svc-rush');
+    if(cb) cb.checked=!!(svcs.rush);
+  }
+
   document.getElementById('ej-adj-amount').value=Math.abs(job.customAdj||0);
   document.getElementById('ej-adj-type').value=(job.customAdj||0)<0?'subtract':'add';
 
@@ -10369,8 +10421,191 @@ function openEditJob(jobId){
   document.getElementById('ej-notes').value=job.notes||'';
   document.getElementById('ej-drive-link').value=job.driveLink||'';
 
-  recalcEdit();
+  if(isUSJob) recalcEditUS(); else recalcEdit();
   document.getElementById('edit-job-overlay').style.display='block';
+}
+
+// ── US edit modal helpers ──────────────────────────────────────────────────
+
+function _ejInitUSEdit(job){
+  const ud=job.usData||{};
+  const market=ud.market||'other_us';
+  const p=US_MARKET_PRICING[market]||US_MARKET_PRICING['other_us'];
+
+  _ejUsState={
+    market,
+    pkgType:ud.pkgType||null,
+    listingTier:ud.listingTier||null,
+    socialTier:ud.socialTier||null,
+    dayType:ud.dayType||null,
+    reelCount:ud.reelCount||0,
+    reelsTBD:ud.reelsTBD||false,
+    dayLocations:ud.dayLocations||[],
+    offSeason:ud.offSeason||false,
+    addons:{sunrise:!!(ud.addons?.sunrise),photoHDR:!!(ud.addons?.photoHDR),photoFlash:!!(ud.addons?.photoFlash)},
+  };
+
+  // Market label
+  document.getElementById('ej-us-market-label').textContent=p.label+' Market';
+  // Addon prices
+  document.getElementById('ej-us-sunrise-price').textContent=p.addons.sunrise.toLocaleString();
+  document.getElementById('ej-us-hdr-price').textContent=p.addons.photoHDR.toLocaleString();
+  document.getElementById('ej-us-flash-price').textContent=p.addons.photoFlash.toLocaleString();
+  document.getElementById('ej-us-offseason-price').textContent=p.offSeasonDiscount.toLocaleString();
+  // Addon checkboxes
+  document.getElementById('ej-us-sunrise').checked=_ejUsState.addons.sunrise;
+  document.getElementById('ej-us-hdr').checked=_ejUsState.addons.photoHDR;
+  document.getElementById('ej-us-flash').checked=_ejUsState.addons.photoFlash;
+  document.getElementById('ej-us-offseason').checked=_ejUsState.offSeason;
+
+  _ejRenderUSPkgBtns();
+  _ejRenderUSTierBtns();
+}
+
+function _ejRenderUSPkgBtns(){
+  const c=document.getElementById('ej-us-pkg-btns');
+  if(!c) return;
+  const pkgs=[
+    {key:'listing',label:'🏠 Listing'},
+    {key:'social', label:'📱 Social Reels'},
+    {key:'agent',  label:'🎬 Agent Promo'},
+    {key:'day',    label:'☀️ Day Rate'},
+  ];
+  const active='padding:7px 14px;border-radius:8px;border:1px solid #5B8DEF;background:rgba(91,141,239,.25);color:#7AABFF;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px';
+  const idle ='padding:7px 14px;border-radius:8px;border:1px solid #3A4460;background:rgba(91,141,239,.07);color:#A8B4D0;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px';
+  c.innerHTML=pkgs.map(pk=>`<button onclick="ejSelectUSPkg('${pk.key}')" style="${_ejUsState.pkgType===pk.key?active:idle}">${pk.label}</button>`).join('');
+}
+
+function ejSelectUSPkg(pkgType){
+  _ejUsState.pkgType=pkgType;
+  _ejUsState.listingTier=null;
+  _ejUsState.socialTier=null;
+  _ejRenderUSPkgBtns();
+  _ejRenderUSTierBtns();
+  recalcEditUS();
+}
+
+function _ejRenderUSTierBtns(){
+  const market=_ejUsState.market||'other_us';
+  const p=US_MARKET_PRICING[market]||US_MARKET_PRICING['other_us'];
+  const tierRow=document.getElementById('ej-us-tier-row');
+  const socialRow=document.getElementById('ej-us-social-row');
+
+  const active='padding:7px 14px;border-radius:8px;border:1px solid #5B8DEF;background:rgba(91,141,239,.25);color:#7AABFF;font-size:12px;cursor:pointer;margin-bottom:4px';
+  const idle ='padding:7px 14px;border-radius:8px;border:1px solid #3A4460;background:rgba(91,141,239,.07);color:#A8B4D0;font-size:12px;cursor:pointer;margin-bottom:4px';
+
+  if(_ejUsState.pkgType==='listing'){
+    if(tierRow) tierRow.style.display='';
+    if(socialRow) socialRow.style.display='none';
+    const c=document.getElementById('ej-us-tier-btns');
+    if(c) c.innerHTML=[
+      {key:'under4k',label:'Under 4,000 sqft',price:p.listing.under4k},
+      {key:'over4k', label:'4,000–8,000 sqft', price:p.listing.over4k},
+      {key:'over8k', label:'Over 8,000 sqft',  price:p.listing.over8k},
+    ].map(t=>`<button onclick="ejSelectUSTier('${t.key}')" style="${_ejUsState.listingTier===t.key?active:idle}">${t.label} — $${t.price.toLocaleString()}</button>`).join('');
+  } else if(_ejUsState.pkgType==='social'){
+    if(tierRow) tierRow.style.display='none';
+    if(socialRow) socialRow.style.display='';
+    const c=document.getElementById('ej-us-social-btns');
+    if(c){
+      const tiers=[
+        {key:'r1',label:'1 Reel'},{key:'r2',label:'2 Reels'},{key:'r3',label:'3 Reels'},
+        {key:'r4',label:'4 Reels'},{key:'r5',label:'5 Reels'},{key:'fullDay',label:'Full Day (Unlimited)'},
+      ];
+      c.innerHTML=tiers.filter(t=>p.social[t.key]!=null).map(t=>`<button onclick="ejSelectUSSocialTier('${t.key}')" style="${_ejUsState.socialTier===t.key?active:idle}">${t.label} — $${p.social[t.key].toLocaleString()}</button>`).join('');
+    }
+  } else {
+    if(tierRow)  tierRow.style.display='none';
+    if(socialRow) socialRow.style.display='none';
+  }
+}
+
+function ejSelectUSTier(tier){
+  _ejUsState.listingTier=tier;
+  _ejRenderUSTierBtns();
+  recalcEditUS();
+}
+
+function ejSelectUSSocialTier(tier){
+  _ejUsState.socialTier=tier;
+  _ejRenderUSTierBtns();
+  recalcEditUS();
+}
+
+function recalcEditUS(){
+  const job=savedJobs.find(j=>String(j.id)===String(editingJobId));
+  if(!job) return;
+  const market=_ejUsState.market||'other_us';
+  const p=US_MARKET_PRICING[market]||US_MARKET_PRICING['other_us'];
+
+  // Sync addon checkboxes into state
+  _ejUsState.addons.sunrise   =!!(document.getElementById('ej-us-sunrise')?.checked);
+  _ejUsState.addons.photoHDR  =!!(document.getElementById('ej-us-hdr')?.checked);
+  _ejUsState.addons.photoFlash=!!(document.getElementById('ej-us-flash')?.checked);
+  _ejUsState.offSeason        =!!(document.getElementById('ej-us-offseason')?.checked);
+
+  const noSel=(msg)=>{
+    document.getElementById('ej-breakdown').textContent=msg;
+    document.getElementById('ej-new-total').textContent='$—';
+    document.getElementById('ej-total-delta').textContent='';
+  };
+
+  let base=0;
+  const parts=[];
+
+  switch(_ejUsState.pkgType){
+    case 'listing':
+      if(!_ejUsState.listingTier) return noSel('← Select property size tier');
+      base=p.listing[_ejUsState.listingTier]||0;
+      const tl={under4k:'Under 4k sqft',over4k:'4k–8k sqft',over8k:'Over 8k sqft'};
+      parts.push(`Listing (${tl[_ejUsState.listingTier]}) $${base.toLocaleString()}`);
+      break;
+    case 'social':
+      if(!_ejUsState.socialTier) return noSel('← Select social package tier');
+      base=p.social[_ejUsState.socialTier]||0;
+      const sl={r1:'1 Reel',r2:'2 Reels',r3:'3 Reels',r4:'4 Reels',r5:'5 Reels',fullDay:'Full Day'};
+      parts.push(`Social Reels (${sl[_ejUsState.socialTier]||_ejUsState.socialTier}) $${base.toLocaleString()}`);
+      if(_ejUsState.offSeason){const d=p.offSeasonDiscount||0;base=Math.max(0,base-d);parts.push(`Off-Season −$${d.toLocaleString()}`);}
+      break;
+    case 'agent':
+      base=p.agentPromo||0;
+      parts.push(`Agent Promo $${base.toLocaleString()}`);
+      break;
+    case 'day':{
+      // Day rate: reconstruct from stored usData (half/full + per-reel)
+      const ud=job.usData||{};
+      if(ud.dayType==='half'||ud.dayType==='full'){
+        base=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
+        const totalReels=ud.dayLocations?.reduce((s,l)=>s+(l.reelCount||0),0)||(ud.reelCount||0);
+        base+=totalReels*US_SOCIAL_DAY.reelRate;
+        parts.push(`Day Rate (${ud.dayType==='half'?'Half':'Full'} Day${totalReels>0?', '+totalReels+' reel'+(totalReels>1?'s':''):''}) $${base.toLocaleString()}`);
+      } else {
+        base=job.grand||0;
+        parts.push(`Day Rate (kept from original) $${base.toLocaleString()}`);
+      }
+      break;
+    }
+    default:
+      return noSel('← Select a package type above');
+  }
+
+  if(_ejUsState.addons.sunrise)   {const a=p.addons.sunrise;   base+=a;parts.push(`Sunrise/Sunset +$${a.toLocaleString()}`);}
+  if(_ejUsState.addons.photoHDR)  {const a=p.addons.photoHDR;  base+=a;parts.push(`Photo HDR +$${a.toLocaleString()}`);}
+  if(_ejUsState.addons.photoFlash){const a=p.addons.photoFlash;base+=a;parts.push(`Flash Photo +$${a.toLocaleString()}`);}
+
+  // Custom adj
+  const adjAmt=parseFloat(document.getElementById('ej-adj-amount')?.value)||0;
+  const adjType=document.getElementById('ej-adj-type')?.value||'add';
+  const adjSigned=adjType==='subtract'?-adjAmt:adjAmt;
+  if(adjAmt>0){base+=adjSigned;parts.push(`Custom adj. ${adjType==='subtract'?'−':'+'}$${adjAmt.toLocaleString()}`);}
+
+  const orig=job.grand||0;
+  const delta=base-orig;
+  document.getElementById('ej-new-total').textContent='$'+base.toLocaleString();
+  document.getElementById('ej-total-delta').textContent=orig>0?(delta===0?`Same as original ($${orig.toLocaleString()})`:
+    (delta>0?`+$${delta.toLocaleString()} more than original ($${orig.toLocaleString()})`:
+     `$${Math.abs(delta).toLocaleString()} less than original ($${orig.toLocaleString()})`)):'';
+  document.getElementById('ej-breakdown').textContent=parts.join(' · ');
 }
 
 function closeEditJob(){
@@ -10382,6 +10617,8 @@ function closeEditJob(){
 function recalcEdit(){
   const job=savedJobs.find(j=>String(j.id)===String(editingJobId));
   if(!job) return;
+  // For US market jobs, delegate to the US recalc
+  if(job.usData||job.currency==='usd'){ recalcEditUS(); return; }
 
   const sqft=job.sqft||0;
   // Read checked services
@@ -10445,47 +10682,95 @@ function saveEditJob(){
   const job=savedJobs.find(j=>String(j.id)===String(editingJobId));
   if(!job) return;
 
-  const s={};
-  ['video','photo','tvideo','tphoto','floorplan','extphoto','extvideo','reel','randomvideo','randomphoto','rush'].forEach(k=>{
-    const el=document.getElementById('ej-svc-'+k);
-    if(el) s[k]=el.checked;
-  });
-  const qty={
-    reel:parseInt(document.getElementById('ej-qty-reel')?.value)||1,
-    randomvideo:parseInt(document.getElementById('ej-qty-randomvideo')?.value)||1,
-    randomphoto:parseInt(document.getElementById('ej-qty-randomphoto')?.value)||1,
-  };
   const adjAmt=parseFloat(document.getElementById('ej-adj-amount')?.value)||0;
   const adjType=document.getElementById('ej-adj-type')?.value||'add';
   const adjSigned=adjType==='subtract'?-adjAmt:adjAmt;
 
-  // Recalculate grand total
-  const sqft=job.sqft||0;
+  const isUSJob=!!(job.usData||job.currency==='usd');
   let total=0;
-  if(s.video&&s.photo){
-    total+=Math.ceil(Math.ceil(baseVideoRate(sqft)/(1-MARGIN))*(1+ADMIN_RATE))+(Math.ceil(photoBase(sqft,true)*(1+ADMIN_RATE)));
+
+  if(isUSJob){
+    // ── US market: recalculate from _ejUsState ──────────────────────────────
+    const market=_ejUsState.market||'other_us';
+    const p=US_MARKET_PRICING[market]||US_MARKET_PRICING['other_us'];
+
+    switch(_ejUsState.pkgType){
+      case 'listing':
+        if(!_ejUsState.listingTier){alert('Please select a property size tier.');return;}
+        total=p.listing[_ejUsState.listingTier]||0;
+        break;
+      case 'social':
+        if(!_ejUsState.socialTier){alert('Please select a social package tier.');return;}
+        total=p.social[_ejUsState.socialTier]||0;
+        if(_ejUsState.offSeason) total=Math.max(0,total-(p.offSeasonDiscount||0));
+        break;
+      case 'agent':
+        total=p.agentPromo||0;
+        break;
+      case 'day':{
+        const ud=job.usData||{};
+        total=ud.dayType==='half'?US_SOCIAL_DAY.halfDay:US_SOCIAL_DAY.fullDay;
+        const reels=ud.dayLocations?.reduce((s,l)=>s+(l.reelCount||0),0)||(ud.reelCount||0);
+        total+=reels*US_SOCIAL_DAY.reelRate;
+        break;
+      }
+      default:
+        alert('Please select a package type.');return;
+    }
+    if(_ejUsState.addons.sunrise)    total+=p.addons.sunrise;
+    if(_ejUsState.addons.photoHDR)   total+=p.addons.photoHDR;
+    if(_ejUsState.addons.photoFlash) total+=p.addons.photoFlash;
+    if(adjAmt>0) total+=adjSigned;
+
+    // Persist updated US data back onto job
+    job.usData={
+      ...(job.usData||{}),
+      pkgType:_ejUsState.pkgType,
+      listingTier:_ejUsState.listingTier,
+      socialTier:_ejUsState.socialTier,
+      offSeason:_ejUsState.offSeason,
+      addons:{..._ejUsState.addons},
+    };
+    job.currency='usd';
+    job.services={};   // clear CA services so they don't bleed into invoices
   } else {
-    if(s.video) total+=Math.ceil(Math.ceil(baseVideoRate(sqft)/(1-MARGIN))*(1+ADMIN_RATE));
-    if(s.photo) total+=Math.ceil(photoBase(sqft,false)*(1+ADMIN_RATE));
+    // ── Canadian market: original logic ────────────────────────────────────
+    const s={};
+    ['video','photo','tvideo','tphoto','floorplan','extphoto','extvideo','reel','randomvideo','randomphoto','rush'].forEach(k=>{
+      const el=document.getElementById('ej-svc-'+k);
+      if(el) s[k]=el.checked;
+    });
+    const qty={
+      reel:parseInt(document.getElementById('ej-qty-reel')?.value)||1,
+      randomvideo:parseInt(document.getElementById('ej-qty-randomvideo')?.value)||1,
+      randomphoto:parseInt(document.getElementById('ej-qty-randomphoto')?.value)||1,
+    };
+    const sqft=job.sqft||0;
+    if(s.video&&s.photo){
+      total+=Math.ceil(Math.ceil(baseVideoRate(sqft)/(1-MARGIN))*(1+ADMIN_RATE))+(Math.ceil(photoBase(sqft,true)*(1+ADMIN_RATE)));
+    } else {
+      if(s.video) total+=Math.ceil(Math.ceil(baseVideoRate(sqft)/(1-MARGIN))*(1+ADMIN_RATE));
+      if(s.photo) total+=Math.ceil(photoBase(sqft,false)*(1+ADMIN_RATE));
+    }
+    if(s.tvideo&&s.tphoto) total+=TWILIGHT_BOTH;
+    else if(s.tvideo) total+=TWILIGHT_VIDEO;
+    else if(s.tphoto) total+=TWILIGHT_PHOTO;
+    if(s.reel) total+=qty.reel*150;
+    if(s.floorplan) total+=150;
+    if(s.extphoto) total+=150;
+    if(s.extvideo) total+=150;
+    if(s.randomvideo) total+=qty.randomvideo*RANDOM_VIDEO_RATE_CLIENT;
+    if(s.randomphoto) total+=qty.randomphoto*RANDOM_PHOTO_RATE_CLIENT;
+    if(s.rush) total+=RUSH_FEE;
+    if(adjAmt>0) total+=adjSigned;
+    total+=job.driveCost||0;
+    job.services={...s};
+    job.hours={...qty};
   }
-  if(s.tvideo&&s.tphoto) total+=TWILIGHT_BOTH;
-  else if(s.tvideo) total+=TWILIGHT_VIDEO;
-  else if(s.tphoto) total+=TWILIGHT_PHOTO;
-  if(s.reel) total+=qty.reel*150;
-  if(s.floorplan) total+=150;
-  if(s.extphoto) total+=150;
-  if(s.extvideo) total+=150;
-  if(s.randomvideo) total+=qty.randomvideo*RANDOM_VIDEO_RATE_CLIENT;
-  if(s.randomphoto) total+=qty.randomphoto*RANDOM_PHOTO_RATE_CLIENT;
-  if(s.rush) total+=RUSH_FEE;
-  if(adjAmt>0) total+=adjSigned;
-  total+=job.driveCost||0;
 
   // Update job in place
   const newDate=document.getElementById('ej-date').value||job.date;
   const period=getBiweeklyPeriod(newDate);
-  job.services={...s};
-  job.hours={...qty};
   job.grand=total;
   job.date=newDate;
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
@@ -10502,7 +10787,7 @@ function saveEditJob(){
   renderCalendar();
 
   const status=document.getElementById('ej-save-status');
-  status.textContent=`✓ Updated — new total ${fmt(total)}`;
+  status.textContent=`✓ Updated — new total $${total.toLocaleString()}`;
   setTimeout(()=>closeEditJob(),1800);
 }
 
