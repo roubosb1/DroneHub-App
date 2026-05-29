@@ -21085,21 +21085,29 @@ function salesLoadList(listId){
 
 // Save an entire list to memory + Firebase
 let _salesSaveStatusTimer = null;
-function _showSalesSaveStatus(state){
+let _salesSavePending = 0; // track concurrent saves so status clears only when all done
+function _showSalesSaveStatus(state, msg){
   const el = document.getElementById('sales-save-status');
   if(!el) return;
   clearTimeout(_salesSaveStatusTimer);
   if(state === 'saving'){
+    _salesSavePending++;
     el.textContent = '⟳ Saving…';
     el.style.color = 'var(--muted)';
   } else if(state === 'saved'){
-    el.textContent = '✓ Saved to cloud';
-    el.style.color = 'var(--green)';
-    _salesSaveStatusTimer = setTimeout(()=>{ if(el) el.textContent=''; }, 3000);
+    _salesSavePending = Math.max(0, _salesSavePending - 1);
+    if(_salesSavePending === 0){
+      el.textContent = '✓ Saved';
+      el.style.color = 'var(--green)';
+      _salesSaveStatusTimer = setTimeout(()=>{ if(el) el.textContent=''; }, 3000);
+    }
   } else if(state === 'error'){
-    el.textContent = '⚠ Save failed — check connection';
+    _salesSavePending = Math.max(0, _salesSavePending - 1);
+    el.title = msg || '';
+    el.textContent = '⚠ Save failed' + (msg ? ` (${msg})` : ' — check connection');
     el.style.color = '#FF7070';
-    // Keep the error visible until next save attempt
+    el.style.cursor = 'help';
+    // Keep the error visible until next successful save
   }
 }
 
@@ -21116,7 +21124,7 @@ function salesSaveList(listId, arr){
       _showSalesSaveStatus('saved');
     }catch(e){
       console.error('[salesSaveList] Firebase write failed for list "'+listId+'":', e.message);
-      _showSalesSaveStatus('error');
+      _showSalesSaveStatus('error', e.message);
     }
   };
 
@@ -21133,16 +21141,20 @@ function salesSaveList(listId, arr){
 
 // Save the full cross-list array back by splitting into per-list buckets.
 // Used by legacy callers that operate on the full array.
-// SAFETY: only writes lists that have already been loaded from Firebase this session
-// (_salesByList[l] !== null). If a list is still null it means we haven't fetched it
-// yet — writing an empty array would wipe out whatever is in Firebase for that list.
+// SAFETY 1: skips lists still at null (not yet loaded — would wipe Firebase with empty data).
+// SAFETY 2: only writes lists whose content actually changed — avoids spurious Firebase
+//           writes (and "save failed" flashes) when e.g. syncAllClientsToCRM runs on a
+//           pane that was already in sync.
 function salesSave(arr){
   const byList = {};
   SALES_LISTS.forEach(l=>{ byList[l]=[]; });
   arr.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
   SALES_LISTS.forEach(l=>{
-    if(_salesByList[l] !== null) salesSaveList(l, byList[l]);
-    // null → list not loaded yet; skip to avoid overwriting Firebase with an empty placeholder
+    if(_salesByList[l] === null) return; // not loaded yet — skip
+    // Quick structural diff: only write if something actually changed
+    if(JSON.stringify(_salesByList[l]) !== JSON.stringify(byList[l])){
+      salesSaveList(l, byList[l]);
+    }
   });
 }
 
@@ -22535,7 +22547,7 @@ function dealsSave(arr){
       _showSalesSaveStatus('saved');
     }catch(e){
       console.error('[dealsSave] Firebase write failed:', e.message);
-      _showSalesSaveStatus('error');
+      _showSalesSaveStatus('error', e.message);
     }
   })();
 }
