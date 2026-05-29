@@ -67,6 +67,25 @@ async function fbGetAll(col){
 async function fbDelete(col,docId){
   await _fbCall({action:'delete',col,docId});
 }
+// Strict write — throws on any failure so callers can surface real errors.
+// Use this anywhere data MUST reach Firebase (e.g. contacts, deals).
+async function fbSetStrict(col,docId,data){
+  const tok=_fbToken();
+  if(!tok) throw new Error('Not authenticated — please log in again');
+  const r=await fetch(_PROXY,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+    body:JSON.stringify({action:'set',col,docId,data}),
+  });
+  if(!r.ok){
+    let msg='Firebase error';
+    try{ const j=await r.json(); msg=j.error||msg; }catch(e){}
+    throw new Error(`${msg} (HTTP ${r.status})`);
+  }
+  const res=await r.json();
+  localStorage.setItem('dronehub_last_save',Date.now().toString());
+  return res;
+}
 
 // ── Message Encryption (AES-GCM 256-bit) ─────────────────────────────────────
 // Encryption key lives only in memory — never written to localStorage or disk.
@@ -3137,6 +3156,7 @@ button{font-family:var(--font);}
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="sales-search" type="text" placeholder="Search contacts…" oninput="renderSalesTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
+        <span id="sales-save-status" style="font-size:11px;font-weight:600;letter-spacing:.02em;transition:color .2s"></span>
         <button onclick="openSalesAddModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Contact</button>
         <button onclick="openImportModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg> Import Excel</button>
         <button onclick="salesFixUnsplitNames()" title="Scan all contacts and split any full names that landed in the First Name field" style="padding:7px 16px;border-radius:20px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Fix Names</button>
@@ -21060,15 +21080,50 @@ function salesLoadList(listId){
 }
 
 // Save an entire list to memory + Firebase
+let _salesSaveStatusTimer = null;
+function _showSalesSaveStatus(state){
+  const el = document.getElementById('sales-save-status');
+  if(!el) return;
+  clearTimeout(_salesSaveStatusTimer);
+  if(state === 'saving'){
+    el.textContent = '⟳ Saving…';
+    el.style.color = 'var(--muted)';
+  } else if(state === 'saved'){
+    el.textContent = '✓ Saved to cloud';
+    el.style.color = 'var(--green)';
+    _salesSaveStatusTimer = setTimeout(()=>{ if(el) el.textContent=''; }, 3000);
+  } else if(state === 'error'){
+    el.textContent = '⚠ Save failed — check connection';
+    el.style.color = '#FF7070';
+    // Keep the error visible until next save attempt
+  }
+}
+
 function salesSaveList(listId, arr){
   const now = Date.now();
   _salesByList[listId] = arr;
   _salesUpdatedAt[listId] = now;
-  const doSync = () => fbSet('orgs', _salesFbKey(listId), {data: JSON.stringify(arr), updatedAt: now}).catch(()=>{});
+
+  _showSalesSaveStatus('saving');
+
+  const doSync = async () => {
+    try{
+      await fbSetStrict('orgs', _salesFbKey(listId), {data: JSON.stringify(arr), updatedAt: now});
+      _showSalesSaveStatus('saved');
+    }catch(e){
+      console.error('[salesSaveList] Firebase write failed for list "'+listId+'":', e.message);
+      _showSalesSaveStatus('error');
+    }
+  };
+
   if(_fbToken()){
     doSync();
   } else {
-    setTimeout(()=>{ if(_fbToken()) doSync(); }, 2000);
+    // Brief wait for token to become available (e.g. just after login)
+    setTimeout(()=>{
+      if(_fbToken()) doSync();
+      else _showSalesSaveStatus('error');
+    }, 2000);
   }
 }
 
