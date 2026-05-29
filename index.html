@@ -6741,6 +6741,10 @@ async function restoreFromFirebase(forceAll=false){
       fb: ORG_ID+':sales_'+l, ls: null,
       apply: d=>{ try{ _salesByList[l]=JSON.parse(d); _salesUpdatedAt[l]=Date.now(); }catch(e){} }
     })),
+    // Deals pipeline — restore on login so pipeline is available on any device
+    { fb: ORG_ID+':sales_deals', ls: 'dronehub_sales_deals',
+      apply: d=>{ try{ localStorage.setItem('dronehub_sales_deals', d); }catch(e){} }
+    },
   ];
 
   let restored=0;
@@ -21127,14 +21131,19 @@ function salesSaveList(listId, arr){
   }
 }
 
-// Save the full cross-list array back by splitting into per-list buckets
-// Used by legacy callers that operate on the full array
+// Save the full cross-list array back by splitting into per-list buckets.
+// Used by legacy callers that operate on the full array.
+// SAFETY: only writes lists that have already been loaded from Firebase this session
+// (_salesByList[l] !== null). If a list is still null it means we haven't fetched it
+// yet — writing an empty array would wipe out whatever is in Firebase for that list.
 function salesSave(arr){
-  // Group by list
   const byList = {};
   SALES_LISTS.forEach(l=>{ byList[l]=[]; });
   arr.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
-  SALES_LISTS.forEach(l=> salesSaveList(l, byList[l]));
+  SALES_LISTS.forEach(l=>{
+    if(_salesByList[l] !== null) salesSaveList(l, byList[l]);
+    // null → list not loaded yet; skip to avoid overwriting Firebase with an empty placeholder
+  });
 }
 
 // Ensure a specific list is loaded. If listId is omitted, loads all lists.
@@ -21367,22 +21376,31 @@ function setSalesList(listId){
   // Reset select-all checkbox
   const sa = document.getElementById('sales-select-all');
   if(sa) sa.checked = false;
-  // Auto-detect client types and sync from main Clients tab when entering clients list
+  // Auto-detect client types and sync from main Clients tab when entering clients list.
+  // Must run AFTER all lists are loaded from Firebase so salesSave doesn't clobber
+  // unloaded lists with empty arrays.
   if(listId === 'clients'){
-    syncAllClientsToCRM(); // pull all clients → Existing Clients list
-    const allContacts = salesLoad();
-    if(salesAutoDetectClientTypes(allContacts)) salesSave(allContacts);
+    salesEnsureLoaded().then(()=>{
+      syncAllClientsToCRM();
+      const allContacts = salesLoad();
+      if(salesAutoDetectClientTypes(allContacts)) salesSave(allContacts);
+      renderSalesTable();
+    });
+  } else {
+    renderSalesTable();
   }
-  renderSalesTable();
 }
 
 function renderSales(){
-  // Always sync main Clients → Existing Clients list so nothing is missed
-  syncAllClientsToCRM();
-  salesSyncFirebase().then(()=>renderSalesTable());
-  dealsSyncFirebase && dealsSyncFirebase().then(()=>{ if(salesView==='pipeline') renderDealsTable(); }).catch(()=>{});
-  renderSalesTable(); // immediate
+  renderSalesTable(); // immediate paint with whatever is already in memory
   if(salesView==='pipeline') renderDealsTable();
+  // Load from Firebase first, THEN sync clients so salesSave never runs
+  // against partially-loaded lists.
+  salesSyncFirebase().then(()=>{
+    syncAllClientsToCRM();
+    renderSalesTable();
+  });
+  dealsSyncFirebase && dealsSyncFirebase().then(()=>{ if(salesView==='pipeline') renderDealsTable(); }).catch(()=>{});
 }
 
 // Auto-classify unclassified Other contacts by inferring type from company name
@@ -22504,8 +22522,22 @@ function dealsLoad(){
   catch(e){ return []; }
 }
 function dealsSave(arr){
-  localStorage.setItem('dronehub_sales_deals', JSON.stringify(arr));
-  if(_fbToken()) fbSet('orgs', ORG_ID+':sales_deals', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  // Keep a local copy as fast cache only — Firebase is the source of truth
+  const now = Date.now();
+  try{
+    localStorage.setItem('dronehub_sales_deals', JSON.stringify(arr));
+    localStorage.setItem('dronehub_sales_deals_ts', String(now));
+  }catch(e){}
+  _showSalesSaveStatus('saving');
+  (async()=>{
+    try{
+      await fbSetStrict('orgs', ORG_ID+':sales_deals', {data:JSON.stringify(arr), updatedAt:now});
+      _showSalesSaveStatus('saved');
+    }catch(e){
+      console.error('[dealsSave] Firebase write failed:', e.message);
+      _showSalesSaveStatus('error');
+    }
+  })();
 }
 
 async function dealsSyncFirebase(){
@@ -22513,8 +22545,14 @@ async function dealsSyncFirebase(){
   try{
     const fb = await fbGet('orgs', ORG_ID+':sales_deals');
     if(fb?.data){
-      const remote = JSON.parse(fb.data);
-      localStorage.setItem('dronehub_sales_deals', JSON.stringify(remote));
+      const remoteTs = fb.updatedAt || 0;
+      const localTs  = parseInt(localStorage.getItem('dronehub_sales_deals_ts')||'0', 10);
+      // Only apply Firebase data if it's newer than what we last wrote locally
+      if(remoteTs >= localTs){
+        const remote = JSON.parse(fb.data);
+        localStorage.setItem('dronehub_sales_deals', JSON.stringify(remote));
+        localStorage.setItem('dronehub_sales_deals_ts', String(remoteTs));
+      }
     }
   }catch(e){}
 }
