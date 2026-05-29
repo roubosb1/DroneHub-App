@@ -21113,15 +21113,55 @@ async function salesMigrateLocalStorage(){
 
   if(!allLegacy.length) return; // nothing to migrate
 
+  // ── SAFETY: write a backup doc BEFORE touching anything else ────────────────
+  const now = Date.now();
+  try{
+    await fbSet('orgs', ORG_ID+':sales_backup', {
+      data: JSON.stringify(allLegacy),
+      count: allLegacy.length,
+      migratedAt: now,
+      source: 'migration'
+    });
+  }catch(e){ console.warn('[salesMigrate] backup write failed — aborting migration to protect data', e); return; }
+
   // Split by list and write each to its own Firebase doc
   const byList = {};
   SALES_LISTS.forEach(l=>{ byList[l]=[]; });
   allLegacy.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
 
-  const now = Date.now();
+  const writeResults = {};
   for(const l of SALES_LISTS){
     if(byList[l].length){
-      await fbSet('orgs', _salesFbKey(l), {data: JSON.stringify(byList[l]), updatedAt: now}).catch(()=>{});
+      try{
+        await fbSet('orgs', _salesFbKey(l), {data: JSON.stringify(byList[l]), updatedAt: now});
+        writeResults[l] = true;
+      }catch(e){
+        writeResults[l] = false;
+        console.warn('[salesMigrate] per-list write failed for', l, e);
+      }
+    } else {
+      writeResults[l] = true; // nothing to write = fine
+    }
+  }
+
+  // ── VERIFY: read back at least one list that had data ────────────────────────
+  const listsWithData = SALES_LISTS.filter(l=>byList[l].length);
+  let verified = true;
+  if(listsWithData.length){
+    try{
+      const check = await fbGet('orgs', _salesFbKey(listsWithData[0]));
+      verified = !!(check?.data && JSON.parse(check.data).length > 0);
+    }catch(e){ verified = false; }
+  }
+
+  if(!verified || SALES_LISTS.some(l=>byList[l].length && !writeResults[l])){
+    console.warn('[salesMigrate] write verification failed — leaving old sources intact for safety');
+    return;
+  }
+
+  // Update in-memory cache for written lists
+  for(const l of SALES_LISTS){
+    if(byList[l].length){
       _salesByList[l] = byList[l];
       _salesUpdatedAt[l] = now;
     }
@@ -21129,11 +21169,73 @@ async function salesMigrateLocalStorage(){
 
   console.log(`salesMigrateLocalStorage: split ${allLegacy.length} contacts into per-list Firebase docs`);
 
-  // Clean up old sources
+  // Clean up old sources ONLY after successful verified writes
   localStorage.removeItem('dronehub_sales');
   localStorage.removeItem('dronehub_sales_updatedAt');
-  // Delete the old monolithic Firebase doc (best-effort)
+  // Overwrite the old monolithic Firebase doc (best-effort)
   if(legacyFb) fbSet('orgs', ORG_ID+':sales', {data:'[]', updatedAt:0}).catch(()=>{});
+}
+
+// Attempt to recover contacts from the migration backup doc.
+// Returns the number of contacts recovered (0 = nothing found).
+async function salesTryRecover(){
+  if(!_fbToken()) return 0;
+  try{
+    const backup = await fbGet('orgs', ORG_ID+':sales_backup');
+    if(!backup?.data) return 0;
+    let contacts = [];
+    try{ contacts = JSON.parse(backup.data); }catch(e){ return 0; }
+    if(!Array.isArray(contacts) || !contacts.length) return 0;
+
+    // Split by list
+    const byList = {};
+    SALES_LISTS.forEach(l=>{ byList[l]=[]; });
+    contacts.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
+
+    const now = Date.now();
+    for(const l of SALES_LISTS){
+      // Only restore to lists that are currently empty (don't overwrite real data)
+      const currentEmpty = !_salesByList[l] || _salesByList[l].length === 0;
+      if(currentEmpty && byList[l].length){
+        try{
+          await fbSet('orgs', _salesFbKey(l), {data: JSON.stringify(byList[l]), updatedAt: now});
+          _salesByList[l] = byList[l];
+          _salesUpdatedAt[l] = now;
+        }catch(e){}
+      }
+    }
+    return contacts.length;
+  }catch(e){
+    console.error('[salesTryRecover]', e);
+    return 0;
+  }
+}
+
+// UI wrapper for the recovery button — shows feedback to the user
+async function salesRunRecovery(){
+  const btn = document.querySelector('button[onclick="salesRunRecovery()"]');
+  if(btn){ btn.disabled=true; btn.textContent='Searching…'; }
+  try{
+    const n = await salesTryRecover();
+    if(n > 0){
+      renderSalesTable();
+      alert(`✅ Recovered ${n} contact${n===1?'':'s'} from backup. Check each list for your contacts.`);
+    } else {
+      // Also try a fresh sync from Firebase before giving up
+      await salesSyncFirebase();
+      const total = SALES_LISTS.reduce((s,l)=>s+(_salesByList[l]||[]).length,0);
+      if(total > 0){
+        renderSalesTable();
+        alert(`✅ Found ${total} contact${total===1?'':'s'} after re-syncing from Firebase.`);
+      } else {
+        alert('No backup data was found. Your contacts may have been lost in a previous session.\n\nIf you have an Excel or CSV export, you can re-import via the Import button.');
+        if(btn){ btn.disabled=false; btn.textContent='🔍 Try to Recover Contacts'; }
+      }
+    }
+  }catch(e){
+    alert('Recovery failed: '+e.message);
+    if(btn){ btn.disabled=false; btn.textContent='🔍 Try to Recover Contacts'; }
+  }
 }
 
 // Sync one or all lists from Firebase
@@ -21380,7 +21482,17 @@ function renderSalesTable(){
   const tbody = document.getElementById('sales-table-body');
   if(!tbody) return;
   if(!filtered.length){
-    tbody.innerHTML = `<tr><td colspan="${isOtherTab?10:9}" style="text-align:center;color:var(--muted);padding:32px">${q?'No contacts match your search.':'No contacts in this list yet.'}</td></tr>`;
+    // Check if ALL lists are empty — might be a data recovery situation
+    const totalAll = SALES_LISTS.reduce((s,l)=>s+(_salesByList[l]||[]).filter(c=>!c._deleted).length,0);
+    const allEmpty = totalAll === 0 && SALES_LISTS.every(l=>Array.isArray(_salesByList[l]));
+    const recoveryHtml = (!q && allEmpty) ? `
+      <div style="margin-top:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">If your contacts recently disappeared, a backup may be available.</div>
+        <button onclick="salesRunRecovery()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--blue-bright);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">
+          🔍 Try to Recover Contacts
+        </button>
+      </div>` : '';
+    tbody.innerHTML = `<tr><td colspan="${isOtherTab?10:9}" style="text-align:center;color:var(--muted);padding:32px 20px">${q?'No contacts match your search.':'No contacts in this list yet.'}${recoveryHtml}</td></tr>`;
     return;
   }
 
