@@ -14040,14 +14040,49 @@ function renderFinance(){
   });
 
   // Category donut chart
-  const catColors={'Equipment':'#5B7FDB','Software':'#1D9E75','Fuel':'#C87D1E','Marketing':'#9B5DE5','Insurance':'#E85D3A','Office':'#888780','Subcontractor':'#0C447C','Other':'#B4B2A9'};
+  const catColors={
+    // Equipment / tech
+    'Equipment':'#5B7FDB','Equipment Lease':'#4A6FCA','Software':'#1D9E75',
+    // People costs
+    'Contractors':'#E85D3A','Subcontractor':'#D44E2E','Payroll':'#F5A623',
+    'Payroll Tax':'#E8931A','Subcontractors':'#D44E2E',
+    // Travel & vehicles
+    'Travel':'#00B4D8','Vehicle Expense':'#0096C7','Vehicle':'#0096C7',
+    'Fuel':'#C87D1E','Fuel/EV':'#B87010','Gas':'#C87D1E',
+    // Marketing / advertising
+    'Marketing':'#9B5DE5','Advertising':'#8A4DD4','Advertising & Promotion':'#9B5DE5',
+    // Admin & finance
+    'Bank Fees':'#64748B','Accounting':'#475569','Taxes':'#DC2626',
+    'Tax':'#DC2626','Business License':'#7C3AED','Legal':'#6D28D9',
+    'Insurance':'#0D9488',
+    // Food / entertainment
+    'Meals':'#F59E0B','Meals & Entertainment':'#F59E0B','Entertainment':'#FBBF24',
+    // Office / supplies
+    'Office':'#6B7280','Supplies':'#9CA3AF','Office Supplies':'#6B7280',
+    // Phone / utilities
+    'Phone':'#06B6D4','Phone/Internet':'#06B6D4','Internet':'#0EA5E9',
+    'Utilities':'#14B8A6',
+    // Misc
+    'Gifts':'#EC4899','Personal':'#A78BFA','Education':'#34D399',
+    'Transfer Funds':'#94A3B8','Other':'#B4B2A9',
+  };
+  // Deterministic color generator for any category not in the map above
+  // Hashes the category name to a consistent hue so the same category always
+  // gets the same color across sessions.
+  function _catColor(name){
+    if(catColors[name]) return catColors[name];
+    let h=0; for(let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))&0xFFFFFF;
+    const hue=(h%360+360)%360;
+    return `hsl(${hue},58%,52%)`;
+  }
+
   const catTotals={};
   expenses.filter(e=>e.date&&e.date.startsWith(year)).forEach(e=>{
     catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;
   });
   const catKeys=Object.keys(catTotals);
   const catVals=catKeys.map(k=>Math.round(catTotals[k]*100)/100);
-  const catColArr=catKeys.map(k=>catColors[k]||'#888');
+  const catColArr=catKeys.map(k=>_catColor(k));
   const ctx2=document.getElementById('exp-cat-chart');
   if(expCatChartInst){expCatChartInst.destroy();expCatChartInst=null;}
   if(catKeys.length){
