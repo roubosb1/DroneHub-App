@@ -16992,17 +16992,31 @@ function totp2faGetSecret(email){
   const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
   return data[email.toLowerCase()]||null;
 }
-function totp2faSaveSecret(email,secret){
-  const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+async function totp2faSaveSecret(email,secret){
+  // Merge with whatever Firebase already has so we don't overwrite other users' entries
+  let data={};
+  try{
+    const fb=await fbGet('orgs',ORG_ID+':2fa');
+    if(fb?.data) data=JSON.parse(fb.data);
+  }catch(e){}
+  // Also merge local cache
+  try{ Object.assign(data, JSON.parse(localStorage.getItem('dronehub_2fa')||'{}')); }catch(e){}
   data[email.toLowerCase()]={secret,verified:false,createdAt:new Date().toISOString()};
-  localStorage.setItem('dronehub_2fa',JSON.stringify(data));
-  fbSet('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
+  // Firebase first — if this fails the user should not proceed with setup
+  await fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
+  try{localStorage.setItem('dronehub_2fa',JSON.stringify(data));}catch(e){}
 }
-function totp2faMarkVerified(email){
-  const data=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+async function totp2faMarkVerified(email){
+  let data={};
+  try{
+    const fb=await fbGet('orgs',ORG_ID+':2fa');
+    if(fb?.data) data=JSON.parse(fb.data);
+  }catch(e){}
+  try{ Object.assign(data, JSON.parse(localStorage.getItem('dronehub_2fa')||'{}')); }catch(e){}
   if(data[email.toLowerCase()]) data[email.toLowerCase()].verified=true;
-  localStorage.setItem('dronehub_2fa',JSON.stringify(data));
-  fbSet('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
+  // Firebase first — if this fails the verification must not be marked complete
+  await fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(data),updatedAt:Date.now()});
+  try{localStorage.setItem('dronehub_2fa',JSON.stringify(data));}catch(e){}
 }
 function totp2faRememberDevice(email){
   const key='dronehub_2fa_trusted_'+email.toLowerCase().replace(/[^a-z0-9]/g,'_');
@@ -17093,7 +17107,7 @@ function totp2faVerifyCode(email,code){
     return delta!==null;
   }catch(e){console.error('TOTP error:',e);return false;}
 }
-function totp2faGenerateSecret(email){
+function totp2faGenerateSecretRaw(){
   const base32chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const array=new Uint8Array(20);
   crypto.getRandomValues(array);
@@ -17102,7 +17116,6 @@ function totp2faGenerateSecret(email){
     const buf=((array[i]||0)<<32)|((array[i+1]||0)<<24)|((array[i+2]||0)<<16)|((array[i+3]||0)<<8)|(array[i+4]||0);
     for(let j=7;j>=0;j--) b32+=base32chars[(buf>>>(j*5))&31];
   }
-  totp2faSaveSecret(email,b32);
   return b32;
 }
 function totp2faGetUri(email,secret){
@@ -17118,12 +17131,31 @@ function totp2faGetUri(email,secret){
 }
 let _pending2faSession=null;
 
-function gateShow2faSetup(session){
+async function gateShow2faSetup(session){
   _pending2faSession=session;
   const email=session.email;
-  const secret=totp2faGenerateSecret(email);
-  const uri=totp2faGetUri(email,secret);
   const gate=document.getElementById('site-login-gate');
+
+  // Show a loading state while we save the secret to Firebase
+  gate.innerHTML=`<div style="text-align:center;color:var(--muted);padding:60px;font-size:14px">Setting up 2FA…</div>`;
+
+  let secret;
+  try{
+    secret=totp2faGenerateSecretRaw();
+    await totp2faSaveSecret(email,secret); // Firebase-first — throws if save fails
+  }catch(e){
+    gate.innerHTML=`<div style="text-align:center;max-width:380px;width:100%;padding:20px">
+      <div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:20px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
+      <div style="background:var(--navy-card);border-radius:18px;border:1px solid rgba(255,80,80,.4);padding:28px">
+        <div style="color:#FF7070;font-size:15px;font-weight:700;margin-bottom:10px">⚠ Could not save 2FA to cloud</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">${e.message}<br><br>Check your internet connection and try again.</div>
+        <button onclick="gateShow2faSetup(_pending2faSession)" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Retry</button>
+        <button onclick="location.reload()" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:8px">← Back to sign in</button>
+      </div></div>`;
+    return;
+  }
+
+  const uri=totp2faGetUri(email,secret);
   gate.innerHTML=`
   <div style="text-align:center;max-width:420px;width:100%;padding:20px">
     <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:4px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
@@ -17152,13 +17184,21 @@ function gateShow2faSetup(session){
   },300);
 }
 
-function gateVerify2faSetup(){
+async function gateVerify2faSetup(){
   const code=document.getElementById('totp-setup-code')?.value.replace(/\s/g,'');
   const err=document.getElementById('totp-setup-error');
   if(!code||code.length!==6){if(err){err.textContent='Enter the 6-digit code from Google Authenticator.';err.style.display='block';}return;}
   if(totp2faVerifyCode(_pending2faSession.email,code)){
-    totp2faMarkVerified(_pending2faSession.email);
-    totp2faRememberDevice(_pending2faSession.email); // trust this device for 30 days
+    const btn=document.querySelector('#site-login-gate button[onclick="gateVerify2faSetup()"]');
+    if(btn){btn.disabled=true;btn.textContent='Saving…';}
+    try{
+      await totp2faMarkVerified(_pending2faSession.email); // Firebase-first — throws if save fails
+    }catch(e){
+      if(err){err.textContent='Code correct but could not save to cloud: '+e.message+'. Check your connection and try again.';err.style.display='block';}
+      if(btn){btn.disabled=false;btn.textContent='Confirm & activate →';}
+      return;
+    }
+    totp2faRememberDevice(_pending2faSession.email);
     gateEnterApp(_pending2faSession);
   } else {
     if(err){err.textContent='Incorrect code — make sure your phone clock is correct and try again.';err.style.display='block';}
