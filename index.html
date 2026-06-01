@@ -21186,6 +21186,43 @@ function _showSalesSaveStatus(state, msg){
   }
 }
 
+// Firestore hard limit is 1MB per document. We leave a safe margin and chunk
+// any list whose JSON exceeds this threshold across numbered part docs.
+const _SALES_CHUNK_BYTES = 700000; // 700 KB per chunk
+
+function _salesChunkSplit(arr){
+  const chunks = [];
+  let i = 0;
+  while(i < arr.length){
+    let lo = i, hi = arr.length;
+    // Binary-search the largest slice that fits in one chunk
+    while(lo < hi - 1){
+      const mid = (lo + hi) >> 1;
+      JSON.stringify(arr.slice(i, mid)).length <= _SALES_CHUNK_BYTES ? (lo=mid) : (hi=mid);
+    }
+    // Guarantee progress even for a single oversized contact
+    const end = lo > i ? lo : i + 1;
+    chunks.push(arr.slice(i, end));
+    i = end;
+  }
+  return chunks;
+}
+
+// Read a potentially-chunked list doc from Firebase and return the merged array.
+// fb is the result of fbGet(key) — has {data?, chunks?, updatedAt?}.
+async function _salesReadChunked(fb, fbKey){
+  if(!fb) return null;
+  const numChunks = fb.chunks || 1;
+  if(numChunks <= 1){
+    return fb.data ? JSON.parse(fb.data) : null;
+  }
+  // Load all part docs in parallel
+  const parts = await Promise.all(
+    Array.from({length: numChunks}, (_, i) => fbGet('orgs', fbKey+'_part'+i).catch(()=>null))
+  );
+  return parts.flatMap(p=>{ try{ return p?.data ? JSON.parse(p.data) : []; }catch(e){ return []; } });
+}
+
 function salesSaveList(listId, arr){
   const now = Date.now();
   _salesByList[listId] = arr;
@@ -21193,9 +21230,26 @@ function salesSaveList(listId, arr){
 
   _showSalesSaveStatus('saving');
 
+  const fbKey = _salesFbKey(listId);
   const doSync = async () => {
     try{
-      await fbSetStrict('orgs', _salesFbKey(listId), {data: JSON.stringify(arr), updatedAt: now});
+      const json = JSON.stringify(arr);
+      if(json.length <= _SALES_CHUNK_BYTES){
+        // Single document — also clear any stale chunk parts from a previous chunked write
+        await fbSetStrict('orgs', fbKey, {data: json, updatedAt: now, chunks: 1});
+        // Best-effort cleanup of old part docs (fire and forget)
+        for(let i=0;i<20;i++) fbDelete('orgs', fbKey+'_part'+i).catch(()=>{});
+      } else {
+        // Chunked write — split into ≤700KB parts
+        const chunks = _salesChunkSplit(arr);
+        for(let i=0;i<chunks.length;i++){
+          await fbSetStrict('orgs', fbKey+'_part'+i, {data: JSON.stringify(chunks[i]), updatedAt: now});
+        }
+        // Header doc: null data field so restoreFromFirebase skips applying it directly
+        await fbSetStrict('orgs', fbKey, {data: null, chunks: chunks.length, updatedAt: now});
+        // Cleanup any excess part docs from a previous write that had more chunks
+        for(let i=chunks.length;i<chunks.length+10;i++) fbDelete('orgs', fbKey+'_part'+i).catch(()=>{});
+      }
       _showSalesSaveStatus('saved');
     }catch(e){
       console.error('[salesSaveList] Firebase write failed for list "'+listId+'":', e.message);
@@ -21206,7 +21260,6 @@ function salesSaveList(listId, arr){
   if(_fbToken()){
     doSync();
   } else {
-    // Brief wait for token to become available (e.g. just after login)
     setTimeout(()=>{
       if(_fbToken()) doSync();
       else _showSalesSaveStatus('error');
@@ -21389,7 +21442,7 @@ async function salesRunRecovery(){
   }
 }
 
-// Sync one or all lists from Firebase
+// Sync one or all lists from Firebase (handles chunked docs transparently)
 async function salesSyncFirebase(listId){
   if(!_fbToken()) return;
   // Run one-time migration from old monolithic doc on first sync
@@ -21399,16 +21452,23 @@ async function salesSyncFirebase(listId){
   const listsToSync = listId ? [listId] : SALES_LISTS;
   for(const l of listsToSync){
     try{
-      const fb = await fbGet('orgs', _salesFbKey(l));
-      if(fb?.data){
-        const remoteTs = fb.updatedAt || 0;
-        if(remoteTs > (_salesUpdatedAt[l]||0)){
-          _salesByList[l] = JSON.parse(fb.data);
+      const fbKey = _salesFbKey(l);
+      const fb = await fbGet('orgs', fbKey);
+      const remoteTs = fb?.updatedAt || 0;
+      if(fb && remoteTs > (_salesUpdatedAt[l]||0)){
+        const data = await _salesReadChunked(fb, fbKey);
+        if(data !== null){
+          _salesByList[l] = data;
           _salesUpdatedAt[l] = remoteTs;
         }
-      } else {
+      } else if(!fb){
         // Doc doesn't exist yet — initialise as empty
         if(_salesByList[l] === null) _salesByList[l] = [];
+      } else if(_salesByList[l] === null){
+        // Doc exists but isn't newer — still need to initialise memory
+        const data = await _salesReadChunked(fb, fbKey);
+        _salesByList[l] = data || [];
+        _salesUpdatedAt[l] = remoteTs;
       }
     }catch(e){
       if(_salesByList[l] === null) _salesByList[l] = [];
@@ -21432,13 +21492,17 @@ async function _salesLiveSyncTick(){
   const ordered = [salesActiveList, ...SALES_LISTS.filter(l => l !== salesActiveList)];
   for(const l of ordered){
     try{
-      const doc = await fbGet('orgs', _salesFbKey(l));
-      if(doc?.data){
+      const fbKey = _salesFbKey(l);
+      const doc = await fbGet('orgs', fbKey);
+      if(doc){
         const remoteTs = doc.updatedAt || 0;
         if(remoteTs > (_salesUpdatedAt[l] || 0)){
-          _salesByList[l] = JSON.parse(doc.data);
-          _salesUpdatedAt[l] = remoteTs;
-          if(l === salesActiveList) changed = true;
+          const data = await _salesReadChunked(doc, fbKey);
+          if(data !== null){
+            _salesByList[l] = data;
+            _salesUpdatedAt[l] = remoteTs;
+            if(l === salesActiveList) changed = true;
+          }
         }
       }
     }catch(e){}

@@ -130,6 +130,6 @@ exports.handler = async (event) => {
 
   } catch (err) {
     console.error('firebase-proxy error:', err.message);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Firebase error' }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message || 'Firebase error' }) };
   }
 };
