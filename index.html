@@ -4803,6 +4803,65 @@ function syncSalesCRMToClient(contact){
   if(clientsDirty) saveClientsToStorage();
   if(salesDirty) salesSave(allSales);
 }
+
+// Batch sync: all CRM contacts with list='clients' → Clients tab.
+// Used after bulk import so every imported client appears in the Clients tab
+// without triggering a separate salesSave per contact.
+function syncCRMClientsToTab(crmContacts){
+  if(!crmContacts || !crmContacts.length) return;
+  let clientsDirty = false;
+  const salesBackLinks = {}; // crmContactId → clientId (for back-linking)
+
+  crmContacts.forEach(sc => {
+    if(!sc || sc.list !== 'clients') return;
+    const fullName = [sc.firstName, sc.lastName].filter(Boolean).join(' ');
+    let idx = clients.findIndex(c => c._salesId === sc.id);
+    if(idx < 0 && sc.email) idx = clients.findIndex(c => c.email && c.email.toLowerCase() === sc.email.toLowerCase());
+
+    if(idx >= 0){
+      const c = clients[idx];
+      if(!c.name && fullName)    { c.name    = fullName;     clientsDirty = true; }
+      if(!c.company && sc.company){ c.company = sc.company;  clientsDirty = true; }
+      if(!c.email && sc.email)   { c.email   = sc.email;     clientsDirty = true; }
+      if(!c.phone && sc.phone)   { c.phone   = sc.phone;     clientsDirty = true; }
+      if(c._salesId !== sc.id)   { c._salesId = sc.id;       clientsDirty = true; }
+      if(sc._clientTypeManual){
+        const ns = sc.clientType === 'past' ? 'inactive' : 'active';
+        if(c.status !== ns){ c.status = ns; clientsDirty = true; }
+      }
+      salesBackLinks[sc.id] = c.id;
+    } else {
+      const newClient = {
+        id: 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        name: fullName || sc.email || 'Client',
+        company: sc.company || '',
+        email: sc.email || '',
+        phone: sc.phone || '',
+        website: '', accountNumber: '',
+        address: '', address2: '', city: sc.city || '', state: '', zip: '', country: '', currency: '',
+        createdAt: sc.createdAt || new Date().toISOString().slice(0,10),
+        status: sc.clientType === 'past' ? 'inactive' : 'active',
+        _salesId: sc.id,
+      };
+      clients.push(newClient);
+      salesBackLinks[sc.id] = newClient.id;
+      clientsDirty = true;
+    }
+  });
+
+  if(clientsDirty) saveClientsToStorage();
+
+  // Write back _clientId links to CRM contacts in a single pass
+  const all = salesLoad();
+  let salesDirty = false;
+  all.forEach(sc => {
+    if(salesBackLinks[sc.id] && sc._clientId !== salesBackLinks[sc.id]){
+      sc._clientId = salesBackLinks[sc.id];
+      salesDirty = true;
+    }
+  });
+  if(salesDirty) salesSave(all);
+}
 const TWILIGHT_VIDEO=350,TWILIGHT_PHOTO=250,TWILIGHT_BOTH=540;
 const FREE_RADIUS_KM=40;
 
@@ -21188,7 +21247,7 @@ function _showSalesSaveStatus(state, msg){
 
 // Firestore hard limit is 1MB per document. We leave a safe margin and chunk
 // any list whose JSON exceeds this threshold across numbered part docs.
-const _SALES_CHUNK_BYTES = 700000; // 700 KB per chunk
+const _SALES_CHUNK_BYTES = 900000; // 900 KB per chunk (Firestore 1 MB doc limit, ~100 KB headroom for field overhead)
 
 function _salesChunkSplit(arr){
   const chunks = [];
@@ -22392,6 +22451,11 @@ function processSalesImportFile(file, listId, overwriteDupes, defaultOtherType){
       });
       // Save to Firebase (in-memory + cloud — no localStorage size limits)
       salesSave(all);
+      // Mirror any imported clients into the Clients tab
+      if(listId === 'clients'){
+        syncCRMClientsToTab(all.filter(c => c.list === 'clients'));
+        if(typeof renderClients === 'function') renderClients();
+      }
       closeSalesImportModal();
       setSalesList(listId);
       renderSalesTable();
