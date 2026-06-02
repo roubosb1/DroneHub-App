@@ -180,7 +180,7 @@ async function saveProfilePhoto(email,dataUrl){
   const key=email.toLowerCase();
   // Compress to a thumbnail so we never hit Firestore's 1 MB document limit
   const compressed=await _resizePhoto(dataUrl,200);
-  // ── 1. Update localStorage ──────────────────────────────────────────────
+  // ── 1. Update localStorage immediately so the UI responds right away ─────
   let photos=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
   // Merge with remote first so we don't overwrite other team members' photos
   try{
@@ -189,11 +189,20 @@ async function saveProfilePhoto(email,dataUrl){
   }catch(e){}
   photos[key]=compressed;
   localStorage.setItem('dronehub_photos',JSON.stringify(photos));
-  // ── 2. Write to shared photos document (used by the startup sync) ───────
+  // ── 2. PRIMARY: write the per-user doc first — this is the reliable backup.
+  // Each user's photo lives in its own doc so it can never be displaced by
+  // another user's write or by the shared doc exceeding the 1 MB limit.
+  try{
+    await fbSetStrict('orgs',ORG_ID+':photo_'+key,{photo:compressed,email:key,updatedAt:Date.now()});
+  }catch(e){
+    console.error('[saveProfilePhoto] per-user doc write failed:',e.message);
+    showDhToast('Photo not saved','Could not save profile picture to cloud — check your connection and try again.','⚠️','var(--orange)',6000);
+    return; // don't bother writing the shared doc if we already failed
+  }
+  // ── 3. SECONDARY: also update the shared doc so restoreFromFirebase can
+  // restore all photos in one fetch. Best-effort — failure is acceptable
+  // because the per-user doc (step 2) is the authoritative source.
   fbSet('orgs',ORG_ID+':photos',{data:JSON.stringify(photos),updatedAt:Date.now()}).catch(()=>{});
-  // ── 3. Belt-and-suspenders: also write each person's photo to their own doc
-  // This way photos survive even if the shared doc fails to sync on another device
-  fbSet('orgs',ORG_ID+':photo_'+key,{photo:compressed,email:key,updatedAt:Date.now()}).catch(()=>{});
 }
 
 async function loadProfilePhotoFromFirebase(email){
@@ -6938,9 +6947,17 @@ async function restoreTeamProfiles(){
     });
   }
   // Restore any per-user photo docs that aren't already in localStorage
-  // This fills gaps left when a photo was too large for the shared doc
+  // Fetch per-user photo docs for any member (or the logged-in user) whose
+  // photo isn't in localStorage yet. Per-user docs are the primary source —
+  // they survive even when the shared :photos doc fails to write.
   const photosLocal=JSON.parse(localStorage.getItem('dronehub_photos')||'{}');
-  const emailsMissingPhoto=members.filter(m=>m.email&&!photosLocal[m.email.toLowerCase()]).map(m=>m.email.toLowerCase());
+  // Always include the logged-in user's email so their own photo restores
+  // even if they're not listed as a team member.
+  const session=gateGetSession&&gateGetSession();
+  const selfEmail=session?.email?.toLowerCase()||'';
+  const memberEmails=members.filter(m=>m.email).map(m=>m.email.toLowerCase());
+  const allEmails=[...new Set([selfEmail,...memberEmails].filter(Boolean))];
+  const emailsMissingPhoto=allEmails.filter(e=>!photosLocal[e]);
   if(emailsMissingPhoto.length){
     Promise.allSettled(emailsMissingPhoto.map(async email=>{
       try{
