@@ -16116,8 +16116,9 @@ function gateGetUsers(){
 function gateSaveUsers(arr){
   try{localStorage.setItem('dronehub_gate_users',JSON.stringify(arr));}catch(e){}
   // SAFETY: never overwrite Firebase with an empty array — would wipe all user accounts
-  if(arr.length > 0){
-    fbSet('orgs',ORG_ID+':gate_users',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  if(arr.length > 0 && _fbToken()){
+    fbSetStrict('orgs',ORG_ID+':gate_users',{data:JSON.stringify(arr),updatedAt:Date.now()})
+      .catch(e=>console.error('[gateSaveUsers] Firebase write failed:',e.message));
   }
 }
 
@@ -16395,14 +16396,33 @@ async function gateLogin(){
   }
 
   if(!user){
-    // Local not found — check Firebase before giving up (handles cross-device logins)
+    // Not in localStorage — get a Firebase token FIRST using credentials,
+    // then use it to look up the user. This handles browser-clear and cross-
+    // device logins where localStorage is empty but Firebase has the account.
+    errEl.textContent='Checking…';errEl.style.display='block';
+    let _earlyAuthOk=false;
+    if(!_fbToken()){
+      try{
+        const _earlyAuth=await fetch('/.netlify/functions/auth',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({email,password:pass,orgId:ORG_ID}),
+        });
+        if(_earlyAuth.status===401){
+          recordLoginFailure(email);
+          errEl.textContent='Incorrect password.';errEl.style.display='block';return;
+        }
+        if(_earlyAuth.ok){
+          const {token}=await _earlyAuth.json();
+          if(token){_dhToken=token;try{sessionStorage.setItem('dh_token',token);}catch(e){}_earlyAuthOk=true;}
+        }
+      }catch(e){/* offline — fall through to local fallbacks */}
+    }
+
     if(_fbToken()){
-      errEl.textContent='Checking…';errEl.style.display='block';
       // First: check if this email belongs to a different org (multi-tenant)
       try{
         const theirOrgId=await lookupUserOrg(email);
         if(theirOrgId && theirOrgId!==ORG_ID){
-          // Switch to their org and load their users
           ORG_ID=theirOrgId;
           const fbOrgData=await fbGet('orgs',ORG_ID+':gate_users');
           if(fbOrgData?.data){
@@ -16412,7 +16432,7 @@ async function gateLogin(){
           }
         }
       }catch(e){console.warn('Org lookup failed:',e);}
-      // Fallback: check dronehub_main Firebase users
+      // Fallback: check dronehub_main Firebase gate_users
       if(!user){
         try{
           const fbData=await fbGet('orgs',ORG_ID+':gate_users');
@@ -16420,7 +16440,6 @@ async function gateLogin(){
             const fbUsers=JSON.parse(fbData.data);
             const fbUser=fbUsers.find(u=>u.email.toLowerCase()===email);
             if(fbUser){
-              // Pull into localStorage for future logins on this device
               const merged=gateGetUsers();
               if(!merged.find(u=>u.email.toLowerCase()===email)){merged.push(fbUser);try{localStorage.setItem('dronehub_gate_users',JSON.stringify(merged));}catch(e){}}
               user=fbUser;
@@ -16428,40 +16447,30 @@ async function gateLogin(){
           }
         }catch(e){console.warn('Firebase user lookup failed:',e);}
       }
-      // Last resort: check admin team roster — if email is there, auto-create a
-      // gate_users entry with no passHash so the login flow lets them set one now.
+      // Last resort: check admin team roster
       if(!user){
         try{
           let teamMembers=getAdminTeamMembers();
-          // Also try Firebase admin team in case localStorage is empty on this device
-          if(!teamMembers.length&&_fbToken()){
+          if(!teamMembers.length){
             const fbTeam=await fbGet('orgs',ORG_ID+':team');
             if(fbTeam?.data) try{teamMembers=JSON.parse(fbTeam.data);}catch(e){}
           }
           const teamEntry=teamMembers.find(m=>(m.email||'').toLowerCase()===email);
           if(teamEntry){
-            // Create login account from roster entry — passHash blank triggers first-login flow
-            user={
-              email:teamEntry.email,
-              name:teamEntry.name||email.split('@')[0],
-              role:teamEntry.role||'contractor',
-              type:teamEntry.role==='admin'?'admin':'team',
-              jobTitle:teamEntry.jobTitle||'',
-              passHash:'',
-              clientId:null,
-              createdAt:new Date().toISOString().slice(0,10),
-            };
+            user={email:teamEntry.email,name:teamEntry.name||email.split('@')[0],
+              role:teamEntry.role||'contractor',type:teamEntry.role==='admin'?'admin':'team',
+              jobTitle:teamEntry.jobTitle||'',passHash:'',clientId:null,
+              createdAt:new Date().toISOString().slice(0,10)};
             const merged=gateGetUsers();
-            if(!merged.find(u=>u.email.toLowerCase()===email)){
-              merged.push(user);
-              gateSaveUsers(merged);
-            }
+            if(!merged.find(u=>u.email.toLowerCase()===email)){merged.push(user);gateSaveUsers(merged);}
           }
         }catch(e){console.warn('Team roster fallback failed:',e);}
       }
     }
     if(!user){errEl.textContent='No account found for that email. Please sign up first or ask your admin to reset your access.';errEl.style.display='block';return;}
     errEl.style.display='none';
+    // If auth.js already validated the password, skip the local password check below
+    if(_earlyAuthOk && user.passHash) user._earlyAuthOk=true;
   }
 
   // ── First-login: no password set yet — any password works and sets it ───────
@@ -16478,7 +16487,9 @@ async function gateLogin(){
   }
 
   // ── Password check ────────────────────────────────────────────────────────
-  const _passOk=await verifyPass(email,pass,user.passHash);
+  // Skip local check if auth.js already validated the password (early-auth path)
+  const _passOk=user._earlyAuthOk || await verifyPass(email,pass,user.passHash);
+  if(user._earlyAuthOk) delete user._earlyAuthOk; // clean up temp flag
   if(!_passOk){
     recordLoginFailure(email);
     const _remaining=_RATE_LIMIT-(_getRateData()[email]?.count||0);
@@ -16781,7 +16792,16 @@ async function gateEnterApp(session){
   }
 
   if(session.type==='team'){
-    // Check if they're linked to the team roster (now uses Firebase-synced data)
+    // Check if they're linked to the team roster.
+    // Always fetch from Firebase first — after a browser clear localStorage is
+    // empty and getAdminTeamMembers() returns [] which would falsely show the
+    // "Link to team" screen to every team member.
+    if(_fbToken() && !getAdminTeamMembers().length){
+      try{
+        const fbTeam=await fbGet('orgs',ORG_ID+':team');
+        if(fbTeam?.data) try{localStorage.setItem('dronehub_admin_team',fbTeam.data);}catch(e){}
+      }catch(e){}
+    }
     const adminMembers=getAdminTeamMembers();
     const isLinked=adminMembers.find(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(!isLinked){
@@ -17449,8 +17469,9 @@ function getAdminTeamMembers(){return JSON.parse(localStorage.getItem('dronehub_
 function saveAdminTeamMembers(arr){
   try{localStorage.setItem('dronehub_admin_team',JSON.stringify(arr));}catch(e){}
   // SAFETY: never overwrite Firebase with an empty array — would wipe all team members
-  if(arr.length > 0){
-    fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(arr),updatedAt:Date.now()});
+  if(arr.length > 0 && _fbToken()){
+    fbSetStrict('orgs',ORG_ID+':team',{data:JSON.stringify(arr),updatedAt:Date.now()})
+      .catch(e=>console.error('[saveAdminTeamMembers] Firebase write failed:',e.message));
     fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(arr),updatedAt:Date.now()});
   }
 }
