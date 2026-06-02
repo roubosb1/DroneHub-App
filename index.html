@@ -21429,6 +21429,7 @@ function normalizeOtherType(raw){
   return raw; // keep original if no match — fall through to unclassified badge style
 }
 let salesEditingId   = null;
+let _scDNE           = false; // tracks Do Not Email toggle state in the add/edit modal
 // salesSortCol, salesSortDir declared early above (TDZ fix)
 
 // Split a full name typed into the first-name field when last name is blank.
@@ -22124,7 +22125,7 @@ function openSalesAddModal(editId){
   const err = document.getElementById('sc-err');
   if(err){ err.style.display='none'; err.textContent=''; }
 
-  let _scDNE = false;
+  _scDNE = false; // reset to off each time the modal opens
   function scToggleDNE(){
     _scDNE = !_scDNE;
     const btn = document.getElementById('sc-dne-btn');
