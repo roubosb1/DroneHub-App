@@ -4763,13 +4763,17 @@ function syncClientToSalesCRM(client){
   const lastName=nameParts.slice(1).join(' ');
   if(idx>=0){
     const c=all[idx];
-    if(!c.firstName&&!c.lastName){ c.firstName=firstName; c.lastName=lastName; }
-    if(!c.company) c.company=client.company||'';
-    if(!c.phone)   c.phone=client.phone||'';
-    if(!c.email)   c.email=client.email||'';
+    // Always push latest client-tab values to the CRM contact
+    if(firstName||lastName){ c.firstName=firstName; c.lastName=lastName; }
+    if(client.company) c.company=client.company;
+    if(client.phone)   c.phone=client.phone;
+    if(client.email)   c.email=client.email;
     c.list='clients';
     c._clientId=client.id;
-    if(!c.clientType) c.clientType=client.status==='inactive'?'past':'active';
+    // Sync active/inactive status → clientType (unless user manually overrode in CRM)
+    if(!c._clientTypeManual){
+      c.clientType=client.status==='inactive'?'past':'active';
+    }
   } else {
     const newContact={
       id:'sc_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
@@ -4852,15 +4856,15 @@ function syncSalesCRMToClient(contact){
   let clientsDirty=false, salesDirty=false;
   if(idx>=0){
     const c=clients[idx];
-    if(!c.name&&fullName)   { c.name=fullName;        clientsDirty=true; }
-    if(!c.company&&sc.company){ c.company=sc.company; clientsDirty=true; }
-    if(!c.email&&sc.email)  { c.email=sc.email;       clientsDirty=true; }
-    if(!c.phone&&sc.phone)  { c.phone=sc.phone;       clientsDirty=true; }
-    if(c._salesId!==sc.id)  { c._salesId=sc.id;       clientsDirty=true; }
-    if(sc._clientTypeManual){
-      const ns=sc.clientType==='past'?'inactive':'active';
-      if(c.status!==ns){ c.status=ns; clientsDirty=true; }
-    }
+    // Always push latest CRM values to the client record (overwrite if source has a value)
+    if(fullName)    { c.name=fullName;       clientsDirty=true; }
+    if(sc.company)  { c.company=sc.company;  clientsDirty=true; }
+    if(sc.email)    { c.email=sc.email;      clientsDirty=true; }
+    if(sc.phone)    { c.phone=sc.phone;      clientsDirty=true; }
+    if(c._salesId!==sc.id){ c._salesId=sc.id; clientsDirty=true; }
+    // Sync active/past status
+    const ns=sc.clientType==='past'?'inactive':'active';
+    if(c.status!==ns){ c.status=ns; clientsDirty=true; }
     if(sc._clientId!==c.id){ sc._clientId=c.id; salesDirty=true; }
   } else {
     const newClient={
@@ -8731,9 +8735,18 @@ function showNewClientForm(){
 
 function deleteClient(id){
   if(!confirm('Delete this client? Their job history will not be deleted, just unlinked.')) return;
+  // Also remove the matching CRM contact so both sides stay in sync
+  const deleted=clients.find(c=>c.id===id);
+  if(deleted){
+    const allSales=salesLoad();
+    let idx=allSales.findIndex(sc=>sc._clientId===id);
+    if(idx<0&&deleted.email) idx=allSales.findIndex(sc=>sc.list==='clients'&&sc.email&&sc.email.toLowerCase()===deleted.email.toLowerCase());
+    if(idx>=0){ allSales.splice(idx,1); salesSave(allSales); }
+  }
   clients=clients.filter(c=>c.id!==id);
   saveClientsToStorage();
   renderClients();
+  if(typeof renderSalesTable==='function') renderSalesTable();
   closeClientDetail();
 }
 
@@ -9854,8 +9867,10 @@ function saveClientEdit(clientId, modal){
     if(el) c[f]=el.value.trim();
   });
   saveClientsToStorage();
+  syncClientToSalesCRM(c); // push changes to CRM Contacts → Existing Clients
   modal.remove();
   renderClients();
+  if(typeof renderSalesTable==='function') renderSalesTable();
   renderClientPortal(clientId,'overview');
 }
 
