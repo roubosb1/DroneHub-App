@@ -293,7 +293,7 @@ function getLcAuthorEmail(name){
 }
 function getAvatarHtml(name,email,size=36,fontSize=12){
   const photo=getProfilePhoto(email||'');
-  if(photo) return `<img src="${photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0">`;
+  if(photo) return `<img src="${photo}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0">`;
   const initials=(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const colors=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9'];
   const bg=colors[(name||'').charCodeAt(0)%colors.length];
@@ -3292,7 +3292,7 @@ button{font-family:var(--font);}
         <table class="sales-table">
           <thead>
             <tr>
-              <th style="width:36px"><input type="checkbox" id="sales-select-all" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
+              <th style="width:36px"><input type="checkbox" id="sales-select-all" aria-label="Select all contacts" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
               <th class="sortable" id="sth-name"    onclick="setSalesSort('name')"    >Name<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-company" onclick="setSalesSort('company')" >Company<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-field" onclick="setSalesSort('field')" style="display:none">Type<span class="sort-arrow">↕</span></th>
@@ -4345,21 +4345,21 @@ button{font-family:var(--font);}
           <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-floorplan" onchange="recalcEdit()"> Floor plan</label>
           <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-extphoto" onchange="recalcEdit()"> Exterior photo</label>
           <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="ej-svc-extvideo" onchange="recalcEdit()"> Exterior video</label>
-          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px;cursor:pointer">
             <input type="checkbox" id="ej-svc-reel" onchange="recalcEdit()"> Social reels
-            <input type="number" id="ej-qty-reel" min="1" max="10" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto">
-          </div>
+            <input type="number" id="ej-qty-reel" aria-label="Social reels quantity" min="1" max="10" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto">
+          </label>
         </div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#A8B4D0;margin-bottom:8px">Miscellaneous / hourly</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px;cursor:pointer">
             <input type="checkbox" id="ej-svc-randomvideo" onchange="recalcEdit()"> Random video
-            <input type="number" id="ej-qty-randomvideo" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px">
+            <input type="number" id="ej-qty-randomvideo" aria-label="Random video hours" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:0.5px solid #e0ddd5;border-radius:8px;font-size:12px;cursor:pointer">
             <input type="checkbox" id="ej-svc-randomphoto" onchange="recalcEdit()"> Random photo
-            <input type="number" id="ej-qty-randomphoto" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
-          </div>
+            <input type="number" id="ej-qty-randomphoto" aria-label="Random photo hours" min="1" max="24" value="1" onchange="recalcEdit()" style="width:44px;padding:2px 4px;border:0.5px solid #ccc;border-radius:5px;font-size:11px;margin-left:auto"> hr
+          </label>
         </div>
       </div>
 
@@ -12889,7 +12889,7 @@ async function cpShowTab(tab){
               const dateStr=p.scheduledAt?new Date(p.scheduledAt).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'}):'No date';
               return `<div style="background:var(--navy-card);border-radius:14px;border:1px solid ${isPending?'rgba(245,200,66,.3)':isRevision?'rgba(251,146,60,.3)':'var(--border)'};padding:16px;margin-bottom:10px;cursor:pointer" onclick="cpOpenPost('${p.id}')">
                 <div style="display:flex;gap:12px;align-items:flex-start">
-                  ${p.coverPhotoData?`<img src="${p.coverPhotoData}" style="width:52px;height:92px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border)">`:'<div style="width:52px;height:92px;border-radius:8px;background:linear-gradient(160deg,#833ab4,#fd1d1d,#fcb045);flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>'}
+                  ${p.coverPhotoData?`<img src="${p.coverPhotoData}" alt="Post cover" style="width:52px;height:92px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border)">`:'<div style="width:52px;height:92px;border-radius:8px;background:linear-gradient(160deg,#833ab4,#fd1d1d,#fcb045);flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>'}
                   <div style="flex:1;min-width:0">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">
                       <div style="flex:1">
@@ -15315,7 +15315,7 @@ function lcRenderAttachPreview(){
   container.innerHTML=lcPendingAttachments.map((a,i)=>`
     <div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border-bright);background:var(--navy-lift)">
       ${a.type==='image'
-        ?`<img src="${a.dataUrl}" style="height:70px;width:auto;max-width:120px;object-fit:cover;display:block">`
+        ?`<img src="${a.dataUrl}" alt="Attachment preview" style="height:70px;width:auto;max-width:120px;object-fit:cover;display:block">`
         :a.type==='video'
         ?`<video src="${a.dataUrl}" style="height:70px;width:auto;max-width:120px;object-fit:cover;display:block" muted></video>`
         :`<div style="height:70px;width:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px">
@@ -15797,7 +15797,7 @@ function lcHandleMentionInput(textarea){
     const bg=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9'][m.name.charCodeAt(0)%6];
     const photo=getProfilePhoto(m.email||'');
     const avatar=photo
-      ?`<img src="${photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+      ?`<img src="${photo}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">`
       :`<div style="width:28px;height:28px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
     const safeName=m.name.replace(/'/g,"\\'");
     return `<div onclick="lcInsertMention('${safeName}')" style="padding:7px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:7px;transition:background .1s" onmouseover="this.style.background='rgba(91,141,239,.18)'" onmouseout="this.style.background='transparent'">
@@ -20454,7 +20454,7 @@ function tpShowTab(tab){
         <div style="display:flex;align-items:center;gap:16px">
           <div id="tp-photo-preview">
             ${currentPhoto
-              ?`<img src="${currentPhoto}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--border-bright)">`
+              ?`<img src="${currentPhoto}" alt="Profile photo" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--border-bright)">`
               :`<div style="width:72px;height:72px;border-radius:50%;background:var(--navy-card);border:2px dashed var(--border-bright);display:flex;align-items:center;justify-content:center;font-size:24px">👤</div>`
             }
           </div>
@@ -20505,12 +20505,12 @@ function tpHandlePhotoUpload(input, email){
     const dataUrl=e.target.result;
     // Show original preview immediately for responsiveness
     const preview=document.getElementById('tp-photo-preview');
-    if(preview) preview.innerHTML=`<img src="${dataUrl}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(preview) preview.innerHTML=`<img src="${dataUrl}" alt="Profile photo preview" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     // saveProfilePhoto now compresses to ~200px and writes to Firebase
     await saveProfilePhoto(email,dataUrl);
     // Show the compressed version in preview
     const compressed=getProfilePhoto(email);
-    if(compressed&&preview) preview.innerHTML=`<img src="${compressed}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(compressed&&preview) preview.innerHTML=`<img src="${compressed}" alt="Profile photo preview" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     if(s){s.textContent='✓ Photo saved to Firebase!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>tpShowTab('profile'),1200);}
     renderAppHeader&&renderAppHeader();
   };
@@ -20571,11 +20571,11 @@ function settingsHandlePhotoUpload(input){
     const dataUrl=e.target.result;
     // Show original first for responsiveness, then update with compressed version
     const previewEl=document.getElementById('settings-photo-preview');
-    if(previewEl) previewEl.innerHTML=`<img src="${dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(previewEl) previewEl.innerHTML=`<img src="${dataUrl}" alt="Profile photo preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     await saveProfilePhoto(email,dataUrl);
     // Refresh preview with compressed version
     const compressed=getProfilePhoto(email);
-    if(compressed&&previewEl) previewEl.innerHTML=`<img src="${compressed}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(compressed&&previewEl) previewEl.innerHTML=`<img src="${compressed}" alt="Profile photo preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     const removeBtn=document.getElementById('settings-remove-photo-btn');
     if(removeBtn) removeBtn.style.display='inline-flex';
     if(s){s.textContent='✓ Photo saved to Firebase!';s.style.color='var(--green)';s.style.display='block';setTimeout(()=>{if(s)s.style.display='none';},3000);}
@@ -20992,12 +20992,12 @@ function teamMemberPhotoUpload(input, email, memberId){
   reader.onload=async e=>{
     // Show immediately for responsiveness
     const avatarEl=document.getElementById('tm-avatar-'+memberId);
-    if(avatarEl) avatarEl.innerHTML=`<img src="${e.target.result}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(avatarEl) avatarEl.innerHTML=`<img src="${e.target.result}" alt="Avatar preview" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     // saveProfilePhoto compresses to 200px then writes to Firebase
     await saveProfilePhoto(email,e.target.result);
     // Update avatar with compressed version
     const compressed=getProfilePhoto(email);
-    if(compressed&&avatarEl) avatarEl.innerHTML=`<img src="${compressed}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
+    if(compressed&&avatarEl) avatarEl.innerHTML=`<img src="${compressed}" alt="Avatar preview" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--green)">`;
     renderAppHeader&&renderAppHeader();
     renderTeamMemberSettings();
   };
@@ -24802,7 +24802,7 @@ function renderSocialPostCard(p){
     const addrText=p.address?(p.address.substring(0,46)+(p.address.length>46?'…':'')):'';
     return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid var(--border);overflow:hidden">
       <div style="position:relative">
-        <img src="${p.coverPhotoData}" style="width:100%;height:158px;object-fit:cover;display:block">
+        <img src="${p.coverPhotoData}" alt="Post cover image" style="width:100%;height:158px;object-fit:cover;display:block">
         <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(12,18,38,.9) 0%,rgba(12,18,38,.2) 50%,transparent 100%)"></div>
         <div style="position:absolute;bottom:10px;left:12px;right:12px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
           <div style="display:flex;align-items:center;gap:5px;min-width:0">
@@ -25230,7 +25230,7 @@ function renderSocialApprovals(){
       const plats=(p.platforms||[]).map(pid=>SOCIAL_PLATFORMS.find(x=>x.id===pid)?.label||pid).join(', ');
       const approvers=(p.approvalRound||1)===1?(ws?.approvers1||''):(ws?.approvers2||'');
       return `<div style="background:var(--navy-lift);border-radius:12px;border:1px solid ${status.color}33;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
-        ${p.coverPhotoData?`<img src="${p.coverPhotoData}" style="width:36px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0">`:''}
+        ${p.coverPhotoData?`<img src="${p.coverPhotoData}" alt="" style="width:36px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0">`:''}
         <div style="flex:1;min-width:200px">
           <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:3px">${p.address||p.reelNumber||p.title||'Untitled'}</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${ws?.name||'—'} · ${format?.label||'Reel'}${plats?' · '+plats:''}</div>
