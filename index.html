@@ -63,8 +63,8 @@ async function _fbCall(body, _attempt=0){
       return null;
     }
     if(!r.ok){
-      // Other server errors — retry writes up to 2 times
-      if(_attempt < 2 && (body.action==='set'||body.action==='delete')){
+      // Other server errors — retry all operations up to 3 times with backoff
+      if(_attempt < 3){
         await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
         return _fbCall(body, _attempt+1);
       }
@@ -72,8 +72,8 @@ async function _fbCall(body, _attempt=0){
     }
     return await r.json();
   }catch(e){
-    // Network error — retry all operations up to 2 times
-    if(_attempt < 2){
+    // Network error — retry all operations up to 3 times with backoff
+    if(_attempt < 3){
       await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
       return _fbCall(body, _attempt+1);
     }
@@ -4962,7 +4962,16 @@ Object.keys(CONTRACTOR_DEFAULTS).forEach(k=>{
     if(CONTRACTOR_DEFAULTS[k].noDrive) CONTRACTORS[k].noDrive=true;
   }
 });
-function saveContractors(){try{localStorage.setItem('dronehub_contractors',JSON.stringify(CONTRACTORS));}catch(e){}fbSet('orgs',ORG_ID+':contractors',{data:JSON.stringify(CONTRACTORS),updatedAt:Date.now()});}
+function saveContractors(){
+  try{localStorage.setItem('dronehub_contractors',JSON.stringify(CONTRACTORS));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':contractors',{data:JSON.stringify(CONTRACTORS),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveContractors] Firebase write failed:',e.message);
+        showDhToast('Contractors not saved','Contractor records could not be saved to the cloud — changes may be lost if your browser cache is cleared.','⚠️','var(--orange)',7000);
+      });
+  }
+}
 
 // Property coords — set when address is looked up
 let propLat=null, propLng=null, propAddrText='';
@@ -5932,8 +5941,14 @@ let _calTypeFilters=null; // null = show all
 
 function calEventsLoad(){try{return JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');}catch(e){return[];}}
 function calEventsSave(arr){
-  localStorage.setItem('dronehub_cal_events',JSON.stringify(arr));
-  if(_fbToken()) fbSet('orgs',ORG_ID+':cal_events',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+  try{localStorage.setItem('dronehub_cal_events',JSON.stringify(arr));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':cal_events',{data:JSON.stringify(arr),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[calEventsSave] Firebase write failed:',e.message);
+        showDhToast('Calendar not saved','Calendar event could not be saved to the cloud — it may disappear after a page reload.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 async function calEventsSyncFirebase(){
   if(!_fbToken()) return;
@@ -5949,8 +5964,14 @@ async function calEventsSyncFirebase(){
 
 function vacationAllocLoad(){try{return JSON.parse(localStorage.getItem('dronehub_vac_alloc')||'[]');}catch(e){return[];}}
 function vacationAllocSave(arr){
-  localStorage.setItem('dronehub_vac_alloc',JSON.stringify(arr));
-  if(_fbToken()) fbSet('orgs',ORG_ID+':vac_alloc',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+  try{localStorage.setItem('dronehub_vac_alloc',JSON.stringify(arr));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':vac_alloc',{data:JSON.stringify(arr),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[vacationAllocSave] Firebase write failed:',e.message);
+        showDhToast('Time-off not saved','Vacation / time-off data could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 
 // Count vacation days used by a member in a given year (inclusive date range)
@@ -7770,9 +7791,18 @@ function saveSettings(){
     notes:document.getElementById('biz-notes').value.trim(),
   };
   try{localStorage.setItem('dronehub_settings',JSON.stringify(bizSettings));}catch(e){}
-  fbSet('orgs',ORG_ID+':settings',{data:JSON.stringify(bizSettings),updatedAt:Date.now()});
-  const msg=document.getElementById('settings-saved-msg');
-  if(msg){msg.textContent='Saved!';setTimeout(()=>msg.textContent='',2500);}
+  const _settingsMsg=document.getElementById('settings-saved-msg');
+  if(_settingsMsg) _settingsMsg.textContent='Saving…';
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':settings',{data:JSON.stringify(bizSettings),updatedAt:Date.now()})
+      .then(()=>{ if(_settingsMsg){_settingsMsg.textContent='✓ Saved';setTimeout(()=>_settingsMsg.textContent='',2500);} })
+      .catch(e=>{
+        console.error('[saveSettings] Firebase write failed:',e.message);
+        if(_settingsMsg){_settingsMsg.style.color='var(--red)';_settingsMsg.textContent='⚠ Cloud save failed — saved locally only';setTimeout(()=>{_settingsMsg.textContent='';_settingsMsg.style.color='';},5000);}
+      });
+  } else {
+    if(_settingsMsg){_settingsMsg.textContent='Saved locally';setTimeout(()=>_settingsMsg.textContent='',2500);}
+  }
 }
 
 function saveUsSettings(){
@@ -7790,9 +7820,18 @@ function saveUsSettings(){
     notes:g('biz-us-notes'),
   };
   try{localStorage.setItem('dronehub_settings_us',JSON.stringify(bizSettingsUs));}catch(e){}
-  fbSet('orgs',ORG_ID+':settings_us',{data:JSON.stringify(bizSettingsUs),updatedAt:Date.now()});
-  const msg=document.getElementById('settings-us-saved-msg');
-  if(msg){msg.textContent='Saved!';setTimeout(()=>msg.textContent='',2500);}
+  const _usMsg=document.getElementById('settings-us-saved-msg');
+  if(_usMsg) _usMsg.textContent='Saving…';
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':settings_us',{data:JSON.stringify(bizSettingsUs),updatedAt:Date.now()})
+      .then(()=>{ if(_usMsg){_usMsg.textContent='✓ Saved';setTimeout(()=>_usMsg.textContent='',2500);} })
+      .catch(e=>{
+        console.error('[saveUsSettings] Firebase write failed:',e.message);
+        if(_usMsg){_usMsg.style.color='var(--red)';_usMsg.textContent='⚠ Cloud save failed — saved locally only';setTimeout(()=>{_usMsg.textContent='';_usMsg.style.color='';},5000);}
+      });
+  } else {
+    if(_usMsg){_usMsg.textContent='Saved locally';setTimeout(()=>_usMsg.textContent='',2500);}
+  }
 }
 
 async function changePassword(){
@@ -7979,7 +8018,10 @@ async function sendInvoiceEmail(){
 function nextInvoiceNum(){
   invoiceNumberBase++;
   try{localStorage.setItem('dronehub_inv_num',String(invoiceNumberBase));}catch(e){}
-  fbSet('orgs',ORG_ID+':inv_num',{data:String(invoiceNumberBase),updatedAt:Date.now()});
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':inv_num',{data:String(invoiceNumberBase),updatedAt:Date.now()})
+      .catch(e=>console.error('[nextInvoiceNum] Firebase write failed:',e.message));
+  }
   return 'INV-'+String(invoiceNumberBase).padStart(5,'0');
 }
 
@@ -11947,7 +11989,16 @@ function revokeClientPortal(clientId){
 function getPortalAccounts(){return JSON.parse(localStorage.getItem('dronehub_portal_accounts')||'[]');}
 
 
-function savePortalAccounts(accounts){try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(accounts));}catch(e){}fbSet('orgs',ORG_ID+':portal_accounts',{data:JSON.stringify(accounts),updatedAt:Date.now()});}
+function savePortalAccounts(accounts){
+  try{localStorage.setItem('dronehub_portal_accounts',JSON.stringify(accounts));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':portal_accounts',{data:JSON.stringify(accounts),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[savePortalAccounts] Firebase write failed:',e.message);
+        showDhToast('Portal accounts not saved','Client portal login accounts could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
+}
 
 // Simple hash (not cryptographic — replace with bcrypt on real backend)
 // Legacy weak hash — kept ONLY for migrating existing stored passwords.
@@ -12264,8 +12315,7 @@ async function cpSignup(){
     const cIdx=clients.findIndex(c=>c.id===clientId);
     if(cIdx>=0 && !clients[cIdx].email){
       clients[cIdx].email=email;
-      try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}
-      fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+      saveClientsToStorage(); // strict write with retry + toast on failure
     }
   }
 
@@ -14124,7 +14174,16 @@ function copyReminderText(){
 
 
 let expenses=JSON.parse(localStorage.getItem('dronehub_expenses')||'[]');
-function saveExpenses(){try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(e){}fbSet('orgs',ORG_ID+':expenses',{data:JSON.stringify(expenses),updatedAt:Date.now()});}
+function saveExpenses(){
+  try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':expenses',{data:JSON.stringify(expenses),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveExpenses] Firebase write failed:',e.message);
+        showDhToast('Expenses not saved','Expense records could not be saved to the cloud — changes may be lost if your browser cache is cleared.','⚠️','var(--orange)',7000);
+      });
+  }
+}
 
 let financeChartInst=null, expCatChartInst=null, financeView='bar';
 
@@ -14565,7 +14624,10 @@ const LC_TYPE_META={
 function getLcChannels(){return JSON.parse(localStorage.getItem('dronehub_lc_channels')||'[]');}
 function saveLcChannels(ch){
   try{localStorage.setItem('dronehub_lc_channels',JSON.stringify(ch));}catch(e){}
-  fbSet('orgs',ORG_ID+':lc_channels',{data:JSON.stringify(ch),updatedAt:Date.now()});
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':lc_channels',{data:JSON.stringify(ch),updatedAt:Date.now()})
+      .catch(e=>console.error('[saveLcChannels] Firebase write failed:',e.message));
+  }
 }
 
 // Messages: {channelId: [{id, author, text, ts, reactions:{emoji:count}}]}
@@ -14641,7 +14703,13 @@ async function saveLcMessage(channelId, msg){
   // Enforce channel isolation: only sync messages that belong to this channel
   const msgsForSync=msgs.filter(m=>!m.channelId||m.channelId===channelId);
   try{localStorage.setItem(key,JSON.stringify(msgsForSync));}catch(e){}
-  fbSet('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgsForSync),updatedAt:Date.now()});
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':lc_msgs_'+channelId,{channelId,msgs:JSON.stringify(msgsForSync),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveLcMessage] Firebase write failed:',e.message);
+        showDhToast('Message not synced','LouChat message saved locally but could not sync to cloud.','⚠️','var(--orange)',5000);
+      });
+  }
   // Send browser notification with original plaintext
   const channels=getLcChannels();
   const ch=channels.find(c=>c.id===channelId);
@@ -16449,7 +16517,7 @@ async function gateClientSignup(){
   }
   // Update client record email in Firebase if missing
   const cIdx=clients.findIndex(c=>c.id===acct.clientId);
-  if(cIdx>=0&&!clients[cIdx].email){clients[cIdx].email=email;try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});}
+  if(cIdx>=0&&!clients[cIdx].email){clients[cIdx].email=email;saveClientsToStorage();}
   // Log in
   cpActiveClientId=acct.clientId;
   try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:acct.clientId,email,name}));}catch(e){}
@@ -18226,7 +18294,16 @@ async function adminResetPassword(id){
 }
 
 function getStandaloneProjects(){return JSON.parse(localStorage.getItem('dronehub_standalone_projects')||'[]');}
-function saveStandaloneProjects(arr){try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(arr));}catch(e){}fbSet('orgs',ORG_ID+':standalone_projects',{data:JSON.stringify(arr),updatedAt:Date.now()});}
+function saveStandaloneProjects(arr){
+  try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(arr));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':standalone_projects',{data:JSON.stringify(arr),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveStandaloneProjects] Firebase write failed:',e.message);
+        showDhToast('Projects not saved','Standalone project records could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
+}
 function clearAllStandaloneProjects(){
   if(!confirm('Delete ALL imported standalone projects? This cannot be undone.\n\nProjects linked to your quote builder will not be affected.')) return;
   localStorage.removeItem('dronehub_standalone_projects');
@@ -18542,7 +18619,13 @@ function setTrackerStage(jobId,update){
   const extraDraftCharge=Math.max(0,draftCount-2)*30;
   stages[jobId]={...existing,...update,draftCount,extraDraftCharge,updatedAt:new Date().toISOString().slice(0,16).replace('T',' ')};
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
-  fbSet('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()});
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[updateTrackerStage] Firebase write failed:',e.message);
+        showDhToast('Tracker not saved','Production tracker update could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 
 // Generate project ID from job
@@ -18555,7 +18638,7 @@ function _trackerNextIdNum(){
 function _trackerIncrementId(){
   const n=_trackerNextIdNum()+1;
   localStorage.setItem('dronehub_tracker_id_counter',String(n));
-  fbSet('orgs',ORG_ID+':tracker_meta',{idCounter:n,updatedAt:Date.now()});
+  if(_fbToken()) fbSetStrict('orgs',ORG_ID+':tracker_meta',{idCounter:n,updatedAt:Date.now()}).catch(e=>console.error('[trackerMeta]',e.message));
   return n;
 }
 // Returns the project's stored ID, assigning a new sequential one if needed.
@@ -18567,7 +18650,7 @@ function ensureProjectId(jobId, ts){
   const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
   stages[jobId]={...(stages[jobId]||ts),projectId:pid};
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
-  fbSet('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()});
+  if(_fbToken()) fbSetStrict('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()}).catch(e=>console.error('[ensureProjectId]',e.message));
   return pid;
 }
 function getProjectId(job){
@@ -18632,7 +18715,13 @@ function setPhotoTrackerStage(jobId, update){
   const existing = getPhotoTrackerStage(jobId);
   stages[jobId] = {...existing, ...update, updatedAt: new Date().toISOString().slice(0,16).replace('T',' ')};
   try{localStorage.setItem('dronehub_photo_tracker', JSON.stringify(stages));}catch(e){}
-  if(_fbToken()) fbSet('orgs', ORG_ID+':photo_tracker', {data:JSON.stringify(stages), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()){
+    fbSetStrict('orgs', ORG_ID+':photo_tracker', {data:JSON.stringify(stages), updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[setPhotoTrackerStage] Firebase write failed:',e.message);
+        showDhToast('Photo tracker not saved','Photo tracker update could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 
 function getPhotoStandaloneProjects(){
@@ -18640,7 +18729,13 @@ function getPhotoStandaloneProjects(){
 }
 function savePhotoStandaloneProjects(arr){
   try{localStorage.setItem('dronehub_photo_standalone', JSON.stringify(arr));}catch(e){}
-  if(_fbToken()) fbSet('orgs', ORG_ID+':photo_standalone', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()){
+    fbSetStrict('orgs', ORG_ID+':photo_standalone', {data:JSON.stringify(arr), updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[savePhotoStandaloneProjects] Firebase write failed:',e.message);
+        showDhToast('Photo projects not saved','Photo standalone projects could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 
 // Photo project ID counter (DHP-0001 format)
@@ -18650,7 +18745,7 @@ function _photoTrackerNextIdNum(){
 function _photoTrackerIncrementId(){
   const n = _photoTrackerNextIdNum() + 1;
   localStorage.setItem('dronehub_photo_id_counter', String(n));
-  if(_fbToken()) fbSet('orgs', ORG_ID+':photo_tracker_meta', {idCounter:n, updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSetStrict('orgs', ORG_ID+':photo_tracker_meta', {idCounter:n, updatedAt:Date.now()}).catch(e=>console.error('[photoTrackerMeta]',e.message));
   return n;
 }
 function ensurePhotoProjectId(jobId, ts){
@@ -18660,7 +18755,7 @@ function ensurePhotoProjectId(jobId, ts){
   const stages = JSON.parse(localStorage.getItem('dronehub_photo_tracker')||'{}');
   stages[jobId] = {...(stages[jobId]||ts), projectId:pid};
   try{localStorage.setItem('dronehub_photo_tracker', JSON.stringify(stages));}catch(e){}
-  if(_fbToken()) fbSet('orgs', ORG_ID+':photo_tracker', {data:JSON.stringify(stages), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()) fbSetStrict('orgs', ORG_ID+':photo_tracker', {data:JSON.stringify(stages), updatedAt:Date.now()}).catch(e=>console.error('[ensurePhotoProjectId]',e.message));
   return pid;
 }
 
@@ -19274,8 +19369,7 @@ function linkProjectToClient(jobId){
   if(existingIdx>=0) client.completedProjects[existingIdx]=projectRef;
   else client.completedProjects.push(projectRef);
 
-  saveClientsToStorage();
-  fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+  saveClientsToStorage(); // already saves to Firebase with retry
 }
 
 // Toggle Files Received directly from the table (no modal needed)
@@ -19343,8 +19437,7 @@ function trackerInlineSaveAddress(jobId, newAddress, mode){
         const cp = client.completedProjects.find(p=>String(p.jobId)===String(jobId));
         if(cp){
           cp.address = newAddress;
-          saveClientsToStorage();
-          fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+          saveClientsToStorage(); // already writes to Firebase with retry
         }
       }
     }
@@ -19369,8 +19462,7 @@ function trackerInlineSaveAddress(jobId, newAddress, mode){
         const cp = client.completedProjects.find(p=>String(p.jobId)===String(jobId));
         if(cp){
           cp.address = newAddress;
-          saveClientsToStorage();
-          fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+          saveClientsToStorage(); // already writes to Firebase with retry
         }
       }
     }
@@ -19858,7 +19950,13 @@ function saveTeamMembers(m){try{localStorage.setItem('dronehub_team_members',JSO
 
 // Orgs: [{id, name, inviteCode, createdAt}]
 function getOrgs(){return JSON.parse(localStorage.getItem('dronehub_orgs')||'[]');}
-function saveOrgs(o){try{localStorage.setItem('dronehub_orgs',JSON.stringify(o));}catch(e){}fbSet('orgs',ORG_ID+':orgs_data',{data:JSON.stringify(o),updatedAt:Date.now()});}
+function saveOrgs(o){
+  try{localStorage.setItem('dronehub_orgs',JSON.stringify(o));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':orgs_data',{data:JSON.stringify(o),updatedAt:Date.now()})
+      .catch(e=>console.error('[saveOrgs] Firebase write failed:',e.message));
+  }
+}
 
 // Ensure default org exists
 function ensureDefaultOrg(){
@@ -21027,7 +21125,13 @@ function getExtraServices(){
 }
 function saveExtraServices(svcs){
   try{localStorage.setItem('dronehub_extra_services',JSON.stringify(svcs));}catch(e){}
-  fbSet('orgs',ORG_ID+':extra_services',{data:JSON.stringify(svcs),updatedAt:Date.now()});
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':extra_services',{data:JSON.stringify(svcs),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveExtraServices] Firebase write failed:',e.message);
+        showDhToast('Services not saved','Extra services config could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 
 // Which extra services are currently toggled ON in the quote builder
@@ -26285,7 +26389,13 @@ function pricingLoad(){
 function pricingSave(cfg){
   _pricingConfig=cfg;
   try{localStorage.setItem('dronehub_pricing_config',JSON.stringify(cfg));}catch(e){}
-  fbSet('orgs',ORG_ID+':pricing',{data:JSON.stringify(cfg),updatedAt:Date.now()});
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':pricing',{data:JSON.stringify(cfg),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[pricingSave] Firebase write failed:',e.message);
+        showDhToast('Pricing not saved','Custom pricing config could not be saved to the cloud.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 
 // ─── Settings UI ──────────────────────────────────────────────────────────────
