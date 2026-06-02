@@ -49,13 +49,21 @@ async function _fbCall(body, _attempt=0){
   try{
     const r=await fetch(_PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
     if(r.status===401){
-      // Token expired — clear it so the user gets a clean login prompt
+      // Token expired/invalid — clear stale token and signal caller
       _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+      return {__authExpired:true};
+    }
+    if(r.status===429){
+      // Rate limited — retry all operations with backoff (reads included,
+      // because a rate-limited chunk read returns null which silently drops contacts)
+      if(_attempt < 3){
+        await new Promise(res=>setTimeout(res, 1500 * (_attempt+1)));
+        return _fbCall(body, _attempt+1);
+      }
       return null;
     }
     if(!r.ok){
-      // Retry writes (set/delete) up to 2 times on server/rate-limit errors.
-      // Reads (get/getAll) are not retried — stale data is better than a slow UI.
+      // Other server errors — retry writes up to 2 times
       if(_attempt < 2 && (body.action==='set'||body.action==='delete')){
         await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
         return _fbCall(body, _attempt+1);
@@ -64,20 +72,38 @@ async function _fbCall(body, _attempt=0){
     }
     return await r.json();
   }catch(e){
-    // Network error — retry writes up to 2 times
-    if(_attempt < 2 && (body.action==='set'||body.action==='delete')){
+    // Network error — retry all operations up to 2 times
+    if(_attempt < 2){
       await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
       return _fbCall(body, _attempt+1);
     }
     return null;
   }
 }
+// Check if a _fbCall result signals an auth expiry
+function _fbAuthExpired(res){ return res && res.__authExpired===true; }
+function _fbShowSessionExpired(){
+  // Show a non-dismissable overlay prompting the user to sign back in
+  if(document.getElementById('_fb_session_expired_overlay')) return;
+  const ov=document.createElement('div');
+  ov.id='_fb_session_expired_overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#1a2236;border:1px solid #3b4f7a;border-radius:18px;padding:36px 40px;max-width:400px;text-align:center">
+    <div style="font-size:28px;margin-bottom:12px">🔒</div>
+    <div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:8px">Session Expired</div>
+    <div style="font-size:13px;color:#8a9bbf;margin-bottom:24px;line-height:1.6">Your session has expired or become invalid. Please sign in again to continue.</div>
+    <button onclick="location.reload()" style="padding:12px 32px;border-radius:12px;border:none;background:linear-gradient(135deg,#5B8DEF,#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Sign In Again</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
 async function fbSet(col,docId,data){
   const res=await _fbCall({action:'set',col,docId,data});
+  if(_fbAuthExpired(res)){ _fbShowSessionExpired(); return; }
   if(res) localStorage.setItem('dronehub_last_save',Date.now().toString());
 }
 async function fbGet(col,docId){
   const res=await _fbCall({action:'get',col,docId});
+  if(_fbAuthExpired(res)){ _fbShowSessionExpired(); return null; }
   return res?.data??null;
 }
 async function fbGetAll(col){
@@ -89,7 +115,7 @@ async function fbDelete(col,docId){
 }
 // Strict write — throws on any failure so callers can surface real errors.
 // Use this anywhere data MUST reach Firebase (e.g. contacts, deals).
-async function fbSetStrict(col,docId,data){
+async function fbSetStrict(col,docId,data,_attempt=0){
   const tok=_fbToken();
   if(!tok) throw new Error('Not authenticated — please log in again');
   const r=await fetch(_PROXY,{
@@ -97,7 +123,23 @@ async function fbSetStrict(col,docId,data){
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
     body:JSON.stringify({action:'set',col,docId,data}),
   });
+  if(r.status===401){
+    // Token invalid/expired — clear it and show the session-expired screen
+    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+    _fbShowSessionExpired();
+    throw new Error('Session expired — please sign in again');
+  }
+  if(r.status===429 && _attempt < 3){
+    // Rate limited — wait and retry
+    await new Promise(res=>setTimeout(res, 1500 * (_attempt+1)));
+    return fbSetStrict(col,docId,data,_attempt+1);
+  }
   if(!r.ok){
+    // Other server errors — retry up to 2 times
+    if(_attempt < 2){
+      await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
+      return fbSetStrict(col,docId,data,_attempt+1);
+    }
     let msg='Firebase error';
     try{ const j=await r.json(); msg=j.error||msg; }catch(e){}
     throw new Error(`${msg} (HTTP ${r.status})`);
@@ -16556,8 +16598,17 @@ async function gateLogin(){
         _loadMsgKey().catch(()=>{}); // pre-load encryption key so chats decrypt immediately
         setTimeout(()=>lcCheckMentions().catch(()=>{}),2000); // check for @mention notifications
       }
+    } else {
+      // Auth endpoint returned an error (500, 503, etc.) — clear any stale
+      // token so we don't keep sending an expired/invalid one on every request
+      _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
     }
-  }catch(e){console.log('Firebase proxy token unavailable (offline?) — local-only mode');}
+  }catch(e){
+    // Network/server error — clear any stale token so we don't send expired
+    // credentials and get a confusing HTTP 401 on every subsequent request
+    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(ex){}
+    console.log('Firebase proxy token unavailable (offline?) — local-only mode');
+  }
 
   // Force admin type for hardcoded owner accounts regardless of stored role
   const FORCE_ADMIN=['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'];
