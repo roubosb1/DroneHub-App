@@ -3226,7 +3226,7 @@ button{font-family:var(--font);}
     <!-- Header row -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="sales-search" type="text" placeholder="Search contacts…" oninput="renderSalesTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
+        <input id="sales-search" type="text" placeholder="Search contacts…" oninput="_salesPage=0;renderSalesTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
         <span id="sales-save-status" style="font-size:11px;font-weight:600;letter-spacing:.02em;transition:color .2s"></span>
         <button onclick="openSalesAddModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Contact</button>
         <button onclick="openImportModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg> Import Excel</button>
@@ -6791,14 +6791,48 @@ async function restoreFromFirebase(forceAll=false){
     // Never block a restore based on array length — length comparisons
     // caused demo-data (4 hardcoded entries) to silently block real Firebase data.
     {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{
-      if(d) localStorage.setItem('dronehub_admin_team',d);
+      if(!d) return;
+      try{
+        const incoming=JSON.parse(d||'[]');
+        const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+        // Merge by email union — never shrink the list
+        const emailMap={};
+        [...existing,...incoming].forEach(m=>{
+          const key=(m.email||'').toLowerCase().trim();
+          if(!key){ emailMap['__noemail_'+Math.random()]=m; return; }
+          if(!emailMap[key]){ emailMap[key]={...m}; }
+          else {
+            const ex=emailMap[key];
+            if(m.status==='active') ex.status='active';
+            if(m.lastSeen&&(!ex.lastSeen||m.lastSeen>ex.lastSeen)) ex.lastSeen=m.lastSeen;
+            if(m.activatedAt&&(!ex.activatedAt||m.activatedAt>ex.activatedAt)) ex.activatedAt=m.activatedAt;
+            if(m.customTabs?.length&&!ex.customTabs?.length) ex.customTabs=m.customTabs;
+            if(m.hourlyRate&&!ex.hourlyRate) ex.hourlyRate=m.hourlyRate;
+            if(m.phone&&!ex.phone) ex.phone=m.phone;
+            if(m.name&&!ex.name) ex.name=m.name;
+            if(m.jobTitle&&!ex.jobTitle) ex.jobTitle=m.jobTitle;
+          }
+        });
+        const merged=Object.values(emailMap);
+        localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));
+      }catch(e){ localStorage.setItem('dronehub_admin_team',d); }
     }},
-    // Also check team_members key as fallback
+    // Also check team_members key as fallback — merges into existing list
     {fb:ORG_ID+':team_members', ls:'dronehub_admin_team', apply:d=>{
-      const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
-      const incoming=JSON.parse(d||'[]');
-      // Only use team_members as fallback if :team didn't already populate the list
-      if(incoming.length>0 && existing.length===0) localStorage.setItem('dronehub_admin_team',JSON.stringify(incoming));
+      if(!d) return;
+      try{
+        const incoming=JSON.parse(d||'[]');
+        if(!incoming.length) return;
+        const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+        // Union merge — add any members in :team_members not already in :team
+        const emailSet=new Set(existing.map(m=>(m.email||'').toLowerCase().trim()).filter(Boolean));
+        let added=false;
+        incoming.forEach(m=>{
+          const key=(m.email||'').toLowerCase().trim();
+          if(key&&!emailSet.has(key)){ existing.push(m); emailSet.add(key); added=true; }
+        });
+        if(added) localStorage.setItem('dronehub_admin_team',JSON.stringify(existing));
+      }catch(e){}
     }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
@@ -17712,15 +17746,52 @@ function renderTeam(){
   mergeTeamDuplicates(true);
 
   // Pull fresh data from Firebase so lastSeen/status from team member devices
-  // is always reflected in the admin view.
+  // is always reflected in the admin view. Check BOTH :team and :team_members keys
+  // and merge them — use whichever has more members to prevent data loss.
   if(_fbToken()){
-    fbGet('orgs',ORG_ID+':team').then(fbTeam=>{
-      if(fbTeam?.data){
-        try{
-          const fbMembers=JSON.parse(fbTeam.data);
-          localStorage.setItem('dronehub_admin_team',JSON.stringify(fbMembers));
+    Promise.all([
+      fbGet('orgs',ORG_ID+':team').catch(()=>null),
+      fbGet('orgs',ORG_ID+':team_members').catch(()=>null),
+    ]).then(([fbTeam, fbTeamMembers])=>{
+      let best = [];
+      const parse = (fb) => {
+        try{ return fb?.data ? JSON.parse(fb.data) : []; }catch(e){ return []; }
+      };
+      const a = parse(fbTeam);
+      const b = parse(fbTeamMembers);
+      // Merge by email — union of both sources
+      const emailMap = {};
+      [...a, ...b].forEach(m=>{
+        const key=(m.email||'').toLowerCase().trim();
+        if(!key){ best.push(m); return; } // keep no-email members
+        if(!emailMap[key]){
+          emailMap[key]={...m};
+        } else {
+          const ex=emailMap[key];
+          // Keep the more complete/recent version
+          if(m.status==='active') ex.status='active';
+          if(m.lastSeen&&(!ex.lastSeen||m.lastSeen>ex.lastSeen)) ex.lastSeen=m.lastSeen;
+          if(m.activatedAt&&(!ex.activatedAt||m.activatedAt>ex.activatedAt)) ex.activatedAt=m.activatedAt;
+          if(m.customTabs?.length&&!ex.customTabs?.length) ex.customTabs=m.customTabs;
+          if(m.hourlyRate&&!ex.hourlyRate) ex.hourlyRate=m.hourlyRate;
+          if(m.phone&&!ex.phone) ex.phone=m.phone;
+          if(m.name&&!ex.name) ex.name=m.name;
+          if(m.jobTitle&&!ex.jobTitle) ex.jobTitle=m.jobTitle;
+        }
+      });
+      best = [...best, ...Object.values(emailMap)];
+      if(best.length > 0){
+        const local = getAdminTeamMembers();
+        // Only update localStorage and Firebase if we got MORE members than what we have locally
+        // This prevents a stale Firebase doc from clobbering a complete local copy
+        if(best.length >= local.length){
+          localStorage.setItem('dronehub_admin_team',JSON.stringify(best));
+          // Write the merged result back to :team so it stays authoritative
+          if(best.length > local.length){
+            fbSet('orgs',ORG_ID+':team',{data:JSON.stringify(best),updatedAt:Date.now()});
+          }
           _renderTeamUI(); // re-render with fresh data
-        }catch(e){}
+        }
       }
     }).catch(()=>{});
   }
@@ -21153,6 +21224,8 @@ let _salesOtherType  = 'all';
 let salesSortCol     = 'name';
 let salesSortDir     = 'asc';
 let salesView        = 'clients';
+let _salesPage       = 0;          // current pagination page (0-based)
+const _SALES_PAGE_SIZE = 500;      // contacts rendered per page — safe DOM limit
 let _pricingConfig   = null;
 
 const jobDateInput=document.getElementById('job-date-input');
@@ -21449,12 +21522,14 @@ function salesSaveList(listId, arr){
         // Best-effort cleanup of old part docs (fire and forget)
         for(let i=0;i<20;i++) fbDelete('orgs', fbKey+'_part'+i).catch(()=>{});
       } else {
-        // Chunked write — split into ≤700KB parts
+        // Chunked write — split into ≤900KB parts and write all parts in parallel
         const chunks = _salesChunkSplit(arr);
-        for(let i=0;i<chunks.length;i++){
-          await fbSetStrict('orgs', fbKey+'_part'+i, {data: JSON.stringify(chunks[i]), updatedAt: now});
-        }
-        // Header doc: null data field so restoreFromFirebase skips applying it directly
+        await Promise.all(
+          chunks.map((chunk, i) =>
+            fbSetStrict('orgs', fbKey+'_part'+i, {data: JSON.stringify(chunk), updatedAt: now})
+          )
+        );
+        // Header doc written AFTER parts are all confirmed (readers check parts count from header)
         await fbSetStrict('orgs', fbKey, {data: null, chunks: chunks.length, updatedAt: now});
         // Cleanup any excess part docs from a previous write that had more chunks
         for(let i=chunks.length;i<chunks.length+10;i++) fbDelete('orgs', fbKey+'_part'+i).catch(()=>{});
@@ -21727,6 +21802,7 @@ function salesInitLiveSync(){
 
 function setSalesList(listId){
   salesActiveList = listId;
+  _salesPage = 0; // reset to first page when switching lists
   try{localStorage.setItem('dronehub_sales_list', listId);}catch(e){}
   if(listId !== 'clients') _salesClientSub = 'all';
   _salesOtherType = 'all'; // reset type filter on every tab switch
@@ -21900,11 +21976,55 @@ function renderSalesTable(){
     ].join('');
   }
 
+  // Pagination — clamp page to valid range after filter changes
+  const totalPages = Math.max(1, Math.ceil(filtered.length / _SALES_PAGE_SIZE));
+  if(_salesPage >= totalPages) _salesPage = totalPages - 1;
+  if(_salesPage < 0) _salesPage = 0;
+  const pageStart = _salesPage * _SALES_PAGE_SIZE;
+  const pageEnd   = Math.min(pageStart + _SALES_PAGE_SIZE, filtered.length);
+  const paginated  = filtered.slice(pageStart, pageEnd);
+
   // Count label
   const cl = document.getElementById('sales-count-label');
   if(cl){
     const subNote = (salesActiveList==='clients' && _salesClientSub!=='all') ? ` (${_salesClientSub} clients)` : '';
-    cl.textContent = `Showing ${filtered.length} of ${subList.length} contacts in this list${subNote}`;
+    if(totalPages > 1){
+      cl.textContent = `Showing ${pageStart+1}–${pageEnd} of ${filtered.length} contacts${subNote} · Page ${_salesPage+1}/${totalPages}`;
+    } else {
+      cl.textContent = `Showing ${filtered.length} of ${subList.length} contacts in this list${subNote}`;
+    }
+  }
+
+  // Render pagination bar (only when more than one page)
+  let paginatorEl = document.getElementById('sales-paginator');
+  if(!paginatorEl){
+    const tableWrap = document.getElementById('sales-table-body')?.closest('table');
+    if(tableWrap){
+      paginatorEl = document.createElement('div');
+      paginatorEl.id = 'sales-paginator';
+      paginatorEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 0 4px;flex-wrap:wrap';
+      tableWrap.parentNode.insertBefore(paginatorEl, tableWrap.nextSibling);
+    }
+  }
+  if(paginatorEl){
+    if(totalPages <= 1){
+      paginatorEl.innerHTML = '';
+    } else {
+      const btnStyle = (active) => `padding:5px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${active?'var(--blue-bright)':'var(--border)'};background:${active?'rgba(91,141,239,.18)':'var(--navy-lift)'};color:${active?'var(--blue-bright)':'var(--offwhite)'}`;
+      // Build page buttons (show at most 7 around current page)
+      const pageBtns = [];
+      const winStart = Math.max(0, _salesPage - 3);
+      const winEnd   = Math.min(totalPages - 1, _salesPage + 3);
+      if(winStart > 0) pageBtns.push(`<button style="${btnStyle(false)}" onclick="_salesPage=0;renderSalesTable()">1</button><span style="color:var(--muted)">…</span>`);
+      for(let p=winStart; p<=winEnd; p++){
+        pageBtns.push(`<button style="${btnStyle(p===_salesPage)}" onclick="_salesPage=${p};renderSalesTable()">${p+1}</button>`);
+      }
+      if(winEnd < totalPages-1) pageBtns.push(`<span style="color:var(--muted)">…</span><button style="${btnStyle(false)}" onclick="_salesPage=${totalPages-1};renderSalesTable()">${totalPages}</button>`);
+      paginatorEl.innerHTML =
+        `<button style="${btnStyle(false)}" ${_salesPage===0?'disabled':''} onclick="_salesPage=Math.max(0,_salesPage-1);renderSalesTable()">← Prev</button>` +
+        pageBtns.join('') +
+        `<button style="${btnStyle(false)}" ${_salesPage===totalPages-1?'disabled':''} onclick="_salesPage=Math.min(${totalPages-1},_salesPage+1);renderSalesTable()">Next →</button>`;
+    }
   }
 
   // Show/hide Field column for Other tab
@@ -21914,7 +22034,7 @@ function renderSalesTable(){
 
   const tbody = document.getElementById('sales-table-body');
   if(!tbody) return;
-  if(!filtered.length){
+  if(!paginated.length){
     // Check if ALL lists are empty — might be a data recovery situation
     const totalAll = SALES_LISTS.reduce((s,l)=>s+(_salesByList[l]||[]).filter(c=>!c._deleted).length,0);
     const allEmpty = totalAll === 0 && SALES_LISTS.every(l=>Array.isArray(_salesByList[l]));
@@ -21930,7 +22050,7 @@ function renderSalesTable(){
   }
 
   const isClientsTab = salesActiveList === 'clients';
-  tbody.innerHTML = filtered.map(c=>{
+  tbody.innerHTML = paginated.map(c=>{
     const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
     const statusClass = {new:'sales-status-new',contacted:'sales-status-contacted',warm:'sales-status-warm',unsubscribed:'sales-status-unsubscribed',client:'sales-status-client'}[c.unsubscribed?'unsubscribed':(c.status||'new')] || 'sales-status-new';
     const statusLabel = c.unsubscribed ? 'Unsubscribed' : ({new:'New',contacted:'Contacted',warm:'Warm',client:'Client'}[c.status]||'New');
@@ -22655,12 +22775,36 @@ function setSalesView(v){
 // SALES CRM — City/Region patch to renderSalesTable
 // (overrides the earlier renderSalesTable to include city column)
 // ══════════════════════════════════════════════════════
-// Re-define renderSalesTable to include the city column
+// Re-define renderSalesTable to include the city column, sorting, sub-filters, and pagination
 renderSalesTable = function(){
   const all = salesLoad();
   const q   = (document.getElementById('sales-search')?.value||'').toLowerCase().trim();
   const list= all.filter(c=> c.list === salesActiveList && !c._deleted);
-  let filtered = q ? list.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : list;
+
+  // Client sub-filter bar / Other type filter bar
+  const subFilterEl = document.getElementById('clients-sub-filter');
+  if(salesActiveList === 'clients' && subFilterEl){
+    const activeCount = list.filter(c=>(c.clientType||'active')==='active').length;
+    const pastCount   = list.filter(c=>c.clientType==='past').length;
+    subFilterEl.style.display = '';
+    subFilterEl.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px">Filter:</span>
+      ${[['all','All Clients',list.length,'var(--green)'],['active','Active Clients',activeCount,'var(--green)'],['past','Past Clients',pastCount,'var(--blue-bright)']].map(([v,lbl,cnt,col])=>`
+        <button onclick="_salesClientSub='${v}';renderSalesTable()" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${_salesClientSub===v?col:'var(--border)'};background:${_salesClientSub===v?'rgba(34,217,122,.1)':'var(--navy-lift)'};color:${_salesClientSub===v?col:'var(--muted)'}">
+          ${lbl} <span style="opacity:.65">(${cnt})</span>
+        </button>`).join('')}
+    </div>`;
+  } else if(subFilterEl){
+    subFilterEl.style.display = 'none';
+  }
+
+  // Apply sub-filter
+  let subList = list;
+  if(salesActiveList==='clients' && _salesClientSub!=='all'){
+    subList = list.filter(c=>(c.clientType||'active')===_salesClientSub);
+  }
+
+  let filtered = q ? subList.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : subList;
 
   // ── Apply sort ──
   const STATUS_ORDER = {new:0, contacted:1, warm:2, client:3, unsubscribed:4};
@@ -22687,36 +22831,117 @@ renderSalesTable = function(){
   // Stats bar
   const statsBar = document.getElementById('sales-stats-bar');
   if(statsBar){
-    const total = all.filter(c=>!c._deleted).length;
-    const warm  = all.filter(c=>c.list==='warm'&&!c._deleted).length;
-    const unsub = all.filter(c=>c.unsubscribed&&!c._deleted).length;
+    const total  = all.filter(c=>!c._deleted).length;
+    const warm   = all.filter(c=>c.list==='warm'&&!c._deleted).length;
+    const unsub  = all.filter(c=>c.unsubscribed&&!c._deleted).length;
+    const dne    = all.filter(c=>c.doNotEmail&&!c._deleted).length;
+    const allClients = all.filter(c=>c.list==='clients'&&!c._deleted);
+    const activeClients = allClients.filter(c=>(c.clientType||'active')==='active').length;
+    const pastClients   = allClients.filter(c=>c.clientType==='past').length;
+    const isClientsView = salesActiveList === 'clients';
     statsBar.innerHTML = [
       `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>Total Contacts</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
+      isClientsView
+        ? `<div style="background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--green);display:block">${activeClients}</span>Active Clients</div>`
+        : `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
+      isClientsView
+        ? `<div style="background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--blue-bright);display:block">${pastClients}</span>Past Clients</div>`
+        : `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
+      !isClientsView && dne>0 ? `<div style="background:rgba(240,82,82,.07);border:1px solid rgba(240,82,82,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--red);display:block">${dne}</span>Do Not Email</div>` : '',
     ].join('');
   }
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / _SALES_PAGE_SIZE));
+  if(_salesPage >= totalPages) _salesPage = totalPages - 1;
+  if(_salesPage < 0) _salesPage = 0;
+  const pageStart = _salesPage * _SALES_PAGE_SIZE;
+  const pageEnd   = Math.min(pageStart + _SALES_PAGE_SIZE, filtered.length);
+  const paginated  = filtered.slice(pageStart, pageEnd);
+
   const cl = document.getElementById('sales-count-label');
-  if(cl) cl.textContent = `Showing ${filtered.length} of ${list.length} contacts in this list`;
+  if(cl){
+    const subNote = (salesActiveList==='clients' && _salesClientSub!=='all') ? ` (${_salesClientSub} clients)` : '';
+    if(totalPages > 1){
+      cl.textContent = `Showing ${pageStart+1}–${pageEnd} of ${filtered.length} contacts${subNote} · Page ${_salesPage+1}/${totalPages}`;
+    } else {
+      cl.textContent = `Showing ${filtered.length} of ${subList.length} contacts in this list${subNote}`;
+    }
+  }
+
+  // Paginator bar
+  let paginatorEl = document.getElementById('sales-paginator');
+  if(!paginatorEl){
+    const tableWrap = document.getElementById('sales-table-body')?.closest('table');
+    if(tableWrap){
+      paginatorEl = document.createElement('div');
+      paginatorEl.id = 'sales-paginator';
+      paginatorEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 0 4px;flex-wrap:wrap';
+      tableWrap.parentNode.insertBefore(paginatorEl, tableWrap.nextSibling);
+    }
+  }
+  if(paginatorEl){
+    if(totalPages <= 1){
+      paginatorEl.innerHTML = '';
+    } else {
+      const btnStyle = (active) => `padding:5px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${active?'var(--blue-bright)':'var(--border)'};background:${active?'rgba(91,141,239,.18)':'var(--navy-lift)'};color:${active?'var(--blue-bright)':'var(--offwhite)'}`;
+      const pageBtns = [];
+      const winStart = Math.max(0, _salesPage - 3);
+      const winEnd   = Math.min(totalPages - 1, _salesPage + 3);
+      if(winStart > 0) pageBtns.push(`<button style="${btnStyle(false)}" onclick="_salesPage=0;renderSalesTable()">1</button><span style="color:var(--muted)">…</span>`);
+      for(let p=winStart; p<=winEnd; p++){
+        pageBtns.push(`<button style="${btnStyle(p===_salesPage)}" onclick="_salesPage=${p};renderSalesTable()">${p+1}</button>`);
+      }
+      if(winEnd < totalPages-1) pageBtns.push(`<span style="color:var(--muted)">…</span><button style="${btnStyle(false)}" onclick="_salesPage=${totalPages-1};renderSalesTable()">${totalPages}</button>`);
+      paginatorEl.innerHTML =
+        `<button style="${btnStyle(false)}" ${_salesPage===0?'disabled':''} onclick="_salesPage=Math.max(0,_salesPage-1);renderSalesTable()">← Prev</button>` +
+        pageBtns.join('') +
+        `<button style="${btnStyle(false)}" ${_salesPage===totalPages-1?'disabled':''} onclick="_salesPage=Math.min(${totalPages-1},_salesPage+1);renderSalesTable()">Next →</button>`;
+    }
+  }
 
   const tbody = document.getElementById('sales-table-body');
   if(!tbody) return;
-  if(!filtered.length){
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">${q?'No contacts match your search.':'No contacts in this list yet.'}</td></tr>`;
+  if(!paginated.length){
+    const totalAll = SALES_LISTS.reduce((s,l)=>s+(_salesByList[l]||[]).filter(c=>!c._deleted).length,0);
+    const allEmpty = totalAll === 0 && SALES_LISTS.every(l=>Array.isArray(_salesByList[l]));
+    const recoveryHtml = (!q && allEmpty) ? `
+      <div style="margin-top:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">If your contacts recently disappeared, a backup may be available.</div>
+        <button onclick="salesRunRecovery()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--blue-bright);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">
+          🔍 Try to Recover Contacts
+        </button>
+      </div>` : '';
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">${q?'No contacts match your search.':'No contacts in this list yet.'}${recoveryHtml}</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(c=>{
+  const isClientsTab = salesActiveList === 'clients';
+  tbody.innerHTML = paginated.map(c=>{
     const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
     const statusClass = {new:'sales-status-new',contacted:'sales-status-contacted',warm:'sales-status-warm',unsubscribed:'sales-status-unsubscribed',client:'sales-status-client'}[c.unsubscribed?'unsubscribed':(c.status||'new')] || 'sales-status-new';
     const statusLabel = c.unsubscribed ? 'Unsubscribed' : ({new:'New',contacted:'Contacted',warm:'Warm',client:'Client'}[c.status]||'New');
-    const emailCell = c.email ? `<a class="sales-email-link" onclick="openSalesIndivEmail('${escSalesAttr(c.id)}')" href="javascript:void(0)">${escSalesHtml(c.email)}</a>` : '—';
+    const dneBadge = c.doNotEmail ? `<span title="Do Not Email" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:var(--red);background:rgba(240,82,82,.1);border:1px solid rgba(240,82,82,.3);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle">⊘ DNE</span>` : '';
+    const ctType = c.clientType || 'active';
+    const ctBadge = isClientsTab
+      ? (ctType === 'active'
+          ? `<span title="Active Client" style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--green);background:rgba(34,217,122,.1);border:1px solid rgba(34,217,122,.3);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle">● Active</span>`
+          : `<span title="Past Client" style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:var(--blue-bright);background:rgba(91,141,239,.1);border:1px solid rgba(91,141,239,.3);border-radius:8px;padding:1px 6px;margin-left:5px;vertical-align:middle">◌ Past</span>`)
+      : '';
+    const emailCell = c.email
+      ? (c.doNotEmail
+          ? `<span style="color:var(--muted);font-size:12px;text-decoration:line-through" title="Do Not Email">${escSalesHtml(c.email)}</span>`
+          : `<a class="sales-email-link" onclick="openSalesIndivEmail('${escSalesAttr(c.id)}')" href="javascript:void(0)">${escSalesHtml(c.email)}</a>`)
+      : '—';
     // Check if there's a deal for this contact
     const deals = dealsLoad();
     const contactDeals = deals.filter(d=>d.contactId===c.id&&d.stage!=='lost');
     const dealBadge = contactDeals.length ? `<span style="background:rgba(245,166,35,.15);color:#F5C842;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:4px" title="Active deal: ${contactDeals.map(d=>d.id).join(', ')}">${contactDeals[0].id}</span>` : '';
+    const ctToggleBtn = isClientsTab
+      ? `<button class="sales-action-btn" onclick="salesToggleClientType('${escSalesAttr(c.id)}')" title="${ctType==='active'?'Mark as Past Client':'Mark as Active Client'}" style="${ctType==='active'?'color:var(--green);border-color:rgba(34,217,122,.4)':'color:var(--blue-bright);border-color:rgba(91,141,239,.4)'}">${ctType==='active'?'●◌':'◌●'}</button>`
+      : '';
     return `<tr>
       <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
-      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dealBadge}</td>
+      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}${ctBadge}${dealBadge}</td>
       <td>${escSalesHtml(c.company||'—')}</td>
       <td style="color:var(--muted);font-size:12px">${escSalesHtml(c.city||'—')}</td>
       <td style="white-space:nowrap">${escSalesHtml(c.phone||'—')}</td>
@@ -22726,7 +22951,9 @@ renderSalesTable = function(){
       <td style="text-align:right;white-space:nowrap">
         <button class="sales-action-btn" onclick="openDealModal(null,'${escSalesAttr(c.id)}')" title="New deal from contact" style="border-color:#F5C842;color:#F5C842"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></button>
         <button class="sales-action-btn" onclick="salesEditContact('${escSalesAttr(c.id)}')" title="Edit">✏</button>
+        ${ctToggleBtn}
         <button class="sales-action-btn" onclick="salesToggleUnsub('${escSalesAttr(c.id)}')" title="${c.unsubscribed?'Re-subscribe':'Unsubscribe'}">${c.unsubscribed?'↩':'🚫'}</button>
+        <button class="sales-action-btn" onclick="salesToggleDNE('${escSalesAttr(c.id)}')" title="${c.doNotEmail?'Remove Do Not Email':'Mark Do Not Email'}" style="${c.doNotEmail?'color:var(--red);border-color:rgba(240,82,82,.4)':''}">⊘</button>
         <button class="sales-action-btn" onclick="salesQuickMove('${escSalesAttr(c.id)}')" title="Move to list">↗</button>
         <button class="sales-action-btn" style="color:#FF7070;border-color:#FF7070" onclick="salesDeleteContact('${escSalesAttr(c.id)}')" title="Delete">✕</button>
       </td>
