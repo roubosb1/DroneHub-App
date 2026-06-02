@@ -44,13 +44,33 @@ async function lookupUserOrg(email){
 // If no session token is available (not logged in, or offline) the calls
 // are silently skipped — localStorage remains the primary data store.
 function _fbToken(){ return _dhToken||sessionStorage.getItem('dh_token')||null; }
-async function _fbCall(body){
+async function _fbCall(body, _attempt=0){
   const tok=_fbToken(); if(!tok) return null;
   try{
     const r=await fetch(_PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
-    if(!r.ok) return null;
+    if(r.status===401){
+      // Token expired — clear it so the user gets a clean login prompt
+      _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+      return null;
+    }
+    if(!r.ok){
+      // Retry writes (set/delete) up to 2 times on server/rate-limit errors.
+      // Reads (get/getAll) are not retried — stale data is better than a slow UI.
+      if(_attempt < 2 && (body.action==='set'||body.action==='delete')){
+        await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
+        return _fbCall(body, _attempt+1);
+      }
+      return null;
+    }
     return await r.json();
-  }catch(e){return null;}
+  }catch(e){
+    // Network error — retry writes up to 2 times
+    if(_attempt < 2 && (body.action==='set'||body.action==='delete')){
+      await new Promise(res=>setTimeout(res, 1000 * (_attempt+1)));
+      return _fbCall(body, _attempt+1);
+    }
+    return null;
+  }
 }
 async function fbSet(col,docId,data){
   const res=await _fbCall({action:'set',col,docId,data});
@@ -4660,9 +4680,13 @@ function setFinanceMarket(m){
 function saveJobsToStorage(){
   try{localStorage.setItem('dronehub_jobs',JSON.stringify(savedJobs));}catch(e){}
   // SAFETY: never overwrite Firebase with an empty array (same guard as clients)
-  if(savedJobs.length > 0 || window._intentionalClearJobs){
+  if((savedJobs.length > 0 || window._intentionalClearJobs) && _fbToken()){
     window._intentionalClearJobs = false;
-    fbSet('orgs',ORG_ID+':jobs',{data:JSON.stringify(savedJobs),updatedAt:Date.now()});
+    fbSetStrict('orgs',ORG_ID+':jobs',{data:JSON.stringify(savedJobs),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveJobsToStorage] Firebase write failed:',e.message);
+        showDhToast('Jobs not saved','Job/invoice data could not be saved to the cloud.','⚠️','var(--orange)',6000);
+      });
   }
   if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
 }
@@ -4673,9 +4697,13 @@ function saveClientsToStorage(){
   // holds real data. Only write to Firebase when there is actual data to save,
   // OR when the caller explicitly cleared clients (e.g. "Clear all" button).
   // The _intentionalClearClients flag is set only by the clear-all action.
-  if(clients.length > 0 || window._intentionalClearClients){
+  if((clients.length > 0 || window._intentionalClearClients) && _fbToken()){
     window._intentionalClearClients = false;
-    fbSet('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()});
+    fbSetStrict('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[saveClientsToStorage] Firebase write failed:',e.message);
+        showDhToast('Clients not saved','Client records could not be saved to the cloud.','⚠️','var(--orange)',6000);
+      });
   }
 }
 
@@ -6717,16 +6745,18 @@ async function restoreFromFirebase(forceAll=false){
   const keys=[
     {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);localStorage.setItem('dronehub_jobs',d);}},
     {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);localStorage.setItem('dronehub_clients',d);}},
+    // Firebase is always the source of truth for team roster on login.
+    // Never block a restore based on array length — length comparisons
+    // caused demo-data (4 hardcoded entries) to silently block real Firebase data.
     {fb:ORG_ID+':team',   ls:'dronehub_admin_team',apply:d=>{
-      const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
-      const incoming=JSON.parse(d||'[]');
-      if(incoming.length>=existing.length){localStorage.setItem('dronehub_admin_team',JSON.stringify(incoming));}
+      if(d) localStorage.setItem('dronehub_admin_team',d);
     }},
     // Also check team_members key as fallback
     {fb:ORG_ID+':team_members', ls:'dronehub_admin_team', apply:d=>{
       const existing=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
       const incoming=JSON.parse(d||'[]');
-      if(incoming.length>existing.length){localStorage.setItem('dronehub_admin_team',JSON.stringify(incoming));}
+      // Only use team_members as fallback if :team didn't already populate the list
+      if(incoming.length>0 && existing.length===0) localStorage.setItem('dronehub_admin_team',JSON.stringify(incoming));
     }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
     {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
@@ -6790,8 +6820,7 @@ async function restoreFromFirebase(forceAll=false){
     }},
     // Calendar events — previously only synced when opening the Calendar tab
     {fb:ORG_ID+':cal_events',    ls:'dronehub_cal_events',        apply:d=>{
-      try{const arr=JSON.parse(d);const local=JSON.parse(localStorage.getItem('dronehub_cal_events')||'[]');
-      if(arr.length>=local.length) localStorage.setItem('dronehub_cal_events',JSON.stringify(arr));}catch(e){}
+      try{ if(d) localStorage.setItem('dronehub_cal_events',d); }catch(e){}
     }},
     // Vacation allocations — previously had no restore at all
     {fb:ORG_ID+':vac_alloc',     ls:'dronehub_vac_alloc',         apply:d=>{localStorage.setItem('dronehub_vac_alloc',d);}},
@@ -16118,7 +16147,10 @@ function gateSaveUsers(arr){
   // SAFETY: never overwrite Firebase with an empty array — would wipe all user accounts
   if(arr.length > 0 && _fbToken()){
     fbSetStrict('orgs',ORG_ID+':gate_users',{data:JSON.stringify(arr),updatedAt:Date.now()})
-      .catch(e=>console.error('[gateSaveUsers] Firebase write failed:',e.message));
+      .catch(e=>{
+        console.error('[gateSaveUsers] Firebase write failed:',e.message);
+        showDhToast('Account save failed','Team login accounts could not be saved to the cloud — changes will be lost if the browser is cleared.','⚠️','var(--orange)',8000);
+      });
   }
 }
 
@@ -21096,23 +21128,11 @@ const _wr=document.querySelector('.wrap');
 if(_ah) _ah.style.display='none';
 if(_wr) _wr.style.display='none';
 gateInit();
-// Pre-populate demo data when running in Claude sandbox (no Firebase)
+// Pre-populate demo data ONLY when running in the Claude sandbox (no Firebase, no token).
+// IMPORTANT: do NOT pre-fill dronehub_admin_team or dronehub_gate_users here —
+// those keys are restored from Firebase on login and any pre-fill would corrupt
+// the restore length-comparison checks and make real accounts look "missing".
 if(!_fbToken()){
-  if(!localStorage.getItem('dronehub_admin_team')){
-    localStorage.setItem('dronehub_admin_team',JSON.stringify([
-      {id:'tmadmin_1',name:'Bailey Roubos',email:'roubosb1@gmail.com',phone:'',type:'admin',role:'admin',orgId:'org_default',status:'active',jobTitle:'Founder/Owner',activatedAt:'2026-05-01',lastSeen:'2026-05-08 11:00'},
-      {id:'tmadmin_2',name:'Alex Shewan',email:'alex@dronehubmedia.com',phone:'',type:'admin',role:'admin',orgId:'org_default',status:'active',jobTitle:'Admin',activatedAt:'2026-05-08',lastSeen:'2026-05-08 10:30'},
-      {id:'tmadmin_3',name:'Mackenzie Woodhouse',email:'mackenzie@dronehubmedia.com',phone:'',type:'team',role:'sales',orgId:'org_default',status:'active',jobTitle:'Sales & Acquisitions',activatedAt:'2026-05-01',lastSeen:'2026-05-07 15:00'},
-      {id:'tmadmin_4',name:'Adrian Gentili',email:'adrian@dronehubmedia.com',phone:'',type:'team',role:'editor',orgId:'org_default',status:'invited',jobTitle:'Editor',activatedAt:''},
-    ]));
-  }
-  if(!localStorage.getItem('dronehub_gate_users')){
-    localStorage.setItem('dronehub_gate_users',JSON.stringify([
-      {email:'roubosb1@gmail.com',name:'Bailey Roubos',role:'admin',type:'admin',passHash:'',clientId:null},
-      {email:'alex@dronehubmedia.com',name:'Alex Shewan',role:'admin',type:'admin',passHash:'',clientId:null},
-      {email:'mackenzie@dronehubmedia.com',name:'Mackenzie Woodhouse',role:'sales',type:'team',passHash:'',clientId:null},
-    ]));
-  }
   if(!localStorage.getItem('dronehub_orgs')){
     localStorage.setItem('dronehub_orgs',JSON.stringify([
       {id:'org_default',name:'DroneHub Media',inviteCode:'DH-2026-DEMO',createdAt:'2026-01-01'}

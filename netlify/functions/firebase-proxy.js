@@ -34,7 +34,7 @@ function getDb() {
 
 // ── Simple in-memory rate limiter (per IP, resets on cold start) ─────────────
 const _rateCounts = {};
-const RATE_LIMIT = 120;  // max requests per minute per IP
+const RATE_LIMIT = 600;  // max requests per minute per IP (team login fires ~40 reads each; 10 users = 400/min)
 const RATE_WINDOW = 60 * 1000;
 
 function isRateLimited(ip) {
