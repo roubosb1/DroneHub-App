@@ -8816,6 +8816,12 @@ function toggleClientStatus(clientId){
   renderClients();
 }
 function renderClients(){
+  // Bootstrap: if Clients tab has no data but CRM Existing Clients does, auto-populate once
+  if(!clients.length){
+    const crmClients = salesLoad().filter(c=>c.list==='clients'&&!c._deleted);
+    if(crmClients.length) syncCRMClientsToTab(crmClients);
+    // Fall through — clients[] is now populated (or still empty if CRM is also empty)
+  }
   const q=(document.getElementById('clients-search')?.value||'').trim().toLowerCase();
   const list=document.getElementById('clients-list');
   const empty=document.getElementById('clients-empty');
@@ -21463,51 +21469,75 @@ function splitSalesName(fn, ln){
 
 function salesFixUnsplitNames(){
   const all = salesLoad();
+  let anyFixed = false;
 
-  // Find every contact where lastName is blank but firstName contains a space
-  const candidates = all.filter(c => {
-    const fn = (c.firstName||'').trim();
-    const ln = (c.lastName||'').trim();
-    return !ln && fn.includes(' ');
-  });
+  // ── Pass 1: firstName contains a full name (lastName is blank) ──────────────
+  const nameCandidates = all.filter(c => !(c.lastName||'').trim() && (c.firstName||'').trim().includes(' '));
+  if(nameCandidates.length){
+    const preview = nameCandidates.slice(0,5).map(c=>{
+      const {firstName:newFn, lastName:newLn} = splitSalesName(c.firstName, '');
+      return `"${c.firstName}" → First: "${newFn}"  Last: "${newLn}"`;
+    }).join('\n');
+    const moreNote = nameCandidates.length > 5 ? `\n…and ${nameCandidates.length - 5} more` : '';
+    if(confirm(
+      `Found ${nameCandidates.length} contact${nameCandidates.length!==1?'s':''} with an unsplit full name.\n\n` +
+      `Rule:\n• 2 words → word 1 = First, word 2 = Last\n• 3+ words → words 1–2 = First, remaining = Last\n\n` +
+      `Preview:\n${preview}${moreNote}\n\nApply to all ${nameCandidates.length} contact${nameCandidates.length!==1?'s':''}?`
+    )){
+      let fixed = 0;
+      all.forEach(c => {
+        if((c.lastName||'').trim() || !(c.firstName||'').trim().includes(' ')) return;
+        const {firstName: newFn, lastName: newLn} = splitSalesName(c.firstName, '');
+        c.firstName = newFn; c.lastName = newLn; c.updatedAt = new Date().toISOString();
+        fixed++;
+      });
+      anyFixed = true;
+      showDhToast(`Fixed ${fixed} name${fixed!==1?'s':''}`, `First and last names separated across ${fixed} contact${fixed!==1?'s':''}.`, '✅', 'var(--green)', 4000);
+    }
+  }
 
-  if(!candidates.length){
-    showDhToast('No names to fix', 'All contacts already have first and last names separated.', '✅', 'var(--green)', 4000);
+  // ── Pass 2: lastName contains " - Company Name" pattern ────────────────────
+  // e.g. lastName = "Gonsenhauser - Harvey Kalles Real Estate"
+  // → clean lastName to "Gonsenhauser", move company to company field (if blank)
+  const dashCandidates = all.filter(c => (c.lastName||'').includes(' - '));
+  if(dashCandidates.length){
+    const preview2 = dashCandidates.slice(0,5).map(c=>{
+      const parts = (c.lastName||'').split(' - ');
+      const cleanLn = parts[0].trim();
+      const coBit   = parts.slice(1).join(' - ').trim();
+      const coAction = c.company ? `(company kept as "${c.company}")` : `Company → "${coBit}"`;
+      return `"${c.firstName} ${c.lastName}" → Last: "${cleanLn}"  ${coAction}`;
+    }).join('\n');
+    const moreNote2 = dashCandidates.length > 5 ? `\n…and ${dashCandidates.length - 5} more` : '';
+    if(confirm(
+      `Found ${dashCandidates.length} contact${dashCandidates.length!==1?'s':''} where the Last Name contains " - [Company]".\n\n` +
+      `This will clean the last name and move the company portion to the Company field (only if Company is currently blank).\n\n` +
+      `Preview:\n${preview2}${moreNote2}\n\nApply to all ${dashCandidates.length} contact${dashCandidates.length!==1?'s':''}?`
+    )){
+      let fixed2 = 0;
+      all.forEach(c => {
+        if(!(c.lastName||'').includes(' - ')) return;
+        const parts  = (c.lastName||'').split(' - ');
+        const coBit  = parts.slice(1).join(' - ').trim();
+        c.lastName   = parts[0].trim();
+        if(!c.company && coBit) c.company = coBit;
+        c.updatedAt  = new Date().toISOString();
+        fixed2++;
+      });
+      anyFixed = true;
+      showDhToast(`Cleaned ${fixed2} last name${fixed2!==1?'s':''}`, `Company names extracted from last name field for ${fixed2} contact${fixed2!==1?'s':''}.`, '✅', 'var(--green)', 4000);
+    }
+  }
+
+  if(!nameCandidates.length && !dashCandidates.length){
+    showDhToast('No names to fix', 'All contacts already have clean, separated names.', '✅', 'var(--green)', 4000);
     return;
   }
 
-  // Build a preview of what will change (show first 5)
-  const preview = candidates.slice(0,5).map(c=>{
-    const {firstName:newFn, lastName:newLn} = splitSalesName(c.firstName, '');
-    return `"${c.firstName}" → "${newFn}" / "${newLn}"`;
-  }).join('\n');
-  const moreNote = candidates.length > 5 ? `\n…and ${candidates.length - 5} more` : '';
-
-  if(!confirm(
-    `Found ${candidates.length} contact${candidates.length!==1?'s':''} with an unsplit full name.\n\n` +
-    `Rule:\n• 2 words  → word 1 = First, word 2 = Last\n• 3+ words → words 1–2 = First, remaining = Last\n\n` +
-    `Preview:\n${preview}${moreNote}\n\nApply to all ${candidates.length} contact${candidates.length!==1?'s':''}?`
-  )) return;
-
-  let fixed = 0;
-  all.forEach(c => {
-    const fn = (c.firstName||'').trim();
-    const ln = (c.lastName||'').trim();
-    if(ln || !fn.includes(' ')) return;   // already split or nothing to do
-    const {firstName: newFn, lastName: newLn} = splitSalesName(fn, '');
-    c.firstName = newFn;
-    c.lastName  = newLn;
-    c.updatedAt = new Date().toISOString();
-    fixed++;
-  });
-
-  salesSave(all);
-  renderSalesTable();
-  showDhToast(
-    `Fixed ${fixed} name${fixed!==1?'s':''}`,
-    `First and last names have been separated across ${fixed} contact${fixed!==1?'s':''}.`,
-    '✅', 'var(--green)', 5000
-  );
+  if(anyFixed){
+    salesSave(all);
+    renderSalesTable();
+  }
 }
 
 function setSalesSort(col){
@@ -21953,6 +21983,14 @@ function renderSales(){
   // Load from Firebase first, THEN sync clients so salesSave never runs
   // against partially-loaded lists.
   salesSyncFirebase().then(()=>{
+    // Bootstrap: if Clients tab is empty but CRM has Existing Clients, populate it now
+    if(!clients.length){
+      const crmClients = salesLoad().filter(c=>c.list==='clients'&&!c._deleted);
+      if(crmClients.length){
+        syncCRMClientsToTab(crmClients);
+        renderClients();
+      }
+    }
     syncAllClientsToCRM();
     renderSalesTable();
   });
@@ -22852,12 +22890,12 @@ function renderSalesTable(){
       : '';
     return `<tr>
       <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
-      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}${ctBadge}${dealBadge}</td>
+      <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}${dealBadge}</td>
       <td>${escSalesHtml(c.company||'—')}</td>
       <td style="color:var(--muted);font-size:12px">${escSalesHtml(c.city||'—')}</td>
       <td style="white-space:nowrap">${escSalesHtml(c.phone||'—')}</td>
       <td>${emailCell}</td>
-      <td><span class="sales-status-badge ${statusClass}">${statusLabel}</span></td>
+      <td style="white-space:nowrap"><span class="sales-status-badge ${statusClass}">${statusLabel}</span>${ctBadge?`<div style="margin-top:3px">${ctBadge.replace('margin-left:5px;','')}</div>`:''}</td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(c.notes||'')}">${escSalesHtml((c.notes||'').slice(0,40))||'—'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="sales-action-btn" onclick="openDealModal(null,'${escSalesAttr(c.id)}')" title="New deal from contact" style="border-color:#F5C842;color:#F5C842"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></button>
