@@ -6730,8 +6730,7 @@ async function restoreFromFirebase(forceAll=false){
         if(remoteN>localN) localStorage.setItem('dronehub_tracker_id_counter',String(remoteN));
       }catch(e){}
     }},
-    {fb:ORG_ID+':lc_channels',ls:'dronehub_lc_channels',apply:d=>{localStorage.setItem('dronehub_lc_channels',d);}},
-    // NOTE: lc_msgs are loaded per-channel when opening each channel, not bulk restored
+    // NOTE: lc_channels also restored below in the social section (with message pre-load)
     {fb:ORG_ID+':contractors',    ls:'dronehub_contractors',       apply:d=>{
       try{
         CONTRACTORS=JSON.parse(d);
@@ -6795,14 +6794,51 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':pricing',       ls:'dronehub_pricing_config',    apply:d=>{
       try{_pricingConfig=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_pricing_config',d);
     }},
-    // Sales contacts — one doc per list (avoids Firestore 1MB limit)
+    // Sales contacts — one doc per list. Lists >900 KB are chunked across
+    // multiple Firestore docs (header doc has data:null, chunks:N). Use applyDoc
+    // so the restore loop passes the full doc object and we can call _salesReadChunked.
     ...['realestate','golf','resorts','other','warm','clients'].map(l=>({
       fb: ORG_ID+':sales_'+l, ls: null,
-      apply: d=>{ try{ _salesByList[l]=JSON.parse(d); _salesUpdatedAt[l]=Date.now(); }catch(e){} }
+      applyDoc: async (fb, fbKey)=>{
+        const data = await _salesReadChunked(fb, fbKey);
+        if(data !== null){ _salesByList[l]=data; _salesUpdatedAt[l]=fb.updatedAt||Date.now(); }
+      }
     })),
     // Deals pipeline — restore on login so pipeline is available on any device
     { fb: ORG_ID+':sales_deals', ls: 'dronehub_sales_deals',
       apply: d=>{ try{ localStorage.setItem('dronehub_sales_deals', d); }catch(e){} }
+    },
+    // Social media — workspaces, posts, and notifications
+    { fb: ORG_ID+':social_workspaces', ls: 'dronehub_social_workspaces',
+      apply: d=>{ try{ localStorage.setItem('dronehub_social_workspaces', d); }catch(e){} }
+    },
+    { fb: ORG_ID+':social_posts', ls: 'dronehub_social_posts',
+      apply: d=>{ try{ localStorage.setItem('dronehub_social_posts', d); }catch(e){} }
+    },
+    { fb: ORG_ID+':social_notifs', ls: 'dh_social_notifs',
+      apply: d=>{ try{ localStorage.setItem('dh_social_notifs', d); }catch(e){} }
+    },
+    // LouChat messages — one doc per channel; restore all channels on login
+    // so messages are available immediately without opening each channel first
+    { fb: ORG_ID+':lc_channels', ls: 'dronehub_lc_channels',
+      apply: d=>{
+        try{
+          localStorage.setItem('dronehub_lc_channels', d);
+          // Kick off a background restore of each channel's messages
+          const channels = JSON.parse(d||'[]');
+          channels.forEach(ch=>{
+            if(!ch.id || ch.id==='lc_welcome') return;
+            fbGet('orgs', ORG_ID+':lc_msgs_'+ch.id).then(fb=>{
+              if(fb?.msgs){
+                try{
+                  const msgs = JSON.parse(fb.msgs).filter(m=>m.channelId===ch.id);
+                  localStorage.setItem('dronehub_lc_msgs_'+ch.id, JSON.stringify(msgs));
+                }catch(e){}
+              }
+            }).catch(()=>{});
+          });
+        }catch(e){}
+      }
     },
   ];
 
@@ -6813,7 +6849,10 @@ async function restoreFromFirebase(forceAll=false){
 
     try{
       const fb=await fbGet('orgs',k.fb);
-      if(!fb?.data) continue;
+      // Skip truly absent docs.
+      // Allow chunked docs where fb.data===null but fb.chunks>1 (applyDoc handles those).
+      if(!fb) continue;
+      if(!fb.data && !k.applyDoc) continue;
       const fbTime=fb.updatedAt||0;
 
       // Always restore these critical keys from Firebase
@@ -6826,7 +6865,8 @@ async function restoreFromFirebase(forceAll=false){
       // 3. Firebase has newer data than our last local save, OR
       // 4. It's team/auth/contacts data (always sync)
       if(forceAll||localEmpty||(fbTime>lastLocalSave&&fbTime>0)||isAlwaysSync){
-        k.apply(fb.data);
+        if(k.applyDoc) await k.applyDoc(fb, k.fb);
+        else k.apply(fb.data);
         restored++;
       }
     }catch(e){}
@@ -6835,6 +6875,7 @@ async function restoreFromFirebase(forceAll=false){
   if(restored>0){
     console.log('Restored '+restored+' collections from Firebase');
     renderJobs();renderClients();renderTeam();renderPayroll();renderTracker();
+    if(typeof renderAppHeader==='function') renderAppHeader();
   }
   // Migrate any contacts still in localStorage → Firebase (runs silently, one-time)
   if(_fbToken()) salesMigrateLocalStorage().catch(()=>{});
