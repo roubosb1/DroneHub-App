@@ -6840,6 +6840,12 @@ async function restoreFromFirebase(forceAll=false){
         });
         const merged=Object.values(emailMap);
         localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));
+        // If the merged list is larger than what Firebase had, push the extras back
+        // so Firebase stays in sync (handles bootstrap members added while offline)
+        if(merged.length > incoming.length && _fbToken()){
+          fbSetStrict('orgs',ORG_ID+':team',{data:JSON.stringify(merged),updatedAt:Date.now()})
+            .catch(e=>console.error('[restoreFromFirebase:team] write-back failed:',e.message));
+        }
       }catch(e){ localStorage.setItem('dronehub_admin_team',d); }
     }},
     // Also check team_members key as fallback — merges into existing list
