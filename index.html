@@ -17686,27 +17686,34 @@ function saveAdminTeamMembers(arr){
   }
 }
 
-// ── BOOTSTRAP FORCE-ADMIN TEAM MEMBERS ───────────────────────────────────────
-// Ensures every hardcoded admin is visible on the Team tab even if they were
-// never explicitly added to the roster (e.g. Mackenzie, Alex, Bailey).
+// ── BOOTSTRAP TEAM MEMBERS ───────────────────────────────────────────────────
+// Ensures every known team member appears on the Team tab even if they were
+// never explicitly added to the roster (e.g. after a cache clear or re-invite).
 // Safe to call at any time — only adds missing entries, never overwrites existing ones.
 function bootstrapForceAdminTeam(){
-  const FORCE_ADMIN_DEFAULTS=[
-    {email:'roubosb1@gmail.com',          name:'Bailey Roubos',       jobTitle:'Founder/Owner',        role:'admin'},
-    {email:'admin@dronehubmedia.com',     name:'Admin',               jobTitle:'Admin',                role:'admin'},
-    {email:'alex@dronehubmedia.com',      name:'Alex Shewan',         jobTitle:'Admin',                role:'admin'},
-    {email:'mackenzie@dronehubmedia.com', name:'Mackenzie Woodhouse', jobTitle:'Sales & Acquisitions', role:'admin'},
+  const TEAM_DEFAULTS=[
+    // ── Admins ────────────────────────────────────────────────────────────────
+    {email:'roubosb1@gmail.com',          name:'Bailey Roubos',       jobTitle:'Founder/Owner',        role:'admin', type:'admin'},
+    {email:'admin@dronehubmedia.com',     name:'Admin',               jobTitle:'Admin',                role:'admin', type:'admin'},
+    {email:'alex@dronehubmedia.com',      name:'Alex Shewan',         jobTitle:'Admin',                role:'admin', type:'admin'},
+    {email:'mackenzie@dronehubmedia.com', name:'Mackenzie Woodhouse', jobTitle:'Sales & Acquisitions', role:'admin', type:'admin'},
+    // ── Team members ──────────────────────────────────────────────────────────
+    {email:'mat@dronehubmedia.com',     name:'Mat Tanguay',      jobTitle:'Head Editor',  role:'editor',     type:'team'},
+    {email:'brad@dronehubmedia.com',    name:'Brad Loiselle',    jobTitle:'',             role:'contractor', type:'team'},
+    {email:'connor@dronehubmedia.com',  name:'Connor Reeves',    jobTitle:'',             role:'contractor', type:'team'},
+    {email:'steve@dronehubmedia.com',   name:'Steve Calaguiro',  jobTitle:'',             role:'contractor', type:'team'},
+    {email:'akbar@dronehubmedia.com',   name:'Akbar Omar',       jobTitle:'',             role:'contractor', type:'team'},
   ];
   const members=getAdminTeamMembers();
   const existingEmails=new Set(members.map(m=>(m.email||'').toLowerCase().trim()));
   let added=0;
   const today=new Date().toISOString().slice(0,10);
-  FORCE_ADMIN_DEFAULTS.forEach(def=>{
+  TEAM_DEFAULTS.forEach(def=>{
     if(!existingEmails.has(def.email.toLowerCase())){
       members.push({
-        id:'tmadmin_'+def.email.split('@')[0].replace(/[^a-z0-9]/g,''),
+        id:'tm_'+def.email.split('@')[0].replace(/[^a-z0-9]/g,''),
         name:def.name, email:def.email, phone:'',
-        type:'admin', role:def.role, jobTitle:def.jobTitle,
+        type:def.type, role:def.role, jobTitle:def.jobTitle,
         orgId:ORG_ID, status:'active',
         invitedAt:'2024-01-01', activatedAt:'2024-01-01', addedAt:today,
       });
