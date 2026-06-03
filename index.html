@@ -23290,7 +23290,13 @@ function socialWorkspacesLoad(){
 }
 function socialWorkspacesSave(arr){
   localStorage.setItem('dronehub_social_workspaces', JSON.stringify(arr));
-  if(_fbToken()) fbSet('orgs', ORG_ID+':social_workspaces', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()){
+    fbSetStrict('orgs', ORG_ID+':social_workspaces', {data:JSON.stringify(arr), updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[socialWorkspacesSave] Firebase write failed:', e.message);
+        showDhToast('Workspace not saved','Social workspace could not be saved to the cloud — changes may be lost on next login.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 function socialPostsLoad(){
   try{
@@ -23312,7 +23318,13 @@ function socialPostsLoad(){
 }
 function socialPostsSave(arr){
   localStorage.setItem('dronehub_social_posts', JSON.stringify(arr));
-  if(_fbToken()) fbSet('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()}).catch(()=>{});
+  if(_fbToken()){
+    fbSetStrict('orgs', ORG_ID+':social_posts', {data:JSON.stringify(arr), updatedAt:Date.now()})
+      .catch(e=>{
+        console.error('[socialPostsSave] Firebase write failed:', e.message);
+        showDhToast('Post not saved','Social post could not be saved to the cloud — changes may be lost on next login.','⚠️','var(--orange)',7000);
+      });
+  }
 }
 function videoDraftsLoad(){
   try{ return JSON.parse(localStorage.getItem('dh_video_drafts')||'[]'); }catch(e){ return []; }
@@ -25125,23 +25137,29 @@ function renderSocialMusicTracker(){
 
 // ── Workspace Modal ───────────────────────────────────────────────────────────────────────────
 function openSocialWorkspaceModal(id){
+  const modal=document.getElementById('social-ws-modal');
+  if(!modal){ console.error('social-ws-modal element not found'); return; }
   _socialEditingWsId=id||null;
   const ws=id?socialWorkspacesLoad().find(w=>w.id===id):null;
-  document.getElementById('social-ws-modal-title').textContent=ws?'Edit Workspace':'New Workspace';
-  document.getElementById('social-ws-name').value=ws?.name||'';
-  document.getElementById('social-ws-ig-handle').value=ws?.igHandle||'';
-  document.getElementById('social-ws-approvers1').value=(ws?.approvers1||'');
-  document.getElementById('social-ws-approvers2').value=(ws?.approvers2||'');
+  const titleEl=document.getElementById('social-ws-modal-title');
+  if(titleEl) titleEl.textContent=ws?'Edit Workspace':'New Workspace';
+  const nameEl=document.getElementById('social-ws-name');       if(nameEl) nameEl.value=ws?.name||'';
+  const igEl=document.getElementById('social-ws-ig-handle');    if(igEl)   igEl.value=(ws?.igHandle||'');
+  const a1El=document.getElementById('social-ws-approvers1');   if(a1El)   a1El.value=(ws?.approvers1||'');
+  const a2El=document.getElementById('social-ws-approvers2');   if(a2El)   a2El.value=(ws?.approvers2||'');
   const selected=ws?.channels||[];
   SOCIAL_PLATFORMS.forEach(p=>{ const cb=document.getElementById('social-ch-'+p.id); if(cb) cb.checked=selected.includes(p.id); });
-  // Populate client dropdown
+  // Populate client dropdown (limit to 500 for performance; show all if fewer)
   const clientSel=document.getElementById('social-ws-client-id');
   if(clientSel){
+    const cList=(clients||[]).slice(0,500);
+    const moreNote=(clients||[]).length>500?`<option disabled>…and ${(clients||[]).length-500} more — use Clients tab to manage</option>`:'';
     clientSel.innerHTML='<option value="">— No client linked —</option>'
-      +(clients||[]).map(c=>`<option value="${c.id}">${c.name}${c.company?' ('+c.company+')':''}</option>`).join('');
+      +cList.map(c=>`<option value="${c.id||''}">${(c.name||'').replace(/"/g,'&quot;')}${c.company?' ('+c.company.replace(/"/g,'&quot;')+')':''}</option>`).join('')
+      +moreNote;
     clientSel.value=ws?.clientId||'';
   }
-  document.getElementById('social-ws-modal').style.display='flex';
+  modal.style.display='flex';
 }
 function closeSocialWorkspaceModal(){
   document.getElementById('social-ws-modal').style.display='none';
