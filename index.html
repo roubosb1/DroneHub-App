@@ -4951,9 +4951,9 @@ const FREE_RADIUS_KM=40;
 // Contractor definitions — editable via Settings, persisted in localStorage
 const CONTRACTOR_DEFAULTS={
   bailey:{name:'Bailey Roubos',addr:'177 Lakeshore Road W, Port Colborne, ON L3K 2S2',lat:42.8778,lng:-79.2598,email:'baileyroubos@gmail.com',phone:'',role:'Videographer / Photographer / Floor plan',rate:80,noDrive:true,notes:'Owner — no drive charge applied. US base: 5217 Old Spicewood Springs Rd, Austin TX 78731'},
-  brad:{name:'Brad Loiselle',addr:'1 Armour Dr, Welland, ON',lat:42.9848,lng:-79.2482,email:'',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
-  akbar:{name:'Akbar Omar',addr:'9 Spall Ct, Toronto, ON',lat:43.7315,lng:-79.6254,email:'',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
-  steve:{name:'Steve Calaguiro',addr:'5623 Woodland Blvd, Niagara Falls, ON',lat:43.0896,lng:-79.0849,email:'',phone:'',role:'Photographer / Floor plan',rate:40,notes:''},
+  brad:{name:'Brad Loiselle',addr:'1 Armour Dr, Welland, ON',lat:42.9848,lng:-79.2482,email:'brad@dronehubmedia.com',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
+  akbar:{name:'Akbar Omar',addr:'9 Spall Ct, Toronto, ON',lat:43.7315,lng:-79.6254,email:'akbar@dronehubmedia.com',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
+  steve:{name:'Steve Calaguiro',addr:'5623 Woodland Blvd, Niagara Falls, ON',lat:43.0896,lng:-79.0849,email:'steve@dronehubmedia.com',phone:'',role:'Photographer / Floor plan',rate:40,notes:''},
 };
 let CONTRACTORS=JSON.parse(localStorage.getItem('dronehub_contractors')||JSON.stringify(CONTRACTOR_DEFAULTS));
 // Ensure any newly hardcoded defaults are always present (won't overwrite user edits)
@@ -16218,11 +16218,15 @@ function isProjectCompleted(ts){
 // Hardcoded admin accounts — full access to everything
 // ── PRESET EMAIL → JOB TITLE MAP ─────────────────────────────────────────
 const PRESET_JOB_TITLES={
-  'admin@dronehubmedia.com':        {title:'Admin',           locked:true},
-  'alex@dronehubmedia.com':         {title:'Admin',           locked:true},
-  'mackenzie@dronehubmedia.com':    {title:'Sales & Acquisitions', locked:true},
-  'roubosb1@gmail.com':       {title:'Founder/Owner',   locked:true},
-  'mat@dronehubmedia.com':    {title:'Head Editor',     locked:true},
+  'admin@dronehubmedia.com':    {title:'Admin',                    locked:true},
+  'alex@dronehubmedia.com':     {title:'Admin',                    locked:true},
+  'mackenzie@dronehubmedia.com':{title:'Sales & Acquisitions',     locked:true},
+  'roubosb1@gmail.com':         {title:'Founder/Owner',            locked:true},
+  'mat@dronehubmedia.com':      {title:'Head Editor',              locked:true},
+  'brad@dronehubmedia.com':     {title:'Videographer/Photographer',locked:true},
+  'connor@dronehubmedia.com':   {title:'Editor',                   locked:true},
+  'steve@dronehubmedia.com':    {title:'Photographer',             locked:true},
+  'akbar@dronehubmedia.com':    {title:'Videographer/Photographer',locked:true},
 };
 
 function gateCheckPresetRole(email){
@@ -17698,18 +17702,21 @@ function bootstrapForceAdminTeam(){
     {email:'alex@dronehubmedia.com',      name:'Alex Shewan',         jobTitle:'Admin',                role:'admin', type:'admin'},
     {email:'mackenzie@dronehubmedia.com', name:'Mackenzie Woodhouse', jobTitle:'Sales & Acquisitions', role:'admin', type:'admin'},
     // ── Team members ──────────────────────────────────────────────────────────
-    {email:'mat@dronehubmedia.com',     name:'Mat Tanguay',      jobTitle:'Head Editor',  role:'editor',     type:'team'},
-    {email:'brad@dronehubmedia.com',    name:'Brad Loiselle',    jobTitle:'',             role:'contractor', type:'team'},
-    {email:'connor@dronehubmedia.com',  name:'Connor Reeves',    jobTitle:'',             role:'contractor', type:'team'},
-    {email:'steve@dronehubmedia.com',   name:'Steve Calaguiro',  jobTitle:'',             role:'contractor', type:'team'},
-    {email:'akbar@dronehubmedia.com',   name:'Akbar Omar',       jobTitle:'',             role:'contractor', type:'team'},
+    {email:'mat@dronehubmedia.com',     name:'Mat Tanguay',      jobTitle:'Head Editor',              role:'editor',     type:'team'},
+    {email:'brad@dronehubmedia.com',    name:'Brad Loiselle',    jobTitle:'Videographer/Photographer', role:'contractor', type:'team'},
+    {email:'connor@dronehubmedia.com',  name:'Connor Reeves',    jobTitle:'Editor',                   role:'editor',     type:'team'},
+    {email:'steve@dronehubmedia.com',   name:'Steve Calaguiro',  jobTitle:'Photographer',             role:'contractor', type:'team'},
+    {email:'akbar@dronehubmedia.com',   name:'Akbar Omar',       jobTitle:'Videographer/Photographer', role:'contractor', type:'team'},
   ];
   const members=getAdminTeamMembers();
-  const existingEmails=new Set(members.map(m=>(m.email||'').toLowerCase().trim()));
-  let added=0;
+  const emailIndex={};
+  members.forEach((m,i)=>{ emailIndex[(m.email||'').toLowerCase().trim()]=i; });
+  let changed=0;
   const today=new Date().toISOString().slice(0,10);
   TEAM_DEFAULTS.forEach(def=>{
-    if(!existingEmails.has(def.email.toLowerCase())){
+    const key=def.email.toLowerCase();
+    if(emailIndex[key]===undefined){
+      // Add missing member
       members.push({
         id:'tm_'+def.email.split('@')[0].replace(/[^a-z0-9]/g,''),
         name:def.name, email:def.email, phone:'',
@@ -17717,10 +17724,16 @@ function bootstrapForceAdminTeam(){
         orgId:ORG_ID, status:'active',
         invitedAt:'2024-01-01', activatedAt:'2024-01-01', addedAt:today,
       });
-      added++;
+      changed++;
+    } else {
+      // Update any fields that are blank or stale (never overwrite user-set values)
+      const m=members[emailIndex[key]];
+      if(!m.jobTitle && def.jobTitle){ m.jobTitle=def.jobTitle; changed++; }
+      if(!m.role    && def.role)     { m.role=def.role;         changed++; }
+      if(!m.name    && def.name)     { m.name=def.name;         changed++; }
     }
   });
-  if(added>0) saveAdminTeamMembers(members);
+  if(changed>0) saveAdminTeamMembers(members);
 }
 
 // ── MERGE DUPLICATE ACCOUNTS ──────────────────────────────────────────────────
