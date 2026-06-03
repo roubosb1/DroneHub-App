@@ -16222,7 +16222,6 @@ const PRESET_JOB_TITLES={
   'alex@dronehubmedia.com':         {title:'Admin',           locked:true},
   'mackenzie@dronehubmedia.com':    {title:'Sales & Acquisitions', locked:true},
   'roubosb1@gmail.com':       {title:'Founder/Owner',   locked:true},
-  'adrian@dronehubmedia.com': {title:'Project Manager', locked:true},
   'mat@dronehubmedia.com':    {title:'Head Editor',     locked:true},
 };
 
@@ -16575,6 +16574,10 @@ async function gateLogin(){
   errEl.style.display='none';
 
   if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
+
+  // Revoked accounts — login permanently blocked
+  const REVOKED_EMAILS=['adrian@dronehubmedia.com'];
+  if(REVOKED_EMAILS.includes(email)){errEl.textContent='This account has been deactivated. Please contact your administrator.';errEl.style.display='block';return;}
 
   // Rate limit check — block after 5 failures for 15 min
   const _rateLock=checkRateLimit(email);
@@ -17141,7 +17144,6 @@ const SALES_ALLOWED_EMAILS = [
 
 // Explicitly blocked from Sales CRM regardless of role or other flags
 const SALES_BLOCKED_EMAILS = [
-  'adrian@dronehubmedia.com',
   'brad@dronehubmedia.com',
   'bradloiselle@dronehubmedia.com',
 ];
