@@ -17221,6 +17221,8 @@ async function gateShowAdminView(session){
   checkStripePaymentReturn();
   // Start background live-sync so contacts update automatically when others upload
   salesInitLiveSync();
+  // Ensure all hardcoded admins (Bailey, Alex, Mackenzie, etc.) appear on the Team tab
+  bootstrapForceAdminTeam();
 }
 
 function gateShowTeamView(session){
@@ -17680,6 +17682,36 @@ function saveAdminTeamMembers(arr){
       .catch(e=>console.error('[saveAdminTeamMembers] Firebase write failed:',e.message));
     fbSet('orgs',ORG_ID+':team_members',{data:JSON.stringify(arr),updatedAt:Date.now()});
   }
+}
+
+// ── BOOTSTRAP FORCE-ADMIN TEAM MEMBERS ───────────────────────────────────────
+// Ensures every hardcoded admin is visible on the Team tab even if they were
+// never explicitly added to the roster (e.g. Mackenzie, Alex, Bailey).
+// Safe to call at any time — only adds missing entries, never overwrites existing ones.
+function bootstrapForceAdminTeam(){
+  const FORCE_ADMIN_DEFAULTS=[
+    {email:'roubosb1@gmail.com',          name:'Bailey Roubos',       jobTitle:'Founder/Owner',        role:'admin'},
+    {email:'admin@dronehubmedia.com',     name:'Admin',               jobTitle:'Admin',                role:'admin'},
+    {email:'alex@dronehubmedia.com',      name:'Alex Shewan',         jobTitle:'Admin',                role:'admin'},
+    {email:'mackenzie@dronehubmedia.com', name:'Mackenzie Woodhouse', jobTitle:'Sales & Acquisitions', role:'admin'},
+  ];
+  const members=getAdminTeamMembers();
+  const existingEmails=new Set(members.map(m=>(m.email||'').toLowerCase().trim()));
+  let added=0;
+  const today=new Date().toISOString().slice(0,10);
+  FORCE_ADMIN_DEFAULTS.forEach(def=>{
+    if(!existingEmails.has(def.email.toLowerCase())){
+      members.push({
+        id:'tmadmin_'+def.email.split('@')[0].replace(/[^a-z0-9]/g,''),
+        name:def.name, email:def.email, phone:'',
+        type:'admin', role:def.role, jobTitle:def.jobTitle,
+        orgId:ORG_ID, status:'active',
+        invitedAt:'2024-01-01', activatedAt:'2024-01-01', addedAt:today,
+      });
+      added++;
+    }
+  });
+  if(added>0) saveAdminTeamMembers(members);
 }
 
 // ── MERGE DUPLICATE ACCOUNTS ──────────────────────────────────────────────────
