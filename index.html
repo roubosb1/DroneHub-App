@@ -21558,20 +21558,25 @@ function salesFixUnsplitNames(){
 
   // ── Pass 2: lastName contains " - Company Name" pattern ────────────────────
   // e.g. lastName = "Gonsenhauser - Harvey Kalles Real Estate"
-  // → clean lastName to "Gonsenhauser", move company to company field (if blank)
+  // → clean lastName to "Gonsenhauser", always set Company to extracted value
+  //   (overrides existing company if different — last name pattern is more reliable)
   const dashCandidates = all.filter(c => (c.lastName||'').includes(' - '));
   if(dashCandidates.length){
     const preview2 = dashCandidates.slice(0,5).map(c=>{
-      const parts = (c.lastName||'').split(' - ');
+      const parts   = (c.lastName||'').split(' - ');
       const cleanLn = parts[0].trim();
       const coBit   = parts.slice(1).join(' - ').trim();
-      const coAction = c.company ? `(company kept as "${c.company}")` : `Company → "${coBit}"`;
+      const coAction = c.company && c.company !== coBit
+        ? `Company: "${c.company}" → "${coBit}"`
+        : `Company → "${coBit}"`;
       return `"${c.firstName} ${c.lastName}" → Last: "${cleanLn}"  ${coAction}`;
     }).join('\n');
+    const overrideCount = dashCandidates.filter(c => c.company && c.company !== (c.lastName||'').split(' - ').slice(1).join(' - ').trim()).length;
     const moreNote2 = dashCandidates.length > 5 ? `\n…and ${dashCandidates.length - 5} more` : '';
+    const overrideNote = overrideCount > 0 ? `\n\n⚠️ ${overrideCount} contact${overrideCount!==1?'s have':' has'} an existing Company that will be replaced with the value from the Last Name field.` : '';
     if(confirm(
       `Found ${dashCandidates.length} contact${dashCandidates.length!==1?'s':''} where the Last Name contains " - [Company]".\n\n` +
-      `This will clean the last name and move the company portion to the Company field (only if Company is currently blank).\n\n` +
+      `This will clean the last name and set the Company field to the extracted value.${overrideNote}\n\n` +
       `Preview:\n${preview2}${moreNote2}\n\nApply to all ${dashCandidates.length} contact${dashCandidates.length!==1?'s':''}?`
     )){
       let fixed2 = 0;
@@ -21580,7 +21585,7 @@ function salesFixUnsplitNames(){
         const parts  = (c.lastName||'').split(' - ');
         const coBit  = parts.slice(1).join(' - ').trim();
         c.lastName   = parts[0].trim();
-        if(!c.company && coBit) c.company = coBit;
+        if(coBit) c.company = coBit; // always update — extracted value is the source of truth
         c.updatedAt  = new Date().toISOString();
         fixed2++;
       });
