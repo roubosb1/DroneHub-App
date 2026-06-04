@@ -19804,6 +19804,7 @@ function openTrackerModal(jobId){
         name:sp.address||sp.clientName||sp.projectId||'Imported Project',
         address:sp.address||'',
         clientName:sp.clientName||'',
+        company:sp.company||'',
         date:sp.date||'',
         duration:sp.approxFilmHours||'',
         clientId:null,
@@ -20000,7 +20001,7 @@ function openTrackerModal(jobId){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
         ${inp('project-id','Project ID',pid,'text','e.g. DH-2025-001')}
         ${inp('client-name','Client name',client?.name||job.clientName||'','text','')}
-        ${inp('company','Company / team',client?.company||'','text','')}
+        ${inp('company','Company / team',client?.company||job.company||'','text','')}
         ${inp('address','Property address',job.address||'','text','')}
         ${inp('shoot-date','Shoot date',job.date||'','date','')}
         <div>
@@ -20172,7 +20173,7 @@ function saveTrackerModal(jobId, modal){
     // Store draft charge separately — will be added to next invoice
   }
 
-  // For standalone/imported projects: persist edits to address, client name, and date
+  // For standalone/imported projects: persist edits to address, client name, company, and date
   if(!job){
     const standaloneArr=getStandaloneProjects();
     const spIdx=standaloneArr.findIndex(s=>String(s.id)===String(jobId));
@@ -20181,9 +20182,11 @@ function saveTrackerModal(jobId, modal){
       const newAddress=document.getElementById('tm-address')?.value;
       const newClient=document.getElementById('tm-client-name')?.value;
       const newDate=document.getElementById('tm-shoot-date')?.value;
+      const newCompany=document.getElementById('tm-company')?.value;
       if(newAddress!==undefined) sp.address=newAddress;
       if(newClient!==undefined) sp.clientName=newClient;
       if(newDate!==undefined) sp.date=newDate;
+      if(newCompany!==undefined) sp.company=newCompany;
       sp.videographer=stageUpdate.videographer||sp.videographer||'';
       sp.stage=stageUpdate.stage||sp.stage||'footage_pending';
       sp.editStatus=stageUpdate.editStatus||sp.editStatus||'ready';
@@ -20201,6 +20204,17 @@ function saveTrackerModal(jobId, modal){
       sp.projectId=stageUpdate.projectId||sp.projectId||'';
       saveStandaloneProjects(standaloneArr);
     }
+  } else {
+    // For regular saved jobs: persist edits to client name, company, address, and date
+    const newAddress=document.getElementById('tm-address')?.value;
+    const newClient=document.getElementById('tm-client-name')?.value;
+    const newDate=document.getElementById('tm-shoot-date')?.value;
+    const newCompany=document.getElementById('tm-company')?.value;
+    if(newAddress!==undefined) job.address=newAddress;
+    if(newClient!==undefined) job.clientName=newClient;
+    if(newDate!==undefined) job.date=newDate;
+    if(newCompany!==undefined) job.company=newCompany;
+    saveJobsToStorage();
   }
 
   setTrackerStage(jobId, stageUpdate);
