@@ -6939,7 +6939,21 @@ async function restoreFromFirebase(forceAll=false){
     }},
     {fb:ORG_ID+':portal_accounts',ls:'dronehub_portal_accounts',   apply:d=>{localStorage.setItem('dronehub_portal_accounts',d);}},
     {fb:ORG_ID+':portal_msgs',    ls:'dronehub_portal_msgs',       apply:d=>{localStorage.setItem('dronehub_portal_msgs',d);}},
-    {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{localStorage.setItem('dronehub_standalone_projects',d);}},
+    {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{
+      try{
+        // Filter out blank entries (no address, clientName, or company) — these are phantom imports
+        const incoming=(JSON.parse(d||'[]')).filter(sp=>sp.address||sp.clientName||sp.company);
+        const existing=JSON.parse(localStorage.getItem('dronehub_standalone_projects')||'[]');
+        if(incoming.length===0 && existing.length>0){ return; } // never wipe real data with empty
+        if(incoming.length>=existing.length){
+          localStorage.setItem('dronehub_standalone_projects',JSON.stringify(incoming));
+        } else {
+          const idSet=new Set(incoming.map(s=>s.id));
+          existing.forEach(s=>{ if(!idSet.has(s.id)&&(s.address||s.clientName||s.company)) incoming.push(s); });
+          localStorage.setItem('dronehub_standalone_projects',JSON.stringify(incoming));
+        }
+      }catch(e){ localStorage.setItem('dronehub_standalone_projects',d); }
+    }},
     // Photo tracker data
     {fb:ORG_ID+':photo_tracker',    ls:'dronehub_photo_tracker',    apply:d=>{localStorage.setItem('dronehub_photo_tracker',d);}},
     {fb:ORG_ID+':photo_standalone', ls:'dronehub_photo_standalone',  apply:d=>{localStorage.setItem('dronehub_photo_standalone',d);}},
@@ -18592,9 +18606,11 @@ async function adminResetPassword(id){
 
 function getStandaloneProjects(){return JSON.parse(localStorage.getItem('dronehub_standalone_projects')||'[]');}
 function saveStandaloneProjects(arr){
-  try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(arr));}catch(e){}
+  // Always strip blank entries before saving — prevents phantom imports from persisting
+  const clean=(arr||[]).filter(sp=>sp.address||sp.clientName||sp.company);
+  try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(clean));}catch(e){}
   if(_fbToken()){
-    fbSetStrict('orgs',ORG_ID+':standalone_projects',{data:JSON.stringify(arr),updatedAt:Date.now()})
+    fbSetStrict('orgs',ORG_ID+':standalone_projects',{data:JSON.stringify(clean),updatedAt:Date.now()})
       .catch(e=>{
         console.error('[saveStandaloneProjects] Firebase write failed:',e.message);
         showDhToast('Projects not saved','Standalone project records could not be saved to the cloud.','⚠️','var(--orange)',7000);
@@ -18608,8 +18624,15 @@ function clearAllStandaloneProjects(){
   const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
   Object.keys(stages).forEach(k=>{ if(k.startsWith('standalone_')) delete stages[k]; });
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
+  // Clear Firebase too — otherwise they come back on next page load
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':standalone_projects',{data:'[]',updatedAt:Date.now()})
+      .catch(e=>console.error('[clearAllStandaloneProjects] Firebase clear failed:',e.message));
+    fbSetStrict('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()})
+      .catch(e=>console.error('[clearAllStandaloneProjects] Tracker Firebase clear failed:',e.message));
+  }
   renderTracker();
-  alert('All imported projects cleared.');
+  showDhToast('Cleared','All imported projects removed.','✓','var(--green)',3000);
 }
 
 const TRACKER_COL_MAP={
