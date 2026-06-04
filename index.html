@@ -6933,7 +6933,21 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
     {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
-    {fb:ORG_ID+':gcal_links',     ls:'dronehub_gcal_links',        apply:d=>{localStorage.setItem('dronehub_gcal_links',d);}},
+    {fb:ORG_ID+':gcal_links',     ls:'dronehub_gcal_links',        apply:d=>{
+      try{
+        const incoming=JSON.parse(d||'[]');
+        const existing=JSON.parse(localStorage.getItem('dronehub_gcal_links')||'[]');
+        if(incoming.length===0 && existing.length>0){ return; } // never wipe with empty
+        if(incoming.length>=existing.length){
+          localStorage.setItem('dronehub_gcal_links',JSON.stringify(incoming));
+        } else {
+          // Local has more entries — union-merge (keep both, prefer newer events)
+          const idSet=new Set(incoming.map(l=>l.id));
+          existing.forEach(l=>{ if(!idSet.has(l.id)) incoming.push(l); });
+          localStorage.setItem('dronehub_gcal_links',JSON.stringify(incoming));
+        }
+      }catch(e){ localStorage.setItem('dronehub_gcal_links',d); }
+    }},
     {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{
       localStorage.setItem('dronehub_orgs',d);
     }},
@@ -7052,7 +7066,7 @@ async function restoreFromFirebase(forceAll=false){
       const fbTime=fb.updatedAt||0;
 
       // Always restore these critical keys from Firebase
-      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users',':sales'];
+      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users',':sales',':gcal_links'];
       const isAlwaysSync=alwaysSync.some(s=>k.fb.endsWith(s));
 
       // Restore from Firebase if:
@@ -7115,7 +7129,7 @@ async function restoreTeamProfiles(){
     });
   });
   if (changed) {
-    try { localStorage.setItem('dronehub_gcal_links', JSON.stringify(links)); } catch(e) {}
+    saveGcalLinks(links); // writes to both localStorage and Firebase
   }
   // Also rebuild OAuth gcal_links entries for members whose profile shows googleCalConnected
   // This restores OAuth calendar entries after a page reload or on a new device
