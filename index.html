@@ -17003,8 +17003,38 @@ async function gateEnterApp(session){
       const fbTeam=await fbGet('orgs',ORG_ID+':team');
       if(fbTeam?.data){
         const fbMembers=JSON.parse(fbTeam.data);
-        // Merge into local cache (Firebase is source of truth for team roster)
-        try{localStorage.setItem('dronehub_admin_team',JSON.stringify(fbMembers));}catch(e){}
+        const localMembers=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+        // Union-merge: never let Firebase shrink the local roster.
+        // Local members not in Firebase (e.g. newly bootstrapped) are kept.
+        if(fbMembers.length >= localMembers.length){
+          // Firebase has more (or equal) — use as base, patch in local-only entries
+          const emailMap={};
+          fbMembers.forEach(m=>{ emailMap[(m.email||'').toLowerCase()]=m; });
+          localMembers.forEach(m=>{
+            const k=(m.email||'').toLowerCase();
+            if(!emailMap[k]) emailMap[k]=m; // keep local-only members
+            else {
+              // Prefer more-recent lastSeen
+              if(m.lastSeen&&(!emailMap[k].lastSeen||m.lastSeen>emailMap[k].lastSeen)) emailMap[k].lastSeen=m.lastSeen;
+            }
+          });
+          const merged=Object.values(emailMap);
+          try{localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));}catch(e){}
+        } else {
+          // Local has more — keep local as base, patch in Firebase fields
+          const emailMap={};
+          localMembers.forEach(m=>{ emailMap[(m.email||'').toLowerCase()]={...m}; });
+          fbMembers.forEach(m=>{
+            const k=(m.email||'').toLowerCase();
+            if(!emailMap[k]) emailMap[k]=m;
+            else if(m.lastSeen&&(!emailMap[k].lastSeen||m.lastSeen>emailMap[k].lastSeen)) emailMap[k].lastSeen=m.lastSeen;
+          });
+          const merged=Object.values(emailMap);
+          try{localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));}catch(e){}
+          // Write merged list back to Firebase so it stays in sync
+          fbSetStrict('orgs',ORG_ID+':team',{data:JSON.stringify(merged),updatedAt:Date.now()})
+            .catch(e=>console.warn('[gateEnterApp:teamSync] write-back failed:',e.message));
+        }
       }
     }
   }catch(e){console.warn('Team sync failed:',e);}
