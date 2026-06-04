@@ -17992,13 +17992,25 @@ function _renderTeamUI(){
     const role=TEAM_ROLES.find(r=>r.key===m.role)||TEAM_ROLES[4];
     const access=TEAM_ACCESS[m.role]||TEAM_ACCESS.contractor;
     const initials=(m.name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
-    const statusColor=m.status==='active'?'var(--green)':m.status==='invited'?'var(--amber)':'var(--muted)';
     const dot=(c)=>`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c};margin-right:4px;vertical-align:middle;flex-shrink:0"></span>`;
     const lastSeenRel=getRelativeTime(m.lastSeen);
-    const isRecent=m.lastSeen&&(Date.now()-new Date(m.lastSeen).getTime())<15*60*1000;
-    const statusLabel=m.status==='active'
-      ?`${isRecent?dot('var(--green)')+'Online now':(lastSeenRel?'Last seen '+lastSeenRel:'Active')}`
-      :m.status==='invited'?dot('var(--amber)')+'Invited — awaiting signup':dot('var(--muted)')+'Inactive';
+    const _lsMs=m.lastSeen?(Date.now()-new Date(m.lastSeen).getTime()):Infinity;
+    const isOnline=_lsMs<15*60*1000;           // within 15 min → Online now
+    const isWithin24h=_lsMs<24*60*60*1000;     // within 24 h  → Last seen X
+    let statusColor, statusLabel;
+    if(m.status==='invited'){
+      statusColor='var(--amber)';
+      statusLabel=dot('var(--amber)')+'Invited — awaiting signup';
+    } else if(isOnline){
+      statusColor='var(--green)';
+      statusLabel=dot('var(--green)')+'Online now';
+    } else if(isWithin24h){
+      statusColor='var(--amber)';
+      statusLabel=dot('var(--amber)')+'Last seen '+lastSeenRel;
+    } else {
+      statusColor='var(--red)';
+      statusLabel=dot('var(--red)')+'Offline';
+    }
     // Build effective access map — customTabs takes priority over role defaults
     let effectiveAccess;
     if(m.customTabs?.length){
