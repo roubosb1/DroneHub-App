@@ -18041,6 +18041,9 @@ function _renderTeamUI(){
     if(m.status==='invited'){
       statusColor='var(--amber)';
       statusLabel=dot('var(--amber)')+'Invited — awaiting signup';
+    } else if(!m.lastSeen){
+      statusColor='var(--amber)';
+      statusLabel=dot('var(--amber)')+'Needs to sign up';
     } else if(isOnline){
       statusColor='var(--green)';
       statusLabel=dot('var(--green)')+'Online now';
