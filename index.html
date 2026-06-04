@@ -6811,7 +6811,27 @@ async function restoreFromFirebase(forceAll=false){
 
   const keys=[
     {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);localStorage.setItem('dronehub_jobs',d);}},
-    {fb:ORG_ID+':clients',ls:'dronehub_clients',  apply:d=>{clients=JSON.parse(d);localStorage.setItem('dronehub_clients',d);}},
+    {fb:ORG_ID+':clients',ls:'dronehub_clients', apply:d=>{
+      try{
+        const incoming=JSON.parse(d||'[]');
+        const existing=clients.length ? clients : JSON.parse(localStorage.getItem('dronehub_clients')||'[]');
+        if(incoming.length === 0 && existing.length > 0){
+          // Firebase is empty but local has data — keep local, don't overwrite
+          return;
+        }
+        if(incoming.length >= existing.length){
+          // Firebase has more (or equal) — use Firebase as source of truth
+          clients=incoming; localStorage.setItem('dronehub_clients',JSON.stringify(incoming));
+        } else {
+          // Local has more — union-merge Firebase additions in, keep local as base
+          const idSet=new Set(existing.map(c=>c.id));
+          let grew=false;
+          incoming.forEach(c=>{ if(!idSet.has(c.id)){ existing.push(c); grew=true; }});
+          clients=existing; localStorage.setItem('dronehub_clients',JSON.stringify(existing));
+          if(grew) saveClientsToStorage(); // push merged list back to Firebase
+        }
+      }catch(e){ clients=JSON.parse(d||'[]'); localStorage.setItem('dronehub_clients',d); }
+    }},
     // Firebase is always the source of truth for team roster on login.
     // Never block a restore based on array length — length comparisons
     // caused demo-data (4 hardcoded entries) to silently block real Firebase data.
@@ -8825,8 +8845,21 @@ function renderClients(){
   // Bootstrap: if Clients tab has no data but CRM Existing Clients does, auto-populate once
   if(!clients.length){
     const crmClients = salesLoad().filter(c=>c.list==='clients'&&!c._deleted);
-    if(crmClients.length) syncCRMClientsToTab(crmClients);
-    // Fall through — clients[] is now populated (or still empty if CRM is also empty)
+    if(crmClients.length){
+      syncCRMClientsToTab(crmClients);
+      // clients[] is now populated — fall through to render
+    } else {
+      // CRM data not loaded yet — wait for salesSyncFirebase then retry
+      if(typeof salesSyncFirebase === 'function'){
+        salesSyncFirebase().then(()=>{
+          if(!clients.length){
+            const deferred = salesLoad().filter(c=>c.list==='clients'&&!c._deleted);
+            if(deferred.length){ syncCRMClientsToTab(deferred); renderClients(); }
+          }
+        }).catch(()=>{});
+      }
+      // Fall through — show empty state for now, re-render will follow
+    }
   }
   const q=(document.getElementById('clients-search')?.value||'').trim().toLowerCase();
   const list=document.getElementById('clients-list');
