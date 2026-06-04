@@ -17020,6 +17020,9 @@ async function gateEnterApp(session){
     }
   }catch(e){}
 
+  // ── Start lastSeen heartbeat — keeps Firebase fresh while user is on platform ─
+  startLastSeenHeartbeat(session.email);
+
   const userDisplay=document.getElementById('app-user-display');
   if(userDisplay) userDisplay.textContent=session.name||session.email;
   // Populate mobile More drawer user label
@@ -17677,6 +17680,43 @@ function gateLogout(){
   window.location.reload();
 }
 
+
+// ── LASTSEEN HEARTBEAT ────────────────────────────────────────────────────────
+// Keeps the current user's lastSeen timestamp fresh in Firebase while they're
+// on the platform. Without this, lastSeen is only written at login — after 24h
+// the user would show "Offline" even though they never left.
+let _lastSeenHeartbeatTimer=null;
+function startLastSeenHeartbeat(email){
+  if(!email) return;
+  if(_lastSeenHeartbeatTimer) clearInterval(_lastSeenHeartbeatTimer);
+
+  function _pingLastSeen(){
+    try{
+      const members=getAdminTeamMembers();
+      const idx=members.findIndex(m=>(m.email||'').toLowerCase()===email.toLowerCase());
+      if(idx<0) return; // not in roster yet — bootstrap will add them
+      members[idx].lastSeen=new Date().toISOString().slice(0,19).replace('T',' ');
+      members[idx].status='active';
+      // localStorage update (fast)
+      try{localStorage.setItem('dronehub_admin_team',JSON.stringify(members));}catch(e){}
+      // Firebase update — only if token is available, use fbSetStrict so it retries on failure
+      if(_fbToken()){
+        fbSetStrict('orgs',ORG_ID+':team',{data:JSON.stringify(members),updatedAt:Date.now()})
+          .catch(e=>console.warn('[lastSeenHeartbeat] Firebase write failed:',e.message));
+      }
+    }catch(e){ console.warn('[lastSeenHeartbeat] error:',e); }
+  }
+
+  // Write immediately (catches login-time race with restoreFromFirebase)
+  setTimeout(_pingLastSeen, 3000);
+
+  // Then every 5 minutes while the tab is open
+  _lastSeenHeartbeatTimer=setInterval(_pingLastSeen, 5*60*1000);
+
+  // Also ping when user returns to this tab (covers long absences)
+  document.removeEventListener('visibilitychange',_pingLastSeen);
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') _pingLastSeen(); });
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 
