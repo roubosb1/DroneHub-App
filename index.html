@@ -4970,6 +4970,7 @@ const CONTRACTOR_DEFAULTS={
   brad:{name:'Brad Loiselle',addr:'1 Armour Dr, Welland, ON',lat:42.9848,lng:-79.2482,email:'brad@dronehubmedia.com',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
   akbar:{name:'Akbar Omar',addr:'9 Spall Ct, Toronto, ON',lat:43.7315,lng:-79.6254,email:'akbar@dronehubmedia.com',phone:'',role:'Videographer / Photographer',rate:80,notes:''},
   steve:{name:'Steve Calaguiro',addr:'5623 Woodland Blvd, Niagara Falls, ON',lat:43.0896,lng:-79.0849,email:'steve@dronehubmedia.com',phone:'',role:'Photographer / Floor plan',rate:40,notes:''},
+  cam:{name:'Cam',addr:'',lat:0,lng:0,email:'',phone:'',role:'Videographer',rate:80,notes:''},
 };
 let CONTRACTORS=JSON.parse(localStorage.getItem('dronehub_contractors')||JSON.stringify(CONTRACTOR_DEFAULTS));
 // Ensure any newly hardcoded defaults are always present (won't overwrite user edits)
@@ -9161,7 +9162,7 @@ function _clientCardHtml({c, cJobs, hasActiveJob, newMsgs}, portalAccts){
         </span>
       </div>
     </div>
-    <div class="client-card-meta">${[c.company,c.email,c.phone].filter(Boolean).join(' · ')||'No contact info'}</div>
+    <div class="client-card-meta">${[c.company,c.city,c.email,c.phone].filter(Boolean).join(' · ')||'No contact info'}</div>
     <div>
       <span class="client-stat"><span class="client-stat-val">${cJobs.length}</span><span class="client-stat-lbl">Jobs</span></span>
       <span class="client-stat"><span class="client-stat-val">${completed.length}</span><span class="client-stat-lbl">Completed</span></span>
@@ -19396,8 +19397,8 @@ function renderTracker(){
       const decB=tsB.clientDecisionAt||tsB.updatedAt||b.date||'';
       return decA.localeCompare(decB);
     }
-    // Upcoming: soonest shoot date first
-    return (a.date||'').localeCompare(b.date||'');
+    // Upcoming: most recently added / newest shoot date first
+    return (b.date||'').localeCompare(a.date||'');
   });
 
   if(countEl) countEl.textContent=jobs.length+' project'+(jobs.length===1?'':'s');
@@ -19872,7 +19873,7 @@ function openTrackerModal(jobId){
   const extraCharge=Math.max(0,draftCount-2)*30;
 
   // Film hours from job duration
-  const filmHours=job.duration||ts.approxFilmHours||'';
+  const filmHours=ts.approxFilmHours||job.duration||'';
 
   const stageOpts=TRACKER_STAGES.map(s=>`<option value="${s.key}"${ts.stage===s.key?' selected':''}>${s.label}</option>`).join('');
   const editStatusOpts=EDIT_STATUS_OPTS.map(s=>`<option value="${s.key}"${ts.editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
@@ -20236,8 +20237,8 @@ function saveTrackerModal(jobId, modal){
       sp.frameioLink=stageUpdate.frameioLink||sp.frameioLink||'';
       sp.downloadLink=stageUpdate.downloadLink||sp.downloadLink||'';
       sp.dropboxLink=stageUpdate.dropboxLink||sp.dropboxLink||'';
-      sp.approxEditHours=stageUpdate.approxEditHours||sp.approxEditHours||'';
-      sp.approxFilmHours=stageUpdate.approxFilmHours||sp.approxFilmHours||'';
+      sp.approxEditHours=stageUpdate.approxEditHours!==undefined?stageUpdate.approxEditHours:(sp.approxEditHours||'');
+      sp.approxFilmHours=stageUpdate.approxFilmHours!==undefined?stageUpdate.approxFilmHours:(sp.approxFilmHours||'');
       sp.completionDate=stageUpdate.completionDate||sp.completionDate||'';
       sp.filesReceived=stageUpdate.filesReceived;
       sp.rush=stageUpdate.rush;
