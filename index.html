@@ -7168,6 +7168,8 @@ async function restoreFromFirebase(forceAll=false){
   }
   // Migrate any contacts still in localStorage → Firebase (runs silently, one-time)
   if(_fbToken()) salesMigrateLocalStorage().catch(()=>{});
+  // Silently clean up any contacts where "LastName - Company" wasn't separated
+  if(_fbToken()) _salesAutoCleanCompanyNames().catch(()=>{});
   // Load all team member profiles (portfolio, bio, etc.) from Firebase
   if(_fbToken()) restoreTeamProfiles().catch(()=>{});
   // One-time migration: move existing blob data into sub-collections
@@ -22043,6 +22045,46 @@ function splitSalesName(fn, ln){
   return {firstName:parts.slice(0,2).join(' '), lastName:parts.slice(2).join(' ')};
 }
 
+// Auto-extract company name from last name if it contains " - Company" pattern.
+// e.g. lastName = "Gonsenhauser - Harvey Kalles Real Estate"
+//   → { firstName, lastName: "Gonsenhauser", company: "Harvey Kalles Real Estate" }
+// Returns unchanged names if no " - " pattern is detected.
+function _salesExtractCompanyFromLastName(firstName, lastName){
+  if(!(lastName||'').includes(' - ')){
+    return {firstName, lastName, company:''};
+  }
+  const parts = lastName.split(' - ');
+  const cleanLast = parts[0].trim();
+  const extractedCompany = parts.slice(1).join(' - ').trim();
+  return {firstName, lastName:cleanLast, company:extractedCompany};
+}
+
+// One-time silent migration: scan all contacts and auto-clean any
+// "LastName - Company Name" patterns without requiring user interaction.
+// Runs once per browser (guarded by localStorage flag) shortly after login.
+async function _salesAutoCleanCompanyNames(){
+  const FLAG = 'dh_sales_company_clean_v1';
+  if(localStorage.getItem(FLAG)) return;
+  await salesEnsureLoaded();
+  const all = salesLoad();
+  let fixed = 0;
+  all.forEach(c => {
+    if(!(c.lastName||'').includes(' - ')) return;
+    const {lastName:cleanLn, company:extracted} = _salesExtractCompanyFromLastName(c.firstName||'', c.lastName||'');
+    c.lastName = cleanLn;
+    if(extracted && !c.company) c.company = extracted;
+    else if(extracted && c.company !== extracted) c.company = extracted; // last name pattern is authoritative
+    c.updatedAt = new Date().toISOString();
+    fixed++;
+  });
+  if(fixed > 0){
+    salesSave(all);
+    if(typeof renderSalesTable === 'function') renderSalesTable();
+    console.log('[salesAutoClean] Cleaned company names for',fixed,'contacts');
+  }
+  localStorage.setItem(FLAG,'1');
+}
+
 function salesFixUnsplitNames(){
   const all = salesLoad();
   let anyFixed = false;
@@ -22885,9 +22927,13 @@ async function saveSalesContact(){
     const idx = all.findIndex(c=>c.id===salesEditingId);
     if(idx>=0){
       const _editName = splitSalesName(document.getElementById('sc-fname').value, document.getElementById('sc-lname').value);
-      all[idx].firstName  = _editName.firstName;
-      all[idx].lastName   = _editName.lastName;
-      all[idx].company    = document.getElementById('sc-company').value.trim();
+      // Auto-extract company from last name if it contains " - Company" pattern
+      const _autoExtracted = _salesExtractCompanyFromLastName(_editName.firstName, _editName.lastName);
+      const _rawCompany = document.getElementById('sc-company').value.trim();
+      all[idx].firstName  = _autoExtracted.firstName;
+      all[idx].lastName   = _autoExtracted.lastName;
+      // Use auto-extracted company if field is blank, otherwise keep what user typed
+      all[idx].company    = _rawCompany || _autoExtracted.company || '';
       all[idx].phone      = document.getElementById('sc-phone').value.trim();
       all[idx].email      = email;
       all[idx].city       = (document.getElementById('sc-city')?.value||'').trim();
@@ -22915,11 +22961,13 @@ async function saveSalesContact(){
   const _newList = document.getElementById('sc-list').value;
   const _newCt   = _newList==='clients' ? (document.querySelector('input[name="sc-clienttype"]:checked')?.value||'active') : undefined;
   const _newName = splitSalesName(document.getElementById('sc-fname').value, document.getElementById('sc-lname').value);
+  const _newExtracted = _salesExtractCompanyFromLastName(_newName.firstName, _newName.lastName);
+  const _newRawCompany = document.getElementById('sc-company').value.trim();
   const contact = {
     id:        'sc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-    firstName: _newName.firstName,
-    lastName:  _newName.lastName,
-    company:   document.getElementById('sc-company').value.trim(),
+    firstName: _newExtracted.firstName,
+    lastName:  _newExtracted.lastName,
+    company:   _newRawCompany || _newExtracted.company || '',
     phone:     document.getElementById('sc-phone').value.trim(),
     email:     email,
     city:      (document.getElementById('sc-city')?.value||'').trim(),
