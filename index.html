@@ -17222,7 +17222,7 @@ async function gateEnterApp(session){
     const _lsEmptyTeam = clients.length === 0 && savedJobs.length === 0;
     if(_fbToken() && _lsEmptyTeam) await restoreFromFirebase(true).catch(()=>{});
     gateShowTeamView(session);
-    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); }).catch(()=>{});
+    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); gcalCheckOAuthReturn().catch(()=>{}); }).catch(()=>{});
     return;
   }
 
@@ -17254,6 +17254,9 @@ async function gateEnterApp(session){
     saveContractors();
     // Re-render header avatar now that photos are synced from Firebase
     renderAppHeader();
+    // Handle Google OAuth callback — must run after Firebase restore so member
+    // profiles are loaded and the calendar picker can find the correct member
+    gcalCheckOAuthReturn().catch(()=>{});
   }).catch(()=>{});
 }
 
