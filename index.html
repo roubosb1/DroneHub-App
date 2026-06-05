@@ -149,6 +149,70 @@ async function fbSetStrict(col,docId,data,_attempt=0){
   return res;
 }
 
+// ── Sub-collection helpers (orgs/{ORG_ID}/{subCol}/...) ──────────────────────
+// Each item (client, job, tracker stage, etc.) gets its own Firestore document
+// instead of being packed into a single JSON blob. This prevents race conditions
+// when multiple devices write simultaneously, and avoids the 1 MB doc size limit.
+
+async function fbSubGetAll(subCol){
+  const res=await _fbCall({action:'getSubCollection',col:'orgs',subCol});
+  if(_fbAuthExpired(res)){ _fbShowSessionExpired(); return []; }
+  return res?.data??[];
+}
+
+async function fbSubSet(subCol,docId,data){
+  const res=await _fbCall({action:'setSubDoc',col:'orgs',subCol,docId:String(docId),data});
+  if(_fbAuthExpired(res)){ _fbShowSessionExpired(); return; }
+  if(res) localStorage.setItem('dronehub_last_save',Date.now().toString());
+}
+
+async function fbSubDelete(subCol,docId){
+  await _fbCall({action:'deleteSubDoc',col:'orgs',subCol,docId:String(docId)});
+}
+
+async function fbSubBatch(subCol,docs){
+  if(!docs||!docs.length) return;
+  const res=await _fbCall({action:'batchSetSubDocs',col:'orgs',subCol,docs});
+  if(_fbAuthExpired(res)){ _fbShowSessionExpired(); return; }
+  if(res) localStorage.setItem('dronehub_last_save',Date.now().toString());
+}
+
+async function fbSubClear(subCol){
+  await _fbCall({action:'deleteSubCollection',col:'orgs',subCol});
+}
+
+// Strict sub-doc write — throws on failure, retries 3×, shows session-expired on 401
+async function fbSubSetStrict(subCol,docId,data,_attempt=0){
+  const tok=_fbToken();
+  if(!tok) throw new Error('Not authenticated — please log in again');
+  const r=await fetch(_PROXY,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+    body:JSON.stringify({action:'setSubDoc',col:'orgs',subCol,docId:String(docId),data}),
+  });
+  if(r.status===401){
+    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+    _fbShowSessionExpired();
+    throw new Error('Session expired — please sign in again');
+  }
+  if(r.status===429 && _attempt<3){
+    await new Promise(res=>setTimeout(res,1500*(_attempt+1)));
+    return fbSubSetStrict(subCol,docId,data,_attempt+1);
+  }
+  if(!r.ok){
+    if(_attempt<2){
+      await new Promise(res=>setTimeout(res,1000*(_attempt+1)));
+      return fbSubSetStrict(subCol,docId,data,_attempt+1);
+    }
+    let msg='Firebase error';
+    try{const j=await r.json();msg=j.error||msg;}catch(e){}
+    throw new Error(`${msg} (HTTP ${r.status})`);
+  }
+  const res=await r.json();
+  localStorage.setItem('dronehub_last_save',Date.now().toString());
+  return res;
+}
+
 // ── Message Encryption (AES-GCM 256-bit) ─────────────────────────────────────
 // Encryption key lives only in memory — never written to localStorage or disk.
 // Fetched from the server on login; only authenticated sessions can decrypt.
@@ -4737,31 +4801,33 @@ function setFinanceMarket(m){
 
 function saveJobsToStorage(){
   try{localStorage.setItem('dronehub_jobs',JSON.stringify(savedJobs));}catch(e){}
-  // SAFETY: never overwrite Firebase with an empty array (same guard as clients)
-  if((savedJobs.length > 0 || window._intentionalClearJobs) && _fbToken()){
-    window._intentionalClearJobs = false;
-    fbSetStrict('orgs',ORG_ID+':jobs',{data:JSON.stringify(savedJobs),updatedAt:Date.now()})
+  if(!_fbToken()) return;
+  if(savedJobs.length > 0){
+    // Each job gets its own sub-collection document — no more blob race conditions
+    fbSubBatch('jobs', savedJobs.map(j=>({...j,_updatedAt:Date.now()})))
       .catch(e=>{
         console.error('[saveJobsToStorage] Firebase write failed:',e.message);
         showDhToast('Jobs not saved','Job/invoice data could not be saved to the cloud.','⚠️','var(--orange)',6000);
       });
+  } else if(window._intentionalClearJobs){
+    window._intentionalClearJobs=false;
+    fbSubClear('jobs').catch(e=>console.error('[saveJobsToStorage] clear failed:',e.message));
   }
   if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
 }
 function saveClientsToStorage(){
   try{localStorage.setItem('dronehub_clients',JSON.stringify(clients));}catch(e){}
-  // SAFETY: never overwrite Firebase with an empty array — this would wipe all
-  // client records if called while localStorage was cleared but Firebase still
-  // holds real data. Only write to Firebase when there is actual data to save,
-  // OR when the caller explicitly cleared clients (e.g. "Clear all" button).
-  // The _intentionalClearClients flag is set only by the clear-all action.
-  if((clients.length > 0 || window._intentionalClearClients) && _fbToken()){
-    window._intentionalClearClients = false;
-    fbSetStrict('orgs',ORG_ID+':clients',{data:JSON.stringify(clients),updatedAt:Date.now()})
+  if(!_fbToken()) return;
+  if(clients.length > 0){
+    // Each client gets its own sub-collection document
+    fbSubBatch('clients', clients.map(c=>({...c,_updatedAt:Date.now()})))
       .catch(e=>{
         console.error('[saveClientsToStorage] Firebase write failed:',e.message);
         showDhToast('Clients not saved','Client records could not be saved to the cloud.','⚠️','var(--orange)',6000);
       });
+  } else if(window._intentionalClearClients){
+    window._intentionalClearClients=false;
+    fbSubClear('clients').catch(e=>console.error('[saveClientsToStorage] clear failed:',e.message));
   }
 }
 
@@ -6827,29 +6893,72 @@ async function restoreFromFirebase(forceAll=false){
   // Use a local timestamp to track when we last saved
   const lastLocalSave=parseInt(localStorage.getItem('dronehub_last_save')||'0');
 
-  const keys=[
-    {fb:ORG_ID+':jobs',   ls:'dronehub_jobs',    apply:d=>{savedJobs=JSON.parse(d);localStorage.setItem('dronehub_jobs',d);}},
-    {fb:ORG_ID+':clients',ls:'dronehub_clients', apply:d=>{
+  // ── Sub-collection restores ───────────────────────────────────────────────
+  // These data types now live as individual Firestore documents in sub-collections
+  // rather than as JSON blobs. Always restore on login (forceAll) or when local
+  // has no data. Mid-session local state is authoritative (written to Firebase
+  // immediately on every change).
+  if(_fbToken()){
+    // Clients
+    if(forceAll || !localStorage.getItem('dronehub_clients')){
       try{
-        const incoming=JSON.parse(d||'[]');
-        const existing=clients.length ? clients : JSON.parse(localStorage.getItem('dronehub_clients')||'[]');
-        if(incoming.length === 0 && existing.length > 0){
-          // Firebase is empty but local has data — keep local, don't overwrite
-          return;
+        const docs=await fbSubGetAll('clients');
+        if(docs.length>0){
+          clients=docs.map(({_updatedAt,...c})=>c);
+          localStorage.setItem('dronehub_clients',JSON.stringify(clients));
         }
-        if(incoming.length >= existing.length){
-          // Firebase has more (or equal) — use Firebase as source of truth
-          clients=incoming; localStorage.setItem('dronehub_clients',JSON.stringify(incoming));
-        } else {
-          // Local has more — union-merge Firebase additions in, keep local as base
-          const idSet=new Set(existing.map(c=>c.id));
-          let grew=false;
-          incoming.forEach(c=>{ if(!idSet.has(c.id)){ existing.push(c); grew=true; }});
-          clients=existing; localStorage.setItem('dronehub_clients',JSON.stringify(existing));
-          if(grew) saveClientsToStorage(); // push merged list back to Firebase
+      }catch(e){console.warn('[restoreFromFirebase] clients sub-collection failed:',e.message);}
+    }
+    // Jobs
+    if(forceAll || !localStorage.getItem('dronehub_jobs')){
+      try{
+        const docs=await fbSubGetAll('jobs');
+        if(docs.length>0){
+          savedJobs=docs.map(({_updatedAt,...j})=>j);
+          localStorage.setItem('dronehub_jobs',JSON.stringify(savedJobs));
         }
-      }catch(e){ clients=JSON.parse(d||'[]'); localStorage.setItem('dronehub_clients',d); }
-    }},
+      }catch(e){console.warn('[restoreFromFirebase] jobs sub-collection failed:',e.message);}
+    }
+    // Tracker stages
+    if(forceAll || !localStorage.getItem('dronehub_tracker')){
+      try{
+        const docs=await fbSubGetAll('tracker');
+        if(docs.length>0){
+          const trackerObj={};
+          docs.forEach(({id:jobId,...stage})=>{ trackerObj[jobId]=stage; });
+          localStorage.setItem('dronehub_tracker',JSON.stringify(trackerObj));
+        }
+      }catch(e){console.warn('[restoreFromFirebase] tracker sub-collection failed:',e.message);}
+    }
+    // Google Calendar links — one doc per member, never races between members
+    if(forceAll || !localStorage.getItem('dronehub_gcal_links')){
+      try{
+        const docs=await fbSubGetAll('gcal');
+        if(docs.length>0){
+          const allLinks=[];
+          docs.forEach(doc=>{
+            try{const ml=JSON.parse(doc.links||'[]'); allLinks.push(...ml);}catch(e){}
+          });
+          if(allLinks.length>0) localStorage.setItem('dronehub_gcal_links',JSON.stringify(allLinks));
+          // Rebuild member key cache so saveGcalLinks can detect future removals
+          const memberKeys=[...new Set(allLinks.map(l=>_gcalMemberKey(l)))];
+          try{localStorage.setItem('_dh_gcal_member_keys',JSON.stringify(memberKeys));}catch(e){}
+        }
+      }catch(e){console.warn('[restoreFromFirebase] gcal sub-collection failed:',e.message);}
+    }
+    // Standalone (imported) projects
+    if(forceAll || !localStorage.getItem('dronehub_standalone_projects')){
+      try{
+        const docs=await fbSubGetAll('projects');
+        if(docs.length>0){
+          const projects=docs.map(({_updatedAt,...p})=>p).filter(p=>p.address||p.clientName||p.company);
+          if(projects.length>0) localStorage.setItem('dronehub_standalone_projects',JSON.stringify(projects));
+        }
+      }catch(e){console.warn('[restoreFromFirebase] projects sub-collection failed:',e.message);}
+    }
+  }
+
+  const keys=[
     // Firebase is always the source of truth for team roster on login.
     // Never block a restore based on array length — length comparisons
     // caused demo-data (4 hardcoded entries) to silently block real Firebase data.
@@ -6904,7 +7013,6 @@ async function restoreFromFirebase(forceAll=false){
       }catch(e){}
     }},
     {fb:ORG_ID+':settings',ls:'dronehub_settings', apply:d=>{bizSettings=JSON.parse(d);localStorage.setItem('dronehub_settings',d);}},
-    {fb:ORG_ID+':tracker',   ls:'dronehub_tracker',    apply:d=>{localStorage.setItem('dronehub_tracker',d);}},
     {fb:ORG_ID+':tracker_meta', ls:'dronehub_tracker_id_counter', apply:d=>{
       try{
         const remote=typeof d==='object'?d:JSON.parse(d||'{}');
@@ -6934,41 +7042,11 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
     {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
-    {fb:ORG_ID+':gcal_links',     ls:'dronehub_gcal_links',        apply:d=>{
-      try{
-        const incoming=JSON.parse(d||'[]');
-        const existing=JSON.parse(localStorage.getItem('dronehub_gcal_links')||'[]');
-        if(incoming.length===0 && existing.length>0){ return; } // never wipe with empty
-        if(incoming.length>=existing.length){
-          localStorage.setItem('dronehub_gcal_links',JSON.stringify(incoming));
-        } else {
-          // Local has more entries — union-merge (keep both, prefer newer events)
-          const idSet=new Set(incoming.map(l=>l.id));
-          existing.forEach(l=>{ if(!idSet.has(l.id)) incoming.push(l); });
-          localStorage.setItem('dronehub_gcal_links',JSON.stringify(incoming));
-        }
-      }catch(e){ localStorage.setItem('dronehub_gcal_links',d); }
-    }},
     {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{
       localStorage.setItem('dronehub_orgs',d);
     }},
     {fb:ORG_ID+':portal_accounts',ls:'dronehub_portal_accounts',   apply:d=>{localStorage.setItem('dronehub_portal_accounts',d);}},
     {fb:ORG_ID+':portal_msgs',    ls:'dronehub_portal_msgs',       apply:d=>{localStorage.setItem('dronehub_portal_msgs',d);}},
-    {fb:ORG_ID+':standalone_projects',ls:'dronehub_standalone_projects',apply:d=>{
-      try{
-        // Filter out blank entries (no address, clientName, or company) — these are phantom imports
-        const incoming=(JSON.parse(d||'[]')).filter(sp=>sp.address||sp.clientName||sp.company);
-        const existing=JSON.parse(localStorage.getItem('dronehub_standalone_projects')||'[]');
-        if(incoming.length===0 && existing.length>0){ return; } // never wipe real data with empty
-        if(incoming.length>=existing.length){
-          localStorage.setItem('dronehub_standalone_projects',JSON.stringify(incoming));
-        } else {
-          const idSet=new Set(incoming.map(s=>s.id));
-          existing.forEach(s=>{ if(!idSet.has(s.id)&&(s.address||s.clientName||s.company)) incoming.push(s); });
-          localStorage.setItem('dronehub_standalone_projects',JSON.stringify(incoming));
-        }
-      }catch(e){ localStorage.setItem('dronehub_standalone_projects',d); }
-    }},
     // Photo tracker data
     {fb:ORG_ID+':photo_tracker',    ls:'dronehub_photo_tracker',    apply:d=>{localStorage.setItem('dronehub_photo_tracker',d);}},
     {fb:ORG_ID+':photo_standalone', ls:'dronehub_photo_standalone',  apply:d=>{localStorage.setItem('dronehub_photo_standalone',d);}},
@@ -7067,7 +7145,7 @@ async function restoreFromFirebase(forceAll=false){
       const fbTime=fb.updatedAt||0;
 
       // Always restore these critical keys from Firebase
-      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users',':sales',':gcal_links'];
+      const alwaysSync=[':team',':team_members',':orgs_data',':gate_users',':sales'];
       const isAlwaysSync=alwaysSync.some(s=>k.fb.endsWith(s));
 
       // Restore from Firebase if:
@@ -7092,6 +7170,90 @@ async function restoreFromFirebase(forceAll=false){
   if(_fbToken()) salesMigrateLocalStorage().catch(()=>{});
   // Load all team member profiles (portfolio, bio, etc.) from Firebase
   if(_fbToken()) restoreTeamProfiles().catch(()=>{});
+  // One-time migration: move existing blob data into sub-collections
+  if(_fbToken()) _migrateToSubCollections().catch(()=>{});
+}
+
+// ── One-time migration: blob docs → sub-collection docs ──────────────────────
+// Reads old JSON-blob Firestore docs and writes each item into its own
+// sub-collection document. Runs silently on first login after deploy,
+// then never again (guarded by a localStorage flag).
+async function _migrateToSubCollections(){
+  const MIGRATION_KEY='dh_sc_migrated_v1';
+  if(localStorage.getItem(MIGRATION_KEY)) return; // already done
+  console.log('[Migration] Starting sub-collection migration...');
+
+  try{
+    // ── Clients ──────────────────────────────────────────────────────────────
+    const clientsBlob=await fbGet('orgs',ORG_ID+':clients');
+    if(clientsBlob?.data){
+      try{
+        const arr=JSON.parse(clientsBlob.data||'[]');
+        if(arr.length>0){
+          await fbSubBatch('clients',arr.map(c=>({...c,_updatedAt:Date.now()})));
+          console.log('[Migration] Migrated',arr.length,'clients');
+        }
+      }catch(e){console.warn('[Migration] clients parse error:',e.message);}
+    }
+
+    // ── Jobs ─────────────────────────────────────────────────────────────────
+    const jobsBlob=await fbGet('orgs',ORG_ID+':jobs');
+    if(jobsBlob?.data){
+      try{
+        const arr=JSON.parse(jobsBlob.data||'[]');
+        if(arr.length>0){
+          await fbSubBatch('jobs',arr.map(j=>({...j,_updatedAt:Date.now()})));
+          console.log('[Migration] Migrated',arr.length,'jobs');
+        }
+      }catch(e){console.warn('[Migration] jobs parse error:',e.message);}
+    }
+
+    // ── Tracker stages ────────────────────────────────────────────────────────
+    const trackerBlob=await fbGet('orgs',ORG_ID+':tracker');
+    if(trackerBlob?.data){
+      try{
+        const obj=JSON.parse(trackerBlob.data||'{}');
+        const docs=Object.entries(obj).map(([jobId,stage])=>({id:String(jobId),...stage}));
+        if(docs.length>0){
+          await fbSubBatch('tracker',docs);
+          console.log('[Migration] Migrated',docs.length,'tracker stages');
+        }
+      }catch(e){console.warn('[Migration] tracker parse error:',e.message);}
+    }
+
+    // ── Google Calendar links ─────────────────────────────────────────────────
+    const gcalBlob=await fbGet('orgs',ORG_ID+':gcal_links');
+    if(gcalBlob?.data){
+      try{
+        const links=JSON.parse(gcalBlob.data||'[]');
+        if(links.length>0){
+          const byMember={};
+          links.forEach(l=>{ const k=_gcalMemberKey(l); (byMember[k]=byMember[k]||[]).push(l); });
+          await Promise.all(Object.entries(byMember).map(([k,ml])=>
+            fbSubSet('gcal',k,{links:JSON.stringify(ml),updatedAt:Date.now()})
+          ));
+          console.log('[Migration] Migrated gcal links for',Object.keys(byMember).length,'members');
+        }
+      }catch(e){console.warn('[Migration] gcal parse error:',e.message);}
+    }
+
+    // ── Standalone projects ──────────────────────────────────────────────────
+    const projBlob=await fbGet('orgs',ORG_ID+':standalone_projects');
+    if(projBlob?.data){
+      try{
+        const arr=(JSON.parse(projBlob.data||'[]')).filter(p=>p.address||p.clientName||p.company);
+        if(arr.length>0){
+          await fbSubBatch('projects',arr.map(p=>({...p,_updatedAt:Date.now()})));
+          console.log('[Migration] Migrated',arr.length,'standalone projects');
+        }
+      }catch(e){console.warn('[Migration] projects parse error:',e.message);}
+    }
+
+    localStorage.setItem(MIGRATION_KEY,'1');
+    console.log('[Migration] Sub-collection migration complete.');
+  }catch(e){
+    console.warn('[Migration] Migration failed, will retry next login:',e.message);
+  }
 }
 
 // Fetch every team member's profile document from Firebase and cache locally.
@@ -7352,41 +7514,68 @@ function showWeatherHourly(dayIndex,label,clickedEl){
 }
 
 function getGcalLinks(){return JSON.parse(localStorage.getItem('dronehub_gcal_links')||'[]');}
+
+// _gcalMemberKey: stable per-member key used as sub-collection doc ID.
+// OAuth members → "m_{memberId}"; ICS-only members → "n_{urlSafeBase64(creatorName)}"
+function _gcalMemberKey(link){
+  if(link.oauthMemberId) return 'm_'+link.oauthMemberId;
+  const name=(link.creatorName||'unknown').replace(/[^a-zA-Z0-9_-]/g,'_');
+  return 'n_'+name;
+}
+
 function saveGcalLinks(links){
   try{localStorage.setItem('dronehub_gcal_links',JSON.stringify(links));}catch(e){}
-  // Primary Firebase save — use fbSetStrict so failures are retried, not silently dropped
-  if(_fbToken()){
-    fbSetStrict('orgs',ORG_ID+':gcal_links',{data:JSON.stringify(links),updatedAt:Date.now()})
-      .catch(e=>console.error('[saveGcalLinks] Firebase write failed:',e.message));
-  }
-  // Belt-and-suspenders: also write each person's ICS URLs into their team member
-  // record AND their profile doc so the calendar survives even if gcal_links is wiped
-  if(_fbToken()){
-    const allMembers=getAdminTeamMembers();
-    const byEmail={};
-    links.forEach(l=>{
-      if(!l.creatorEmail&&!l.creatorName) return;
-      const key=(l.creatorEmail||'').toLowerCase()||l.creatorName;
-      (byEmail[key]=byEmail[key]||[]).push(l.icsUrl||'');
-    });
-    // Also index by name for backward compat
-    const byName={};
-    links.forEach(l=>{if(l.creatorName)(byName[l.creatorName]=byName[l.creatorName]||[]).push(l.icsUrl||'');});
+  if(!_fbToken()) return;
 
-    allMembers.forEach(m=>{
-      const emailKey=(m.email||'').toLowerCase();
-      const urls=byEmail[emailKey]||(m.name?byName[m.name]:null);
-      if(urls){
-        // Write into team member record directly (survives restoreFromFirebase)
-        m.calendarUrls=urls;
-        // Also write into profile doc via tpProfileSave
-        if(m.id) tpProfileSave(m.id,{calendarUrls:urls});
-      }
-    });
-    // Persist updated team member records (with calendarUrls) to Firebase
-    const dirty=allMembers.filter(m=>m.calendarUrls);
-    if(dirty.length) saveAdminTeamMembers(allMembers);
-  }
+  // ── Per-member sub-collection docs ─────────────────────────────────────────
+  // Each member's links live in their own document (orgs/{orgId}/gcal/{memberKey}).
+  // Writing one member's doc never touches another's — no more array race conditions.
+
+  // Compute previous member keys so we can delete docs for removed members
+  let prevKeys=[];
+  try{prevKeys=JSON.parse(localStorage.getItem('_dh_gcal_member_keys')||'[]');}catch(e){}
+
+  const byMember={};
+  links.forEach(l=>{
+    const key=_gcalMemberKey(l);
+    (byMember[key]=byMember[key]||[]).push(l);
+  });
+
+  // Write/update each member doc
+  Object.entries(byMember).forEach(([key,memberLinks])=>{
+    fbSubSet('gcal',key,{links:JSON.stringify(memberLinks),updatedAt:Date.now()})
+      .catch(e=>console.error('[saveGcalLinks] sub-set failed:',e.message));
+  });
+
+  // Delete docs for members who now have no links (they were removed)
+  prevKeys.forEach(key=>{
+    if(!byMember[key]) fbSubDelete('gcal',key).catch(()=>{});
+  });
+
+  // Persist the current member key set so next call can detect removals
+  try{localStorage.setItem('_dh_gcal_member_keys',JSON.stringify(Object.keys(byMember)));}catch(e){}
+
+  // Belt-and-suspenders: also write each person's ICS URLs into their team member
+  // record AND their profile doc so the calendar survives even if gcal sub-collection is wiped
+  const allMembers=getAdminTeamMembers();
+  const byEmail={};
+  links.forEach(l=>{
+    if(!l.creatorEmail&&!l.creatorName) return;
+    const key=(l.creatorEmail||'').toLowerCase()||l.creatorName;
+    (byEmail[key]=byEmail[key]||[]).push(l.icsUrl||'');
+  });
+  const byName={};
+  links.forEach(l=>{if(l.creatorName)(byName[l.creatorName]=byName[l.creatorName]||[]).push(l.icsUrl||'');});
+  allMembers.forEach(m=>{
+    const emailKey=(m.email||'').toLowerCase();
+    const urls=byEmail[emailKey]||(m.name?byName[m.name]:null);
+    if(urls){
+      m.calendarUrls=urls;
+      if(m.id) tpProfileSave(m.id,{calendarUrls:urls});
+    }
+  });
+  const dirty=allMembers.filter(m=>m.calendarUrls);
+  if(dirty.length) saveAdminTeamMembers(allMembers);
 }
 
 function populateCalNameDropdown(){
@@ -8898,6 +9087,8 @@ function deleteClient(id){
   }
   clients=clients.filter(c=>c.id!==id);
   saveClientsToStorage();
+  // Delete the individual sub-collection doc for this client
+  if(_fbToken()) fbSubDelete('clients',id).catch(e=>console.error('[deleteClient] sub-delete failed:',e.message));
   renderClients();
   if(typeof renderSalesTable==='function') renderSalesTable();
   closeClientDetail();
@@ -8905,7 +9096,7 @@ function deleteClient(id){
 
 function clearAllClients(){
   if(!confirm('Delete all clients? Job history will remain but clients will be unlinked.')) return;
-  window._intentionalClearClients = true; // allow empty-array write to Firebase
+  window._intentionalClearClients = true;
   clients=[];saveClientsToStorage();renderClients();
 }
 
@@ -11519,19 +11710,26 @@ function saveEditJob(){
 
 function deleteJob(id){
   savedJobs=savedJobs.filter(j=>j.id!==id);
-  saveJobsToStorage(); refreshPayrollPeriods(); renderPayroll(); renderJobs();
+  saveJobsToStorage();
+  // Delete the individual sub-collection doc for this job
+  if(_fbToken()) fbSubDelete('jobs',String(id)).catch(e=>console.error('[deleteJob] sub-delete failed:',e.message));
+  refreshPayrollPeriods(); renderPayroll(); renderJobs();
 }
 function clearJobsByStatus(status){
   const count=savedJobs.filter(j=>(j.status||'quoted')===status).length;
   if(!count){alert('No '+status+' jobs to clear.');return;}
   if(!confirm('Clear all '+count+' '+status+' job'+(count>1?'s':'')+'? This cannot be undone.')) return;
+  const removedIds=savedJobs.filter(j=>(j.status||'quoted')===status).map(j=>String(j.id));
   savedJobs=savedJobs.filter(j=>(j.status||'quoted')!==status);
-  saveJobsToStorage(); refreshPayrollPeriods(); renderPayroll(); renderJobs();
+  saveJobsToStorage();
+  // Delete sub-collection docs for removed jobs
+  if(_fbToken()) removedIds.forEach(id=>fbSubDelete('jobs',id).catch(()=>{}));
+  refreshPayrollPeriods(); renderPayroll(); renderJobs();
 }
 
 function clearAllJobs(){
   if(!confirm('Clear all saved jobs?')) return;
-  window._intentionalClearJobs = true; // allow empty-array write to Firebase
+  window._intentionalClearJobs = true;
   savedJobs=[]; saveJobsToStorage(); refreshPayrollPeriods(); renderPayroll(); renderJobs();
 }
 
@@ -18627,8 +18825,9 @@ function saveStandaloneProjects(arr){
   // Always strip blank entries before saving — prevents phantom imports from persisting
   const clean=(arr||[]).filter(sp=>sp.address||sp.clientName||sp.company);
   try{localStorage.setItem('dronehub_standalone_projects',JSON.stringify(clean));}catch(e){}
-  if(_fbToken()){
-    fbSetStrict('orgs',ORG_ID+':standalone_projects',{data:JSON.stringify(clean),updatedAt:Date.now()})
+  if(_fbToken() && clean.length>0){
+    // Each project gets its own sub-collection document
+    fbSubBatch('projects', clean.map(p=>({...p,_updatedAt:Date.now()})))
       .catch(e=>{
         console.error('[saveStandaloneProjects] Firebase write failed:',e.message);
         showDhToast('Projects not saved','Standalone project records could not be saved to the cloud.','⚠️','var(--orange)',7000);
@@ -18640,14 +18839,13 @@ function clearAllStandaloneProjects(){
   localStorage.removeItem('dronehub_standalone_projects');
   // Also clear their tracker stage entries
   const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
-  Object.keys(stages).forEach(k=>{ if(k.startsWith('standalone_')) delete stages[k]; });
+  const standaloneKeys=Object.keys(stages).filter(k=>k.startsWith('standalone_'));
+  standaloneKeys.forEach(k=>delete stages[k]);
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
-  // Clear Firebase too — otherwise they come back on next page load
+  // Clear Firebase sub-collection docs
   if(_fbToken()){
-    fbSetStrict('orgs',ORG_ID+':standalone_projects',{data:'[]',updatedAt:Date.now()})
-      .catch(e=>console.error('[clearAllStandaloneProjects] Firebase clear failed:',e.message));
-    fbSetStrict('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()})
-      .catch(e=>console.error('[clearAllStandaloneProjects] Tracker Firebase clear failed:',e.message));
+    fbSubClear('projects').catch(e=>console.error('[clearAllStandaloneProjects] projects clear failed:',e.message));
+    standaloneKeys.forEach(k=>fbSubDelete('tracker',k).catch(()=>{}));
   }
   renderTracker();
   showDhToast('Cleared','All imported projects removed.','✓','var(--green)',3000);
@@ -18955,12 +19153,14 @@ function setTrackerStage(jobId,update){
   const existing=getTrackerStage(jobId);
   const draftCount=parseInt(update.draftCount||existing.draftCount||0);
   const extraDraftCharge=Math.max(0,draftCount-2)*30;
-  stages[jobId]={...existing,...update,draftCount,extraDraftCharge,updatedAt:new Date().toISOString().slice(0,16).replace('T',' ')};
+  const newStage={...existing,...update,draftCount,extraDraftCharge,updatedAt:new Date().toISOString().slice(0,16).replace('T',' ')};
+  stages[jobId]=newStage;
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
   if(_fbToken()){
-    fbSetStrict('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()})
+    // Write only this job's doc — no more re-writing the entire tracker blob
+    fbSubSetStrict('tracker',String(jobId),newStage)
       .catch(e=>{
-        console.error('[updateTrackerStage] Firebase write failed:',e.message);
+        console.error('[setTrackerStage] Firebase write failed:',e.message);
         showDhToast('Tracker not saved','Production tracker update could not be saved to the cloud.','⚠️','var(--orange)',7000);
       });
   }
@@ -18986,9 +19186,10 @@ function ensureProjectId(jobId, ts){
   const pid='DH-'+String(num).padStart(4,'0');
   // Persist without triggering a full re-render (write directly to localStorage+Firebase)
   const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
-  stages[jobId]={...(stages[jobId]||ts),projectId:pid};
+  const updatedStage={...(stages[jobId]||ts),projectId:pid};
+  stages[jobId]=updatedStage;
   try{localStorage.setItem('dronehub_tracker',JSON.stringify(stages));}catch(e){}
-  if(_fbToken()) fbSetStrict('orgs',ORG_ID+':tracker',{data:JSON.stringify(stages),updatedAt:Date.now()}).catch(e=>console.error('[ensureProjectId]',e.message));
+  if(_fbToken()) fbSubSet('tracker',String(jobId),updatedStage).catch(e=>console.error('[ensureProjectId]',e.message));
   return pid;
 }
 function getProjectId(job){
@@ -21308,6 +21509,9 @@ async function gcalDisconnect(memberId,memberName){
     await gcalApiCall('disconnect',memberId,{});
     // Remove OAuth entries from gcal_links
     saveGcalLinks(getGcalLinks().filter(l=>l.oauthMemberId!==memberId));
+    // Explicitly delete this member's sub-collection doc (saveGcalLinks handles it via
+    // prevKeys diffing, but this is an explicit guarantee for the disconnect case)
+    if(_fbToken()) fbSubDelete('gcal','m_'+memberId).catch(()=>{});
     // Update local profile cache
     tpProfileSave(memberId,{googleCalConnected:false,googleCalEmail:null,googleCalSelectedIds:null});
     renderCalLinkedList();

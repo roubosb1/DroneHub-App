@@ -79,9 +79,9 @@ exports.handler = async (event) => {
   }
 
   // Parse request body
-  let action, col, docId, data;
+  let action, col, docId, data, subCol, docs;
   try {
-    ({ action, col, docId, data } = JSON.parse(event.body || '{}'));
+    ({ action, col, docId, data, subCol, docs } = JSON.parse(event.body || '{}'));
   } catch (e) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
@@ -93,9 +93,13 @@ exports.handler = async (event) => {
   // Enforce org isolation: only allow access to the user's own org's documents
   const userOrgId = session.orgId || 'dronehub_main';
   if (docId && !docId.startsWith(userOrgId + ':') && col === 'orgs') {
-    // Allow platform-level reads for multi-org lookup (admin only)
-    if (session.role !== 'admin' || action !== 'get') {
-      return { statusCode: 403, headers, body: JSON.stringify({ error: 'Access denied to this document' }) };
+    // Sub-collection actions bypass this check — they're org-isolated via userOrgId
+    const isSubColAction = ['getSubCollection','setSubDoc','deleteSubDoc','batchSetSubDocs','deleteSubCollection'].includes(action);
+    if (!isSubColAction) {
+      // Allow platform-level reads for multi-org lookup (admin only)
+      if (session.role !== 'admin' || action !== 'get') {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Access denied to this document' }) };
+      }
     }
   }
 
@@ -123,6 +127,59 @@ exports.handler = async (event) => {
     if (action === 'delete') {
       if (!docId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'docId required' }) };
       await db.collection(col).doc(docId).delete();
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    }
+
+    // ── Sub-collection actions (orgs/{userOrgId}/{subCol}/...) ──────────────────
+
+    if (action === 'getSubCollection') {
+      if (!subCol) return { statusCode: 400, headers, body: JSON.stringify({ error: 'subCol required' }) };
+      const snap = await db.collection('orgs').doc(userOrgId).collection(subCol).get();
+      const result = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return { statusCode: 200, headers, body: JSON.stringify({ data: result }) };
+    }
+
+    if (action === 'setSubDoc') {
+      if (!subCol || !docId || !data) return { statusCode: 400, headers, body: JSON.stringify({ error: 'subCol, docId, data required' }) };
+      await db.collection('orgs').doc(userOrgId).collection(subCol).doc(String(docId)).set(data);
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === 'deleteSubDoc') {
+      if (!subCol || !docId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'subCol and docId required' }) };
+      await db.collection('orgs').doc(userOrgId).collection(subCol).doc(String(docId)).delete();
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === 'batchSetSubDocs') {
+      if (!subCol || !Array.isArray(docs)) return { statusCode: 400, headers, body: JSON.stringify({ error: 'subCol and docs[] required' }) };
+      // Firestore batch limit is 500 — process in chunks
+      const CHUNK = 490;
+      for (let i = 0; i < docs.length; i += CHUNK) {
+        const chunk = docs.slice(i, i + CHUNK);
+        const batch = db.batch();
+        chunk.forEach(doc => {
+          const { id, ...docData } = doc;
+          if (!id) return;
+          const ref = db.collection('orgs').doc(userOrgId).collection(subCol).doc(String(id));
+          batch.set(ref, docData);
+        });
+        await batch.commit();
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === 'deleteSubCollection') {
+      if (!subCol) return { statusCode: 400, headers, body: JSON.stringify({ error: 'subCol required' }) };
+      const snap = await db.collection('orgs').doc(userOrgId).collection(subCol).get();
+      if (!snap.empty) {
+        const CHUNK = 490;
+        for (let i = 0; i < snap.docs.length; i += CHUNK) {
+          const batch = db.batch();
+          snap.docs.slice(i, i + CHUNK).forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+      }
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
     }
 
