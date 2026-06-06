@@ -8372,9 +8372,11 @@ function renderCalendar(){
       legend.style.display='flex';
       legend.innerHTML=Array.from(used).sort().map(name=>{
         const col=getCreatorColor(name);
-        return `<div style="display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:10px;background:${col.bg};border:1px solid ${col.border};cursor:pointer" onclick="document.getElementById('cal-filter-contractor').value='${name}';renderCalendar()">
+        const isActive = filterCreator === name;
+        return `<div style="display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:10px;background:${col.bg};border:1px solid ${isActive?col.text:col.border};cursor:pointer;opacity:${filterCreator&&!isActive?.45:1};transition:opacity .15s,border-color .15s" onclick="(function(){var el=document.getElementById('cal-filter-contractor');el.value=el.value==='${name}'?'':'${name}';renderCalendar();})()">
           <span style="width:8px;height:8px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
           <span style="font-size:11px;font-weight:600;color:${col.text}">${name}</span>
+          ${isActive?`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${col.text}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`:''}
         </div>`;
       }).join('');
     } else {
