@@ -6629,58 +6629,117 @@ function tpRenderPortfolio(){
   const profile = tpProfileLoad(member.id);
   const lastSync = profile.updatedAt ? new Date(profile.updatedAt).toLocaleString() : 'Not yet synced';
 
+  const typeConfig = {
+    video:  {icon:'🎥', label:'Video',  grad:'linear-gradient(135deg,#1a1f3a 0%,#0d1b3e 100%)', accent:'#5B8DEF'},
+    photo:  {icon:'📸', label:'Photo',  grad:'linear-gradient(135deg,#1a2a1a 0%,#0d2010 100%)', accent:'#22D97A'},
+    reel:   {icon:'📱', label:'Reel',   grad:'linear-gradient(135deg,#2a1a2a 0%,#200d20 100%)', accent:'#A78BFA'},
+    other:  {icon:'📁', label:'Other',  grad:'linear-gradient(135deg,#2a1f1a 0%,#201510 100%)', accent:'#F59E0B'},
+  };
+
   content.innerHTML = `
-    ${canEdit?`
-    <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:var(--white)">🎬 Add Work Sample</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:10px;color:var(--muted)">Last saved: ${lastSync}</span>
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:rgba(34,217,122,.12);color:var(--green);border:1px solid rgba(34,217,122,.3)">🔥 Firebase</span>
+  <style>
+    .pf-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+    .pf-tile { position:relative; aspect-ratio:1/1; overflow:hidden; cursor:pointer; border-radius:4px; }
+    .pf-tile-bg { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+    .pf-tile-overlay {
+      position:absolute; inset:0; background:rgba(0,0,0,.78);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:10px; padding:14px; opacity:0; transition:opacity .2s;
+    }
+    .pf-tile:hover .pf-tile-overlay { opacity:1; }
+    .pf-add-form { display:none; background:var(--navy-mid); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:16px; }
+    .pf-add-form.open { display:block; }
+  </style>
+
+  <!-- Stats bar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:28px">
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.length}</div>
+        <div style="font-size:11px;color:var(--muted)">posts</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.filter(i=>i.type==='video').length}</div>
+        <div style="font-size:11px;color:var(--muted)">videos</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.filter(i=>i.type==='photo').length}</div>
+        <div style="font-size:11px;color:var(--muted)">photos</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.filter(i=>i.type==='reel').length}</div>
+        <div style="font-size:11px;color:var(--muted)">reels</div>
+      </div>
+    </div>
+    ${canEdit?`<button onclick="document.getElementById('tp-pf-addform').classList.toggle('open')" style="padding:7px 16px;border-radius:20px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">+ Add Post</button>`:''}
+  </div>
+
+  <!-- Collapsible add form -->
+  ${canEdit?`
+  <div id="tp-pf-addform" class="pf-add-form">
+    <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <span>New Work Sample</span>
+      <span style="font-size:10px;color:var(--muted)">Last saved: ${lastSync}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Title</div>
+        <input id="tp-pf-title" type="text" placeholder="e.g. Lake Austin Compound" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Type</div>
+        <select id="tp-pf-type" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+          <option value="video">🎥 Video Edit</option>
+          <option value="photo">📸 Photo Edit</option>
+          <option value="reel">📱 Social Reel</option>
+          <option value="other">📁 Other</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Link (Drive, Dropbox, Vimeo, YouTube…)</div>
+      <input id="tp-pf-url" type="url" placeholder="https://..." style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Description (optional)</div>
+      <textarea id="tp-pf-desc" placeholder="Brief description…" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="tpAddPortfolioItem()" style="padding:7px 20px;border-radius:20px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">+ Add to Portfolio</button>
+      <button onclick="document.getElementById('tp-pf-addform').classList.remove('open')" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+    </div>
+  </div>`:''}
+
+  <!-- Instagram-style grid -->
+  ${items.length?`
+  <div class="pf-grid">
+    ${items.map(item=>{
+      const tc = typeConfig[item.type]||typeConfig.other;
+      return `
+      <div class="pf-tile">
+        <div class="pf-tile-bg" style="background:${tc.grad}">
+          <div style="font-size:32px">${tc.icon}</div>
+          <div style="font-size:10px;font-weight:700;color:${tc.accent};letter-spacing:.06em;text-transform:uppercase">${tc.label}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);padding:0 10px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
         </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
-        <div>
-          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Title</div>
-          <input id="tp-pf-title" type="text" placeholder="e.g. Luxury Condo Walkthrough" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Type</div>
-          <select id="tp-pf-type" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
-            <option value="video">🎥 Video Edit</option>
-            <option value="photo">📸 Photo Edit</option>
-            <option value="reel">📱 Social Reel</option>
-            <option value="other">📁 Other</option>
-          </select>
-        </div>
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Link (Google Drive, Dropbox, Vimeo, YouTube, etc.)</div>
-        <input id="tp-pf-url" type="url" placeholder="https://..." style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
-      </div>
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Description (optional)</div>
-        <textarea id="tp-pf-desc" placeholder="Brief description of the project…" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);resize:vertical;box-sizing:border-box"></textarea>
-      </div>
-      <button onclick="tpAddPortfolioItem()" style="padding:8px 22px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">+ Add to Portfolio</button>
-    </div>`:''}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
-      ${items.length?items.map(item=>`
-        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
-          <div style="padding:14px 14px 10px;flex:1">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(91,141,239,.15);color:var(--blue-bright)">${item.type==='video'?'🎥 Video':item.type==='photo'?'📸 Photo':item.type==='reel'?'📱 Reel':'📁 Other'}</span>
-              <span style="font-size:10px;color:var(--muted)">${item.date||''}</span>
-            </div>
-            <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">${item.title}</div>
-            ${item.description?`<div style="font-size:11px;color:var(--muted);line-height:1.4">${item.description}</div>`:''}
+        <div class="pf-tile-overlay">
+          <div style="font-size:12px;font-weight:700;color:#fff;text-align:center;line-height:1.4">${item.title}</div>
+          ${item.description?`<div style="font-size:10px;color:rgba(255,255,255,.65);text-align:center;line-height:1.5;max-height:48px;overflow:hidden">${item.description}</div>`:''}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
+            ${item.url?`<a href="${item.url}" target="_blank" style="padding:5px 14px;border-radius:16px;background:${tc.accent};color:#fff;font-size:11px;font-weight:700;text-decoration:none">▶ View</a>`:''}
+            ${canEdit?`<button onclick="tpRemovePortfolioItem('${item.id}')" style="padding:5px 10px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer">Remove</button>`:''}
           </div>
-          <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
-            ${item.url?`<a href="${item.url}" target="_blank" style="flex:1;padding:5px 10px;border-radius:8px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;text-align:center">▶ View Work</a>`:''}
-            ${canEdit?`<button onclick="tpRemovePortfolioItem('${item.id}')" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>`:''}
-          </div>
-        </div>`).join(''):`<div style="font-size:12px;color:var(--muted);grid-column:1/-1;padding:20px 0">No portfolio items yet.${canEdit?' Use the form above to add your first work sample.':''}</div>`}
-    </div>`;
+          <div style="position:absolute;top:8px;right:8px;font-size:9px;color:rgba(255,255,255,.35)">${item.date||''}</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`:`
+  <div style="text-align:center;padding:40px 20px;color:var(--muted)">
+    <div style="font-size:40px;margin-bottom:10px">🎬</div>
+    <div style="font-size:13px;font-weight:700;color:var(--offwhite);margin-bottom:6px">No posts yet</div>
+    ${canEdit?`<div style="font-size:12px;line-height:1.6">Click <strong style="color:var(--green)">+ Add Post</strong> above to share your first work sample.</div>`:'<div style="font-size:12px">This team member hasn\'t added portfolio work yet.</div>'}
+  </div>`}
+  `;
 }
 
 function tpAddPortfolioItem(){
