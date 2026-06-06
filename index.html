@@ -7057,78 +7057,90 @@ function tpRenderCalendarTab(){
   const profile = tpProfileLoad(member.id);
   const gcalConnected = profile?.googleCalConnected;
   const gcalEmail = profile?.googleCalEmail || '';
-  const myOauthLinks = getGcalLinks().filter(l=>l.oauthMemberId===member.id);
-  const myIcsLink = getGcalLinks().find(l=>l.creatorName===member.name && l.icsUrl);
+  const allLinks = getGcalLinks();
+  const myOauthLinks = allLinks.filter(l=>l.oauthMemberId===member.id);
+  const myIcsLinks   = allLinks.filter(l=>l.creatorName===member.name && l.icsUrl && !l.oauthMemberId);
 
-  // ── Google Calendar connection card ──────────────────────────────────────
-  const connectedCard = `
-    <div class="card" style="margin-bottom:16px;border-color:${col.border}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-        <div>
-          <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px;display:flex;align-items:center;gap:8px">
-            <span style="width:10px;height:10px;border-radius:50%;background:${col.border};display:inline-block"></span>
-            ✅ Google Calendar connected
+  // ── Connected calendars list (OAuth + ICS) ────────────────────────────────
+  const allMyLinks = [...myOauthLinks, ...myIcsLinks];
+  const calListHtml = allMyLinks.length ? `
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${allMyLinks.map(l=>{
+        const evtCount=(l.events||[]).length;
+        const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
+        const isOauth = !!l.oauthMemberId;
+        const dot = l.syncError?'#E85D5D':evtCount>0?'#22D97A':'#555E78';
+        const typeIcon = isOauth
+          ? '<svg width="11" height="11" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>'
+          : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0"></span>
+          <span style="color:var(--muted);flex-shrink:0">${typeIcon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.calLabel||'Calendar'}</div>
+            <div style="font-size:10px;color:var(--muted)">${evtCount} events · synced ${lastSync}</div>
           </div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${gcalEmail}</div>
-          <div style="font-size:11px;color:var(--muted)">${myOauthLinks.length||1} calendar${(myOauthLinks.length||1)!==1?'s':''} syncing · events appear in <span style="color:${col.text};font-weight:700">your colour</span></div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button onclick="gcalShowPicker('${member.id}','${member.name}')" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">⚙ Manage Calendars</button>
-          <button onclick="gcalDisconnect('${member.id}','${member.name}')" style="padding:7px 16px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Disconnect</button>
-        </div>
-      </div>
-      ${myOauthLinks.length?`
-        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-          ${myOauthLinks.map(l=>{
-            const evtCount=(l.events||[]).length;
-            const lastSync=l.lastSync?new Date(l.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Never';
-            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-              <span style="width:8px;height:8px;border-radius:50%;background:${l.syncError?'#E85D5D':evtCount>0?'#22D97A':'#555E78'};flex-shrink:0"></span>
-              <div style="flex:1;font-size:12px;color:var(--offwhite)">${l.calLabel||'Calendar'}</div>
-              <div style="font-size:11px;color:var(--muted)">${evtCount} events · synced ${lastSync}</div>
-              <button onclick="calSyncOne('${l.id}')" title="Sync now" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:14px;padding:2px 4px">⟳</button>
-            </div>`;
-          }).join('')}
-        </div>`:''}
-    </div>`;
+          <button onclick="calSyncOne('${l.id}')" title="Sync now" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;padding:2px 4px;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          ${isOauth
+            ? `<button onclick="gcalDisconnect('${member.id}','${member.name}')" title="Disconnect" style="border:none;background:none;color:var(--muted);cursor:pointer;padding:2px 4px;flex-shrink:0;font-size:14px">✕</button>`
+            : `<button onclick="tpRemoveIcsById('${l.id}')" title="Remove" style="border:none;background:none;color:var(--muted);cursor:pointer;padding:2px 4px;flex-shrink:0;font-size:14px">✕</button>`}
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
-  const disconnectedCard = `
-    <div class="card" style="margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:8px">📅 Connect Your Google Calendar</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.75">
-        Connect your Google Calendar so your availability shows on the DroneHub team calendar in
-        <span style="color:${col.text};font-weight:700">your colour</span>.
-        You can pick individual calendars (work, personal, travel) after connecting.
-      </div>
-      <button onclick="gcalConnectWithGoogle('${member.id}')" style="padding:11px 22px;border-radius:12px;border:1px solid rgba(66,133,244,.5);background:rgba(66,133,244,.1);color:#4285F4;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>
-        Sign in with Google
-      </button>
-      ${myIcsLink?`<div style="font-size:11px;color:var(--muted);margin-top:12px;padding:8px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border)">
-        <strong style="color:var(--offwhite)">ICS calendar already linked</strong> · Signing in with Google will add OAuth sync on top. Both will appear on the team calendar.
-      </div>`:''}
-    </div>`;
+  // ── Add options ───────────────────────────────────────────────────────────
+  const googleBtn = `
+    <button onclick="gcalConnectWithGoogle('${member.id}')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:10px;border:1px solid rgba(66,133,244,.4);background:rgba(66,133,244,.08);color:#4285F4;font-size:12px;font-weight:700;cursor:pointer">
+      <svg width="15" height="15" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>
+      ${gcalConnected ? 'Add another Google Calendar' : 'Sign in with Google'}
+    </button>`;
 
-  // ── ICS / Apple Calendar option ───────────────────────────────────────────
-  const currentIcsUrl = myIcsLink?.icsUrl || '';
-  const icsCard = `
+  const addCard = `
     <div class="card">
-      <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:6px">🍎 Apple / Outlook / ICS Calendar</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
-        Paste a public ICS URL from Apple Calendar, Outlook, or any calendar that exports ICS feeds.
-        <a href="https://support.apple.com/guide/calendar/share-calendars-icl1023/mac" target="_blank" style="color:var(--blue-bright);text-decoration:none">How to get an ICS URL ↗</a>
+      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:14px;display:flex;align-items:center;gap:7px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add a Calendar
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="tp-cal-ics-url" type="url" placeholder="webcal:// or https://…" value="${currentIcsUrl}"
-          style="flex:1;min-width:200px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-mid);color:var(--white);font-size:12px">
-        <button onclick="tpSaveIcsCalendar('${member.id}','${member.name}')" style="padding:8px 18px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Save ICS</button>
-        ${currentIcsUrl?`<button onclick="tpRemoveIcsCalendar('${member.name}')" style="padding:8px 14px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Remove</button>`:''}
+
+      <!-- Google OAuth -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Google Calendar</div>
+        ${googleBtn}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+          ${gcalConnected?'Already connected. Click to link an additional Google account.':'Events appear in <span style="color:'+col.text+';font-weight:700">your colour</span> on the team calendar.'}
+        </div>
       </div>
-      ${currentIcsUrl?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">Currently linked: <span style="color:var(--offwhite);word-break:break-all">${currentIcsUrl}</span></div>`:''}
+
+      <div style="border-top:1px solid var(--border);margin-bottom:16px"></div>
+
+      <!-- ICS / Paste link -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">ICS / Paste a calendar link</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+          Works with Apple Calendar, Outlook, Google Calendar (ICS export), or any calendar that exports a public feed URL.
+          <a href="https://support.google.com/calendar/answer/37648" target="_blank" style="color:var(--blue-bright);text-decoration:none;margin-left:4px">How to get the URL ↗</a>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="tp-cal-ics-url" type="url" placeholder="webcal:// or https://calendar.google.com/…"
+            style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-mid);color:var(--white);font-size:12px;box-sizing:border-box">
+          <button onclick="tpSaveIcsCalendar('${member.id}','${member.name}')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Save</button>
+        </div>
+      </div>
     </div>`;
+
+  // ── Header strip ─────────────────────────────────────────────────────────
+  const headerStrip = allMyLinks.length ? `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">
+        Connected Calendars (${allMyLinks.length})
+      </div>
+      <div style="font-size:10px;color:var(--muted)">Events appear in <span style="color:${col.text};font-weight:700">your colour</span></div>
+    </div>` : '';
 
   try{
-    content.innerHTML = (gcalConnected ? connectedCard : disconnectedCard) + icsCard;
+    content.innerHTML = headerStrip + calListHtml + addCard;
   }catch(e){
     console.error('[tpRenderCalendarTab] render error:', e);
     content.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted)">
@@ -7142,27 +7154,41 @@ function tpRenderCalendarTab(){
   }
 }
 
-// Save ICS calendar URL from the My Profile → Calendar tab
+// Save ICS calendar URL from the My Profile → Calendar tab (supports multiple)
 function tpSaveIcsCalendar(memberId, memberName){
   const url = (document.getElementById('tp-cal-ics-url')?.value||'').trim();
   if(!url){ showDhToast('ICS URL','Please paste a valid ICS URL first.','⚠️','var(--amber)',3000); return; }
   const links = getGcalLinks();
-  const idx = links.findIndex(l=>l.creatorName===memberName && l.icsUrl);
-  const entry = {
-    id: idx>=0 ? links[idx].id : 'gcal_ics_'+memberId+'_'+Date.now(),
+  // Prevent exact duplicate
+  if(links.find(l=>l.creatorName===memberName && l.icsUrl===url)){
+    showDhToast('Already linked','This calendar URL is already connected.','⚠️','var(--amber)',3000); return;
+  }
+  const myExisting = links.filter(l=>l.creatorName===memberName && l.icsUrl && !l.oauthMemberId);
+  const calNum = myExisting.length + 1;
+  links.push({
+    id: 'gcal_ics_'+memberId+'_'+Date.now(),
     creatorName: memberName,
-    calLabel: memberName+"'s Calendar",
+    calLabel: calNum===1 ? memberName+"'s Calendar" : memberName+"'s Calendar "+calNum,
     icsUrl: url,
     addedAt: new Date().toISOString().slice(0,10),
     events: [], lastSync: null, syncError: null,
-  };
-  if(idx>=0) links[idx]=entry; else links.push(entry);
+  });
   saveGcalLinks(links);
-  showDhToast('Calendar linked','ICS calendar saved. It will sync on the next calendar refresh.','📅','var(--green)',3000);
-  tpRenderCalendarTab(); // refresh the tab
+  showDhToast('Calendar linked','Calendar saved — syncing now.','✅','var(--green)',3000);
+  // Clear the input and refresh
+  const inp = document.getElementById('tp-cal-ics-url');
+  if(inp) inp.value = '';
+  tpRenderCalendarTab();
 }
 
-// Remove ICS calendar from the My Profile → Calendar tab
+// Remove a single ICS calendar by its id
+function tpRemoveIcsById(linkId){
+  if(!confirm('Remove this calendar?')) return;
+  saveGcalLinks(getGcalLinks().filter(l=>l.id!==linkId));
+  tpRenderCalendarTab();
+}
+
+// Legacy — kept for any old callers
 function tpRemoveIcsCalendar(memberName){
   if(!confirm('Remove this ICS calendar link?')) return;
   const links = getGcalLinks().filter(l=>!(l.creatorName===memberName && l.icsUrl));
