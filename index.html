@@ -6268,6 +6268,7 @@ function renderVacationTracker(){
 // ── TEAM MEMBER PROFILE ──────────────────────────────────────────────────────
 let _tpMemberId = null;
 let _tpTab = 'overview';
+let _tpPfTab = 'youtube'; // sub-tab inside Portfolio: 'youtube' | 'reels' | 'photos'
 
 // ── Profile storage: each member has one dedicated Firebase document ──────────
 // Doc path: orgs / {orgId}:profile_{memberId}
@@ -6636,49 +6637,53 @@ function tpRenderPortfolio(){
     other:  {icon:'📁', label:'Other',  grad:'linear-gradient(135deg,#2a1f1a 0%,#201510 100%)', accent:'#F59E0B'},
   };
 
+  // Sub-tab config: which types belong to each tab, aspect ratio, cols, empty message
+  const pfTabs = {
+    youtube: { label:'▶ YouTube', types:['video'], ratio:'16/9', cols:2, accent:'#FF0000', emptyIcon:'🎬', emptyMsg:'No YouTube videos yet.' },
+    reels:   { label:'📱 Reels',  types:['reel'],  ratio:'9/16', cols:3, accent:'#A78BFA', emptyIcon:'📱', emptyMsg:'No Reels yet.' },
+    photos:  { label:'📸 Photos', types:['photo','other'], ratio:'1/1', cols:3, accent:'#22D97A', emptyIcon:'📸', emptyMsg:'No photos yet.' },
+  };
+  const activePfTab = _tpPfTab;
+  const tabCfg = pfTabs[activePfTab];
+  const visibleItems = items.filter(i=>tabCfg.types.includes(i.type));
+
+  // Default type to pre-select in form based on active sub-tab
+  const defaultType = activePfTab==='youtube'?'video': activePfTab==='reels'?'reel':'photo';
+
   content.innerHTML = `
   <style>
-    .pf-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
-    .pf-tile { position:relative; aspect-ratio:1/1; overflow:hidden; cursor:pointer; border-radius:4px; }
-    .pf-tile-bg { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+    .pf-subtab-bar { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:16px; }
+    .pf-subtab { padding:8px 18px; font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s; }
+    .pf-subtab.active { color:var(--white); border-bottom-color:var(--blue-bright); }
+    .pf-grid-yt  { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; }
+    .pf-grid-sq  { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+    .pf-tile { position:relative; overflow:hidden; cursor:pointer; border-radius:6px; }
     .pf-tile-overlay {
       position:absolute; inset:0; background:rgba(0,0,0,.78);
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:10px; padding:14px; opacity:0; transition:opacity .2s;
+      gap:8px; padding:12px; opacity:0; transition:opacity .2s; z-index:2;
     }
     .pf-tile:hover .pf-tile-overlay { opacity:1; }
     .pf-add-form { display:none; background:var(--navy-mid); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:16px; }
     .pf-add-form.open { display:block; }
   </style>
 
-  <!-- Stats bar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-    <div style="display:flex;gap:28px">
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.length}</div>
-        <div style="font-size:11px;color:var(--muted)">posts</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.filter(i=>i.type==='video').length}</div>
-        <div style="font-size:11px;color:var(--muted)">videos</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.filter(i=>i.type==='photo').length}</div>
-        <div style="font-size:11px;color:var(--muted)">photos</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:800;color:var(--white)">${items.filter(i=>i.type==='reel').length}</div>
-        <div style="font-size:11px;color:var(--muted)">reels</div>
-      </div>
+  <!-- Sub-tab bar + add button -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+    <div class="pf-subtab-bar" style="flex:1;margin-bottom:0">
+      <button class="pf-subtab ${activePfTab==='youtube'?'active':''}" onclick="_tpPfTab='youtube';tpRenderPortfolio()">▶ YouTube</button>
+      <button class="pf-subtab ${activePfTab==='reels'?'active':''}"   onclick="_tpPfTab='reels';tpRenderPortfolio()">📱 Reels</button>
+      <button class="pf-subtab ${activePfTab==='photos'?'active':''}"  onclick="_tpPfTab='photos';tpRenderPortfolio()">📸 Photos</button>
+      <div style="flex:1"></div>
+      ${canEdit?`<button onclick="document.getElementById('tp-pf-addform').classList.toggle('open')" style="padding:5px 14px;border-radius:20px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;margin:4px 0 4px 8px">+ Add</button>`:''}
     </div>
-    ${canEdit?`<button onclick="document.getElementById('tp-pf-addform').classList.toggle('open')" style="padding:7px 16px;border-radius:20px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">+ Add Post</button>`:''}
   </div>
 
   <!-- Collapsible add form -->
   ${canEdit?`
   <div id="tp-pf-addform" class="pf-add-form">
     <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-      <span>New Work Sample</span>
+      <span>New ${activePfTab==='youtube'?'YouTube Video':activePfTab==='reels'?'Reel':'Photo'}</span>
       <span style="font-size:10px;color:var(--muted)">Last saved: ${lastSync}</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -6689,15 +6694,15 @@ function tpRenderPortfolio(){
       <div>
         <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Type</div>
         <select id="tp-pf-type" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-          <option value="video">🎥 Video Edit</option>
-          <option value="photo">📸 Photo Edit</option>
-          <option value="reel">📱 Social Reel</option>
+          <option value="video" ${defaultType==='video'?'selected':''}>🎥 YouTube Video</option>
+          <option value="reel"  ${defaultType==='reel' ?'selected':''}>📱 Reel</option>
+          <option value="photo" ${defaultType==='photo'?'selected':''}>📸 Photo</option>
           <option value="other">📁 Other</option>
         </select>
       </div>
     </div>
     <div style="margin-bottom:10px">
-      <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Link (Drive, Dropbox, Vimeo, YouTube…)</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Link (YouTube, Vimeo, Drive, Dropbox…)</div>
       <input id="tp-pf-url" type="url" placeholder="https://..." style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
     </div>
     <div style="margin-bottom:10px">
@@ -6709,43 +6714,42 @@ function tpRenderPortfolio(){
       <textarea id="tp-pf-desc" placeholder="Brief description…" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;box-sizing:border-box"></textarea>
     </div>
     <div style="display:flex;gap:8px">
-      <button onclick="tpAddPortfolioItem()" style="padding:7px 20px;border-radius:20px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">+ Add to Portfolio</button>
+      <button onclick="tpAddPortfolioItem()" style="padding:7px 20px;border-radius:20px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">+ Add</button>
       <button onclick="document.getElementById('tp-pf-addform').classList.remove('open')" style="padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
     </div>
   </div>`:''}
 
-  <!-- Instagram-style grid -->
-  ${items.length?`
-  <div class="pf-grid">
-    ${items.map(item=>{
+  <!-- Grid — aspect ratio and column count change per tab -->
+  ${visibleItems.length?`
+  <div class="${activePfTab==='youtube'?'pf-grid-yt':'pf-grid-sq'}">
+    ${visibleItems.map(item=>{
       const tc = typeConfig[item.type]||typeConfig.other;
       const thumb = item.coverUrl || tpGetAutoThumb(item.url) || '';
       return `
-      <div class="pf-tile">
-        <!-- Fallback icon always present underneath; image sits on top and hides on error -->
-        <div style="position:absolute;inset:0;background:${tc.grad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-          <div style="font-size:32px">${tc.icon}</div>
+      <div class="pf-tile" style="aspect-ratio:${tabCfg.ratio}">
+        <!-- Fallback underneath -->
+        <div style="position:absolute;inset:0;background:${tc.grad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;z-index:0">
+          <div style="font-size:${activePfTab==='youtube'?'40':'28'}px">${tc.icon}</div>
           <div style="font-size:10px;font-weight:700;color:${tc.accent};letter-spacing:.06em;text-transform:uppercase">${tc.label}</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.45);padding:0 10px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);padding:0 12px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${item.title}</div>
         </div>
-        ${thumb?`<img src="${thumb}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:''}
-
+        ${thumb?`<img src="${thumb}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'">`:''}
         <div class="pf-tile-overlay">
-          <div style="font-size:12px;font-weight:700;color:#fff;text-align:center;line-height:1.4">${item.title}</div>
-          ${item.description?`<div style="font-size:10px;color:rgba(255,255,255,.65);text-align:center;line-height:1.5;max-height:48px;overflow:hidden">${item.description}</div>`:''}
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
+          <div style="font-size:${activePfTab==='youtube'?'13':'11'}px;font-weight:700;color:#fff;text-align:center;line-height:1.4">${item.title}</div>
+          ${item.description?`<div style="font-size:10px;color:rgba(255,255,255,.65);text-align:center;line-height:1.5;max-height:40px;overflow:hidden">${item.description}</div>`:''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
             ${item.url?`<a href="${item.url}" target="_blank" style="padding:5px 14px;border-radius:16px;background:${tc.accent};color:#fff;font-size:11px;font-weight:700;text-decoration:none">▶ View</a>`:''}
-            ${canEdit?`<button onclick="tpRemovePortfolioItem('${item.id}')" style="padding:5px 10px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer">Remove</button>`:''}
+            ${canEdit?`<button onclick="tpRemovePortfolioItem('${item.id}')" style="padding:5px 10px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer">✕</button>`:''}
           </div>
-          <div style="position:absolute;top:8px;right:8px;font-size:9px;color:rgba(255,255,255,.35)">${item.date||''}</div>
+          <div style="position:absolute;top:6px;right:8px;font-size:9px;color:rgba(255,255,255,.3)">${item.date||''}</div>
         </div>
       </div>`;
     }).join('')}
   </div>`:`
   <div style="text-align:center;padding:40px 20px;color:var(--muted)">
-    <div style="font-size:40px;margin-bottom:10px">🎬</div>
-    <div style="font-size:13px;font-weight:700;color:var(--offwhite);margin-bottom:6px">No posts yet</div>
-    ${canEdit?`<div style="font-size:12px;line-height:1.6">Click <strong style="color:var(--green)">+ Add Post</strong> above to share your first work sample.</div>`:'<div style="font-size:12px">This team member hasn\'t added portfolio work yet.</div>'}
+    <div style="font-size:36px;margin-bottom:10px">${tabCfg.emptyIcon}</div>
+    <div style="font-size:13px;font-weight:700;color:var(--offwhite);margin-bottom:6px">${tabCfg.emptyMsg}</div>
+    ${canEdit?`<div style="font-size:12px;line-height:1.6;color:var(--muted)">Click <strong style="color:var(--green)">+ Add</strong> above to post your first one.</div>`:''}
   </div>`}
   `;
 }
