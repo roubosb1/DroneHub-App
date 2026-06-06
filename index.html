@@ -6743,8 +6743,9 @@ function tpRenderPortfolio(){
     ${visibleItems.map(item=>{
       const tc = typeConfig[item.type]||typeConfig.other;
       const thumb = item.coverUrl || tpGetAutoThumb(item.url) || '';
+      const needsOgFetch = !thumb && tpShouldFetchOg(item.url);
       return `
-      <div class="pf-tile" style="aspect-ratio:${tabCfg.ratio}">
+      <div class="pf-tile" style="aspect-ratio:${tabCfg.ratio}"${needsOgFetch?` data-og-url="${(item.url||'').replace(/"/g,'&quot;')}"`:''}>
         <!-- Fallback underneath -->
         <div style="position:absolute;inset:0;background:${tc.grad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;z-index:0">
           <div style="font-size:${activePfTab==='youtube'?'48':'28'}px">${tc.icon}</div>
@@ -6775,15 +6776,51 @@ function tpRenderPortfolio(){
     ${canEdit?`<div style="font-size:12px;line-height:1.6;color:var(--muted)">Click <strong style="color:var(--green)">+ Add</strong> above to post your first one.</div>`:''}
   </div>`}
   `;
+  // Async-load og:image covers for Instagram/Vimeo/etc tiles that have no static thumb
+  tpLoadDeferredThumbs(content);
 }
 
-// Extract a thumbnail URL from a YouTube or Vimeo link automatically
+// Extract a thumbnail URL from a YouTube/Vimeo link automatically
 function tpGetAutoThumb(url){
   if(!url) return null;
   // YouTube: watch?v=, youtu.be/, /shorts/, /embed/
   const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   if(yt) return 'https://img.youtube.com/vi/'+yt[1]+'/maxresdefault.jpg';
-  return null;
+  // Vimeo thumbnails aren't a static URL but we still signal to defer-fetch
+  return null; // other platforms use deferred og:image fetch
+}
+
+// Is this a URL we should try to auto-fetch an og:image for?
+function tpShouldFetchOg(url){
+  if(!url) return false;
+  // Skip if YouTube (already handled) or clearly a direct image
+  if(/youtu\.be|youtube\.com/.test(url)) return false;
+  if(/\.(jpg|jpeg|png|gif|webp|avif|svg)(\?|$)/i.test(url)) return false;
+  return true;
+}
+
+// After grid renders, find tiles tagged data-og-url and fetch covers via server proxy
+async function tpLoadDeferredThumbs(container){
+  const tiles = container ? container.querySelectorAll('[data-og-url]') : [];
+  for(const tile of tiles){
+    const url = tile.dataset.ogUrl;
+    if(!url) continue;
+    try{
+      const res = await fetch('/.netlify/functions/get-og-image?url='+encodeURIComponent(url));
+      const { imageUrl } = await res.json();
+      if(imageUrl){
+        // Remove existing img if any, inject new one
+        tile.querySelectorAll('img[data-og-img]').forEach(el=>el.remove());
+        const img = document.createElement('img');
+        img.dataset.ogImg = '1';
+        img.src = imageUrl;
+        img.alt = '';
+        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1';
+        img.onerror = ()=>img.remove();
+        tile.appendChild(img);
+      }
+    }catch(e){ /* non-fatal */ }
+  }
 }
 
 function tpAddPortfolioItem(){
@@ -6795,7 +6832,8 @@ function tpAddPortfolioItem(){
   if(!title){ showDhToast('Portfolio','Please enter a title.','⚠️','var(--amber)',3000); return; }
   if(!url){ showDhToast('Portfolio','Please enter a link to the work.','⚠️','var(--amber)',3000); return; }
   // Use manually entered cover, fall back to auto-detected thumbnail
-  const coverUrl = coverRaw || tpGetAutoThumb(url) || '';
+  const autoThumb = tpGetAutoThumb(url) || '';
+  const coverUrl = coverRaw || autoThumb;
   const newItem = {
     id: 'pf_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
     title, url, type, description: desc, coverUrl,
@@ -6804,10 +6842,25 @@ function tpAddPortfolioItem(){
   };
   const items = tpPortfolioLoad(_tpMemberId);
   items.unshift(newItem);
-  // Save to localStorage + Firebase profile doc immediately
   tpPortfolioSave(_tpMemberId, items);
   showDhToast('Portfolio','Saved to your profile ✓','✅','var(--green)',2500);
   tpRenderPortfolio();
+  // If no cover yet and the URL supports og:image fetch, try to get one and persist it
+  if(!coverUrl && tpShouldFetchOg(url)){
+    fetch('/.netlify/functions/get-og-image?url='+encodeURIComponent(url))
+      .then(r=>r.json())
+      .then(({imageUrl})=>{
+        if(!imageUrl) return;
+        const stored = tpPortfolioLoad(_tpMemberId);
+        const idx = stored.findIndex(i=>i.id===newItem.id);
+        if(idx>=0 && !stored[idx].coverUrl){
+          stored[idx].coverUrl = imageUrl;
+          tpPortfolioSave(_tpMemberId, stored);
+          tpRenderPortfolio(); // re-render with the now-available cover
+        }
+      })
+      .catch(()=>{});
+  }
 }
 
 function tpRemovePortfolioItem(itemId){
