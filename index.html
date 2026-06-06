@@ -6739,7 +6739,12 @@ function tpRenderPortfolio(){
           <div style="font-size:${activePfTab==='youtube'?'15':'11'}px;font-weight:700;color:#fff;text-align:center;line-height:1.4">${item.title}</div>
           ${item.description?`<div style="font-size:${activePfTab==='youtube'?'12':'10'}px;color:rgba(255,255,255,.65);text-align:center;line-height:1.5;max-height:48px;overflow:hidden">${item.description}</div>`:''}
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
-            ${item.url?`<a href="${item.url}" target="_blank" style="padding:${activePfTab==='youtube'?'7px 20px':'5px 14px'};border-radius:16px;background:${tc.accent};color:#fff;font-size:${activePfTab==='youtube'?'12':'11'}px;font-weight:700;text-decoration:none">▶ View</a>`:''}
+            ${item.url?`<button
+                data-url="${item.url.replace(/"/g,'&quot;')}"
+                data-title="${(item.title||'').replace(/"/g,'&quot;')}"
+                data-reel="${activePfTab==='reels'}"
+                onclick="tpPlayVideo(this.dataset.url,this.dataset.title,this.dataset.reel==='true')"
+                style="padding:${activePfTab==='youtube'?'7px 20px':'5px 14px'};border-radius:16px;background:${tc.accent};color:#fff;font-size:${activePfTab==='youtube'?'12':'11'}px;font-weight:700;border:none;cursor:pointer">▶ Play</button>`:''}
             ${canEdit?`<button onclick="tpRemovePortfolioItem('${item.id}')" style="padding:5px 10px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer">✕</button>`:''}
           </div>
           <div style="position:absolute;top:6px;right:8px;font-size:9px;color:rgba(255,255,255,.3)">${item.date||''}</div>
@@ -6794,6 +6799,66 @@ function tpRemovePortfolioItem(itemId){
   tpPortfolioSave(_tpMemberId, items);
   showDhToast('Portfolio','Item removed','🗑️','var(--muted)',2000);
   tpRenderPortfolio();
+}
+
+// ── Inline video player lightbox ──────────────────────────────────────────────
+function tpPlayVideo(url, title, isReel){
+  if(!url) return;
+
+  // Build embed URL — YouTube and Vimeo can be embedded; everything else opens in new tab
+  let embedUrl = null;
+
+  // YouTube: watch, shorts, embed, youtu.be
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if(yt) embedUrl = 'https://www.youtube.com/embed/'+yt[1]+'?autoplay=1&rel=0&modestbranding=1';
+
+  // Vimeo
+  if(!embedUrl){
+    const vm = url.match(/vimeo\.com\/(\d+)/);
+    if(vm) embedUrl = 'https://player.vimeo.com/video/'+vm[1]+'?autoplay=1&title=0&byline=0&portrait=0';
+  }
+
+  if(!embedUrl){ window.open(url,'_blank'); return; }
+
+  // Remove any existing overlay
+  document.getElementById('tp-video-overlay')?.remove();
+
+  // Portrait (Reels) vs landscape (YouTube) sizing
+  const maxW  = isReel ? '360px' : '860px';
+  const ratio = isReel ? '9/16'  : '16/9';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'tp-video-overlay';
+  overlay.style.cssText = [
+    'position:fixed','inset:0','z-index:99999',
+    'background:rgba(0,0,0,.93)',
+    'display:flex','flex-direction:column',
+    'align-items:center','justify-content:center',
+    'padding:24px','box-sizing:border-box',
+  ].join(';');
+  overlay.innerHTML = `
+    <div style="width:100%;max-width:${maxW}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px">
+        <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title.replace(/</g,'&lt;')}</div>
+        <button id="tp-video-close" style="flex-shrink:0;border:none;background:rgba(255,255,255,.12);color:#fff;padding:5px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">✕ Close</button>
+      </div>
+      <div style="aspect-ratio:${ratio};background:#000;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.8)">
+        <iframe src="${embedUrl}"
+          style="width:100%;height:100%;border:none"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </div>`;
+
+  // Close on background click or close button
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#tp-video-close').addEventListener('click', ()=>overlay.remove());
+  // Close on Escape
+  const escHandler = e=>{ if(e.key==='Escape'){ overlay.remove(); document.removeEventListener('keydown',escHandler); } };
+  document.addEventListener('keydown', escHandler);
+
+  document.body.appendChild(overlay);
 }
 
 function tpRenderMyWork(){
