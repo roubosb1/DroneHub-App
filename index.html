@@ -19549,7 +19549,7 @@ function getTrackerStage(jobId){
     stage:'ready',claimedBy:'',claimedAt:'',notes:'',updatedAt:'',
     editStatus:'ready',filesReceived:false,downloadLink:'',filemailLink:'',
     frameioLink:'',dropboxLink:'',approxEditHours:'',approxFilmHours:'',completionDate:'',
-    draftCount:0,extraDraftCharge:0,projectId:'',
+    draftCount:0,extraDraftCharge:0,projectId:'',reviewLinks:[],
   };
 }
 function setTrackerStage(jobId,update){
@@ -20747,12 +20747,24 @@ function openTrackerModal(jobId){
           </div>
         </div>
         <div>
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:4px;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Frame.io link (client review & notes)</label>
-          <div style="display:flex;gap:6px">
-            <input type="url" id="tm-frameio" value="${ts.frameioLink||''}" placeholder="https://app.frame.io/…" style="flex:1;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-            ${ts.frameioLink?`<a href="${ts.frameioLink}" target="_blank" style="padding:6px 12px;border-radius:8px;border:1px solid var(--purple);background:var(--purple-bg);color:#A78BFA;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">▶ Frame.io</a>`:''}
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:4px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            Review Links <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);margin-left:2px">— YouTube, Vimeo, Drive… one per video/reel</span>
+          </label>
+          <div id="tm-review-links-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+            ${(ts.reviewLinks&&ts.reviewLinks.length?ts.reviewLinks:[]).map((rl,i)=>`
+            <div id="tm-rl-row-${i}" style="display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center">
+              <input type="url" class="tm-rl-url" data-idx="${i}" value="${(rl.url||'').replace(/"/g,'&quot;')}" placeholder="https://…" style="padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;min-width:0">
+              <select class="tm-rl-type" data-idx="${i}" style="padding:6px 6px;border:1px solid var(--border-bright);border-radius:8px;font-size:11px;background:var(--navy-lift);color:var(--white);cursor:pointer">
+                <option value="horizontal" ${(rl.type||'horizontal')==='horizontal'?'selected':''}>↔ Horizontal</option>
+                <option value="reel" ${rl.type==='reel'?'selected':''}>↕ Reel</option>
+              </select>
+              <button onclick="tmRemoveReviewLink(${i})" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;white-space:nowrap">✕</button>
+            </div>`).join('')}
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px">Paste a Frame.io review link — clients and editors can watch and leave timestamped notes directly on the video.</div>
+          <button onclick="tmAddReviewLink()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:11px;font-weight:700;cursor:pointer">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Review Link
+          </button>
         </div>
         <div>
           <label style="font-size:10px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:4px;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Google Drive link (finals for client)</label>
@@ -20790,6 +20802,39 @@ function openTrackerModal(jobId){
   });
 }
 
+function tmAddReviewLink(){
+  const list = document.getElementById('tm-review-links-list');
+  if(!list) return;
+  const idx = list.querySelectorAll('[id^="tm-rl-row-"]').length;
+  const row = document.createElement('div');
+  row.id = 'tm-rl-row-'+idx;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center';
+  row.innerHTML = `
+    <input type="url" class="tm-rl-url" data-idx="${idx}" value="" placeholder="https://…" style="padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;min-width:0">
+    <select class="tm-rl-type" data-idx="${idx}" style="padding:6px 6px;border:1px solid var(--border-bright);border-radius:8px;font-size:11px;background:var(--navy-lift);color:var(--white);cursor:pointer">
+      <option value="horizontal">↔ Horizontal</option>
+      <option value="reel">↕ Reel</option>
+    </select>
+    <button onclick="tmRemoveReviewLink(${idx})" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>`;
+  list.appendChild(row);
+}
+
+function tmRemoveReviewLink(idx){
+  const row = document.getElementById('tm-rl-row-'+idx);
+  if(row) row.remove();
+}
+
+function tmCollectReviewLinks(){
+  const urls  = document.querySelectorAll('.tm-rl-url');
+  const types = document.querySelectorAll('.tm-rl-type');
+  const links = [];
+  urls.forEach((inp, i) => {
+    const url = inp.value.trim();
+    if(url) links.push({ id:'rl_'+Date.now()+'_'+i, url, type: types[i]?.value||'horizontal' });
+  });
+  return links;
+}
+
 function tmUpdateDraftCharge(){
   const count=parseInt(document.getElementById('tm-draft-count')?.value||0);
   const extra=Math.max(0,count-2)*30;
@@ -20811,10 +20856,12 @@ function saveTrackerModal(jobId, modal){
   const filesReceived=document.getElementById('tm-files-received')?.checked||false;
   const rush=document.getElementById('tm-rush')?.checked||false;
   const filemailLink=v('tm-filemail');
-  const frameioLink=v('tm-frameio');
   const downloadLink=v('tm-download');
   const dropboxLink=v('tm-dropbox');
   const videographer=v('tm-videographer');
+  const reviewLinks=tmCollectReviewLinks();
+  // Legacy frameioLink: keep first horizontal link for back-compat display
+  const frameioLink=(reviewLinks.find(l=>l.type==='horizontal')||reviewLinks[0])?.url||'';
 
   // Detect team-member simplified form — admin-only fields may not exist
   const _saveSession=gateGetSession();
@@ -20827,7 +20874,7 @@ function saveTrackerModal(jobId, modal){
     // preserve all admin-only values from the existing tracker record.
     stageUpdate={
       stage,claimedBy,notes,editStatus,filesReceived,rush,
-      filemailLink,frameioLink,downloadLink,dropboxLink,videographer,
+      filemailLink,frameioLink,reviewLinks,downloadLink,dropboxLink,videographer,
       claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
       // Preserve admin-only fields
       draftCount:existing.draftCount||0,
@@ -20846,7 +20893,7 @@ function saveTrackerModal(jobId, modal){
     const extraDraftCharge=Math.max(0,draftCount-2)*30;
     stageUpdate={
       stage,claimedBy,notes,editStatus,filesReceived,rush,draftCount,
-      projectId,filemailLink,frameioLink,downloadLink,dropboxLink,
+      projectId,filemailLink,frameioLink,reviewLinks,downloadLink,dropboxLink,
       approxEditHours,approxFilmHours,completionDate,videographer,
       claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
       extraDraftCharge,
@@ -24509,10 +24556,11 @@ function dismissDhToast(id){
 // ── VIDEO DRAFT REVIEW SYSTEM ─────────────────
 // ══════════════════════════════════════════════
 
-let _vdActiveJobId   = null;  // jobId currently open in the profile modal
-let _vdActiveDraftId = null;  // which draft version is being viewed
-let _vdCommentTs     = null;  // captured timestamp in seconds (null = no timestamp)
-let _vdViewerMode    = 'team'; // 'team' | 'client'
+let _vdActiveJobId        = null;  // jobId currently open in the profile modal
+let _vdActiveDraftId      = null;  // which draft version is being viewed
+let _vdCommentTs          = null;  // captured timestamp in seconds (null = no timestamp)
+let _vdViewerMode         = 'team'; // 'team' | 'client'
+let _vdActiveReviewLinkId = null;  // id of the currently selected review link tab
 
 function openVdProfile(jobId, viewerMode){
   _vdActiveJobId  = jobId;
@@ -24521,12 +24569,24 @@ function openVdProfile(jobId, viewerMode){
 
   const job = (savedJobs||[]).find(j=>j.id===jobId);
   const vd  = videoDraftForJob(jobId);
+  const ts  = getTrackerStage(jobId);
   const modal = document.getElementById('vd-profile-modal');
   if(!modal) return;
 
   // Header
   document.getElementById('vd-profile-title').textContent   = job ? (job.title||job.client||job.name||'Project Review') : 'Project Review';
   document.getElementById('vd-profile-subtitle').textContent = job ? `${job.clientName||job.client||''} · ${job.date||''}`.replace(/^·\s*/,'').replace(/\s*·$/,'') : '';
+
+  // Seed review links from legacy frameioLink if reviewLinks is empty
+  const reviewLinks = (ts.reviewLinks&&ts.reviewLinks.length)
+    ? ts.reviewLinks
+    : (ts.frameioLink ? [{id:'rl_legacy',url:ts.frameioLink,type:'horizontal'}] : []);
+
+  // Set default active link
+  _vdActiveReviewLinkId = reviewLinks.length ? reviewLinks[0].id : null;
+
+  // Render review link tabs
+  vdRenderReviewTabs(reviewLinks);
 
   // If no draft record yet, create a shell
   if(!vd){
@@ -24539,6 +24599,11 @@ function openVdProfile(jobId, viewerMode){
     vdRenderProfile(vd);
   }
 
+  // If review links exist and no draft upload, load the first review link directly
+  if(reviewLinks.length && (!vd || !vd.drafts?.length)){
+    vdLoadReviewLink(reviewLinks[0]);
+  }
+
   // Show/hide team vs client sections
   const uploadSec   = document.getElementById('vd-upload-section');
   const approvalSec = document.getElementById('vd-approval-section');
@@ -24549,11 +24614,68 @@ function openVdProfile(jobId, viewerMode){
   videoDraftsSyncFirebase().then(()=>{ const v=videoDraftForJob(jobId); if(v) vdRenderProfile(v); });
 }
 
+// Render the video tab bar (one tab per review link)
+function vdRenderReviewTabs(reviewLinks){
+  const container = document.getElementById('vd-review-tabs');
+  if(!container) return;
+  if(!reviewLinks || !reviewLinks.length){
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'flex';
+  container.innerHTML = reviewLinks.map((rl, i) => {
+    const active = rl.id === _vdActiveReviewLinkId;
+    const isReel = rl.type === 'reel';
+    const label  = rl.title || (isReel ? `Reel ${i+1}` : `Video ${i+1}`);
+    const icon   = isReel
+      ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="6" x2="12" y2="6.01"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>'
+      : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+    return `<button
+      onclick="vdSelectReviewLink('${rl.id}')"
+      data-rl-id="${rl.id}"
+      data-rl-url="${(rl.url||'').replace(/"/g,'&quot;')}"
+      data-rl-type="${rl.type||'horizontal'}"
+      style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${active?'#A78BFA':'var(--border)'};background:${active?'rgba(139,92,246,.15)':'var(--navy-lift)'};color:${active?'#A78BFA':'var(--muted)'}">
+      ${icon} ${label}
+    </button>`;
+  }).join('');
+}
+
+function vdSelectReviewLink(rlId){
+  const container = document.getElementById('vd-review-tabs');
+  if(!container) return;
+  _vdActiveReviewLinkId = rlId;
+  // Update tab styles
+  container.querySelectorAll('button').forEach(btn=>{
+    const active = btn.dataset.rlId === rlId;
+    btn.style.borderColor  = active ? '#A78BFA' : 'var(--border)';
+    btn.style.background   = active ? 'rgba(139,92,246,.15)' : 'var(--navy-lift)';
+    btn.style.color        = active ? '#A78BFA' : 'var(--muted)';
+    if(active){
+      vdLoadReviewLink({ id: btn.dataset.rlId, url: btn.dataset.rlUrl, type: btn.dataset.rlType });
+    }
+  });
+}
+
+function vdLoadReviewLink(rl){
+  if(!rl || !rl.url) return;
+  // Adjust aspect ratio based on orientation
+  const area = document.getElementById('vd-video-area');
+  if(area) area.style.aspectRatio = rl.type==='reel' ? '9/16' : '16/9';
+  vdLoadVideo(rl.url);
+  // Also re-render comments filtered by this link
+  const vd = videoDraftForJob(_vdActiveJobId);
+  if(vd) vdRenderComments((vd.comments||[]).filter(c=>c.draftId===_vdActiveDraftId&&(c.reviewLinkId===rl.id||!c.reviewLinkId)));
+}
+
 function closeVdProfile(){
   document.getElementById('vd-profile-modal').style.display = 'none';
-  _vdActiveJobId   = null;
-  _vdActiveDraftId = null;
-  _vdCommentTs     = null;
+  _vdActiveJobId        = null;
+  _vdActiveDraftId      = null;
+  _vdCommentTs          = null;
+  _vdActiveReviewLinkId = null;
+  const tabs = document.getElementById('vd-review-tabs');
+  if(tabs){ tabs.innerHTML=''; tabs.style.display='none'; }
   _vdStopProgressTimer();
   // Stop / destroy players
   const vid = document.getElementById('vd-video-el');
@@ -27901,6 +28023,9 @@ function initGoogleMaps(){
     <div style="display:grid;grid-template-columns:1fr 340px;min-height:500px">
       <!-- Left: Video + Comments -->
       <div style="padding:20px;border-right:1px solid var(--border)">
+        <!-- Review link tabs (one per video/reel in the project) -->
+        <div id="vd-review-tabs" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
+
         <!-- Draft selector -->
         <div id="vd-draft-selector" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
 
