@@ -6875,8 +6875,9 @@ function tpRemovePortfolioItem(itemId){
 function tpPlayVideo(url, title, isReel){
   if(!url) return;
 
-  // Build embed URL — YouTube and Vimeo can be embedded; everything else opens in new tab
-  let embedUrl = null;
+  // Detect platform & build embed
+  let embedUrl  = null;
+  let igPermalink = null; // Instagram uses blockquote embed, not iframe
 
   // YouTube: watch, shorts, embed, youtu.be
   const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
@@ -6888,14 +6889,24 @@ function tpPlayVideo(url, title, isReel){
     if(vm) embedUrl = 'https://player.vimeo.com/video/'+vm[1]+'?autoplay=1&title=0&byline=0&portrait=0';
   }
 
-  if(!embedUrl){ window.open(url,'_blank'); return; }
+  // Instagram Reels / posts / TV — use blockquote embed (no API key needed for public posts)
+  if(!embedUrl){
+    const ig = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+    if(ig){
+      isReel = true; // always portrait
+      igPermalink = 'https://www.instagram.com/reel/'+ig[1]+'/';
+    }
+  }
+
+  // Anything else — open in new tab
+  if(!embedUrl && !igPermalink){ window.open(url,'_blank'); return; }
 
   // Remove any existing overlay
   document.getElementById('tp-video-overlay')?.remove();
 
-  // Portrait (Reels) vs landscape (YouTube) sizing
-  const maxW  = isReel ? '360px' : '860px';
-  const ratio = isReel ? '9/16'  : '16/9';
+  // Portrait (Reels/Instagram) vs landscape (YouTube) sizing
+  const maxW  = isReel ? '420px' : '900px';
+  const ratio = isReel ? null    : '16/9'; // Instagram embed is naturally sized
 
   const overlay = document.createElement('div');
   overlay.id = 'tp-video-overlay';
@@ -6905,20 +6916,35 @@ function tpPlayVideo(url, title, isReel){
     'display:flex','flex-direction:column',
     'align-items:center','justify-content:center',
     'padding:24px','box-sizing:border-box',
+    'overflow-y:auto',
   ].join(';');
+
+  const playerHtml = igPermalink
+    // Instagram blockquote embed — rendered directly in DOM (not in iframe)
+    ? `<div style="width:100%;display:flex;justify-content:center">
+        <blockquote
+          class="instagram-media"
+          data-instgrm-permalink="${igPermalink}"
+          data-instgrm-version="14"
+          style="background:#fff;border:0;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.8);margin:0;max-width:100%;min-width:280px;padding:0;width:min(400px,100%)">
+        </blockquote>
+       </div>`
+    // iframe embed (YouTube / Vimeo)
+    : `<div style="aspect-ratio:${ratio};background:#000;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.8)">
+        <iframe src="${embedUrl}"
+          style="width:100%;height:100%;border:none"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+       </div>`;
+
   overlay.innerHTML = `
     <div style="width:100%;max-width:${maxW}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px">
         <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title.replace(/</g,'&lt;')}</div>
         <button id="tp-video-close" style="flex-shrink:0;border:none;background:rgba(255,255,255,.12);color:#fff;padding:5px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">✕ Close</button>
       </div>
-      <div style="aspect-ratio:${ratio};background:#000;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.8)">
-        <iframe src="${embedUrl}"
-          style="width:100%;height:100%;border:none"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowfullscreen>
-        </iframe>
-      </div>
+      ${playerHtml}
     </div>`;
 
   // Close on background click or close button
@@ -6929,6 +6955,23 @@ function tpPlayVideo(url, title, isReel){
   document.addEventListener('keydown', escHandler);
 
   document.body.appendChild(overlay);
+
+  // Trigger Instagram embed processing after inserting into DOM
+  if(igPermalink){
+    if(window.instgrm && window.instgrm.Embeds){
+      // Script already loaded — just reprocess
+      window.instgrm.Embeds.process();
+    } else if(!document.getElementById('ig-embed-script')){
+      // Load Instagram's embed.js once
+      const s = document.createElement('script');
+      s.id   = 'ig-embed-script';
+      s.src  = 'https://www.instagram.com/embed.js';
+      s.async = true;
+      document.body.appendChild(s);
+    } else {
+      // Script tag exists but not yet loaded — it will auto-process on load
+    }
+  }
 }
 
 function tpRenderMyWork(){
