@@ -34,7 +34,7 @@ function getFirestore() {
 }
 
 // ── Token helpers ─────────────────────────────────────────────────────────
-const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function signToken(payload) {
   const secret = process.env.JWT_SECRET || 'change-me-set-JWT_SECRET-env-var';

@@ -7403,7 +7403,11 @@ async function restoreFromFirebase(forceAll=false){
       fb: ORG_ID+':sales_'+l, ls: null,
       applyDoc: async (fb, fbKey)=>{
         const data = await _salesReadChunked(fb, fbKey);
-        if(data !== null){ _salesByList[l]=data; _salesUpdatedAt[l]=fb.updatedAt||Date.now(); }
+        if(data !== null){
+          _salesByList[l]=data;
+          _salesUpdatedAt[l]=fb.updatedAt||Date.now();
+          _salesCacheWrite(l, data); // persist to localStorage so next load has a fallback
+        }
       }
     })),
     // Deals pipeline — restore on login so pipeline is available on any device
@@ -22531,10 +22535,34 @@ let _salesByList = { realestate:null, golf:null, resorts:null, other:null, warm:
 let _salesUpdatedAt = {}; // { listId: timestamp }
 
 function _salesFbKey(listId){ return ORG_ID + ':sales_' + listId; }
+function _salesLsKey(listId){ return 'dh_sales_cache_' + listId; }
+
+// ── localStorage cache helpers ────────────────────────────────────────────────
+// Writes a list to localStorage so it survives token expiry / page reloads.
+// Only stores up to 1.5 MB per list to avoid QuotaExceededError.
+function _salesCacheWrite(listId, arr){
+  try{
+    const json = JSON.stringify(arr);
+    if(json.length <= 1500000) localStorage.setItem(_salesLsKey(listId), json);
+  }catch(e){}
+}
+// Reads a list from localStorage cache. Returns null if absent.
+function _salesCacheRead(listId){
+  try{
+    const raw = localStorage.getItem(_salesLsKey(listId));
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
 
 // Returns all contacts across all lists (for operations that need the full set)
 function salesLoad(){
-  return SALES_LISTS.flatMap(l => _salesByList[l] || []);
+  return SALES_LISTS.flatMap(l => {
+    if(_salesByList[l] !== null) return _salesByList[l];
+    // Firebase not yet loaded — fall back to localStorage cache
+    const cached = _salesCacheRead(l);
+    if(cached) { _salesByList[l] = cached; } // populate memory from cache
+    return _salesByList[l] || [];
+  });
 }
 
 // Returns contacts for a specific list only
@@ -22611,6 +22639,7 @@ function salesSaveList(listId, arr){
   const now = Date.now();
   _salesByList[listId] = arr;
   _salesUpdatedAt[listId] = now;
+  _salesCacheWrite(listId, arr); // keep localStorage cache in sync
 
   _showSalesSaveStatus('saving');
 
