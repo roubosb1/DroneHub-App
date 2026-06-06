@@ -22006,14 +22006,21 @@ async function gcalShowPicker(memberId,memberName){
       return;
     }
     if(listEl) listEl.innerHTML=_gcalPickerCalendars.map((cal,i)=>`
-      <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:var(--navy-lift);margin-bottom:6px;cursor:pointer;border:1px solid ${cal.selected?'var(--blue)':'var(--border)'}">
-        <input type="checkbox" id="gcal-pick-${i}" ${cal.selected?'checked':''} style="accent-color:${cal.colorHex};width:16px;height:16px;cursor:pointer" onchange="gcalPickerToggle(${i})">
-        <span style="width:10px;height:10px;border-radius:50%;background:${cal.colorHex};flex-shrink:0"></span>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--offwhite)">${cal.name}</div>
-          ${cal.primary?'<div style="font-size:10px;color:var(--muted)">Primary calendar</div>':''}
+      <div id="gcal-pick-row-${i}" style="padding:10px 12px;border-radius:10px;background:var(--navy-lift);margin-bottom:6px;border:1px solid ${cal.selected?'var(--blue)':'var(--border)'}">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:0">
+          <input type="checkbox" id="gcal-pick-${i}" ${cal.selected?'checked':''} style="accent-color:${cal.colorHex};width:16px;height:16px;cursor:pointer;flex-shrink:0" onchange="gcalPickerToggle(${i})">
+          <span style="width:10px;height:10px;border-radius:50%;background:${cal.colorHex};flex-shrink:0"></span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--offwhite)">${cal.name}</div>
+            ${cal.primary?'<div style="font-size:10px;color:var(--muted)">Primary calendar</div>':''}
+          </div>
+        </label>
+        <div id="gcal-pick-label-wrap-${i}" style="margin-top:8px;display:${cal.selected?'block':'none'}">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Display name in DroneHub</div>
+          <input id="gcal-pick-label-${i}" type="text" value="${cal.name}" placeholder="e.g. Work, Personal, Travel…"
+            style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--white)">
         </div>
-      </label>`).join('');
+      </div>`).join('');
   }catch(e){
     if(listEl) listEl.innerHTML=`<div style="color:var(--red);font-size:12px;padding:10px">${e.message}</div>`;
   }
@@ -22021,9 +22028,18 @@ async function gcalShowPicker(memberId,memberName){
 
 function gcalPickerToggle(idx){
   if(_gcalPickerCalendars[idx]) _gcalPickerCalendars[idx].selected=!_gcalPickerCalendars[idx].selected;
-  // Update border highlight
-  const lbl=document.getElementById('gcal-pick-'+idx)?.closest('label');
-  if(lbl) lbl.style.borderColor=_gcalPickerCalendars[idx]?.selected?'var(--blue)':'var(--border)';
+  const selected=_gcalPickerCalendars[idx]?.selected;
+  // Update row border
+  const row=document.getElementById('gcal-pick-row-'+idx);
+  if(row) row.style.borderColor=selected?'var(--blue)':'var(--border)';
+  // Show/hide the name input
+  const wrap=document.getElementById('gcal-pick-label-wrap-'+idx);
+  if(wrap) wrap.style.display=selected?'block':'none';
+  // Focus the name input when newly checked
+  if(selected){
+    const inp=document.getElementById('gcal-pick-label-'+idx);
+    if(inp){ inp.select(); inp.focus(); }
+  }
 }
 
 // Save picker selection and sync
@@ -22042,11 +22058,15 @@ async function gcalPickerSave(){
     const data=await gcalApiCall('sync',memberId,{calendarIds});
     // Build gcal_links entries for each selected calendar
     const links=getGcalLinks().filter(l=>l.oauthMemberId!==memberId); // remove old OAuth entries for this member
-    selected.forEach(cal=>{
+    selected.forEach((cal,si)=>{
+      // Use the custom display name typed by the user, fall back to Google name
+      const origIdx=_gcalPickerCalendars.indexOf(cal);
+      const customLabel=(document.getElementById('gcal-pick-label-'+origIdx)?.value||'').trim();
+      const calLabel=customLabel || cal.name;
       links.push({
         id:'goauth_'+memberId+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
         creatorName:memberName,
-        calLabel:cal.name+(cal.primary?' (Primary)':''),
+        calLabel,
         oauthMemberId:memberId,
         oauthCalendarId:cal.id,
         events:(data.events||[]).filter(e=>e.calendarId===cal.id),
