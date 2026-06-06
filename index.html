@@ -1433,7 +1433,6 @@ button{font-family:var(--font);}
   <div class="card">
     <div class="section-label">Assign contractors</div>
     <div class="svc-row"><span class="svc-name" style="min-width:110px;flex:none">Videographer</span><select id="sel-videographer" onchange="onContractorChange()" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select><span class="svc-price" id="vid-drive-hint" style="min-width:110px;text-align:right"></span></div>
-    <div class="svc-row" style="opacity:.85"><span class="svc-name" style="min-width:110px;flex:none;font-size:13px;color:#A8B4D0">✂️ Video editor</span><select id="sel-video-editor" onchange="editors.video=this.value;calc()" style="flex:1;padding:6px 10px;border:0.5px solid rgba(91,141,239,.4);border-radius:8px;font-size:13px;background:#1C2333;color:#E8ECF8"></select><span style="min-width:110px;text-align:right;font-size:10px;color:#7A8AAA;padding-left:6px">internal — no paystub</span></div>
     <div class="svc-row"><span class="svc-name" style="min-width:110px;flex:none">Photographer</span><select id="sel-photographer" onchange="onContractorChange()" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select><span class="svc-price" id="photo-drive-hint" style="min-width:110px;text-align:right"></span></div>
     <div class="svc-row"><span class="svc-name" style="min-width:110px;flex:none">Floor plan</span><select id="sel-floorplan" onchange="onContractorChange()" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select><span class="svc-price" id="fp-drive-hint" style="min-width:110px;text-align:right"></span></div>
     <div class="note" id="contractor-note" style="margin-top:6px"></div>
@@ -5622,9 +5621,10 @@ function renderCostModel(grand,driveCost,lines){
     const vidShootName=ds.vidKey?cName(ds.vidKey):'(no videographer selected)';
     addPayout(vidShootKey,vidShootName,{label:'Video shoot',fee:videoShooterFee});
     if(ds.vidKey) payouts[vidShootKey].driveFee+=vidDriveReimb;
-    // Editor is tracked for scheduling but NOT paid via per-job paystub — salaried/hourly
-    const vidEdName=editors.video?cName(editors.video):'(to be assigned)';
-    payouts[vidShootKey]._vidEditorName=vidEdName;
+    // Editing fee stored separately — attributed to shooter by default.
+    // When the editor is assigned in the Project Tracker, jobDetailReassign will move
+    // this to the actual editor. If a salaried DroneHub team member edits, it will be
+    // removed from here and handled by their hourly rate system instead.
     payouts[vidShootKey]._vidEditBudget=videoEditorFee;
   }
   if(svc.photo){
@@ -5633,9 +5633,6 @@ function renderCostModel(grand,driveCost,lines){
     const phoShootName=phoShootKey==='__unassigned_photo__'?'(no photographer selected)':cName(phoShootKey);
     addPayout(phoShootKey,phoShootName,{label:'Photo shoot',fee:photoShooterFee});
     if(ds.phoKey&&!ds.sameShooter) payouts[phoShootKey].driveFee+=phoDriveReimb;
-    // Photo editing is also internal cost — no per-job paystub
-    const phoEdName=editors.photo?cName(editors.photo):'(to be assigned)';
-    payouts[phoShootKey]._phoEditorName=phoEdName;
     payouts[phoShootKey]._phoEditBudget=photoEditorFee;
   }
 
@@ -5813,21 +5810,19 @@ function renderCostModel(grand,driveCost,lines){
     totalPaidOut+=invoiceTotal+editTotal; // edit budget for core video/photo is NOT included (salaried/hourly)
 
     if(invoiceTotal>0){
-      // Build editor info sections for video/photo (shown as internal cost, not a paystub)
-      const vidEditorSection=p._vidEditorName?`
+      // Video/photo editing info — editor is assigned later in the tracker
+      const vidEditorSection=p._vidEditBudget?`
         <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.1)">
-          <div style="font-size:10px;font-weight:700;color:#7A8AAA;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">✂️ Video editing (internal — no paystub)</div>
           <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
-            <span style="color:#A8B4D0">${p._vidEditorName}</span>
-            <span style="color:#7A8AAA;font-size:11px">paid separately · ${fmt(p._vidEditBudget)} budget</span>
+            <span style="color:#7A8AAA">✂️ Video editing budget</span>
+            <span style="color:#7A8AAA;font-size:11px">${fmt(p._vidEditBudget)} · editor assigned in tracker</span>
           </div>
         </div>`:'';
-      const phoEditorSection=p._phoEditorName?`
+      const phoEditorSection=p._phoEditBudget?`
         <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.1)">
-          <div style="font-size:10px;font-weight:700;color:#7A8AAA;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">✂️ Photo editing (internal — no paystub)</div>
           <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px">
-            <span style="color:#A8B4D0">${p._phoEditorName}</span>
-            <span style="color:#7A8AAA;font-size:11px">paid separately · ${fmt(p._phoEditBudget)} budget</span>
+            <span style="color:#7A8AAA">✂️ Photo editing budget</span>
+            <span style="color:#7A8AAA;font-size:11px">${fmt(p._phoEditBudget)} · editor assigned in tracker</span>
           </div>
         </div>`:'';
 
@@ -6751,10 +6746,30 @@ function tpRenderMyWork(){
 }
 
 function tpRenderCalendarTab(){
-  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
-  if(!member) return;
+  // Primary lookup: by the stored member ID
+  let member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  // Fallback: match by session email/name in case the ID lookup misses (e.g. roster
+  // was refreshed between opening the modal and clicking the Calendar tab)
+  if(!member){
+    const s = gateGetSession();
+    if(s?.email) member = getAdminTeamMembers().find(m=>
+      (m.email||'').toLowerCase() === (s.email||'').toLowerCase()
+    );
+    if(!member && s?.name) member = getAdminTeamMembers().find(m=>
+      (m.name||'').toLowerCase() === (s.name||'').toLowerCase()
+    );
+    if(member) _tpMemberId = member.id; // sync the ID so future renders work
+  }
   const content = document.getElementById('tp-content');
   if(!content) return;
+  if(!member){
+    content.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">📅</div>
+      <div style="font-size:14px;font-weight:600;color:var(--offwhite);margin-bottom:6px">Calendar setup unavailable</div>
+      <div style="font-size:12px;line-height:1.6">Your team profile couldn't be found. Try closing and re-opening this window, or ask an admin to add you to the team roster.</div>
+    </div>`;
+    return;
+  }
 
   const col = getCreatorColor(member.name);
   const profile = tpProfileLoad(member.id);
@@ -6830,7 +6845,19 @@ function tpRenderCalendarTab(){
       ${currentIcsUrl?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">Currently linked: <span style="color:var(--offwhite);word-break:break-all">${currentIcsUrl}</span></div>`:''}
     </div>`;
 
-  content.innerHTML = (gcalConnected ? connectedCard : disconnectedCard) + icsCard;
+  try{
+    content.innerHTML = (gcalConnected ? connectedCard : disconnectedCard) + icsCard;
+  }catch(e){
+    console.error('[tpRenderCalendarTab] render error:', e);
+    content.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">📅</div>
+      <div style="font-size:14px;font-weight:600;color:var(--offwhite);margin-bottom:12px">Add Your Calendar</div>
+      <button onclick="gcalConnectWithGoogle('${member.id}')" style="padding:11px 22px;border-radius:12px;border:1px solid rgba(66,133,244,.5);background:rgba(66,133,244,.1);color:#4285F4;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;margin-bottom:16px">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>
+        Sign in with Google
+      </button>
+    </div>`;
+  }
 }
 
 // Save ICS calendar URL from the My Profile → Calendar tab
@@ -10424,7 +10451,8 @@ function removeClientAsset(clientId, index){
 
 function renderEditorSelectors(){
   const services=[
-    {key:'video',label:'Video editor',show:svc.video},
+    // Video editor intentionally omitted — assigned in the Project Tracker after filming.
+    // Editing fee goes to whoever is assigned as editor in the tracker (contractor or team member).
     {key:'photo',label:'Photo editor',show:svc.photo},
     {key:'extvideo',label:'Exterior video editor',show:svc.extvideo},
     {key:'extphoto',label:'Exterior photo editor',show:svc.extphoto},
@@ -10575,15 +10603,14 @@ function saveJob(){
   // Find the videographer (shooter) from payouts
   const shooterEntry=Object.values(payoutSnapshot).find(p=>p.entries?.some(e=>e.role?.includes('shoot')));
   const videographerName=shooterEntry?.name||'';
-  // Editor comes from the editors object directly (no per-job paystub — salaried/hourly)
-  const _vidEdKey=isUS?'':editors.video;
-  const cNameSnapshot=k=>CONTRACTORS[k]?.name||EDITOR_NAMES[k]||k||'';
-  const editorName=_vidEdKey?cNameSnapshot(_vidEdKey):'';
+  // Editor is not set at quote time — assigned later in the Project Tracker.
+  // Editing fee defaults to the shooter on their paystub; jobDetailReassign
+  // will move it when an editor is actually assigned.
 
   setTrackerStage(job.id,{
     stage:'ready',
     editStatus:'ready',
-    claimedBy:editorName,
+    claimedBy:'',   // editor assigned in tracker, not at quote time
     videographer:videographerName,
     filesReceived:false,
     notes:'',
@@ -10640,11 +10667,9 @@ function saveJob(){
   refreshPayrollPeriods();
   renderJobs();
   renderTracker();
-  // Reset editors back to DroneHub default so the next quote starts clean
+  // Reset editors back to defaults so the next quote starts clean
   editors.video='dronehub'; editors.photo='dronehub';
   editors.extvideo=''; editors.extphoto=''; editors.randomvideo=''; editors.randomphoto=''; editors.rush=''; editors.custom='';
-  const _postSaveEdSel=document.getElementById('sel-video-editor');
-  if(_postSaveEdSel) _postSaveEdSel.value='dronehub';
   renderEditorSelectors();
 }
 
@@ -10667,9 +10692,13 @@ function buildPayoutSnapshot(lines,ds){
     });
     const vRev=vGrossedBase*(1-MARGIN);
     const shooterFee=vRev*0.600;
+    const editFee=vRev*0.400;
     addContractor(ds.vidKey,'Video shoot',shooterFee,0,ds.vidDrive.contractorCharge||0,0,'');
-    // Video editing is an internal cost (salaried/hourly) — no per-job paystub entry
-    // Editor is stored on job.editors.video for tracker tracking only
+    // Editing fee starts on the shooter — if a different editor is assigned in the
+    // tracker, jobDetailReassign moves this entry to them. If a salaried DroneHub
+    // team member edits, jobDetailReassign removes this entry entirely (their pay
+    // comes from the hourly rate system instead).
+    addContractor(ds.vidKey,'Video editing',0,editFee,0,0,'');
   }
   // Photo
   if(svc.photo&&ds.phoKey){
@@ -10961,27 +10990,43 @@ function jobDetailReassign(jobId){
     j.editors.video=editor;
     j.editors.photo=photoEditor;
 
-    // Sweep ALL payout entries matching a pattern across every contractor key
-    // and consolidate them under the newly assigned editor.
-    // This handles legacy jobs where edit fees were baked onto the shooter's key.
+    // Helper: check if a person is a field contractor (Akbar, Brad, etc.) by looking
+    // them up in CONTRACTORS by name. Internal DroneHub team members are NOT contractors.
+    const isFieldContractor=(name)=>{
+      if(!name) return false;
+      return Object.values(CONTRACTORS).some(c=>(c.name||'').toLowerCase()===name.toLowerCase());
+    };
+
+    // Sweep ALL payout entries matching a pattern across every contractor key.
+    // If the new editor is a field contractor → move the edit entries to their paystub.
+    // If the new editor is an internal DroneHub team member → remove the edit entries
+    //   entirely (their pay is calculated from hours × hourly rate in the hourly system).
     const reassignEditEntries=(newName,rolePattern)=>{
       if(!newName||!j.payouts) return;
-      if(!j.payouts[newName]) j.payouts[newName]={name:newName,entries:[],editLines:[]};
+      const editorIsContractor=isFieldContractor(newName);
+      if(editorIsContractor && !j.payouts[newName]){
+        j.payouts[newName]={name:newName,entries:[],editLines:[]};
+      }
       Object.keys(j.payouts).forEach(key=>{
-        if(key===newName) return; // already correct
         const p=j.payouts[key];
         // entries[] format (new)
         const toMove=(p.entries||[]).filter(e=>rolePattern.test(e.role||''));
         if(toMove.length){
-          if(!j.payouts[newName].entries) j.payouts[newName].entries=[];
-          toMove.forEach(e=>j.payouts[newName].entries.push({...e}));
+          if(editorIsContractor && key!==newName){
+            // Contractor editor — move entries to their key
+            if(!j.payouts[newName].entries) j.payouts[newName].entries=[];
+            toMove.forEach(e=>j.payouts[newName].entries.push({...e}));
+          }
+          // Whether moved or removed, strip from the source (avoids double-counting)
           p.entries=p.entries.filter(e=>!rolePattern.test(e.role||''));
         }
         // editLines[] format (legacy)
         const toMoveLines=(p.editLines||[]).filter(l=>rolePattern.test(l.label||''));
         if(toMoveLines.length){
-          if(!j.payouts[newName].editLines) j.payouts[newName].editLines=[];
-          toMoveLines.forEach(l=>j.payouts[newName].editLines.push({...l}));
+          if(editorIsContractor && key!==newName){
+            if(!j.payouts[newName].editLines) j.payouts[newName].editLines=[];
+            toMoveLines.forEach(l=>j.payouts[newName].editLines.push({...l}));
+          }
           p.editLines=p.editLines.filter(l=>!rolePattern.test(l.label||''));
         }
       });
@@ -14509,13 +14554,7 @@ function openInvoiceJob(jobId){
 
   // ── Restore editors ─────────────────────────────────────────────────────────
   if(job.editors) Object.entries(job.editors).forEach(([k,v])=>{editors[k]=v||'';});
-  const _edSel=document.getElementById('sel-video-editor');
-  if(_edSel){
-    const _edVal=editors.video||'dronehub';
-    if(!_edSel.querySelector(`option[value="${_edVal}"]`)) populateVideoEditorDropdown();
-    _edSel.value=_edVal;
-    editors.video=_edVal;
-  }
+  // sel-video-editor removed from quote builder — editor assigned in Project Tracker
 
   if(isUSJob){
     // ── US market job: restore usQuoteState from job.usData ──────────────────
@@ -17436,6 +17475,9 @@ async function gateEnterApp(session){
   _activeSessionEmail = (session.email||'').toLowerCase().trim();
   // Restore ORG_ID from session (multi-tenant: each org has its own ORG_ID)
   if(session.orgId && session.orgId!=='dronehub_main') ORG_ID=session.orgId;
+  // Reset the sales session-sync flag so every login gets a fresh Firebase read
+  // the first time the Sales pane is opened (catches uploads by other team members)
+  _salesSessionSynced = false;
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
 
@@ -22046,6 +22088,7 @@ let salesSortDir     = 'asc';
 let salesView        = 'clients';
 let _salesPage       = 0;          // current pagination page (0-based)
 const _SALES_PAGE_SIZE = 500;      // contacts rendered per page — safe DOM limit
+let _salesSessionSynced = false;   // true after first forced full-sync on Sales pane open
 let _pricingConfig   = null;
 
 const jobDateInput=document.getElementById('job-date-input');
@@ -22508,9 +22551,23 @@ async function salesMigrateLocalStorage(){
   allLegacy.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
 
   const writeResults = {};
+  const skipLists = new Set(); // Lists skipped because a per-list doc already has data
   for(const l of SALES_LISTS){
     if(byList[l].length){
       try{
+        // ── CRITICAL SAFETY CHECK ────────────────────────────────────────────────
+        // If a per-list Firebase doc already exists and has data, NEVER overwrite it
+        // with the old monolithic migration data. A team member may have uploaded
+        // contacts (e.g. 7,187 real-estate leads) after this user last had the app
+        // open, and the old :sales doc is stale by comparison.
+        // Only write to lists that have NO existing per-list doc yet.
+        const existingDoc = await fbGet('orgs', _salesFbKey(l)).catch(()=>null);
+        const existingHasData = existingDoc && (existingDoc.data || (existingDoc.chunks||0) > 1);
+        if(existingHasData){
+          writeResults[l] = true; // already populated — treat as done
+          skipLists.add(l);
+          continue;
+        }
         await fbSet('orgs', _salesFbKey(l), {data: JSON.stringify(byList[l]), updatedAt: now});
         writeResults[l] = true;
       }catch(e){
@@ -22522,8 +22579,8 @@ async function salesMigrateLocalStorage(){
     }
   }
 
-  // ── VERIFY: read back at least one list that had data ────────────────────────
-  const listsWithData = SALES_LISTS.filter(l=>byList[l].length);
+  // ── VERIFY: read back at least one list that was actually written (not skipped) ─
+  const listsWithData = SALES_LISTS.filter(l=>byList[l].length && !skipLists.has(l));
   let verified = true;
   if(listsWithData.length){
     try{
@@ -22537,9 +22594,10 @@ async function salesMigrateLocalStorage(){
     return;
   }
 
-  // Update in-memory cache for written lists
+  // Update in-memory cache ONLY for lists that were actually written (not skipped).
+  // Lists that were skipped already have correct data in _salesByList from restoreFromFirebase.
   for(const l of SALES_LISTS){
-    if(byList[l].length){
+    if(byList[l].length && !skipLists.has(l)){
       _salesByList[l] = byList[l];
       _salesUpdatedAt[l] = now;
     }
@@ -22617,7 +22675,7 @@ async function salesRunRecovery(){
 }
 
 // Sync one or all lists from Firebase (handles chunked docs transparently)
-async function salesSyncFirebase(listId){
+async function salesSyncFirebase(listId, force=false){
   if(!_fbToken()) return;
   // Run one-time migration from old monolithic doc on first sync
   const needsMigration = SALES_LISTS.some(l=>_salesByList[l]===null);
@@ -22629,7 +22687,9 @@ async function salesSyncFirebase(listId){
       const fbKey = _salesFbKey(l);
       const fb = await fbGet('orgs', fbKey);
       const remoteTs = fb?.updatedAt || 0;
-      if(fb && remoteTs > (_salesUpdatedAt[l]||0)){
+      // force=true bypasses the timestamp guard — always read fresh from Firebase.
+      // Used on the first Sales pane open per session to catch uploads from other users.
+      if(fb && (force || remoteTs > (_salesUpdatedAt[l]||0))){
         const data = await _salesReadChunked(fb, fbKey);
         if(data !== null){
           _salesByList[l] = data;
@@ -22722,7 +22782,12 @@ function renderSales(){
   if(salesView==='pipeline') renderDealsTable();
   // Load from Firebase first, THEN sync clients so salesSave never runs
   // against partially-loaded lists.
-  salesSyncFirebase().then(()=>{
+  // On the first open per session, force a full fresh read from Firebase so any
+  // contacts uploaded by other team members (e.g. Mackenzie's bulk upload) are
+  // immediately visible — even if restoreFromFirebase already ran with stale data.
+  const forceRefresh = !_salesSessionSynced;
+  _salesSessionSynced = true;
+  salesSyncFirebase(null, forceRefresh).then(()=>{
     // Bootstrap: if Clients tab is empty but CRM has Existing Clients, populate it now
     if(!clients.length){
       const crmClients = salesLoad().filter(c=>c.list==='clients'&&!c._deleted);
