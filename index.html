@@ -6700,6 +6700,10 @@ function tpRenderPortfolio(){
       <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Link (Drive, Dropbox, Vimeo, YouTube…)</div>
       <input id="tp-pf-url" type="url" placeholder="https://..." style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
     </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Cover Photo URL <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — auto-detected for YouTube)</span></div>
+      <input id="tp-pf-cover" type="url" placeholder="https://... (paste a direct image URL)" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+    </div>
     <div style="margin-bottom:12px">
       <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Description (optional)</div>
       <textarea id="tp-pf-desc" placeholder="Brief description…" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;box-sizing:border-box"></textarea>
@@ -6715,13 +6719,17 @@ function tpRenderPortfolio(){
   <div class="pf-grid">
     ${items.map(item=>{
       const tc = typeConfig[item.type]||typeConfig.other;
+      const thumb = item.coverUrl || tpGetAutoThumb(item.url) || '';
+      const tileInner = thumb
+        ? `<img src="${thumb}" alt="${item.title}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<div class=\\'pf-tile-bg\\' style=\\'width:100%;height:100%;background:${tc.grad.replace(/'/g,'\\'')};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px\\'><div style=\\'font-size:32px\\'>${tc.icon}</div><div style=\\'font-size:10px;font-weight:700;color:${tc.accent};text-transform:uppercase\\'>${tc.label}</div></div>'">`
+        : `<div class="pf-tile-bg" style="width:100%;height:100%;background:${tc.grad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+            <div style="font-size:32px">${tc.icon}</div>
+            <div style="font-size:10px;font-weight:700;color:${tc.accent};letter-spacing:.06em;text-transform:uppercase">${tc.label}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.45);padding:0 10px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
+          </div>`;
       return `
       <div class="pf-tile">
-        <div class="pf-tile-bg" style="background:${tc.grad}">
-          <div style="font-size:32px">${tc.icon}</div>
-          <div style="font-size:10px;font-weight:700;color:${tc.accent};letter-spacing:.06em;text-transform:uppercase">${tc.label}</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.45);padding:0 10px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
-        </div>
+        ${tileInner}
         <div class="pf-tile-overlay">
           <div style="font-size:12px;font-weight:700;color:#fff;text-align:center;line-height:1.4">${item.title}</div>
           ${item.description?`<div style="font-size:10px;color:rgba(255,255,255,.65);text-align:center;line-height:1.5;max-height:48px;overflow:hidden">${item.description}</div>`:''}
@@ -6742,16 +6750,28 @@ function tpRenderPortfolio(){
   `;
 }
 
+// Extract a thumbnail URL from a YouTube or Vimeo link automatically
+function tpGetAutoThumb(url){
+  if(!url) return null;
+  // YouTube: watch?v=, youtu.be/, /shorts/, /embed/
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if(yt) return 'https://img.youtube.com/vi/'+yt[1]+'/maxresdefault.jpg';
+  return null;
+}
+
 function tpAddPortfolioItem(){
-  const title = document.getElementById('tp-pf-title')?.value.trim();
-  const url   = document.getElementById('tp-pf-url')?.value.trim();
-  const type  = document.getElementById('tp-pf-type')?.value||'video';
-  const desc  = document.getElementById('tp-pf-desc')?.value.trim()||'';
+  const title    = document.getElementById('tp-pf-title')?.value.trim();
+  const url      = document.getElementById('tp-pf-url')?.value.trim();
+  const type     = document.getElementById('tp-pf-type')?.value||'video';
+  const desc     = document.getElementById('tp-pf-desc')?.value.trim()||'';
+  const coverRaw = document.getElementById('tp-pf-cover')?.value.trim()||'';
   if(!title){ showDhToast('Portfolio','Please enter a title.','⚠️','var(--amber)',3000); return; }
   if(!url){ showDhToast('Portfolio','Please enter a link to the work.','⚠️','var(--amber)',3000); return; }
+  // Use manually entered cover, fall back to auto-detected thumbnail
+  const coverUrl = coverRaw || tpGetAutoThumb(url) || '';
   const newItem = {
     id: 'pf_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
-    title, url, type, description: desc,
+    title, url, type, description: desc, coverUrl,
     date: new Date().toISOString().slice(0,10),
     addedAt: new Date().toISOString(),
   };
