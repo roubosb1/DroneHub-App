@@ -2689,7 +2689,7 @@ button{font-family:var(--font);}
       <button onclick="closeTeamMemberProfile()" style="margin-left:auto;border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px;padding:0 4px;align-self:center">✕</button>
     </div>
     <!-- Content -->
-    <div id="tp-content" style="padding:24px 28px;min-height:300px;max-height:70vh;overflow-y:auto"></div>
+    <div id="tp-modal-content" style="padding:24px 28px;min-height:300px;max-height:70vh;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -6474,7 +6474,7 @@ function tpRenderContent(){
 function tpRenderOverview(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-content');
+  const content = document.getElementById('tp-modal-content');
   if(!content) return;
   // Completed projects count
   const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
@@ -6516,7 +6516,7 @@ function tpRenderOverview(){
 function tpRenderTimeOff(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-content');
+  const content = document.getElementById('tp-modal-content');
   if(!content) return;
   const session = gateGetSession();
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
@@ -6617,7 +6617,7 @@ function tpDeleteTimeOff(evtId){
 function tpRenderPortfolio(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-content');
+  const content = document.getElementById('tp-modal-content');
   if(!content) return;
   const session = gateGetSession();
   const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
@@ -6715,7 +6715,7 @@ function tpRemovePortfolioItem(itemId){
 function tpRenderMyWork(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-content');
+  const content = document.getElementById('tp-modal-content');
   if(!content) return;
   const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
   const standaloneArr = getStandaloneProjects();
@@ -6780,7 +6780,7 @@ function tpRenderCalendarTab(){
     );
     if(member) _tpMemberId = member.id; // sync the ID so future renders work
   }
-  const content = document.getElementById('tp-content');
+  const content = document.getElementById('tp-modal-content');
   if(!content) return;
   if(!member){
     content.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted)">
