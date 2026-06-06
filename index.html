@@ -6720,16 +6720,16 @@ function tpRenderPortfolio(){
     ${items.map(item=>{
       const tc = typeConfig[item.type]||typeConfig.other;
       const thumb = item.coverUrl || tpGetAutoThumb(item.url) || '';
-      const tileInner = thumb
-        ? `<img src="${thumb}" alt="${item.title}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<div class=\\'pf-tile-bg\\' style=\\'width:100%;height:100%;background:${tc.grad.replace(/'/g,'\\'')};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px\\'><div style=\\'font-size:32px\\'>${tc.icon}</div><div style=\\'font-size:10px;font-weight:700;color:${tc.accent};text-transform:uppercase\\'>${tc.label}</div></div>'">`
-        : `<div class="pf-tile-bg" style="width:100%;height:100%;background:${tc.grad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
-            <div style="font-size:32px">${tc.icon}</div>
-            <div style="font-size:10px;font-weight:700;color:${tc.accent};letter-spacing:.06em;text-transform:uppercase">${tc.label}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.45);padding:0 10px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
-          </div>`;
       return `
       <div class="pf-tile">
-        ${tileInner}
+        <!-- Fallback icon always present underneath; image sits on top and hides on error -->
+        <div style="position:absolute;inset:0;background:${tc.grad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+          <div style="font-size:32px">${tc.icon}</div>
+          <div style="font-size:10px;font-weight:700;color:${tc.accent};letter-spacing:.06em;text-transform:uppercase">${tc.label}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);padding:0 10px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
+        </div>
+        ${thumb?`<img src="${thumb}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:''}
+
         <div class="pf-tile-overlay">
           <div style="font-size:12px;font-weight:700;color:#fff;text-align:center;line-height:1.4">${item.title}</div>
           ${item.description?`<div style="font-size:10px;color:rgba(255,255,255,.65);text-align:center;line-height:1.5;max-height:48px;overflow:hidden">${item.description}</div>`:''}
