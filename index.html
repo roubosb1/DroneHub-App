@@ -6402,6 +6402,16 @@ function tpSwitchTab(tab){
 }
 
 function tpRender(){
+  // Fallback: resolve member from session if ID lookup misses
+  if(!getAdminTeamMembers().find(m=>m.id===_tpMemberId)){
+    const s=gateGetSession();
+    if(s){
+      const members=getAdminTeamMembers();
+      const fallback=members.find(m=>(m.email&&(m.email||'').toLowerCase()===(s.email||'').toLowerCase()))
+        || members.find(m=>(m.name&&(m.name||'').toLowerCase()===(s.name||'').toLowerCase()));
+      if(fallback) _tpMemberId=fallback.id;
+    }
+  }
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
   const session = gateGetSession();
@@ -6444,6 +6454,16 @@ function tpRender(){
 }
 
 function tpRenderContent(){
+  // Fallback: if _tpMemberId doesn't match anyone, try resolving from the session
+  if(!getAdminTeamMembers().find(m=>m.id===_tpMemberId)){
+    const s=gateGetSession();
+    if(s){
+      const members=getAdminTeamMembers();
+      const fallback=members.find(m=>(m.email&&(m.email||'').toLowerCase()===(s.email||'').toLowerCase()))
+        || members.find(m=>(m.name&&(m.name||'').toLowerCase()===(s.name||'').toLowerCase()));
+      if(fallback) _tpMemberId=fallback.id;
+    }
+  }
   if(_tpTab==='overview')   tpRenderOverview();
   else if(_tpTab==='timeoff')   tpRenderTimeOff();
   else if(_tpTab==='portfolio') tpRenderPortfolio();
