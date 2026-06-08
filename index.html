@@ -5848,6 +5848,14 @@ function mobShowProfile(){
   _mobPfSubTab = 'youtube';
   document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('mob-pftab-portfolio')?.classList.add('active');
+  // Show + add button for portfolio (admin or own profile)
+  const _addBtn = document.getElementById('mob-pf-portfolio-add-btn');
+  if(_addBtn){
+    const _s = gateGetSession();
+    const _isOwn = member.email&&(_s?.email||'').toLowerCase()===member.email.toLowerCase();
+    const _isAdmin = !_s||_s.type==='admin'||_s.role==='admin';
+    _addBtn.style.display = (_isAdmin||_isOwn) ? 'flex' : 'none';
+  }
   mobPfRenderPortfolio(member);
 
   // Background Firebase refresh
@@ -5859,6 +5867,9 @@ function mobShowProfile(){
 function mobHideProfile(){
   const pane = document.getElementById('mob-profile-pane');
   if(pane) pane.style.display='none';
+  // Hide the portfolio + button
+  const addBtn = document.getElementById('mob-pf-portfolio-add-btn');
+  if(addBtn) addBtn.style.display='none';
   // Restore last active pane nav state
   document.getElementById('mobnav-profile')?.classList.remove('active');
 }
@@ -5875,7 +5886,21 @@ function mobPfSwitchTab(tab){
   document.getElementById('mob-pftab-'+tab)?.classList.add('active');
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
+  // Show + button only on Portfolio tab for users who can edit
+  const addBtn = document.getElementById('mob-pf-portfolio-add-btn');
+  if(addBtn){
+    const session = gateGetSession();
+    const isOwn = member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase();
+    const isAdmin = !session||session.type==='admin'||session.role==='admin';
+    addBtn.style.display = (tab==='portfolio'&&(isAdmin||isOwn)) ? 'flex' : 'none';
+  }
   mobPfRenderCurrent(member);
+}
+
+function mobPfPortfolioAdd(){
+  // Open full editor for this member, then hide mobile profile
+  if(_tpMemberId) openTeamMemberProfile(_tpMemberId);
+  mobHideProfile();
 }
 
 function mobPfRenderCurrent(member){
@@ -5982,13 +6007,6 @@ function mobPfRenderPortfolio(member){
     <button class="mob-pf-subtab ${_mobPfSubTab==='reels'?'active':''}"   onclick="_mobPfSubTab='reels';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">📱 Reels</button>
     <button class="mob-pf-subtab ${_mobPfSubTab==='photos'?'active':''}"  onclick="_mobPfSubTab='photos';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">📸 Photos</button>
   </div>
-
-  ${canEdit?`
-  <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
-    <button onclick="openTeamMemberProfile('${member.id}');mobHideProfile()" style="width:100%;padding:10px;border-radius:10px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer">
-      + Add Portfolio Work (full editor)
-    </button>
-  </div>`:''}
 
   ${visItems.length === 0 ? `
   <div style="padding:60px 20px;text-align:center;color:var(--muted)">
@@ -29466,7 +29484,10 @@ function initGoogleMaps(){
   <div id="mob-pf-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:52px;background:var(--navy-card);border-bottom:1px solid var(--border);flex-shrink:0">
     <!-- DroneHub logo flush left (src populated by JS from main header) -->
     <img id="mob-pf-logo" src="" alt="DroneHub" style="height:20px;object-fit:contain">
-    <div style="display:flex;align-items:center;gap:6px">
+    <div style="display:flex;align-items:center;gap:4px">
+      <!-- Portfolio add (+) — shown only when Portfolio tab is active and user can edit -->
+      <button id="mob-pf-portfolio-add-btn" onclick="mobPfPortfolioAdd()" aria-label="Add portfolio work"
+        style="display:none;width:34px;height:34px;border-radius:50%;border:none;background:rgba(34,217,122,.13);color:var(--green);cursor:pointer;align-items:center;justify-content:center;font-size:20px;font-weight:300;line-height:1;-webkit-tap-highlight-color:transparent">+</button>
       <!-- Notification bell (mirrors main header bell) -->
       <button onclick="toggleNotificationPanel()" style="position:relative;width:34px;height:34px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
