@@ -673,8 +673,9 @@ button{font-family:var(--font);}
 @media(max-width:768px){
 
   /* ── Header ── */
-  .app-header{height:52px;padding:0 1rem;gap:10px;overflow:hidden;}
-  .app-header img{height:26px;flex-shrink:0;}
+  .app-header{height:52px;padding:0 12px;gap:8px;overflow:hidden;}
+  .app-header img{height:20px;flex-shrink:0;}
+  #mob-hamburger-btn{display:flex;}
   .header-sub,.header-divider{display:none;}
   /* On mobile: hide Client Portal, user name text, and sign-out from header
      (sign-out moves to More drawer) */
@@ -823,10 +824,43 @@ button{font-family:var(--font);}
   padding:14px;text-align:center;
 }
 
+/* ── Mobile hamburger & top dropdown ── */
+#mob-hamburger-btn{
+  display:none;align-items:center;justify-content:center;
+  width:36px;height:36px;border:none;background:transparent;
+  color:var(--offwhite);cursor:pointer;border-radius:8px;
+  -webkit-tap-highlight-color:transparent;flex-shrink:0;
+}
+#mob-hamburger-btn:active{background:rgba(255,255,255,.08);}
+#mob-top-dropdown-overlay{
+  display:none;position:fixed;inset:0;z-index:700;
+}
+#mob-top-dropdown{
+  display:none;position:fixed;top:52px;right:10px;
+  background:var(--navy-card);border:1px solid var(--border-bright);
+  border-radius:14px;z-index:701;padding:8px;min-width:180px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  transform-origin:top right;
+  transform:scale(.92);opacity:0;
+  transition:transform .18s cubic-bezier(.4,0,.2,1),opacity .18s;
+}
+#mob-top-dropdown.open{transform:scale(1);opacity:1;}
+.mob-dd-item{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:11px 14px;border:none;background:transparent;
+  color:var(--offwhite);font-size:13px;font-family:var(--font);
+  font-weight:600;cursor:pointer;border-radius:10px;text-align:left;
+  -webkit-tap-highlight-color:transparent;transition:background .12s;
+}
+.mob-dd-item:active,.mob-dd-item:hover{background:rgba(91,141,239,.14);color:var(--blue-bright);}
+.mob-dd-divider{height:1px;background:var(--border);margin:4px 0;}
+
 /* Desktop: never show mobile nav elements */
 @media(min-width:769px){
   #mobile-bottom-nav{display:none!important;}
   #mob-profile-pane{display:none!important;}
+  #mob-hamburger-btn{display:none!important;}
+  #mob-top-dropdown,#mob-top-dropdown-overlay{display:none!important;}
   #mobile-more-overlay,#mobile-more-drawer{display:none!important;}
 }
 
@@ -1457,6 +1491,10 @@ button{font-family:var(--font);}
       <button id="header-platform-btn" onclick="showPane('platform')" title="Platform Dashboard" style="display:none;padding:5px 10px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Platform</button>
       <button id="header-signout-btn" onclick="gateLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Sign out</button>
     </div>
+    <!-- Mobile-only hamburger ≡ — opens top dropdown instead of bottom drawer -->
+    <button id="mob-hamburger-btn" onclick="toggleMobTopDropdown()" aria-label="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
   </div>
 </div>
 <!-- ── Notification toast stack ───────────────────────────────────────────── -->
@@ -5292,14 +5330,23 @@ function toggleMobileMore(){
   }
 }
 
-function closeMobileMore(){
-  const overlay=document.getElementById('mobile-more-overlay');
-  const drawer=document.getElementById('mobile-more-drawer');
-  if(drawer){
-    drawer.classList.remove('open');
-    setTimeout(()=>{ if(!drawer.classList.contains('open')) drawer.style.display='none'; },280);
-  }
-  if(overlay) overlay.style.display='none';
+function closeMobileMore(){ closeMobTopDropdown(); } // legacy alias
+
+function toggleMobTopDropdown(){
+  const dd = document.getElementById('mob-top-dropdown');
+  const ov = document.getElementById('mob-top-dropdown-overlay');
+  if(!dd) return;
+  const isOpen = dd.classList.contains('open');
+  if(isOpen){ closeMobTopDropdown(); return; }
+  dd.style.display = 'block';
+  ov.style.display = 'block';
+  requestAnimationFrame(()=>dd.classList.add('open'));
+}
+function closeMobTopDropdown(){
+  const dd = document.getElementById('mob-top-dropdown');
+  const ov = document.getElementById('mob-top-dropdown-overlay');
+  if(dd){ dd.classList.remove('open'); setTimeout(()=>{ if(!dd.classList.contains('open')) dd.style.display='none'; },180); }
+  if(ov) ov.style.display = 'none';
 }
 
 // ── MOBILE PROFILE (Instagram-style) ──────────────────────────────────────────
@@ -5318,10 +5365,19 @@ function mobShowProfile(){
   if(!member){ showDhToast('Profile','Team profile not found.','⚠️','var(--amber)',3000); return; }
   _tpMemberId = member.id;
 
-  // Populate header & stats
-  const initials = member.name ? member.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+  // Populate header & stats — use real photo if available
   const avatarEl = document.getElementById('mob-pf-avatar');
-  if(avatarEl) avatarEl.textContent = initials;
+  if(avatarEl){
+    const photo = typeof getProfilePhoto === 'function' ? getProfilePhoto(s.email||member.email||'') : null;
+    if(photo){
+      avatarEl.innerHTML = `<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      avatarEl.style.background = 'none';
+    } else {
+      const initials = member.name ? member.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+      avatarEl.innerHTML = initials;
+      avatarEl.style.background = 'linear-gradient(135deg,#5B8DEF,#A78BFA)';
+    }
+  }
   const nameEl = document.getElementById('mob-pf-header-name');
   if(nameEl) nameEl.textContent = member.name || 'Profile';
   const pfName = document.getElementById('mob-pf-name');
@@ -5356,11 +5412,12 @@ function mobShowProfile(){
   document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('mobnav-profile')?.classList.add('active');
 
-  // Render default tab
-  _mobPfTab = 'overview';
+  // Render default tab — Portfolio first
+  _mobPfTab = 'portfolio';
+  _mobPfSubTab = 'youtube';
   document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('mob-pftab-overview')?.classList.add('active');
-  mobPfRenderOverview(member);
+  document.getElementById('mob-pftab-portfolio')?.classList.add('active');
+  mobPfRenderPortfolio(member);
 
   // Background Firebase refresh
   if(typeof tpProfileLoad_fb === 'function' && _fbToken && _fbToken()){
@@ -18298,7 +18355,7 @@ async function gateEnterApp(session){
     const _lsEmptyTeam = clients.length === 0 && savedJobs.length === 0;
     if(_fbToken() && _lsEmptyTeam) await restoreFromFirebase(true).catch(()=>{});
     gateShowTeamView(session);
-    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); gcalCheckOAuthReturn().catch(()=>{}); }).catch(()=>{});
+    if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); gcalCheckOAuthReturn().catch(()=>{}); if(window.innerWidth<=768&&typeof mobShowProfile==='function'){const _pf=document.getElementById('mob-profile-pane');if(_pf&&_pf.style.display!=='none') mobShowProfile();} }).catch(()=>{});
     return;
   }
 
@@ -18500,6 +18557,8 @@ async function gateShowAdminView(session){
   const _raw=localStorage.getItem('dronehub_active_pane')||'quote';
   const savedPane=(_raw==='jobs'||_raw==='clients')?'sales':_raw;
   showPane(savedPane||'quote');
+  // On mobile: always open profile pane on login
+  if(window.innerWidth<=768 && typeof mobShowProfile==='function') setTimeout(mobShowProfile,120);
   // Auto-mark invoice paid if returning from Stripe success
   checkStripePaymentReturn();
   // Start background live-sync so contacts update automatically when others upload
@@ -18566,6 +18625,8 @@ function gateShowTeamView(session){
   const savedPane=(_rawSaved==='jobs'||_rawSaved==='clients')?'sales':_rawSaved;
   const startPane=(savedPane&&allowed.includes(savedPane))?savedPane:firstAllowed;
   showPane(startPane);
+  // On mobile: always open profile pane on login
+  if(window.innerWidth<=768 && typeof mobShowProfile==='function') setTimeout(mobShowProfile,120);
 
   const userDisplay=document.getElementById('app-user-display');
   const roleLabels={admin:'Admin',editor:'Editor',videographer:'Videographer',sales:'Sales',contractor:'Contractor (Photographer/Videographer)'};
@@ -28451,50 +28512,44 @@ function initGoogleMaps(){
 
 </nav>
 
-<!-- More drawer overlay -->
-<div id="mobile-more-overlay" onclick="closeMobileMore()"></div>
+<!-- Mobile top dropdown overlay (closes on outside tap) -->
+<div id="mob-top-dropdown-overlay" onclick="closeMobTopDropdown()"></div>
 
-<!-- More drawer -->
-<div id="mobile-more-drawer">
-  <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright);margin:0 auto 14px"></div>
-  <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;text-align:center;margin-bottom:4px">More</div>
-  <div class="mob-more-grid">
+<!-- Mobile top dropdown menu (opens from hamburger in header) -->
+<div id="mob-top-dropdown">
+  <span id="mob-more-user-label" style="display:block;font-size:11px;color:var(--muted);font-weight:600;padding:4px 14px 8px;border-bottom:1px solid var(--border);margin-bottom:4px"></span>
 
-    <button class="mob-more-item" id="mobmore-quote" onclick="showPane('quote',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-      <span>Quotes</span>
-    </button>
+  <button class="mob-dd-item" id="mobmore-quote" onclick="showPane('quote',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    Quotes
+  </button>
 
-    <button class="mob-more-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Sales</span>
-    </button>
+  <button class="mob-dd-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Sales
+  </button>
 
-    <button class="mob-more-item" id="mobmore-team" onclick="showPane('team',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>Creator</span>
-    </button>
+  <button class="mob-dd-item" id="mobmore-team" onclick="showPane('team',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Creator
+  </button>
 
-    <button class="mob-more-item" id="mobmore-social" onclick="showPane('social',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-      <span>Social</span>
-    </button>
+  <button class="mob-dd-item" id="mobmore-social" onclick="showPane('social',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+    Social
+  </button>
 
-    <button class="mob-more-item" id="mobmore-settings" onclick="showPane('settings',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Settings</span>
-    </button>
+  <button class="mob-dd-item" id="mobmore-settings" onclick="showPane('settings',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </button>
 
-  </div>
+  <div class="mob-dd-divider"></div>
 
-  <!-- Sign out row at the bottom of More drawer -->
-  <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-    <span id="mob-more-user-label" style="font-size:12px;color:var(--muted)"></span>
-    <button onclick="gateLogout()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Sign out
-    </button>
-  </div>
+  <button class="mob-dd-item" onclick="gateLogout()" style="color:var(--muted)">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Sign Out
+  </button>
 </div>
 
 <!-- ═══ MOBILE PROFILE PANE (Instagram-style) ═══ -->
