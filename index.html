@@ -988,84 +988,87 @@ button{font-family:var(--font);}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
 @keyframes bellShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(8deg)}}
 
-/* ── Mobile Calendar — Apple Calendar style ── */
-/* Month slide keyframes */
-@keyframes mcSlideInR{from{transform:translateX(100%)}to{transform:translateX(0)}}
-@keyframes mcSlideInL{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-
-/* Dot indicators (shared desktop/mobile — desktop size kept from .cal-cell-badges hide) */
+/* ── Mobile Calendar — Apple Calendar style (two-screen) ── */
 .mob-cal-dots{display:none;gap:2px;justify-content:center;min-height:5px;}
 .mob-cal-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
-/* Desktop: hide mob cal main */
 @media(min-width:769px){#mob-cal-main{display:none!important;}}
 
 @media(max-width:768px){
-  /* ── Full-screen fixed calendar pane (like LouChat) ── */
+  /* Full-screen fixed pane */
   #pane-calendar{
-    position:fixed!important;
-    top:52px!important;
+    position:fixed!important;top:52px!important;
     bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
-    left:0!important;right:0!important;
-    padding:0!important;overflow:hidden!important;
-    display:none;flex-direction:column!important;
+    left:0!important;right:0!important;padding:0!important;
+    overflow:hidden!important;display:none;flex-direction:column!important;
     height:auto!important;min-height:0!important;
-    background:var(--navy-card)!important;
-    border-radius:0!important;
+    background:var(--navy-card)!important;border-radius:0!important;
   }
   #pane-calendar.active{display:flex!important;}
-  /* Hide ALL desktop calendar content; show only mobile shell */
   #pane-calendar > *:not(#mob-cal-main){display:none!important;}
-  /* ── Mobile calendar shell ── */
-  #mob-cal-main{
-    display:flex!important;flex-direction:column;
-    flex:1;overflow:hidden;background:var(--navy-card);
+
+  /* ── Shell ── */
+  #mob-cal-main{display:flex!important;flex-direction:column;flex:1;overflow:hidden;}
+  /* Two-screen sliding container */
+  #mob-cal-view-wrap{
+    flex:1;overflow:hidden;position:relative;
+    display:flex;min-height:0;
   }
-  /* Nav row */
+  /* Month screen */
+  #mob-cal-month-screen{
+    width:100%;flex-shrink:0;display:flex;flex-direction:column;
+    transition:transform .32s cubic-bezier(.4,0,.2,1);
+  }
+  /* Day screen — starts off-screen right */
+  #mob-cal-day-screen{
+    width:100%;position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    background:var(--navy-card);
+    transform:translateX(100%);
+    transition:transform .32s cubic-bezier(.4,0,.2,1);
+  }
+  /* Slide in/out when day open */
+  #mob-cal-main.mc-day-open #mob-cal-month-screen{transform:translateX(-100%);}
+  #mob-cal-main.mc-day-open #mob-cal-day-screen{transform:translateX(0);}
+
+  /* ── Month nav ── */
   #mob-cal-nav{
-    display:flex;align-items:center;
-    padding:10px 16px 6px;flex-shrink:0;gap:2px;
+    display:flex;align-items:center;padding:10px 16px 6px;
+    flex-shrink:0;gap:2px;
   }
-  #mob-cal-nav-month{
-    flex:1;font-size:20px;font-weight:700;color:var(--white);
-  }
+  #mob-cal-nav-month{flex:1;font-size:20px;font-weight:700;color:var(--white);}
   .mc-nav-btn{
-    width:36px;height:36px;border:none;background:none;
-    color:var(--offwhite);font-size:22px;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    border-radius:50%;-webkit-tap-highlight-color:transparent;
-    transition:background .12s;flex-shrink:0;
+    width:36px;height:36px;border:none;background:none;color:var(--offwhite);
+    font-size:22px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;border-radius:50%;
+    -webkit-tap-highlight-color:transparent;transition:background .12s;flex-shrink:0;
   }
   .mc-nav-btn:active{background:rgba(255,255,255,.1);}
   #mob-cal-today-btn{
-    padding:4px 11px;border:1px solid var(--border-bright);
-    border-radius:14px;background:transparent;color:var(--offwhite);
-    font-size:12px;font-weight:600;cursor:pointer;
-    -webkit-tap-highlight-color:transparent;flex-shrink:0;
+    padding:4px 11px;border:1px solid var(--border-bright);border-radius:14px;
+    background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;
   }
   #mob-cal-today-btn:active{background:rgba(255,255,255,.08);}
   #mob-cal-add-btn{
-    width:32px;height:32px;border:none;background:none;
-    color:var(--blue-bright);font-size:26px;line-height:1;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;
-    -webkit-tap-highlight-color:transparent;flex-shrink:0;padding-bottom:2px;
+    width:32px;height:32px;border:none;background:none;color:var(--blue-bright);
+    font-size:26px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;
   }
-  /* Day-of-week header */
+  /* ── Day-of-week row (month screen) ── */
   #mob-cal-dow{
     display:grid;grid-template-columns:repeat(7,1fr);
     padding:0 6px 4px;flex-shrink:0;
   }
   #mob-cal-dow span{
     text-align:center;font-size:11px;font-weight:700;
-    color:var(--muted);padding:2px 0;letter-spacing:.02em;
+    color:var(--muted);padding:2px 0;
   }
-  /* Grid clipping wrapper — overflow hidden to contain slide */
+  /* ── Month grid ── */
   #mob-cal-grid-clip{
-    flex-shrink:0;overflow:hidden;position:relative;
-    padding:0 6px 4px;border-bottom:1px solid var(--border);
+    flex-shrink:0;overflow:hidden;position:relative;padding:0 6px 4px;
   }
-  /* Grid inner */
   .mc-grid{display:grid;grid-template-columns:repeat(7,1fr);}
-  /* Cells */
   .mc-cell{
     display:flex;flex-direction:column;align-items:center;
     padding:2px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;
@@ -1077,34 +1080,77 @@ button{font-family:var(--font);}
     font-size:15px;font-weight:500;color:var(--offwhite);
     transition:background .15s,color .15s;
   }
-  /* Today: solid blue circle */
-  .mc-cell.mc-today .mc-num{
-    background:var(--blue-bright);color:#fff;font-weight:700;
-  }
-  /* Selected (not today): outlined blue circle */
+  .mc-cell.mc-today .mc-num{background:var(--blue-bright);color:#fff;font-weight:700;}
   .mc-cell.mc-sel:not(.mc-today) .mc-num{
     background:rgba(91,141,239,.18);color:var(--blue-bright);
     font-weight:700;outline:1.5px solid var(--blue-bright);
   }
-  /* Today + selected: glow ring */
-  .mc-cell.mc-today.mc-sel .mc-num{
-    box-shadow:0 0 0 2.5px rgba(91,141,239,.4);
-  }
-  /* Dot row under number */
+  .mc-cell.mc-today.mc-sel .mc-num{box-shadow:0 0 0 2.5px rgba(91,141,239,.4);}
   .mc-cell .mob-cal-dots{display:flex!important;margin-top:2px;}
-  /* ── Events section ── */
-  #mob-cal-events-section{
-    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    display:flex;flex-direction:column;
+
+  /* ── Day screen nav ── */
+  #mob-cal-dv-nav{
+    display:flex;align-items:center;padding:10px 14px 8px;
+    flex-shrink:0;gap:4px;border-bottom:1px solid var(--border);
   }
-  #mob-cal-day-header{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:10px 16px 8px;flex-shrink:0;
-    position:sticky;top:0;background:var(--navy-card);z-index:2;
+  #mob-cal-dv-back{
+    display:flex;align-items:center;gap:3px;border:none;background:none;
+    color:var(--blue-bright);font-size:15px;font-weight:600;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;padding:0;
+  }
+  #mob-cal-dv-title{
+    flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--white);
+  }
+  #mob-cal-dv-add{
+    width:32px;height:32px;border:none;background:none;color:var(--blue-bright);
+    font-size:24px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;-webkit-tap-highlight-color:transparent;flex-shrink:0;
+  }
+  /* ── Week strip ── */
+  #mob-cal-week-strip{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    padding:8px 6px 6px;flex-shrink:0;
     border-bottom:1px solid var(--border);
   }
-  #mob-cal-day-title{font-size:13px;font-weight:700;color:var(--white);}
-  #mob-cal-events-body{padding:10px 14px 24px;flex:1;}
+  .mc-ws-cell{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;padding:2px 0;
+  }
+  .mc-ws-letter{
+    font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .mc-ws-num{
+    width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:500;color:var(--offwhite);
+    transition:background .15s,color .15s;
+  }
+  .mc-ws-cell.mc-ws-today .mc-ws-num{background:var(--blue-bright);color:#fff;font-weight:700;}
+  .mc-ws-cell.mc-ws-sel:not(.mc-ws-today) .mc-ws-num{
+    background:rgba(91,141,239,.2);color:var(--blue-bright);
+    font-weight:700;outline:1.5px solid var(--blue-bright);
+  }
+  .mc-ws-cell.mc-ws-today.mc-ws-sel .mc-ws-num{box-shadow:0 0 0 2.5px rgba(91,141,239,.35);}
+  /* ── Day events scroll ── */
+  #mob-cal-dv-events{
+    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:10px 14px 24px;
+  }
+  /* Event row */
+  .mc-ev-row{
+    display:flex;gap:10px;padding:10px 12px;
+    border-radius:10px;margin-bottom:8px;
+    border-left:4px solid transparent;
+  }
+  .mc-ev-time{
+    font-size:11px;color:var(--muted);font-weight:600;
+    min-width:44px;flex-shrink:0;padding-top:2px;
+    text-align:right;
+  }
+  .mc-ev-body{flex:1;min-width:0;}
+  .mc-ev-title{font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px;}
+  .mc-ev-sub{font-size:11px;color:var(--muted);margin-top:1px;}
 }
 </style>
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
@@ -3361,32 +3407,45 @@ button{font-family:var(--font);}
     </div>
   </div>
 
-  <!-- ══ MOBILE APPLE CALENDAR (hidden on desktop via CSS) ══ -->
+  <!-- ══ MOBILE APPLE CALENDAR — two-screen (month → day) ══ -->
   <div id="mob-cal-main">
-    <!-- Month navigation row -->
-    <div id="mob-cal-nav">
-      <div id="mob-cal-nav-month"></div>
-      <button id="mob-cal-today-btn" onclick="calToday()">Today</button>
-      <button class="mc-nav-btn" onclick="calNav(-1)">‹</button>
-      <button class="mc-nav-btn" onclick="calNav(1)">›</button>
-      <button id="mob-cal-add-btn" onclick="openCalEventModal()" title="Add event">+</button>
-    </div>
-    <!-- Day-of-week header -->
-    <div id="mob-cal-dow">
-      <span>Sun</span><span>Mon</span><span>Tue</span>
-      <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-    </div>
-    <!-- Clipping wrapper — overflow:hidden to contain the slide animation -->
-    <div id="mob-cal-grid-clip">
-      <div id="mob-cal-grid" class="mc-grid"></div>
-    </div>
-    <!-- Events for the selected day -->
-    <div id="mob-cal-events-section">
-      <div id="mob-cal-day-header">
-        <div id="mob-cal-day-title"></div>
-        <button onclick="openCalEventModal()" style="padding:4px 12px;border:1px solid var(--blue);border-radius:8px;font-size:11px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-weight:700;flex-shrink:0">+ Add</button>
+    <div id="mob-cal-view-wrap">
+
+      <!-- ── SCREEN 1: Month view ── -->
+      <div id="mob-cal-month-screen">
+        <div id="mob-cal-nav">
+          <div id="mob-cal-nav-month"></div>
+          <button id="mob-cal-today-btn" onclick="calToday()">Today</button>
+          <button class="mc-nav-btn" onclick="calNav(-1)">‹</button>
+          <button class="mc-nav-btn" onclick="calNav(1)">›</button>
+          <button id="mob-cal-add-btn" onclick="openCalEventModal()">+</button>
+        </div>
+        <div id="mob-cal-dow">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+          <span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="mob-cal-grid-clip">
+          <div id="mob-cal-grid" class="mc-grid"></div>
+        </div>
       </div>
-      <div id="mob-cal-events-body"></div>
+
+      <!-- ── SCREEN 2: Day view ── -->
+      <div id="mob-cal-day-screen">
+        <!-- Back + date title + add -->
+        <div id="mob-cal-dv-nav">
+          <button id="mob-cal-dv-back" onclick="mobCalBackToMonth()">
+            <svg width="9" height="15" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 1 2 7.5 8 14"/></svg>
+            <span id="mob-cal-dv-back-label">Back</span>
+          </button>
+          <div id="mob-cal-dv-title"></div>
+          <button id="mob-cal-dv-add" onclick="openCalEventModal()">+</button>
+        </div>
+        <!-- Compact week strip -->
+        <div id="mob-cal-week-strip"></div>
+        <!-- Scrollable day events -->
+        <div id="mob-cal-dv-events"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -9333,59 +9392,205 @@ function renderMobCal(dir){
   _mcRenderEvents(jobsByDate);
 }
 
+// Tap a date cell in month grid → open day view
 function mobCalSelectDay(dateStr){
   _mobCalSelDate=dateStr;
-  // Update selection highlights in grid
+  // Highlight tapped cell before sliding
   document.querySelectorAll('#mob-cal-grid-clip .mc-cell').forEach(el=>el.classList.remove('mc-sel'));
-  const allCells=document.querySelectorAll('#mob-cal-grid-clip .mc-cell:not(.mc-other)');
-  const d=parseInt(dateStr.slice(8))-1;
-  if(allCells[d]) allCells[d].classList.add('mc-sel');
-  // Update events
-  _mcRenderEvents(_mcBuildJobsByDate());
+  const cells=document.querySelectorAll('#mob-cal-grid-clip .mc-cell:not(.mc-other)');
+  const idx=parseInt(dateStr.slice(8))-1;
+  if(cells[idx]) cells[idx].classList.add('mc-sel');
+  // Build day view then slide in
+  _mcBuildDayScreen(dateStr);
+  document.getElementById('mob-cal-main')?.classList.add('mc-day-open');
 }
 
-function _mcRenderEvents(jobsByDate){
-  const d=new Date(_mobCalSelDate+'T12:00:00');
-  const titleEl=document.getElementById('mob-cal-day-title');
-  if(titleEl) titleEl.textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  const body=document.getElementById('mob-cal-events-body');
-  if(!body) return;
-  const dateStr=_mobCalSelDate;
-  const dayJobs=savedJobs.filter(j=>j.date===dateStr);
-  const dayEvts=calEventsLoad().filter(ev=>{
-    return dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date);
-  });
+// Slide back to month view
+function mobCalBackToMonth(){
+  document.getElementById('mob-cal-main')?.classList.remove('mc-day-open');
+}
+
+// Switch to a different day within the day view (no slide animation)
+function mobCalSwitchDay(dateStr){
+  _mobCalSelDate=dateStr;
+  const d=new Date(dateStr+'T12:00:00');
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // If crossing into a different month, update the month grid in background
+  if(d.getFullYear()!==calYear||d.getMonth()!==calMonth){
+    calYear=d.getFullYear(); calMonth=d.getMonth();
+    _mcNavDir=0; renderCalendar();
+  }
+  // Back button label = current month name
+  const bl=document.getElementById('mob-cal-dv-back-label');
+  if(bl) bl.textContent=months[d.getMonth()];
+  // Day title
+  const tl=document.getElementById('mob-cal-dv-title');
+  if(tl) tl.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  // Re-render week strip + events with fade
+  _mcRenderWeekStrip(dateStr);
+  _mcRenderDayEvents(dateStr);
+}
+
+// Build & populate the entire day screen for a given date
+function _mcBuildDayScreen(dateStr){
+  const d=new Date(dateStr+'T12:00:00');
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const bl=document.getElementById('mob-cal-dv-back-label');
+  if(bl) bl.textContent=months[d.getMonth()];
+  const tl=document.getElementById('mob-cal-dv-title');
+  if(tl) tl.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  _mcRenderWeekStrip(dateStr);
+  _mcRenderDayEvents(dateStr);
+}
+
+// Render the compact 7-day week strip
+function _mcRenderWeekStrip(dateStr){
+  const strip=document.getElementById('mob-cal-week-strip');
+  if(!strip) return;
+  const d=new Date(dateStr+'T12:00:00');
+  const dow=d.getDay();
+  const weekStart=new Date(d); weekStart.setDate(d.getDate()-dow);
+  const todayStr=new Date().toISOString().slice(0,10);
+  const letters=['S','M','T','W','T','F','S'];
   let html='';
+  for(let i=0;i<7;i++){
+    const dd=new Date(weekStart); dd.setDate(weekStart.getDate()+i);
+    const ds=dd.toISOString().slice(0,10);
+    const isToday=ds===todayStr, isSel=ds===dateStr;
+    html+=`<div class="mc-ws-cell${isToday?' mc-ws-today':''}${isSel?' mc-ws-sel':''}" onclick="mobCalSwitchDay('${ds}')">
+      <span class="mc-ws-letter">${letters[i]}</span>
+      <span class="mc-ws-num">${dd.getDate()}</span>
+    </div>`;
+  }
+  strip.innerHTML=html;
+}
+
+// Render the event list for a day with time-sorted layout
+function _mcRenderDayEvents(dateStr){
+  const body=document.getElementById('mob-cal-dv-events');
+  if(!body) return;
+  const dayJobs=savedJobs.filter(j=>j.date===dateStr)
+    .sort((a,b)=>(a.shootTime||'').localeCompare(b.shootTime||''));
+  const dayEvts=calEventsLoad().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date));
+  let html='';
+  // All-day custom events first
   dayEvts.forEach(ev=>{
     const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
-    html+=`<div style="padding:10px 12px;border:1px solid ${td.color}55;border-left:4px solid ${td.color};border-radius:10px;margin-bottom:8px;background:${td.bg}">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-        <span style="font-size:13px;font-weight:700;color:var(--white)">${td.icon} ${ev.title}</span>
-        <button onclick="deleteCalEvent('${ev.id}');mobCalSelectDay('${dateStr}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px">🗑</button>
+    html+=`<div class="mc-ev-row" style="background:${td.bg};border-left-color:${td.color}"
+        onclick="mcShowEventDetail('custom','${ev.id}','${dateStr}')">
+      <div class="mc-ev-time" style="color:${td.color}">all-day</div>
+      <div class="mc-ev-body">
+        <div class="mc-ev-title">${td.icon} ${ev.title}</div>
+        ${ev.memberName?`<div class="mc-ev-sub">👤 ${ev.memberName}</div>`:''}
+        ${ev.notes?`<div class="mc-ev-sub" style="font-style:italic">${ev.notes}</div>`:''}
       </div>
-      ${ev.memberName?`<div style="font-size:11px;color:${td.color};font-weight:600">👤 ${ev.memberName}</div>`:''}
-      ${ev.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${ev.notes}</div>`:''}
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;align-self:center"><polyline points="9 18 15 12 9 6"/></svg>
     </div>`;
   });
+  // Timed job shoots
   dayJobs.forEach(j=>{
     const creator=getJobCreator(j);
     const col=getCreatorColor(creator);
-    html+=`<div style="padding:10px 12px;border:1px solid ${col.border};border-radius:10px;margin-bottom:8px;background:${col.bg}">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
-        <span style="font-size:13px;font-weight:600;color:var(--white);flex:1">📸 ${j.name}</span>
-        <span class="status-badge status-${j.status||'quoted'}">${j.status||'quoted'}</span>
+    const timeDisp=j.shootTime?_mcFmtTime(j.shootTime):'—';
+    html+=`<div class="mc-ev-row" style="background:${col.bg};border-left-color:${col.border}"
+        onclick="mcShowEventDetail('job',${j.id},'${dateStr}')">
+      <div class="mc-ev-time">${timeDisp}</div>
+      <div class="mc-ev-body">
+        <div class="mc-ev-title">📸 ${j.name}</div>
+        ${creator?`<div class="mc-ev-sub" style="color:${col.text}">👤 ${creator}</div>`:''}
+        ${j.address?`<div class="mc-ev-sub">${j.address}</div>`:''}
+        <span class="status-badge status-${j.status||'quoted'}" style="margin-top:4px;display:inline-block">${j.status||'quoted'}</span>
       </div>
-      ${j.shootTime?`<div style="font-size:12px;color:var(--amber);margin-bottom:2px">🕐 ${j.shootTime}${j.duration?' ('+j.duration+' hr)':''}</div>`:''}
-      ${creator?`<div style="font-size:11px;color:${col.text};font-weight:600;margin-bottom:2px">👤 ${creator}</div>`:''}
-      <div style="font-size:11px;color:var(--muted)">${j.address||''}</div>
-      ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id})" style="display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:4px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;cursor:pointer;font-weight:600">Invoice</button>`:''}
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;align-self:center"><polyline points="9 18 15 12 9 6"/></svg>
     </div>`;
   });
-  if(!html) html=`<div style="padding:28px 0;text-align:center;color:var(--muted);font-size:13px">No events · <button onclick="openCalEventModal('${dateStr}')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:13px;padding:0;font-weight:600">+ add one</button></div>`;
-  // Fade in
+  if(!html) html=`<div style="padding:36px 0;text-align:center;color:var(--muted);font-size:13px">No events<br><button onclick="openCalEventModal('${dateStr}')" style="margin-top:12px;border:1px solid var(--blue);border-radius:10px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-size:13px;padding:6px 18px;font-weight:600">+ Add Event</button></div>`;
   body.style.opacity='0';
   body.innerHTML=html;
-  requestAnimationFrame(()=>{ body.style.transition='opacity .18s'; body.style.opacity='1'; });
+  body.scrollTop=0;
+  requestAnimationFrame(()=>{body.style.transition='opacity .18s';body.style.opacity='1';});
+}
+
+// Format "09:30" → "9:30 AM"
+function _mcFmtTime(t){
+  if(!t) return '';
+  const [h,m]=t.split(':').map(Number);
+  return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+}
+
+// Show full event detail modal (tap on event in day view)
+function mcShowEventDetail(type,idOrEvtId,dateStr){
+  if(type==='job'){
+    const j=savedJobs.find(jj=>jj.id==idOrEvtId);
+    if(!j) return;
+    const creator=getJobCreator(j);
+    const col=getCreatorColor(creator);
+    const svcsStr=Object.entries(j.services||{}).filter(([k,v])=>v&&!['tvideo','tphoto'].includes(k)).map(([k])=>({video:'Video',photo:'Photo',reel:'Reels',extphoto:'Ext. photo',extvideo:'Ext. video',floorplan:'Floor plan',randomvideo:'Random video',randomphoto:'Random photo'}[k]||k)).join(', ');
+    const body=`<div style="padding:4px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:17px;font-weight:800;color:var(--white)">📸 ${j.name}</div>
+        <span class="status-badge status-${j.status||'quoted'}">${j.status||'quoted'}</span>
+      </div>
+      ${j.shootTime?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:13px;color:var(--amber)">🕐 ${_mcFmtTime(j.shootTime)}${j.duration?' · '+j.duration+' hr':''}</span></div>`:''}
+      ${creator?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:13px;font-weight:600;padding:3px 10px;border-radius:8px;background:${col.border}22;border:1px solid ${col.border};color:${col.text}">👤 ${creator}</span></div>`:''}
+      ${j.address?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;align-items:flex-start;gap:6px"><span>📍</span><span>${j.address}</span></div>`:''}
+      ${j.clientName?`<div style="font-size:12px;color:var(--offwhite);margin-bottom:8px">👤 Client: ${j.clientName}</div>`:''}
+      ${svcsStr?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Services: ${svcsStr}</div>`:''}
+      ${j.notes?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px">${j.notes}</div>`:''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id});mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.14);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">📄 Invoice</button>`:''}
+        <button onclick="mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer">Close</button>
+      </div>
+    </div>`;
+    _mcOpenDetailSheet(j.name, body, col.border);
+  } else {
+    const evts=calEventsLoad();
+    const ev=evts.find(e=>e.id===idOrEvtId);
+    if(!ev) return;
+    const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    const isMultiDay=ev.endDate&&ev.endDate!==ev.date;
+    const body=`<div style="padding:4px 0">
+      <div style="font-size:17px;font-weight:800;color:var(--white);margin-bottom:14px">${td.icon} ${ev.title}</div>
+      ${isMultiDay?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">📅 ${ev.date} → ${ev.endDate}</div>`:''}
+      ${ev.memberName?`<div style="font-size:13px;font-weight:600;color:${td.color};margin-bottom:8px">👤 ${ev.memberName}</div>`:''}
+      ${ev.notes?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px">${ev.notes}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="deleteCalEvent('${ev.id}');mcCloseEventDetail();mobCalSwitchDay('${dateStr}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--red,#E85D5D);background:rgba(232,93,93,.1);color:var(--red,#E85D5D);font-size:13px;font-weight:700;cursor:pointer">🗑 Delete</button>
+        <button onclick="mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer">Close</button>
+      </div>
+    </div>`;
+    _mcOpenDetailSheet(ev.title, body, td.color);
+  }
+}
+function _mcOpenDetailSheet(title, bodyHtml, accentColor){
+  let sheet=document.getElementById('mc-event-detail-sheet');
+  let ov=document.getElementById('mc-event-detail-ov');
+  if(!sheet){
+    ov=document.createElement('div');
+    ov.id='mc-event-detail-ov';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2100;';
+    ov.onclick=mcCloseEventDetail;
+    sheet=document.createElement('div');
+    sheet.id='mc-event-detail-sheet';
+    sheet.style.cssText='position:fixed;bottom:calc(64px + env(safe-area-inset-bottom,0px));left:0;right:0;background:var(--navy-card);border-radius:18px 18px 0 0;border-top:1px solid var(--border-bright);z-index:2101;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -6px 32px rgba(0,0,0,.5);padding:0 18px 24px;';
+    document.body.appendChild(ov);
+    document.body.appendChild(sheet);
+  }
+  sheet.innerHTML=`
+    <div style="display:flex;justify-content:center;padding:10px 0 6px"><div style="width:36px;height:4px;border-radius:2px;background:${accentColor||'var(--border-bright)'}"></div></div>
+    ${bodyHtml}`;
+  ov.style.display='block';
+  sheet.style.display='block';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ sheet.style.transform='translateY(0)'; }));
+}
+function mcCloseEventDetail(){
+  const sheet=document.getElementById('mc-event-detail-sheet');
+  const ov=document.getElementById('mc-event-detail-ov');
+  if(sheet) sheet.style.transform='translateY(100%)';
+  setTimeout(()=>{
+    if(sheet) sheet.style.display='none';
+    if(ov) ov.style.display='none';
+  },300);
 }
 
 // ─── CONTRACTOR SETTINGS ─────────────────────────────────────────────────────
