@@ -792,96 +792,130 @@ button{font-family:var(--font);}
     top:0!important;
     bottom:0!important;
   }
+  /* lc-main must be a proper flex column filling its parent */
+  body.lc-chat-full #lc-main{
+    display:flex!important;flex-direction:column!important;overflow:hidden!important;
+  }
+  /* Messages area: flex-grow + proper iOS scroll */
+  body.lc-chat-full #lc-messages{
+    flex:1!important;min-height:0!important;
+    overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;
+  }
+  body.lc-chat-full #lc-welcome-view{
+    flex:1!important;min-height:0!important;overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
 
   /* ── Mobile chat header: IG-style ── */
   body.lc-chat-full #lc-main > div:first-child{
-    height:58px!important;
-    padding:0 8px 0 4px!important;
+    min-height:58px!important;height:58px!important;
+    padding:0 max(14px,env(safe-area-inset-right,14px)) 0
+            max(4px,env(safe-area-inset-left,4px))!important;
     display:flex!important;align-items:center!important;
     justify-content:space-between!important;
     border-bottom:1px solid var(--border)!important;
-    flex-shrink:0!important;
-    background:var(--navy-card)!important;
+    flex-shrink:0!important;background:var(--navy-card)!important;
+    box-sizing:border-box!important;
   }
-  body.lc-chat-full #lc-chat-header{gap:4px!important;}
+  body.lc-chat-full #lc-chat-header{
+    gap:6px!important;flex:1!important;min-width:0!important;overflow:hidden!important;
+  }
   body.lc-chat-full #lc-mob-back-btn{
-    padding:6px 6px 6px 2px!important;
-    color:var(--blue-bright)!important;
+    padding:6px 8px 6px 2px!important;color:var(--blue-bright)!important;flex-shrink:0!important;
   }
   body.lc-chat-full #lc-channel-icon{
-    width:34px!important;height:34px!important;border-radius:50%!important;
+    width:36px!important;height:36px!important;border-radius:50%!important;
     background:var(--navy-lift)!important;
     display:flex!important;align-items:center!important;justify-content:center!important;
-    font-size:16px!important;flex-shrink:0!important;
+    font-size:17px!important;flex-shrink:0!important;
   }
-  body.lc-chat-full #lc-channel-title{font-size:15px!important;font-weight:700!important;}
-  body.lc-chat-full #lc-channel-desc{font-size:11px!important;color:var(--muted)!important;}
+  body.lc-chat-full #lc-chat-header > div{
+    min-width:0!important;overflow:hidden!important;
+  }
+  body.lc-chat-full #lc-channel-title{
+    font-size:15px!important;font-weight:700!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  }
+  body.lc-chat-full #lc-channel-desc{
+    font-size:11px!important;color:var(--muted)!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  }
   /* Hide desktop action buttons in chat header */
   body.lc-chat-full #lc-channel-actions{display:none!important;}
-  /* Mobile video call button */
+  /* Mobile video call button — flush right, proper tap size */
   #lc-mob-vc-btn{display:none;}
   body.lc-chat-full #lc-mob-vc-btn{
-    display:flex!important;align-items:center;justify-content:center;
-    width:38px;height:38px;border-radius:50%;border:none;
-    background:rgba(91,141,239,.12);color:var(--blue-bright);
-    cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
-    margin-left:auto;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    width:40px!important;height:40px!important;border-radius:50%!important;border:none!important;
+    background:rgba(91,141,239,.12)!important;color:var(--blue-bright)!important;
+    cursor:pointer!important;flex-shrink:0!important;
+    -webkit-tap-highlight-color:transparent!important;margin-left:8px!important;
   }
 
   /* ── Hide desktop input area on mobile, show IG bar ── */
   body.lc-chat-full #lc-input-area{display:none!important;}
-  /* Always hide IG bar normally — only show in chat-full mode */
+  /* Always hide IG bar — only shown in chat-full mode */
   #lc-mob-ig-bar{display:none!important;}
   body.lc-chat-full #lc-mob-ig-bar{
-    display:flex!important;align-items:center;gap:8px;
-    padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));
-    border-top:1px solid var(--border);
-    background:var(--navy-card);flex-shrink:0;
+    display:flex!important;align-items:center!important;gap:6px!important;
+    padding:8px max(10px,env(safe-area-inset-right,10px))
+            max(10px,calc(8px + env(safe-area-inset-bottom,0px)))
+            max(10px,env(safe-area-inset-left,10px))!important;
+    border-top:1px solid var(--border)!important;
+    background:var(--navy-card)!important;flex-shrink:0!important;
+    box-sizing:border-box!important;width:100%!important;
   }
   /* Camera button */
   .lc-ig-cam{
-    width:40px;height:40px;border-radius:50%;border:2px solid var(--border-bright);
-    background:transparent;color:var(--offwhite);
-    display:flex;align-items:center;justify-content:center;
+    width:42px!important;height:42px!important;border-radius:50%!important;
+    border:2px solid rgba(168,180,208,.35)!important;
+    background:transparent!important;color:var(--offwhite)!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
     cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
     transition:border-color .15s,background .15s;
   }
-  .lc-ig-cam:active{background:rgba(255,255,255,.07);}
+  .lc-ig-cam:active{background:rgba(255,255,255,.07)!important;}
   /* Pill input */
   .lc-ig-pill{
-    flex:1;min-width:0;
-    background:var(--navy-lift);border:1px solid var(--border-bright);
-    border-radius:24px;padding:8px 14px;
-    display:flex;align-items:center;
+    flex:1!important;min-width:0!important;
+    background:var(--navy-lift)!important;
+    border:1px solid rgba(168,180,208,.3)!important;
+    border-radius:22px!important;padding:7px 14px!important;
+    display:flex!important;align-items:center!important;
+    box-sizing:border-box!important;
   }
   .lc-ig-pill textarea{
-    flex:1;background:transparent;border:none;outline:none;
-    color:var(--white);font-size:15px!important;font-family:var(--font);
-    resize:none;line-height:1.4;max-height:100px;
-    -webkit-appearance:none;
+    flex:1!important;background:transparent!important;border:none!important;outline:none!important;
+    color:var(--white)!important;font-size:15px!important;font-family:var(--font)!important;
+    resize:none!important;line-height:1.4!important;max-height:100px!important;
+    -webkit-appearance:none!important;padding:0!important;margin:0!important;
+    display:block!important;width:100%!important;
   }
-  .lc-ig-pill textarea::placeholder{color:var(--muted);}
+  .lc-ig-pill textarea::placeholder{color:rgba(168,180,208,.6)!important;}
   /* Right icons row */
-  .lc-ig-right{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+  .lc-ig-right{display:flex!important;align-items:center!important;gap:0!important;flex-shrink:0!important;}
   .lc-ig-right button{
-    width:38px;height:38px;border-radius:50%;border:none;
-    background:transparent;color:var(--offwhite);
-    display:flex;align-items:center;justify-content:center;
+    width:36px!important;height:42px!important;border:none!important;
+    background:transparent!important;color:var(--offwhite)!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
-    transition:background .12s;
+    transition:opacity .12s;
   }
-  .lc-ig-right button:active{background:rgba(255,255,255,.08);}
+  .lc-ig-right button:active{opacity:.6!important;}
   /* Send button */
   .lc-ig-send{
-    width:38px;height:38px;border-radius:50%;border:none;
-    background:var(--blue);
-    display:none;align-items:center;justify-content:center;
-    cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
-    transition:transform .1s,opacity .15s;
+    width:42px!important;height:42px!important;border-radius:50%!important;border:none!important;
+    background:var(--blue)!important;
+    display:none;align-items:center!important;justify-content:center!important;
+    cursor:pointer!important;flex-shrink:0!important;
+    -webkit-tap-highlight-color:transparent!important;
+    transition:transform .1s!important;
   }
-  .lc-ig-send:active{transform:scale(.92);}
-  /* Desktop hint line hidden on mobile */
-  body.lc-chat-full #lc-input-area > div:last-child{display:none!important;}
+  .lc-ig-send:active{transform:scale(.9)!important;}
+  /* Typing state: hide camera + right icons, show send */
+  body.lc-chat-full #lc-mob-ig-bar.lc-ig-typing .lc-ig-cam{display:none!important;}
+  body.lc-chat-full #lc-mob-ig-bar.lc-ig-typing .lc-ig-right{display:none!important;}
+  body.lc-chat-full #lc-mob-ig-bar.lc-ig-typing .lc-ig-send{display:flex!important;}
 
   /* ── Finance chart container ── */
   #finance-chart{max-height:200px;}
@@ -17055,12 +17089,8 @@ function lcIgInputChange(el){
   el.style.height='auto';
   el.style.height=Math.min(el.scrollHeight,100)+'px';
   const hasText=el.value.length>0;
-  const rightEl=document.getElementById('lc-ig-right');
-  const sendEl=document.getElementById('lc-ig-send');
-  const camEl=document.querySelector('.lc-ig-cam');
-  if(rightEl) rightEl.style.display=hasText?'none':'flex';
-  if(sendEl)  sendEl.style.display=hasText?'flex':'none';
-  if(camEl)   camEl.style.display=hasText?'none':'flex';
+  const bar=document.getElementById('lc-mob-ig-bar');
+  if(bar) bar.classList.toggle('lc-ig-typing',hasText);
 }
 
 function lcIgSend(){
@@ -17071,7 +17101,9 @@ function lcIgSend(){
   mainEl.value=igEl.value;
   igEl.value='';
   igEl.style.height='auto';
-  lcIgInputChange(igEl); // reset icons
+  // Reset typing state
+  const bar=document.getElementById('lc-mob-ig-bar');
+  if(bar) bar.classList.remove('lc-ig-typing');
   lcSendMessage();
 }
 
