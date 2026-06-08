@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -743,9 +743,9 @@ button{font-family:var(--font);}
   .qty-btn{width:32px;height:32px;font-size:18px;}
 
   /* ── Prevent iOS input zoom (font-size < 16px triggers zoom) ── */
-  input[type=text],input[type=email],input[type=number],
-  input[type=date],input[type=time],input[type=url],
-  input[type=tel],select,textarea{font-size:16px!important;}
+  input,select,textarea{font-size:16px!important;}
+  /* Prevent double-tap zoom on buttons/interactive elements */
+  button,a,[onclick]{touch-action:manipulation;}
 
   /* ── Tables: horizontal scroll ── */
   .tier-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
@@ -886,7 +886,7 @@ button{font-family:var(--font);}
   }
   .lc-ig-pill textarea{
     flex:1!important;background:transparent!important;border:none!important;outline:none!important;
-    color:var(--white)!important;font-size:15px!important;font-family:var(--font)!important;
+    color:var(--white)!important;font-size:16px!important;font-family:var(--font)!important;
     resize:none!important;line-height:1.4!important;max-height:100px!important;
     -webkit-appearance:none!important;padding:0!important;margin:0!important;
     display:block!important;width:100%!important;
