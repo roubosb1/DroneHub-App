@@ -675,7 +675,7 @@ button{font-family:var(--font);}
   /* ── Header — fixed 52px, logo 20px, only bell + hamburger visible ── */
   .app-header{height:52px;min-height:52px;max-height:52px;padding:0 12px;gap:8px;overflow:hidden;flex-wrap:nowrap;}
   .app-header img{height:20px;flex-shrink:0;max-height:20px;}
-  #mob-hamburger-btn{display:flex;}
+  #mob-hamburger-btn{display:flex!important;}
   .header-sub,.header-divider{display:none;}
   /* Hide everything in header-right except notification bell + hamburger */
   #header-client-portal-btn{display:none!important;}
@@ -5832,9 +5832,15 @@ function showPane(id,ev){
     lcEnsureDefaults();
     lcMarkMentionsRead();
     renderLouChat();
-    // Auto-open welcome on first visit; re-render active channel when returning to tab
-    if(!lcActiveChannel) lcOpenChannel('lc_welcome');
-    else lcRenderMessages();
+    // Auto-open welcome on first visit (desktop only — mobile shows channel list first)
+    if(!lcActiveChannel){
+      if(window.innerWidth>768) lcOpenChannel('lc_welcome');
+      // else: mobile stays on channel list view — no auto-open
+    } else {
+      lcRenderMessages();
+      // On mobile, if we have an active channel make sure the chat panel is visible
+      if(window.innerWidth<=768) document.getElementById('lc-flex-container')?.classList.add('lc-mob-chat-open');
+    }
     // Check for unread @mentions on each visit (async, non-blocking)
     lcCheckMentions().catch(()=>{});
   }
@@ -16317,6 +16323,19 @@ function renderLouChat(){
     groups[ch.type].push(ch);
   });
 
+  // Helper: get last-message timestamp for a channel (for sorting most-recent-first)
+  function lcLastMsgTs(ch){
+    const msgs=getLcMessages(ch.id);
+    if(!msgs.length) return 0;
+    const last=msgs[msgs.length-1];
+    return new Date(last.ts||last.sentAt||0).getTime();
+  }
+  // Sort each group's channels by most-recent message desc
+  Object.keys(groups).forEach(t=>{
+    if(t==='welcome') return; // welcome always stays pinned at top
+    groups[t].sort((a,b)=>lcLastMsgTs(b)-lcLastMsgTs(a));
+  });
+
   const typeOrder=['welcome','general','project','client','client_dm','social','admin'];
   let html='';
   typeOrder.forEach(type=>{
@@ -16676,19 +16695,22 @@ async function lcRenderMessages(){
     const welcomeView=document.getElementById('lc-welcome-view');
     if(welcomeView){
       const photo=document.getElementById('lou-photo-data')?.src||'';
+      const isMob=window.innerWidth<=768;
       welcomeView.innerHTML=`
-        ${photo?`<img src="${photo}" alt="Lou" style="height:min(55vh,340px);width:auto;border-radius:18px;object-fit:cover;box-shadow:0 12px 48px rgba(0,0,0,.55);border:2px solid rgba(91,141,239,.45);flex-shrink:0">`:'<div style="width:72px;height:72px;border-radius:50%;background:rgba(91,141,239,.18);border:2px solid rgba(91,141,239,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'}
-        <div style="text-align:left;max-width:320px">
-          <div style="font-size:38px;font-weight:900;color:var(--white);font-family:'Barlow Condensed',sans-serif;letter-spacing:-.01em;margin-bottom:12px;line-height:1.05">
+        ${photo?`<img src="${photo}" alt="Lou" style="${isMob?'width:100%;max-height:52vw;':'height:min(55vh,340px);width:auto;flex-shrink:0;'}border-radius:${isMob?'12px':'18px'};object-fit:cover;object-position:top;box-shadow:0 12px 48px rgba(0,0,0,.55);border:2px solid rgba(91,141,239,.45)${isMob?';margin-bottom:16px':''}">`:'<div style="width:72px;height:72px;border-radius:50%;background:rgba(91,141,239,.18);border:2px solid rgba(91,141,239,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'}
+        <div style="text-align:left;${isMob?'padding:0 4px':'max-width:320px'}">
+          <div style="font-size:${isMob?'28':'38'}px;font-weight:900;color:var(--white);font-family:'Barlow Condensed',sans-serif;letter-spacing:-.01em;margin-bottom:10px;line-height:1.05">
             Welcome to <span style="color:var(--blue-bright)">LouChat</span>
           </div>
-          <div style="font-size:15px;color:var(--offwhite);line-height:1.7;margin-bottom:14px">
+          <div style="font-size:${isMob?'14':'15'}px;color:var(--offwhite);line-height:1.7;margin-bottom:14px">
             My name is Lou and this chat was named after me.
           </div>
-          <div style="font-size:18px;color:var(--blue-bright);font-weight:700;margin-bottom:16px">Happy Messaging! 💬✨</div>
+          <div style="font-size:${isMob?'16':'18'}px;color:var(--blue-bright);font-weight:700;margin-bottom:16px">Happy Messaging! 💬✨</div>
           <div style="font-size:11px;color:var(--muted)">— Lou · the person behind the name</div>
         </div>`;
-      welcomeView.style.display='flex';
+      welcomeView.style.cssText=isMob
+        ? 'display:flex;flex-direction:column;flex:1;overflow-y:auto;padding:16px;gap:0;align-items:stretch;justify-content:flex-start;'
+        : 'display:flex;flex:1;overflow:hidden;align-items:center;justify-content:center;padding:24px 32px;gap:32px;';
     }
     container.style.display='none'; // hide lc-messages — nothing can overwrite welcome now
     return;
