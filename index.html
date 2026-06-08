@@ -949,6 +949,181 @@ button{font-family:var(--font);}
   [style*="max-width:720px"]{max-width:95vw!important;}
   [style*="max-width:800px"]{max-width:95vw!important;}
   [style*="margin:40px auto"]{margin:16px auto!important;}
+
+  /* ── Mobile Tracker: full-screen pane like calendar ── */
+  #pane-tracker{
+    position:fixed!important;top:52px!important;
+    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    left:0!important;right:0!important;padding:0!important;
+    overflow:hidden!important;display:none;flex-direction:column!important;
+    height:auto!important;min-height:0!important;
+    background:var(--navy-card)!important;border-radius:0!important;
+  }
+  #pane-tracker.active{display:flex!important;}
+  /* Hide all desktop content, show only mobile shell */
+  #pane-tracker > *:not(#mob-tracker-main){display:none!important;}
+  #mob-tracker-main{display:flex!important;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+
+  /* Two-screen slide container */
+  #mob-trk-wrap{flex:1;overflow:hidden;position:relative;display:flex;min-height:0;}
+
+  /* Screen 1: list */
+  #mob-trk-list{
+    width:100%;flex-shrink:0;display:flex;flex-direction:column;
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    min-height:0;
+  }
+  /* Screen 2: detail */
+  #mob-trk-detail{
+    width:100%;position:absolute;inset:0;display:flex;flex-direction:column;
+    background:var(--navy-card);
+    transform:translateX(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    overflow:hidden;
+  }
+  /* Slide states */
+  #mob-tracker-main.mtrk-detail-open #mob-trk-list{transform:translateX(-100%);}
+  #mob-tracker-main.mtrk-detail-open #mob-trk-detail{transform:translateX(0);}
+
+  /* ── List screen header ── */
+  #mob-trk-hdr{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+    height:54px;box-sizing:border-box;
+  }
+  #mob-trk-hdr-title{font-size:17px;font-weight:800;color:var(--white);}
+  #mob-trk-add-btn{
+    width:34px;height:34px;border-radius:50%;border:none;
+    background:rgba(91,141,239,.15);color:var(--blue-bright);
+    font-size:22px;font-weight:300;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+
+  /* My Projects / All Projects toggle */
+  #mob-trk-toggle{
+    display:flex;gap:0;margin:10px 16px 0;
+    background:var(--navy-mid);border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;flex-shrink:0;
+  }
+  .mob-trk-tog-btn{
+    flex:1;padding:8px 0;border:none;font-size:12px;font-weight:700;
+    cursor:pointer;transition:all .15s;color:var(--muted);
+    background:transparent;-webkit-tap-highlight-color:transparent;
+  }
+  .mob-trk-tog-btn.active{background:var(--blue);color:#fff;}
+
+  /* Status tabs */
+  #mob-trk-tabs{
+    display:flex;gap:0;margin:10px 16px;
+    border-radius:10px;overflow:hidden;flex-shrink:0;
+    border:1px solid var(--border);
+  }
+  .mob-trk-tab{
+    flex:1;padding:8px 0;border:none;font-size:11px;font-weight:700;
+    cursor:pointer;transition:all .15s;color:var(--muted);
+    background:transparent;-webkit-tap-highlight-color:transparent;
+    white-space:nowrap;
+  }
+  .mob-trk-tab.active-upcoming{background:linear-gradient(135deg,var(--amber),#D97706);color:#fff;}
+  .mob-trk-tab.active-active{background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;}
+  .mob-trk-tab.active-completed{background:linear-gradient(135deg,var(--green),#16A34A);color:#fff;}
+
+  /* Cards scroll area */
+  #mob-trk-cards{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px;}
+
+  /* Individual project card */
+  .mob-trk-card{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;border-radius:14px;margin-bottom:8px;
+    background:var(--navy-mid);border:1px solid var(--border);
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:background .15s;
+  }
+  .mob-trk-card:active{background:rgba(91,141,239,.1);}
+  .mob-trk-card-accent{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0;}
+  .mob-trk-card-body{flex:1;min-width:0;}
+  .mob-trk-card-name{font-size:13px;font-weight:700;color:var(--white);margin-bottom:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mob-trk-card-meta{font-size:11px;color:var(--muted);margin-bottom:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mob-trk-card-status{display:inline-block;font-size:10px;font-weight:700;
+    padding:2px 8px;border-radius:8px;}
+  .mob-trk-card-chevron{color:var(--muted);flex-shrink:0;}
+
+  /* Empty state */
+  .mob-trk-empty{padding:60px 20px;text-align:center;color:var(--muted);font-size:13px;}
+
+  /* ── Detail screen ── */
+  #mob-trk-dv-hdr{
+    display:flex;align-items:center;gap:6px;
+    padding:0 max(12px,env(safe-area-inset-right,12px)) 0 4px;
+    height:54px;box-sizing:border-box;
+    border-bottom:1px solid var(--border);flex-shrink:0;
+    background:var(--navy-card);
+  }
+  #mob-trk-dv-back{
+    display:flex;align-items:center;gap:2px;
+    background:none;border:none;color:var(--blue-bright);
+    cursor:pointer;padding:8px 4px 8px 8px;flex-shrink:0;
+    font-size:13px;font-weight:600;-webkit-tap-highlight-color:transparent;
+  }
+  #mob-trk-dv-title{
+    flex:1;font-size:14px;font-weight:700;color:var(--white);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;
+  }
+  #mob-trk-dv-full-btn{
+    background:none;border:none;color:var(--muted);
+    cursor:pointer;padding:6px 8px;font-size:13px;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;
+  }
+  #mob-trk-dv-body{
+    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px));
+  }
+
+  /* Detail field rows */
+  .mtrk-section{font-size:10px;font-weight:700;color:var(--blue-bright);
+    text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;}
+  .mtrk-section:first-child{margin-top:0;}
+  .mtrk-field{margin-bottom:12px;}
+  .mtrk-field label{font-size:11px;color:var(--muted);font-weight:700;
+    display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+  .mtrk-field select,.mtrk-field textarea,.mtrk-field input[type=text],
+  .mtrk-field input[type=date],.mtrk-field input[type=number]{
+    width:100%;box-sizing:border-box;padding:9px 12px;
+    border:1px solid var(--border-bright);border-radius:10px;
+    background:var(--navy-lift);color:var(--white);font-family:var(--font);
+    font-size:14px;
+  }
+  .mtrk-field textarea{resize:none;min-height:72px;line-height:1.5;}
+  .mtrk-link-btn{
+    display:flex;align-items:center;gap:10px;width:100%;
+    padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+    background:var(--navy-mid);color:var(--offwhite);font-size:13px;
+    cursor:pointer;box-sizing:border-box;margin-bottom:8px;
+    -webkit-tap-highlight-color:transparent;text-decoration:none;
+    transition:background .12s;
+  }
+  .mtrk-link-btn:active{background:rgba(91,141,239,.12);}
+  .mtrk-link-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .mtrk-link-label{flex:1;font-weight:600;text-align:left;}
+  .mtrk-link-badge{font-size:10px;padding:2px 7px;border-radius:6px;
+    background:rgba(34,217,122,.15);color:var(--green);font-weight:700;}
+  .mtrk-link-badge.empty{background:rgba(168,180,208,.1);color:var(--muted);}
+  .mtrk-save-btn{
+    width:100%;padding:12px;border-radius:12px;border:none;
+    background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;
+    font-size:14px;font-weight:700;cursor:pointer;margin-top:16px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mtrk-check-row{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+    background:var(--navy-mid);margin-bottom:8px;
+  }
+  .mtrk-check-row label{font-size:13px;font-weight:600;color:var(--offwhite);flex:1;cursor:pointer;}
+  .mtrk-check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
 }
 
 /* ── Mobile Profile Pane ── */
@@ -1139,6 +1314,7 @@ button{font-family:var(--font);}
 .mob-cal-dots{display:none;gap:2px;justify-content:center;min-height:5px;}
 .mob-cal-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 @media(min-width:769px){#mob-cal-main{display:none!important;}}
+@media(min-width:769px){#mob-tracker-main{display:none!important;}}
 
 @media(max-width:768px){
   /* Full-screen fixed pane */
@@ -2488,6 +2664,41 @@ button{font-family:var(--font);}
         <!-- General keyword search -->
         <input type="text" id="tracker-search" placeholder="🔍 Search address / editor…" oninput="renderTracker()"
           style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);width:180px">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MOBILE TRACKER (hidden on desktop) ═══ -->
+  <div id="mob-tracker-main">
+    <div id="mob-trk-wrap">
+      <!-- SCREEN 1: List -->
+      <div id="mob-trk-list">
+        <div id="mob-trk-hdr">
+          <span id="mob-trk-hdr-title">Projects</span>
+          <button id="mob-trk-add-btn" onclick="mobTrkAdd()" aria-label="Add project">+</button>
+        </div>
+        <div id="mob-trk-toggle">
+          <button id="mob-trk-mine-btn" class="mob-trk-tog-btn active" onclick="mobTrkSetMine(true)">👤 My Projects</button>
+          <button id="mob-trk-all-btn" class="mob-trk-tog-btn" onclick="mobTrkSetMine(false)">All Projects</button>
+        </div>
+        <div id="mob-trk-tabs">
+          <button id="mob-trk-tab-upcoming" class="mob-trk-tab active-upcoming" onclick="mobTrkSetTab('upcoming')">📋 Upcoming</button>
+          <button id="mob-trk-tab-active"   class="mob-trk-tab" onclick="mobTrkSetTab('active')">🔄 Active</button>
+          <button id="mob-trk-tab-completed"class="mob-trk-tab" onclick="mobTrkSetTab('completed')">✅ Done</button>
+        </div>
+        <div id="mob-trk-cards"></div>
+      </div>
+      <!-- SCREEN 2: Detail -->
+      <div id="mob-trk-detail">
+        <div id="mob-trk-dv-hdr">
+          <button id="mob-trk-dv-back" onclick="mobTrkBackToList()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Projects
+          </button>
+          <div id="mob-trk-dv-title"></div>
+          <button id="mob-trk-dv-full-btn" onclick="mobTrkOpenFullModal()" title="Full editor">⋯</button>
+        </div>
+        <div id="mob-trk-dv-body"></div>
       </div>
     </div>
   </div>
@@ -18269,6 +18480,7 @@ function trackerSetTab(tab){
     }
   });
   renderTracker();
+  if(window.innerWidth<=768) setTimeout(mobTrkRefresh, 50);
 }
 
 function trackerSetMode(mode){
@@ -21705,6 +21917,7 @@ function renderTracker(){
       </td>
     </tr>`;
   }).join('');
+  if(window.innerWidth<=768) setTimeout(mobTrkRefresh, 50);
 }
 
 // ── Delete a tracker entry ────────────────────────────────────────────────────
@@ -29381,6 +29594,348 @@ function showToast(msg, duration=4000){
   t.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);white-space:nowrap';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),duration);
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE TRACKER
+   ═══════════════════════════════════════════════════ */
+let _mobTrkTab = 'upcoming';      // 'upcoming' | 'active' | 'completed'
+let _mobTrkMineOnly = true;       // My Projects vs All
+let _mobTrkOpenJobId = null;      // currently open project
+
+function mobTrkSetTab(tab){
+  _mobTrkTab = tab;
+  ['upcoming','active','completed'].forEach(t=>{
+    const btn = document.getElementById('mob-trk-tab-'+t);
+    if(!btn) return;
+    btn.className = 'mob-trk-tab' + (t===tab ? ' active-'+t : '');
+  });
+  mobTrkRenderCards();
+}
+
+function mobTrkSetMine(mine){
+  _mobTrkMineOnly = mine;
+  document.getElementById('mob-trk-mine-btn')?.classList.toggle('active', mine);
+  document.getElementById('mob-trk-all-btn')?.classList.toggle('active', !mine);
+  mobTrkRenderCards();
+}
+
+function mobTrkRenderCards(){
+  const el = document.getElementById('mob-trk-cards');
+  if(!el) return;
+
+  const _isPhoto = _trackerMode === 'photo';
+  const _getStage = _isPhoto ? getPhotoTrackerStage : getTrackerStage;
+  const _upcomingSt = _isPhoto ? PHOTO_UPCOMING_STATUSES : UPCOMING_STATUSES;
+  const _inprogressSt = _isPhoto ? PHOTO_INPROGRESS_STATUSES : INPROGRESS_STATUSES;
+  const _completedSt = _isPhoto ? PHOTO_COMPLETED_STATUSES : COMPLETED_STATUSES;
+  const _statusStyles = _isPhoto
+    ? (typeof PHOTO_STATUS_STYLES!=='undefined' ? PHOTO_STATUS_STYLES : {})
+    : null;
+
+  const STATUS_STYLES_LOCAL = {
+    footage_pending:{bg:'rgba(168,180,208,.15)',color:'#A8B4D0',label:'Footage Pending'},
+    ready:{bg:'rgba(122,171,255,.15)',color:'#7AABFF',label:'Ready to Start'},
+    draft1_progress:{bg:'rgba(52,211,153,.15)',color:'#34D399',label:'D1 - In Progress'},
+    draft1:{bg:'rgba(34,217,122,.15)',color:'#22D97A',label:'D1 - Sent'},
+    draft2_ready:{bg:'rgba(96,200,255,.15)',color:'#60C8FF',label:'D2 - Ready'},
+    draft2_progress:{bg:'rgba(252,211,77,.15)',color:'#FCD34D',label:'D2 - In Progress'},
+    draft2:{bg:'rgba(245,166,35,.15)',color:'#F5A623',label:'D2 - Sent'},
+    draft3_ready:{bg:'rgba(96,200,255,.15)',color:'#60C8FF',label:'D3 - Ready'},
+    draft3_progress:{bg:'rgba(251,146,60,.15)',color:'#FB923C',label:'D3 - In Progress'},
+    draft3:{bg:'rgba(240,82,82,.15)',color:'#F05252',label:'D3 - Sent'},
+    draft_plus_ready:{bg:'rgba(96,200,255,.15)',color:'#60C8FF',label:'D+ - Ready'},
+    draft_plus:{bg:'rgba(248,113,113,.15)',color:'#F87171',label:'Draft+ - In Progress'},
+    finals_sent:{bg:'rgba(34,217,122,.2)',color:'#22D97A',label:'Finals Sent ✓'},
+    in_progress:{bg:'rgba(91,141,239,.15)',color:'#5B8DEF',label:'In Progress'},
+    review:{bg:'rgba(167,139,250,.15)',color:'#A78BFA',label:'In Review'},
+    files_pending:{bg:'rgba(168,180,208,.15)',color:'#A8B4D0',label:'Files Pending'},
+    editing:{bg:'rgba(52,211,153,.15)',color:'#34D399',label:'Editing'},
+    delivered:{bg:'rgba(34,217,122,.2)',color:'#22D97A',label:'Delivered ✓'},
+  };
+  const getStatusStyle = s => (_statusStyles||STATUS_STYLES_LOCAL)[s] || STATUS_STYLES_LOCAL.ready;
+
+  // Build job list
+  let jobs = _isPhoto
+    ? savedJobs.filter(j=>j.isPhoto&&(j.status==='confirmed'||j.status==='completed'))
+    : savedJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&!j.isPhoto);
+
+  // Merge standalones
+  const standalone = _isPhoto ? getPhotoStandaloneProjects() : getStandaloneProjects();
+  standalone.forEach(sp=>{
+    if(!jobs.find(j=>j.id===sp.id)){
+      jobs.push({id:sp.id,name:sp.address||sp.clientName||'Imported Project',
+        date:sp.date,clientId:null,clientName:sp.clientName,isStandalone:true,_sp:sp});
+    }
+  });
+
+  // Tab filter
+  if(_mobTrkTab==='upcoming') jobs=jobs.filter(j=>_upcomingSt.includes(_getStage(j.id).editStatus||''));
+  else if(_mobTrkTab==='active') jobs=jobs.filter(j=>_inprogressSt.includes(_getStage(j.id).editStatus||''));
+  else jobs=jobs.filter(j=>_completedSt.includes(_getStage(j.id).editStatus||''));
+
+  // "My Projects" filter
+  if(_mobTrkMineOnly){
+    const sess = gateGetSession();
+    const myName = (sess?.name||'').toLowerCase();
+    if(myName){
+      jobs = jobs.filter(j=>{
+        const ts=_getStage(j.id);
+        const editor=(ts.claimedBy||'').toLowerCase();
+        const vg=(ts.videographer||'').toLowerCase();
+        const creator=(getJobCreator?.(j)||'').toLowerCase();
+        return editor.includes(myName)||vg.includes(myName)||creator.includes(myName);
+      });
+    }
+  }
+
+  // Sort
+  jobs.sort((a,b)=>{
+    const tsA=_getStage(a.id), tsB=_getStage(b.id);
+    if(tsA.rush&&!tsB.rush) return -1;
+    if(!tsA.rush&&tsB.rush) return 1;
+    return (b.date||'').localeCompare(a.date||'');
+  });
+
+  if(!jobs.length){
+    el.innerHTML=`<div class="mob-trk-empty"><div style="font-size:36px;margin-bottom:8px">📋</div>No projects${_mobTrkMineOnly?' assigned to you':''}</div>`;
+    return;
+  }
+
+  el.innerHTML = jobs.map(j=>{
+    const ts = _getStage(j.id);
+    const editStatus = ts.editStatus||(_isPhoto?'files_pending':'ready');
+    const ss = getStatusStyle(editStatus);
+    const client = clients?.find(c=>c.id===j.clientId);
+    const clientName = client?.name||j.clientName||'';
+    const editor = ts.claimedBy||'';
+    const isDhOrEmpty = !editor||editor==='DroneHub'||editor==='dronehub';
+    const isRush = ts.rush||false;
+    const isOverdue = ts.completionDate && ts.completionDate < new Date().toISOString().slice(0,10);
+    const accentColor = isRush ? '#ef4444' : isOverdue ? '#f97316' : ss.color;
+    return `<div class="mob-trk-card" onclick="mobTrkOpenProject('${j.id}')">
+      <div class="mob-trk-card-accent" style="background:${accentColor}"></div>
+      <div class="mob-trk-card-body">
+        <div class="mob-trk-card-name">${isRush?'🚨 ':isOverdue?'⚠ ':''}${j.name||j.address||'Unnamed'}</div>
+        <div class="mob-trk-card-meta">${[clientName,j.date].filter(Boolean).join(' · ')}</div>
+        <span class="mob-trk-card-status" style="background:${ss.bg};color:${ss.color}">${ss.label}</span>
+        ${isDhOrEmpty?'<span style="margin-left:6px;font-size:10px;color:#ef4444;font-weight:700">⚠ Unassigned</span>':''}
+      </div>
+      <svg class="mob-trk-card-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+  }).join('');
+}
+
+function mobTrkOpenProject(jobId){
+  _mobTrkOpenJobId = jobId;
+  mobTrkBuildDetail(jobId);
+  document.getElementById('mob-tracker-main')?.classList.add('mtrk-detail-open');
+}
+
+function mobTrkBackToList(){
+  document.getElementById('mob-tracker-main')?.classList.remove('mtrk-detail-open');
+  _mobTrkOpenJobId = null;
+  mobTrkRenderCards(); // re-render to pick up any saves
+}
+
+function mobTrkAdd(){
+  if(_trackerMode==='photo') openPhotoTrackerAddModal?.();
+  else openTrackerAddModal?.();
+}
+
+function mobTrkOpenFullModal(){
+  if(!_mobTrkOpenJobId) return;
+  if(_trackerMode==='photo') openPhotoTrackerModal?.(_mobTrkOpenJobId);
+  else openTrackerModal?.(_mobTrkOpenJobId);
+}
+
+function mobTrkBuildDetail(jobId){
+  const _isPhoto = _trackerMode==='photo';
+  const _getStage = _isPhoto ? getPhotoTrackerStage : getTrackerStage;
+  const _statusOpts = _isPhoto
+    ? (typeof PHOTO_EDIT_STATUS_OPTS!=='undefined' ? PHOTO_EDIT_STATUS_OPTS : [])
+    : EDIT_STATUS_OPTS;
+  const _stageOpts = typeof TRACKER_STAGES!=='undefined' ? TRACKER_STAGES : [];
+
+  let job = savedJobs.find(j=>String(j.id)===String(jobId));
+  if(!job){
+    const sp = (_isPhoto?getPhotoStandaloneProjects():getStandaloneProjects()).find(s=>String(s.id)===String(jobId));
+    if(sp) job={id:sp.id,name:sp.address||sp.clientName||'Imported Project',date:sp.date,clientId:null,clientName:sp.clientName,isStandalone:true,_sp:sp};
+  }
+  if(!job) return;
+
+  const ts = _getStage(jobId);
+  const client = clients?.find(c=>c.id===job.clientId);
+  const clientName = client?.name||job.clientName||'';
+  const editStatus = ts.editStatus||(_isPhoto?'files_pending':'ready');
+  const stage = ts.stage||(_stageOpts[0]?.key||'');
+
+  // Header
+  const titleEl = document.getElementById('mob-trk-dv-title');
+  if(titleEl) titleEl.textContent = job.name||job.address||'Project';
+
+  // Build options
+  const editStatusOptHtml = _statusOpts.map(s=>`<option value="${s.key}"${editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
+  const stageOptHtml = _stageOpts.map(s=>`<option value="${s.key}"${stage===s.key?' selected':''}>${s.label}</option>`).join('');
+  const contractorOptHtml = typeof buildEditorOptions==='function' ? buildEditorOptions(ts.claimedBy||'') : '';
+  const vidOptHtml = typeof buildVideographerOptions==='function' ? buildVideographerOptions(ts.videographer||'') : '';
+
+  // Link helper
+  const mkLink = (href, label, color, icon) => href
+    ? `<a href="${href}" target="_blank" class="mtrk-link-btn"><span class="mtrk-link-dot" style="background:${color}"></span><span class="mtrk-link-label">${label}</span><span class="mtrk-link-badge">Tap to open</span></a>`
+    : `<div class="mtrk-link-btn" style="opacity:.5"><span class="mtrk-link-dot" style="background:${color}"></span><span class="mtrk-link-label">${label}</span><span class="mtrk-link-badge empty">Not set</span></div>`;
+
+  const body = document.getElementById('mob-trk-dv-body');
+  if(!body) return;
+
+  body.innerHTML = `
+    <!-- Project info -->
+    <div style="padding:14px;background:var(--navy-mid);border-radius:12px;margin-bottom:16px;border:1px solid var(--border)">
+      <div style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:4px">${job.name||job.address||'—'}</div>
+      ${clientName?`<div style="font-size:12px;color:var(--muted);margin-bottom:2px">👤 ${clientName}</div>`:''}
+      ${job.date?`<div style="font-size:12px;color:var(--muted)">📅 ${job.date}</div>`:''}
+    </div>
+
+    <div class="mtrk-section">Status</div>
+
+    <div class="mtrk-field">
+      <label>Edit status</label>
+      <select id="mtrk-edit-status" onchange="mobTrkSave('${jobId}','editStatus',this.value)">${editStatusOptHtml}</select>
+    </div>
+
+    ${!_isPhoto?`<div class="mtrk-field">
+      <label>Kanban stage</label>
+      <select id="mtrk-stage" onchange="mobTrkSave('${jobId}','stage',this.value)">${stageOptHtml}</select>
+    </div>`:''}
+
+    <div class="mtrk-section">Assignment</div>
+
+    ${contractorOptHtml?`<div class="mtrk-field">
+      <label>Editor</label>
+      <select id="mtrk-editor" onchange="mobTrkSave('${jobId}','claimedBy',this.value)">${contractorOptHtml}</select>
+    </div>`:''}
+
+    ${vidOptHtml?`<div class="mtrk-field">
+      <label>${_isPhoto?'Photographer':'Videographer'}</label>
+      <select id="mtrk-videographer" onchange="mobTrkSave('${jobId}',${_isPhoto?`'photographer'`:`'videographer'`},this.value)">${vidOptHtml}</select>
+    </div>`:''}
+
+    <div class="mtrk-section">Footage & Files</div>
+
+    <div class="mtrk-check-row">
+      <input type="checkbox" id="mtrk-footage" ${ts.filesReceived?'checked':''} onchange="mobTrkSave('${jobId}','filesReceived',this.checked)">
+      <label for="mtrk-footage">Footage / files received</label>
+    </div>
+    <div class="mtrk-check-row">
+      <input type="checkbox" id="mtrk-rush" ${ts.rush?'checked':''} onchange="mobTrkSave('${jobId}','rush',this.checked)">
+      <label for="mtrk-rush">🚨 Rush project</label>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="mtrk-field" style="margin-bottom:0">
+        <label>Film hrs</label>
+        <input type="number" id="mtrk-film-hrs" value="${ts.approxFilmHours||''}" placeholder="e.g. 2" step="0.5" min="0" onchange="mobTrkSave('${jobId}','approxFilmHours',this.value)">
+      </div>
+      <div class="mtrk-field" style="margin-bottom:0">
+        <label>Edit hrs</label>
+        <input type="number" id="mtrk-edit-hrs" value="${ts.approxEditHours||''}" placeholder="e.g. 4" step="0.5" min="0" onchange="mobTrkSave('${jobId}','approxEditHours',this.value)">
+      </div>
+    </div>
+
+    <div class="mtrk-field">
+      <label>Due date</label>
+      <input type="date" id="mtrk-due" value="${ts.completionDate||''}" onchange="mobTrkSave('${jobId}','completionDate',this.value)">
+    </div>
+
+    <div class="mtrk-section">Links</div>
+
+    ${mkLink(ts.frameioLink,'▶ Frame.io Review','#A78BFA','')}
+    ${mkLink(ts.downloadLink,'☁ Google Drive','#5B8DEF','')}
+    ${mkLink(ts.dropboxLink,'📦 Dropbox','#0061FF','')}
+    ${mkLink(ts.filemailLink,'↓ Filemail','#22D97A','')}
+
+    <button class="mtrk-link-btn" onclick="mobTrkEditLinks('${jobId}')" style="border-color:rgba(91,141,239,.3);background:rgba(91,141,239,.06);color:var(--blue-bright)">
+      <span class="mtrk-link-dot" style="background:var(--blue-bright)"></span>
+      <span class="mtrk-link-label">Edit links…</span>
+    </button>
+
+    <div class="mtrk-section">Notes</div>
+
+    <div class="mtrk-field">
+      <textarea id="mtrk-notes" placeholder="Any notes…" onchange="mobTrkSave('${jobId}','notes',this.value)">${ts.notes||''}</textarea>
+    </div>
+
+    <button class="mtrk-save-btn" onclick="mobTrkSaveNotes('${jobId}')">Save Notes</button>
+
+    <div style="height:8px"></div>
+    <button onclick="mobTrkOpenFullModal()" style="width:100%;padding:11px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;margin-top:4px">Open full editor ↗</button>
+  `;
+}
+
+function mobTrkSave(jobId, key, value){
+  const _isPhoto = _trackerMode==='photo';
+  const _getStage = _isPhoto ? getPhotoTrackerStage : getTrackerStage;
+  const storageKey = _isPhoto ? 'dronehub_photo_tracker' : 'dronehub_tracker';
+  const stages = JSON.parse(localStorage.getItem(storageKey)||'{}');
+  if(!stages[jobId]) stages[jobId] = _getStage(jobId);
+  stages[jobId][key] = value;
+  try{ localStorage.setItem(storageKey, JSON.stringify(stages)); }catch(e){}
+  // Sync to Firebase if available
+  if(typeof fbSubBatch==='function' && _fbToken && _fbToken()){
+    fbSubBatch(_isPhoto?'photo_tracker':'tracker', [{id:jobId,...stages[jobId],_updatedAt:Date.now()}]).catch(()=>{});
+  }
+}
+
+function mobTrkSaveNotes(jobId){
+  const el = document.getElementById('mtrk-notes');
+  if(el) mobTrkSave(jobId,'notes',el.value);
+  // Brief visual feedback
+  const btn = document.querySelector('.mtrk-save-btn');
+  if(btn){btn.textContent='Saved ✓';btn.style.background='linear-gradient(135deg,var(--green),#16A34A)';setTimeout(()=>{btn.textContent='Save Notes';btn.style.background='';},1500);}
+}
+
+function mobTrkEditLinks(jobId){
+  const _isPhoto = _trackerMode==='photo';
+  const _getStage = _isPhoto ? getPhotoTrackerStage : getTrackerStage;
+  const ts = _getStage(jobId);
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9800;display:flex;align-items:flex-end';
+  overlay.innerHTML=`<div style="width:100%;background:var(--navy-card);border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--border)">
+    <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      Edit Links <button onclick="this.closest('[style*=fixed]').remove()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0">✕</button>
+    </div>
+    ${!_isPhoto?`<label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Frame.io</label>
+    <input type="url" id="mtrk-lnk-frameio" placeholder="https://app.frame.io/…" value="${ts.frameioLink||''}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;margin-bottom:10px">`:''}
+    <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Google Drive</label>
+    <input type="url" id="mtrk-lnk-drive" placeholder="https://drive.google.com/…" value="${ts.downloadLink||''}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;margin-bottom:10px">
+    <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Dropbox</label>
+    <input type="url" id="mtrk-lnk-dropbox" placeholder="https://www.dropbox.com/…" value="${ts.dropboxLink||''}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;margin-bottom:10px">
+    <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Filemail</label>
+    <input type="url" id="mtrk-lnk-filemail" placeholder="https://…filemail.com/…" value="${ts.filemailLink||''}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;margin-bottom:16px">
+    <button onclick="mobTrkSaveLinks('${jobId}',this.closest('[style*=fixed]'))" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Save Links</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+function mobTrkSaveLinks(jobId, overlayEl){
+  const frameio = document.getElementById('mtrk-lnk-frameio')?.value||'';
+  const drive   = document.getElementById('mtrk-lnk-drive')?.value||'';
+  const dropbox = document.getElementById('mtrk-lnk-dropbox')?.value||'';
+  const filemail= document.getElementById('mtrk-lnk-filemail')?.value||'';
+  mobTrkSave(jobId,'frameioLink',frameio);
+  mobTrkSave(jobId,'downloadLink',drive);
+  mobTrkSave(jobId,'dropboxLink',dropbox);
+  mobTrkSave(jobId,'filemailLink',filemail);
+  overlayEl?.remove();
+  mobTrkBuildDetail(jobId); // refresh detail view
+}
+
+// Called after renderTracker() or when pane becomes active on mobile
+function mobTrkRefresh(){
+  if(window.innerWidth>768) return;
+  mobTrkRenderCards();
 }
 
 // Close notification panel when clicking outside
