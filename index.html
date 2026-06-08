@@ -625,8 +625,8 @@ button{font-family:var(--font);}
   height:calc(64px + env(safe-area-inset-bottom,0px));
   padding-bottom:env(safe-area-inset-bottom,0px);
   background:var(--navy-card);border-top:1px solid var(--border-bright);
-  z-index:500;align-items:stretch;
-  /* Raise above Safari's browser chrome when it's collapsed */
+  z-index:900;align-items:stretch;
+  /* Always sits above profile pane and other overlays */
   box-shadow:0 -2px 20px rgba(0,0,0,.4);
 }
 .mob-nav-btn{
@@ -28565,12 +28565,9 @@ function initGoogleMaps(){
 <!-- ═══ MOBILE PROFILE PANE (Instagram-style) ═══ -->
 <div id="mob-profile-pane" style="display:none;position:fixed;inset:0;z-index:800;background:var(--navy-card);overflow:hidden;flex-direction:column">
 
-  <!-- Header bar: back ← | DroneHub logo | notifications + settings -->
+  <!-- Header bar: DroneHub logo LEFT | notifications + hamburger RIGHT -->
   <div id="mob-pf-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:52px;background:var(--navy-card);border-bottom:1px solid var(--border);flex-shrink:0">
-    <button onclick="mobHideProfile()" style="background:none;border:none;color:var(--offwhite);cursor:pointer;padding:6px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <!-- DroneHub logo (src populated by JS from main header) -->
+    <!-- DroneHub logo flush left (src populated by JS from main header) -->
     <img id="mob-pf-logo" src="" alt="DroneHub" style="height:20px;object-fit:contain">
     <div style="display:flex;align-items:center;gap:6px">
       <!-- Notification bell (mirrors main header bell) -->
