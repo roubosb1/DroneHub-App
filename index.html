@@ -774,9 +774,59 @@ button{font-family:var(--font);}
   [style*="margin:40px auto"]{margin:16px auto!important;}
 }
 
+/* ── Mobile Profile Pane ── */
+.mob-pf-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:10px 4px;border:none;background:transparent;
+  color:var(--muted);font-size:9px;font-family:var(--font);font-weight:700;
+  cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:2px solid transparent;transition:color .15s,border-color .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.mob-pf-tab.active{color:var(--white);border-bottom-color:var(--blue-bright);}
+.mob-pf-tab svg{flex-shrink:0;}
+
+/* IG-style portfolio grid sub-tabs */
+.mob-pf-subtab-bar{display:flex;border-bottom:1px solid var(--border);background:var(--navy-card);}
+.mob-pf-subtab{
+  flex:1;padding:10px 4px;border:none;background:transparent;
+  color:var(--muted);font-size:10px;font-family:var(--font);font-weight:700;
+  cursor:pointer;letter-spacing:.04em;border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;-webkit-tap-highlight-color:transparent;
+}
+.mob-pf-subtab.active{color:var(--white);border-bottom-color:var(--blue-bright);}
+
+/* IG 3-col grid */
+.mob-pf-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;}
+/* Full-width YouTube list */
+.mob-pf-grid-yt{display:flex;flex-direction:column;gap:10px;padding:12px;}
+/* Shared tile style */
+.mob-pf-tile{position:relative;overflow:hidden;cursor:pointer;background:var(--navy-mid);}
+.mob-pf-tile-inner{width:100%;padding-top:100%;position:relative;} /* square default */
+.mob-pf-tile-inner.ratio-916{padding-top:177.78%;}
+.mob-pf-tile-inner.ratio-169{padding-top:56.25%;}
+.mob-pf-tile img,.mob-pf-tile-inner img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.mob-pf-tile-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.6);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s;
+}
+.mob-pf-tile:active .mob-pf-tile-overlay{opacity:1;}
+.mob-pf-tile-placeholder{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);flex-direction:column;gap:6px;
+}
+
+/* Overview stat card */
+.mob-pf-stat-card{
+  background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;
+  padding:14px;text-align:center;
+}
+
 /* Desktop: never show mobile nav elements */
 @media(min-width:769px){
   #mobile-bottom-nav{display:none!important;}
+  #mob-profile-pane{display:none!important;}
   #mobile-more-overlay,#mobile-more-drawer{display:none!important;}
 }
 
@@ -5213,10 +5263,10 @@ const asvc={video:true,photo:false,tvideo:false,tphoto:false,reel:false,extphoto
 const aqty={reel:1};
 
 // ── MOBILE NAV ────────────────────────────────────────────────────────────────
-// Maps pane IDs → bottom-nav button IDs (primary 4 tabs)
-const MOB_NAV_MAP={quote:'mobnav-quote',jobs:'mobnav-sales',clients:'mobnav-sales',sales:'mobnav-sales',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
+// Maps pane IDs → bottom-nav button IDs (primary 5 tabs)
+const MOB_NAV_MAP={tracker:'mobnav-tracker',finance:'mobnav-finance',louchat:'mobnav-louchat',calendar:'mobnav-calendar'};
 // Maps pane IDs → more-drawer button IDs (secondary tabs)
-const MOB_MORE_MAP={finance:'mobmore-finance',calendar:'mobmore-calendar',team:'mobmore-team',settings:'mobmore-settings',social:'mobmore-social'};
+const MOB_MORE_MAP={quote:'mobmore-quote',jobs:'mobmore-sales',clients:'mobmore-sales',sales:'mobmore-sales',team:'mobmore-team',social:'mobmore-social',settings:'mobmore-settings'};
 
 function syncMobileNav(paneId){
   // Clear all primary nav active states
@@ -5251,6 +5301,322 @@ function closeMobileMore(){
   }
   if(overlay) overlay.style.display='none';
 }
+
+// ── MOBILE PROFILE (Instagram-style) ──────────────────────────────────────────
+let _mobPfTab = 'overview';    // 'overview' | 'portfolio' | 'timeoff'
+let _mobPfSubTab = 'youtube';  // 'youtube' | 'reels' | 'photos'
+
+function mobShowProfile(){
+  // Resolve the current user's member record
+  const s = gateGetSession();
+  if(!s){ showDhToast('Profile','Please sign in first.','⚠️','var(--amber)',3000); return; }
+  const members = getAdminTeamMembers ? getAdminTeamMembers() : [];
+  const member = members.find(m=>
+    (m.email && m.email.toLowerCase()===(s.email||'').toLowerCase()) ||
+    (m.name  && m.name.toLowerCase() ===(s.name||'').toLowerCase())
+  ) || members[0];
+  if(!member){ showDhToast('Profile','Team profile not found.','⚠️','var(--amber)',3000); return; }
+  _tpMemberId = member.id;
+
+  // Populate header & stats
+  const initials = member.name ? member.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+  const avatarEl = document.getElementById('mob-pf-avatar');
+  if(avatarEl) avatarEl.textContent = initials;
+  const nameEl = document.getElementById('mob-pf-header-name');
+  if(nameEl) nameEl.textContent = member.name || 'Profile';
+  const pfName = document.getElementById('mob-pf-name');
+  if(pfName) pfName.textContent = member.name || '';
+  const pfRole = document.getElementById('mob-pf-role');
+  if(pfRole) pfRole.textContent = member.role || member.title || '';
+
+  // Load stats
+  const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
+  const active = Object.values(trackerData).filter(ts=>
+    (ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()) &&
+    ts.editStatus !== 'finals_sent' && ts.editStatus !== 'footage_pending'
+  ).length;
+  const done = Object.values(trackerData).filter(ts=>
+    (ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()) &&
+    ts.editStatus === 'finals_sent'
+  ).length;
+  const hrs = Object.values(trackerData)
+    .filter(ts=>(ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()))
+    .reduce((s,ts)=>s+(parseFloat(ts.approxEditHours)||0),0);
+  const portfolio = tpPortfolioLoad ? tpPortfolioLoad(member.id) : [];
+
+  const elStat = id => document.getElementById(id);
+  if(elStat('mob-pf-stat-active'))   elStat('mob-pf-stat-active').textContent   = active;
+  if(elStat('mob-pf-stat-done'))     elStat('mob-pf-stat-done').textContent     = done;
+  if(elStat('mob-pf-stat-hrs'))      elStat('mob-pf-stat-hrs').textContent      = hrs.toFixed(1);
+  if(elStat('mob-pf-stat-portfolio'))elStat('mob-pf-stat-portfolio').textContent= portfolio.length;
+
+  // Show pane, set active nav
+  const pane = document.getElementById('mob-profile-pane');
+  if(pane){ pane.style.display='flex'; }
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mobnav-profile')?.classList.add('active');
+
+  // Render default tab
+  _mobPfTab = 'overview';
+  document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mob-pftab-overview')?.classList.add('active');
+  mobPfRenderOverview(member);
+
+  // Background Firebase refresh
+  if(typeof tpProfileLoad_fb === 'function' && _fbToken && _fbToken()){
+    tpProfileLoad_fb(member.id).then(()=>{ mobPfRenderCurrent(member); }).catch(()=>{});
+  }
+}
+
+function mobHideProfile(){
+  const pane = document.getElementById('mob-profile-pane');
+  if(pane) pane.style.display='none';
+  // Restore last active pane nav state
+  document.getElementById('mobnav-profile')?.classList.remove('active');
+}
+
+function mobPfOpenSettings(){
+  // Open the main settings pane on mobile
+  showPane('settings');
+  mobHideProfile();
+}
+
+function mobPfSwitchTab(tab){
+  _mobPfTab = tab;
+  document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mob-pftab-'+tab)?.classList.add('active');
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  mobPfRenderCurrent(member);
+}
+
+function mobPfRenderCurrent(member){
+  if(_mobPfTab === 'overview')  mobPfRenderOverview(member);
+  else if(_mobPfTab === 'portfolio') mobPfRenderPortfolio(member);
+  else if(_mobPfTab === 'timeoff')   mobPfRenderTimeOff(member);
+}
+
+function mobPfRenderOverview(member){
+  const content = document.getElementById('mob-pf-content');
+  if(!content) return;
+  const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
+  const activeByMe = Object.values(trackerData).filter(ts=>
+    (ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()) &&
+    ts.editStatus !== 'finals_sent' && ts.editStatus !== 'footage_pending'
+  ).length;
+  const completedByMe = Object.values(trackerData).filter(ts=>
+    (ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()) &&
+    ts.editStatus === 'finals_sent'
+  ).length;
+  const totalEditHrs = Object.values(trackerData)
+    .filter(ts=>(ts.claimedBy||'').toLowerCase().includes(member.name.toLowerCase()))
+    .reduce((s,ts)=>s+(parseFloat(ts.approxEditHours)||0),0);
+  const portfolio = tpPortfolioLoad ? tpPortfolioLoad(member.id) : [];
+
+  content.innerHTML = `
+  <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+    ${[
+      ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>','Active Projects',activeByMe,'var(--blue-bright)'],
+      ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>','Completed',completedByMe,'var(--green)'],
+      ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>','Edit Hours',totalEditHrs.toFixed(1),'var(--amber)'],
+      ['<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>','Portfolio',portfolio.length,'#A78BFA'],
+    ].map(([icon,lbl,val,color])=>`
+      <div class="mob-pf-stat-card">
+        <div style="display:flex;justify-content:center;margin-bottom:4px;color:${color}">${icon}</div>
+        <div style="font-size:24px;font-weight:800;color:${color}">${val}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:600">${lbl}</div>
+      </div>`).join('')}
+  </div>
+  <div style="padding:0 16px 16px">
+    <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:10px">Quick Actions</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="mobPfSwitchTab('portfolio')" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(34,217,122,.35);background:rgba(34,217,122,.07);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;text-align:left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        View My Portfolio
+      </button>
+      <button onclick="mobPfSwitchTab('timeoff')" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(139,92,246,.35);background:rgba(139,92,246,.07);color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer;text-align:left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
+        Request Time Off
+      </button>
+      <button onclick="mobHideProfile();showPane('tracker')" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;border:1px solid rgba(91,141,239,.35);background:rgba(91,141,239,.07);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;text-align:left">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        My Projects
+      </button>
+    </div>
+  </div>`;
+}
+
+function mobPfRenderPortfolio(member){
+  const content = document.getElementById('mob-pf-content');
+  if(!content) return;
+  const items = tpPortfolioLoad ? tpPortfolioLoad(member.id) : [];
+  const session = gateGetSession();
+  const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
+                (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
+  const isAdmin = !session || session.type==='admin' || session.role==='admin';
+  const canEdit = isAdmin || isOwn;
+
+  const subCfg = {
+    youtube: { types:['video'], ratio:'ratio-169', label:'▶ YouTube', gridClass:'mob-pf-grid-yt', wrapper:'yt' },
+    reels:   { types:['reel'],  ratio:'ratio-916', label:'📱 Reels',  gridClass:'mob-pf-grid-3',  wrapper:'3col' },
+    photos:  { types:['photo','other'], ratio:'', label:'📸 Photos', gridClass:'mob-pf-grid-3',  wrapper:'3col' },
+  };
+  const cfg = subCfg[_mobPfSubTab] || subCfg.youtube;
+  const visItems = items.filter(i=>cfg.types.includes(i.type));
+
+  const tileHtml = (item) => {
+    const thumb = item.thumb || tpGetAutoThumb(item.url);
+    const isYT = _mobPfSubTab === 'youtube';
+    if(isYT){
+      return `
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="border-radius:10px;overflow:hidden;background:var(--navy-mid)">
+        <div class="mob-pf-tile-inner ratio-169" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
+          <div class="mob-pf-tile-overlay"><svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        </div>
+        ${item.title?`<div style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--white);line-height:1.3">${item.title}</div>`:''}
+      </div>`;
+    } else {
+      return `
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
+        <div class="mob-pf-tile-inner ${cfg.ratio||''}">
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
+          <div class="mob-pf-tile-overlay"><svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        </div>
+      </div>`;
+    }
+  };
+
+  content.innerHTML = `
+  <!-- Portfolio sub-tab bar -->
+  <div class="mob-pf-subtab-bar">
+    <button class="mob-pf-subtab ${_mobPfSubTab==='youtube'?'active':''}" onclick="_mobPfSubTab='youtube';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">▶ YouTube</button>
+    <button class="mob-pf-subtab ${_mobPfSubTab==='reels'?'active':''}"   onclick="_mobPfSubTab='reels';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">📱 Reels</button>
+    <button class="mob-pf-subtab ${_mobPfSubTab==='photos'?'active':''}"  onclick="_mobPfSubTab='photos';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">📸 Photos</button>
+  </div>
+
+  ${canEdit?`
+  <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+    <button onclick="openTeamMemberProfile('${member.id}');mobHideProfile()" style="width:100%;padding:10px;border-radius:10px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer">
+      + Add Portfolio Work (full editor)
+    </button>
+  </div>`:''}
+
+  ${visItems.length === 0 ? `
+  <div style="padding:60px 20px;text-align:center;color:var(--muted)">
+    <div style="font-size:32px;margin-bottom:8px">${_mobPfSubTab==='youtube'?'🎬':_mobPfSubTab==='reels'?'📱':'📸'}</div>
+    <div style="font-size:13px">No ${cfg.label.replace(/^[^ ]+ /,'')} yet.</div>
+  </div>` : `
+  <div class="${cfg.gridClass}" style="${_mobPfSubTab==='youtube'?'padding:12px':''}">
+    ${visItems.map(tileHtml).join('')}
+  </div>`}`;
+
+  // Deferred og:image fetch for tiles without thumbnails
+  requestAnimationFrame(()=>{
+    if(typeof tpLoadDeferredThumbs === 'function') tpLoadDeferredThumbs(content);
+  });
+}
+
+function mobPfRenderTimeOff(member){
+  const content = document.getElementById('mob-pf-content');
+  if(!content) return;
+  const session = gateGetSession();
+  const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
+                (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
+  const isAdmin = !session || session.type==='admin' || session.role==='admin';
+  const canEdit = isAdmin || isOwn;
+
+  const evts = typeof calEventsLoad === 'function' ? calEventsLoad().filter(e=>
+    (e.type==='vacation'||e.type==='sick') && e.memberName===member.name
+  ).sort((a,b)=>(a.start||a.date||'').localeCompare(b.start||b.date||'')) : [];
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = evts.filter(e=>(e.end||e.start||e.date||'')>=today);
+  const past = evts.filter(e=>(e.end||e.start||e.date||'')<today);
+
+  content.innerHTML = `<div style="padding:16px">
+  ${canEdit?`
+  <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px">
+    <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:12px;display:flex;align-items:center;gap:7px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Request Time Off
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Start Date</div>
+        <input type="date" id="mob-toff-start" style="width:100%;padding:9px 10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">End Date</div>
+        <input type="date" id="mob-toff-end" style="width:100%;padding:9px 10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <label style="flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);font-size:12px;font-weight:700;color:var(--muted)" id="mob-toff-lbl-vac">
+        <input type="radio" name="mob-toff-type" value="vacation" checked onchange="document.getElementById('mob-toff-lbl-vac').style.borderColor=this.checked?'#A78BFA':'var(--border)';document.getElementById('mob-toff-lbl-sick').style.borderColor='var(--border)'"> Vacation
+      </label>
+      <label style="flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);font-size:12px;font-weight:700;color:var(--muted)" id="mob-toff-lbl-sick">
+        <input type="radio" name="mob-toff-type" value="sick" onchange="document.getElementById('mob-toff-lbl-sick').style.borderColor=this.checked?'var(--red)':'var(--border)';document.getElementById('mob-toff-lbl-vac').style.borderColor='var(--border)'"> Sick Day
+      </label>
+    </div>
+    <input id="mob-toff-note" type="text" placeholder="Optional note…" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;margin-bottom:10px">
+    <button onclick="mobSubmitTimeOff()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.15);color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer">Submit Request</button>
+  </div>`:''}
+
+  <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:10px">Upcoming (${upcoming.length})</div>
+  ${upcoming.length ? upcoming.map(e=>`
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;margin-bottom:8px">
+    <div>
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${e.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${e.type==='vacation'?'#A78BFA':'var(--red)'}">${e.type==='vacation'?'Vacation':'Sick'}</span>
+      <div style="font-size:12px;color:var(--white);margin-top:4px">${e.start||e.date||''} → ${e.end||e.start||e.date||''}</div>
+      ${e.title?`<div style="font-size:11px;color:var(--muted)">${e.title}</div>`:''}
+    </div>
+    ${canEdit?`<button onclick="mobDeleteTimeOff('${e.id}')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>`:''}
+  </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0 16px">No upcoming time off.</div>`}
+
+  ${past.length ? `
+  <div style="font-size:12px;font-weight:700;color:var(--white);margin-top:8px;margin-bottom:10px">Past (${past.length})</div>
+  ${past.slice(-5).reverse().map(e=>`
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;margin-bottom:6px;opacity:.65">
+    <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted)">${e.type==='vacation'?'Vacation':'Sick'}</span>
+    <span style="font-size:12px;color:var(--offwhite)">${e.start||e.date||''} → ${e.end||e.start||e.date||''}</span>
+  </div>`).join('')}` : ''}
+  </div>`;
+}
+
+function mobSubmitTimeOff(){
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  const start = document.getElementById('mob-toff-start')?.value;
+  const end   = document.getElementById('mob-toff-end')?.value || start;
+  const type  = document.querySelector('input[name="mob-toff-type"]:checked')?.value || 'vacation';
+  const note  = document.getElementById('mob-toff-note')?.value.trim()||'';
+  if(!start){ showDhToast('Time Off','Please enter a start date.','⚠️','var(--amber)',3000); return; }
+  if(end < start){ showDhToast('Time Off','End date must be on or after start date.','⚠️','var(--amber)',3000); return; }
+  const overlaps = typeof vacationOverlapCheck==='function' ? vacationOverlapCheck(start,end,member.name) : [];
+  const evt = {
+    id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    type, memberName:member.name,
+    start, end,
+    title: note || (type==='vacation'?member.name+' – Vacation':member.name+' – Sick'),
+    color: type==='vacation'?'#A78BFA':'#FF7070',
+    allDay:true,
+  };
+  const evts = calEventsLoad();
+  evts.push(evt);
+  calEventsSave(evts);
+  showDhToast('Time Off','Request submitted ✓','✅','var(--green)',3000);
+  if(overlaps.length) showDhToast('Overlap Warning',overlaps.join(', ')+' also off during this period','⚠️','var(--amber)',5000);
+  mobPfRenderTimeOff(member);
+}
+
+function mobDeleteTimeOff(evtId){
+  if(!confirm('Cancel this time off request?')) return;
+  const evts = calEventsLoad().filter(e=>e.id!==evtId);
+  calEventsSave(evts);
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(member) mobPfRenderTimeOff(member);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 function showPane(id,ev){
@@ -5258,6 +5624,9 @@ function showPane(id,ev){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('pane-'+id).classList.add('active');
   if(ev&&ev.target)ev.target.classList.add('active');
+  // Hide mobile profile pane when navigating to any regular pane
+  const _mobPfPane = document.getElementById('mob-profile-pane');
+  if(_mobPfPane && _mobPfPane.style.display!=='none') _mobPfPane.style.display='none';
   syncMobileNav(id);
   // Persist so refresh returns to the same tab
   try{localStorage.setItem('dronehub_active_pane',id);}catch(e){}
@@ -28050,34 +28419,34 @@ function initGoogleMaps(){
 <!-- ═══ MOBILE BOTTOM NAV ═══ -->
 <nav id="mobile-bottom-nav">
 
-  <!-- Quote -->
-  <button class="mob-nav-btn active" id="mobnav-quote" onclick="showPane('quote',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    <span>Quote</span>
-  </button>
-
-  <!-- Sales (Jobs + Clients hub) -->
-  <button class="mob-nav-btn" id="mobnav-sales" onclick="showPane('sales',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    <span>Sales</span>
-  </button>
-
-  <!-- Tracker -->
+  <!-- Projects -->
   <button class="mob-nav-btn" id="mobnav-tracker" onclick="showPane('tracker',event)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     <span>Projects</span>
   </button>
 
-  <!-- LouChat -->
-  <button class="mob-nav-btn" id="mobnav-louchat" onclick="showPane('louchat',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <span>Chat</span>
+  <!-- Finance -->
+  <button class="mob-nav-btn" id="mobnav-finance" onclick="showPane('finance',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>Finance</span>
   </button>
 
-  <!-- More -->
-  <button class="mob-nav-btn" id="mobnav-more" onclick="toggleMobileMore()">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    <span>More</span>
+  <!-- LouChat -->
+  <button class="mob-nav-btn" id="mobnav-louchat" onclick="showPane('louchat',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <span>LouChat</span>
+  </button>
+
+  <!-- Calendar -->
+  <button class="mob-nav-btn" id="mobnav-calendar" onclick="showPane('calendar',event)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Calendar</span>
+  </button>
+
+  <!-- Profile -->
+  <button class="mob-nav-btn" id="mobnav-profile" onclick="mobShowProfile()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profile</span>
   </button>
 
 </nav>
@@ -28088,33 +28457,32 @@ function initGoogleMaps(){
 <!-- More drawer -->
 <div id="mobile-more-drawer">
   <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright);margin:0 auto 14px"></div>
-  <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;text-align:center;margin-bottom:4px">All Sections</div>
+  <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;text-align:center;margin-bottom:4px">More</div>
   <div class="mob-more-grid">
 
-    <button class="mob-more-item" id="mobmore-finance" onclick="showPane('finance',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span>Finance</span>
+    <button class="mob-more-item" id="mobmore-quote" onclick="showPane('quote',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      <span>Quotes</span>
     </button>
 
-    <button class="mob-more-item" id="mobmore-calendar" onclick="showPane('calendar',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>Calendar</span>
+    <button class="mob-more-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Sales</span>
     </button>
-
 
     <button class="mob-more-item" id="mobmore-team" onclick="showPane('team',event);closeMobileMore()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>Team</span>
-    </button>
-
-    <button class="mob-more-item" id="mobmore-settings" onclick="showPane('settings',event);closeMobileMore()">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Settings</span>
+      <span>Creator</span>
     </button>
 
     <button class="mob-more-item" id="mobmore-social" onclick="showPane('social',event);closeMobileMore()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
       <span>Social</span>
+    </button>
+
+    <button class="mob-more-item" id="mobmore-settings" onclick="showPane('settings',event);closeMobileMore()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
     </button>
 
   </div>
@@ -28126,6 +28494,75 @@ function initGoogleMaps(){
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sign out
     </button>
+  </div>
+</div>
+
+<!-- ═══ MOBILE PROFILE PANE (Instagram-style) ═══ -->
+<div id="mob-profile-pane" style="display:none;position:fixed;inset:0;z-index:800;background:var(--navy-card);overflow:hidden;flex-direction:column">
+
+  <!-- Header bar -->
+  <div id="mob-pf-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;background:var(--navy-card);border-bottom:1px solid var(--border);flex-shrink:0">
+    <button onclick="mobHideProfile()" style="background:none;border:none;color:var(--offwhite);cursor:pointer;padding:6px;display:flex;align-items:center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span id="mob-pf-header-name" style="font-size:15px;font-weight:800;color:var(--white)">Profile</span>
+    <button onclick="mobPfOpenSettings()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;display:flex;align-items:center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <!-- Scrollable body -->
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))">
+
+    <!-- IG-style top section: avatar + stats -->
+    <div style="padding:20px 16px 0">
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:14px">
+        <!-- Avatar -->
+        <div id="mob-pf-avatar" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0;border:3px solid var(--border-bright)">?</div>
+        <!-- Stats row -->
+        <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
+          <div>
+            <div id="mob-pf-stat-active" style="font-size:18px;font-weight:800;color:var(--blue-bright)">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Active</div>
+          </div>
+          <div>
+            <div id="mob-pf-stat-done" style="font-size:18px;font-weight:800;color:var(--green)">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Done</div>
+          </div>
+          <div>
+            <div id="mob-pf-stat-hrs" style="font-size:18px;font-weight:800;color:var(--amber)">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Hrs</div>
+          </div>
+          <div>
+            <div id="mob-pf-stat-portfolio" style="font-size:18px;font-weight:800;color:#A78BFA">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Videos</div>
+          </div>
+        </div>
+      </div>
+      <!-- Name + role -->
+      <div id="mob-pf-name" style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:3px"></div>
+      <div id="mob-pf-role" style="font-size:11px;color:var(--muted);margin-bottom:16px"></div>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--navy-card);position:sticky;top:0;z-index:10">
+      <button id="mob-pftab-overview"  class="mob-pf-tab active"  onclick="mobPfSwitchTab('overview')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Overview</span>
+      </button>
+      <button id="mob-pftab-portfolio" class="mob-pf-tab" onclick="mobPfSwitchTab('portfolio')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span>Portfolio</span>
+      </button>
+      <button id="mob-pftab-timeoff"   class="mob-pf-tab" onclick="mobPfSwitchTab('timeoff')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
+        <span>Time Off</span>
+      </button>
+    </div>
+
+    <!-- Tab content -->
+    <div id="mob-pf-content" style="min-height:400px"></div>
+
   </div>
 </div>
 
