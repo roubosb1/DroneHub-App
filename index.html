@@ -5379,8 +5379,17 @@ function mobShowProfile(){
       avatarEl.style.background = 'linear-gradient(135deg,#5B8DEF,#A78BFA)';
     }
   }
-  const nameEl = document.getElementById('mob-pf-header-name');
-  if(nameEl) nameEl.textContent = member.name || 'Profile';
+  // Copy DroneHub logo from main header into profile header
+  const mainLogo = document.querySelector('.app-header img');
+  const pfLogoEl = document.getElementById('mob-pf-logo');
+  if(mainLogo && pfLogoEl && !pfLogoEl.src) pfLogoEl.src = mainLogo.src;
+  // Sync notification badge
+  const mainBadge = document.getElementById('notif-badge');
+  const pfBadge = document.getElementById('mob-pf-notif-badge');
+  if(pfBadge && mainBadge){
+    pfBadge.textContent = mainBadge.textContent;
+    pfBadge.style.display = mainBadge.style.display;
+  }
   const pfName = document.getElementById('mob-pf-name');
   if(pfName) pfName.textContent = member.name || '';
   const pfRole = document.getElementById('mob-pf-role');
@@ -28556,48 +28565,59 @@ function initGoogleMaps(){
 <!-- ═══ MOBILE PROFILE PANE (Instagram-style) ═══ -->
 <div id="mob-profile-pane" style="display:none;position:fixed;inset:0;z-index:800;background:var(--navy-card);overflow:hidden;flex-direction:column">
 
-  <!-- Header bar -->
-  <div id="mob-pf-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;background:var(--navy-card);border-bottom:1px solid var(--border);flex-shrink:0">
-    <button onclick="mobHideProfile()" style="background:none;border:none;color:var(--offwhite);cursor:pointer;padding:6px;display:flex;align-items:center">
+  <!-- Header bar: back ← | DroneHub logo | notifications + settings -->
+  <div id="mob-pf-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:52px;background:var(--navy-card);border-bottom:1px solid var(--border);flex-shrink:0">
+    <button onclick="mobHideProfile()" style="background:none;border:none;color:var(--offwhite);cursor:pointer;padding:6px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <span id="mob-pf-header-name" style="font-size:15px;font-weight:800;color:var(--white)">Profile</span>
-    <button onclick="mobPfOpenSettings()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;display:flex;align-items:center">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
+    <!-- DroneHub logo (src populated by JS from main header) -->
+    <img id="mob-pf-logo" src="" alt="DroneHub" style="height:20px;object-fit:contain">
+    <div style="display:flex;align-items:center;gap:6px">
+      <!-- Notification bell (mirrors main header bell) -->
+      <button onclick="toggleNotificationPanel()" style="position:relative;width:34px;height:34px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="mob-pf-notif-badge" style="display:none;position:absolute;top:2px;right:2px;min-width:14px;height:14px;border-radius:7px;background:var(--red);color:#fff;font-size:8px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--navy-card)"></span>
+      </button>
+      <!-- Settings gear -->
+      <button onclick="mobPfOpenSettings()" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;display:flex;align-items:center;-webkit-tap-highlight-color:transparent">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Scrollable body -->
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))">
 
-    <!-- IG-style top section: avatar + stats -->
+    <!-- IG-style top section: avatar LEFT, name+role+stats RIGHT -->
     <div style="padding:20px 16px 0">
-      <div style="display:flex;align-items:center;gap:20px;margin-bottom:14px">
-        <!-- Avatar -->
-        <div id="mob-pf-avatar" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0;border:3px solid var(--border-bright)">?</div>
-        <!-- Stats row -->
-        <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center">
-          <div>
-            <div id="mob-pf-stat-active" style="font-size:18px;font-weight:800;color:var(--blue-bright)">0</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Active</div>
-          </div>
-          <div>
-            <div id="mob-pf-stat-done" style="font-size:18px;font-weight:800;color:var(--green)">0</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Done</div>
-          </div>
-          <div>
-            <div id="mob-pf-stat-hrs" style="font-size:18px;font-weight:800;color:var(--amber)">0</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Hrs</div>
-          </div>
-          <div>
-            <div id="mob-pf-stat-portfolio" style="font-size:18px;font-weight:800;color:#A78BFA">0</div>
-            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Videos</div>
+      <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px">
+        <!-- Avatar (left) -->
+        <div id="mob-pf-avatar" style="width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0;border:3px solid var(--border-bright);overflow:hidden">?</div>
+        <!-- Right column: name, role, stats -->
+        <div style="flex:1;padding-top:6px">
+          <div id="mob-pf-name" style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:2px;line-height:1.2"></div>
+          <div id="mob-pf-role" style="font-size:11px;color:var(--muted);margin-bottom:12px;font-weight:600"></div>
+          <!-- Stats row -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;text-align:center">
+            <div>
+              <div id="mob-pf-stat-active" style="font-size:17px;font-weight:800;color:var(--blue-bright)">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Active</div>
+            </div>
+            <div>
+              <div id="mob-pf-stat-done" style="font-size:17px;font-weight:800;color:var(--green)">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Done</div>
+            </div>
+            <div>
+              <div id="mob-pf-stat-hrs" style="font-size:17px;font-weight:800;color:var(--amber)">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Hrs</div>
+            </div>
+            <div>
+              <div id="mob-pf-stat-portfolio" style="font-size:17px;font-weight:800;color:#A78BFA">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Videos</div>
+            </div>
           </div>
         </div>
       </div>
-      <!-- Name + role -->
-      <div id="mob-pf-name" style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:3px"></div>
-      <div id="mob-pf-role" style="font-size:11px;color:var(--muted);margin-bottom:16px"></div>
     </div>
 
     <!-- Tab bar -->
