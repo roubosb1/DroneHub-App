@@ -988,56 +988,123 @@ button{font-family:var(--font);}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
 @keyframes bellShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(8deg)}}
 
-/* ── Mobile Calendar — Apple-style ── */
-/* Dot indicators for event colours (hidden on desktop) */
-.mob-cal-dots{display:none;gap:3px;justify-content:center;flex-wrap:wrap;min-height:7px;}
-.mob-cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+/* ── Mobile Calendar — Apple Calendar style ── */
+/* Month slide keyframes */
+@keyframes mcSlideInR{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes mcSlideInL{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 
-/* Mobile calendar bottom sheet */
-#mob-cal-sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:850;}
-#mob-cal-sheet{
-  display:none;position:fixed;
-  bottom:calc(64px + env(safe-area-inset-bottom,0px));
-  left:0;right:0;
-  background:var(--navy-card);
-  border-radius:18px 18px 0 0;
-  border-top:1px solid var(--border-bright);
-  z-index:851;
-  max-height:72vh;
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  transform:translateY(100%);
-  transition:transform .32s cubic-bezier(.4,0,.2,1);
-  box-shadow:0 -6px 32px rgba(0,0,0,.5);
-}
-#mob-cal-sheet.mob-cal-sheet-open{transform:translateY(0);}
+/* Dot indicators (shared desktop/mobile — desktop size kept from .cal-cell-badges hide) */
+.mob-cal-dots{display:none;gap:2px;justify-content:center;min-height:5px;}
+.mob-cal-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+/* Desktop: hide mob cal main */
+@media(min-width:769px){#mob-cal-main{display:none!important;}}
 
 @media(max-width:768px){
-  /* ── Calendar pane: compact padding ── */
-  #pane-calendar{padding:8px 10px!important;}
-  /* Hide desktop-only controls */
-  #cal-type-filter-bar,#cal-legend,#cal-day-detail,#cal-gcal-events{display:none!important;}
-  /* Hide right side of controls row (filter dropdown, Add Event, Google Calendar) */
-  #pane-calendar > div:first-child > div:last-child{display:none!important;}
-  /* Hide vacation tracker container */
-  div:has(> #vac-tracker-panel){display:none!important;}
-  /* Compact cells */
-  .cal-cell{
-    min-height:0!important;padding:5px 2px 8px!important;
-    display:flex!important;flex-direction:column!important;
-    align-items:center!important;gap:3px!important;
+  /* ── Full-screen fixed calendar pane (like LouChat) ── */
+  #pane-calendar{
+    position:fixed!important;
+    top:52px!important;
+    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    left:0!important;right:0!important;
+    padding:0!important;overflow:hidden!important;
+    display:none;flex-direction:column!important;
+    height:auto!important;min-height:0!important;
+    background:var(--navy-card)!important;
+    border-radius:0!important;
   }
-  /* Hide event-label badges, show coloured dots */
-  .cal-cell-badges{display:none!important;}
-  .mob-cal-dots{display:flex!important;}
-  /* Selected cell highlight */
-  .cal-cell.mob-cal-selected{background:rgba(91,141,239,.22)!important;}
-  /* Date number sizing in cells */
-  .cal-cell > div:first-child{margin-bottom:0!important;line-height:1.1!important;}
-  /* On mobile never show #mob-cal-sheet on desktop */
-  #mob-cal-sheet,#mob-cal-sheet-overlay{display:none;}
-}
-@media(min-width:769px){
-  #mob-cal-sheet,#mob-cal-sheet-overlay{display:none!important;}
+  #pane-calendar.active{display:flex!important;}
+  /* Hide ALL desktop calendar content; show only mobile shell */
+  #pane-calendar > *:not(#mob-cal-main){display:none!important;}
+  /* ── Mobile calendar shell ── */
+  #mob-cal-main{
+    display:flex!important;flex-direction:column;
+    flex:1;overflow:hidden;background:var(--navy-card);
+  }
+  /* Nav row */
+  #mob-cal-nav{
+    display:flex;align-items:center;
+    padding:10px 16px 6px;flex-shrink:0;gap:2px;
+  }
+  #mob-cal-nav-month{
+    flex:1;font-size:20px;font-weight:700;color:var(--white);
+  }
+  .mc-nav-btn{
+    width:36px;height:36px;border:none;background:none;
+    color:var(--offwhite);font-size:22px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;-webkit-tap-highlight-color:transparent;
+    transition:background .12s;flex-shrink:0;
+  }
+  .mc-nav-btn:active{background:rgba(255,255,255,.1);}
+  #mob-cal-today-btn{
+    padding:4px 11px;border:1px solid var(--border-bright);
+    border-radius:14px;background:transparent;color:var(--offwhite);
+    font-size:12px;font-weight:600;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;
+  }
+  #mob-cal-today-btn:active{background:rgba(255,255,255,.08);}
+  #mob-cal-add-btn{
+    width:32px;height:32px;border:none;background:none;
+    color:var(--blue-bright);font-size:26px;line-height:1;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;padding-bottom:2px;
+  }
+  /* Day-of-week header */
+  #mob-cal-dow{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    padding:0 6px 4px;flex-shrink:0;
+  }
+  #mob-cal-dow span{
+    text-align:center;font-size:11px;font-weight:700;
+    color:var(--muted);padding:2px 0;letter-spacing:.02em;
+  }
+  /* Grid clipping wrapper — overflow hidden to contain slide */
+  #mob-cal-grid-clip{
+    flex-shrink:0;overflow:hidden;position:relative;
+    padding:0 6px 4px;border-bottom:1px solid var(--border);
+  }
+  /* Grid inner */
+  .mc-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+  /* Cells */
+  .mc-cell{
+    display:flex;flex-direction:column;align-items:center;
+    padding:2px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .mc-cell.mc-other{opacity:.28;pointer-events:none;}
+  .mc-num{
+    width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:500;color:var(--offwhite);
+    transition:background .15s,color .15s;
+  }
+  /* Today: solid blue circle */
+  .mc-cell.mc-today .mc-num{
+    background:var(--blue-bright);color:#fff;font-weight:700;
+  }
+  /* Selected (not today): outlined blue circle */
+  .mc-cell.mc-sel:not(.mc-today) .mc-num{
+    background:rgba(91,141,239,.18);color:var(--blue-bright);
+    font-weight:700;outline:1.5px solid var(--blue-bright);
+  }
+  /* Today + selected: glow ring */
+  .mc-cell.mc-today.mc-sel .mc-num{
+    box-shadow:0 0 0 2.5px rgba(91,141,239,.4);
+  }
+  /* Dot row under number */
+  .mc-cell .mob-cal-dots{display:flex!important;margin-top:2px;}
+  /* ── Events section ── */
+  #mob-cal-events-section{
+    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;
+  }
+  #mob-cal-day-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px 8px;flex-shrink:0;
+    position:sticky;top:0;background:var(--navy-card);z-index:2;
+    border-bottom:1px solid var(--border);
+  }
+  #mob-cal-day-title{font-size:13px;font-weight:700;color:var(--white);}
+  #mob-cal-events-body{padding:10px 14px 24px;flex:1;}
 }
 </style>
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
@@ -3291,6 +3358,35 @@ button{font-family:var(--font);}
           <button onclick="calAddGcal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Link ✓</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ MOBILE APPLE CALENDAR (hidden on desktop via CSS) ══ -->
+  <div id="mob-cal-main">
+    <!-- Month navigation row -->
+    <div id="mob-cal-nav">
+      <div id="mob-cal-nav-month"></div>
+      <button id="mob-cal-today-btn" onclick="calToday()">Today</button>
+      <button class="mc-nav-btn" onclick="calNav(-1)">‹</button>
+      <button class="mc-nav-btn" onclick="calNav(1)">›</button>
+      <button id="mob-cal-add-btn" onclick="openCalEventModal()" title="Add event">+</button>
+    </div>
+    <!-- Day-of-week header -->
+    <div id="mob-cal-dow">
+      <span>Sun</span><span>Mon</span><span>Tue</span>
+      <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <!-- Clipping wrapper — overflow:hidden to contain the slide animation -->
+    <div id="mob-cal-grid-clip">
+      <div id="mob-cal-grid" class="mc-grid"></div>
+    </div>
+    <!-- Events for the selected day -->
+    <div id="mob-cal-events-section">
+      <div id="mob-cal-day-header">
+        <div id="mob-cal-day-title"></div>
+        <button onclick="openCalEventModal()" style="padding:4px 12px;border:1px solid var(--blue);border-radius:8px;font-size:11px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-weight:700;flex-shrink:0">+ Add</button>
+      </div>
+      <div id="mob-cal-events-body"></div>
     </div>
   </div>
 </div>
@@ -6547,8 +6643,23 @@ function deleteContractor(key){
 // ─── CALENDAR ────────────────────────────────────────────────────────────────
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 
-function calNav(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
-function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMonth();renderCalendar();}
+let _mcNavDir=0; // direction hint for mobile slide animation (set before renderCalendar)
+let _mobCalSelDate=new Date().toISOString().slice(0,10);
+
+function calNav(dir){
+  calMonth+=dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  else if(calMonth<0){calMonth=11;calYear--;}
+  _mcNavDir=dir;
+  renderCalendar();
+}
+function calToday(){
+  calYear=new Date().getFullYear();
+  calMonth=new Date().getMonth();
+  _mobCalSelDate=new Date().toISOString().slice(0,10);
+  _mcNavDir=0;
+  renderCalendar();
+}
 
 // ── CUSTOM EVENT TYPES ────────────────────────────────────────────────────────
 const CAL_EVENT_TYPES=[
@@ -9012,6 +9123,11 @@ function renderCalendar(){
     html+=`<div class="cal-cell other-month"><span style="font-size:12px;color:var(--border-bright)">${d}</span></div>`;
 
   grid.innerHTML=html;
+  // Sync mobile calendar view (no-op on desktop)
+  if(window.innerWidth<=768 && typeof renderMobCal==='function'){
+    const dir=_mcNavDir||0;_mcNavDir=0;
+    renderMobCal(dir);
+  }
 }
 function showCalDay(dateStr,e){
   if(e) e.stopPropagation();
@@ -9097,6 +9213,179 @@ function mobCalCloseSheet(){
     if(overlay) overlay.style.display='none';
   },320);
   document.querySelectorAll('.cal-cell.mob-cal-selected').forEach(el=>el.classList.remove('mob-cal-selected'));
+}
+
+// ─── MOBILE APPLE-STYLE CALENDAR ─────────────────────────────────────────────
+function _mcBuildJobsByDate(){
+  const jobsByDate={};
+  const showShoots=_calTypeFilters===null||_calTypeFilters.has('shoots');
+  if(showShoots){
+    savedJobs.forEach(j=>{
+      if(!j.date) return;
+      const primary=getJobCreator(j)||'Unknown';
+      if(!jobsByDate[j.date]) jobsByDate[j.date]=[];
+      if(!jobsByDate[j.date].find(e=>e.id===j.id))
+        jobsByDate[j.date].push({...j,_creator:primary,_evtType:'shoot'});
+    });
+    getGcalLinks().forEach(link=>{
+      if(link.enabled===false) return;
+      (link.events||[]).forEach(ev=>{
+        if(!ev.date) return;
+        if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
+        jobsByDate[ev.date].push({_gcal:true,name:ev.title||'GCal event',_creator:link.creatorName,date:ev.date,shootTime:ev.time||'',_evtType:'shoot'});
+      });
+    });
+  }
+  calEventsLoad().forEach(e=>{
+    if(_calTypeFilters!==null&&!_calTypeFilters.has(e.type)) return;
+    const typeDef=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    const start=new Date(e.date+'T12:00:00');
+    const end=new Date((e.endDate||e.date)+'T12:00:00');
+    for(let dt=new Date(start);dt<=end;dt.setDate(dt.getDate()+1)){
+      const dStr=dt.toISOString().slice(0,10);
+      if(!jobsByDate[dStr]) jobsByDate[dStr]=[];
+      jobsByDate[dStr].push({_customEvt:true,id:e.id,name:e.title,_creator:e.memberName,date:dStr,_evtType:e.type,_typeDef:typeDef,_eventId:e.id});
+    }
+  });
+  return jobsByDate;
+}
+
+function _mcBuildGridHtml(jobsByDate){
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const daysInPrev=new Date(calYear,calMonth,0).getDate();
+  const todayStr=new Date().toISOString().slice(0,10);
+  let html='';
+  // Leading blank cells (previous month)
+  for(let i=firstDay-1;i>=0;i--)
+    html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${daysInPrev-i}</span><div class="mob-cal-dots"></div></div>`;
+  // Current month cells
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday=ds===todayStr;
+    const isSel=ds===_mobCalSelDate;
+    const items=jobsByDate[ds]||[];
+    const dots=items.slice(0,3).map(j=>{
+      if(j._customEvt) return `<span class="mob-cal-dot" style="background:${j._typeDef.color}"></span>`;
+      const col=getCreatorColor(j._creator);
+      return `<span class="mob-cal-dot" style="background:${col.border}"></span>`;
+    }).join('');
+    html+=`<div class="mc-cell${isToday?' mc-today':''}${isSel?' mc-sel':''}" onclick="mobCalSelectDay('${ds}')">
+      <span class="mc-num">${d}</span>
+      <div class="mob-cal-dots">${dots}</div>
+    </div>`;
+  }
+  // Trailing blank cells (next month)
+  const total=Math.ceil((firstDay+daysInMonth)/7)*7;
+  for(let d=1;d<=total-firstDay-daysInMonth;d++)
+    html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${d}</span><div class="mob-cal-dots"></div></div>`;
+  return html;
+}
+
+function renderMobCal(dir){
+  if(window.innerWidth>768) return;
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const ml=document.getElementById('mob-cal-nav-month');
+  if(ml) ml.textContent=months[calMonth]+' '+calYear;
+
+  // If selected date is outside current month, reset to today or 1st
+  const curMY=calYear+'-'+String(calMonth+1).padStart(2,'0');
+  if(_mobCalSelDate.slice(0,7)!==curMY){
+    const todayStr=new Date().toISOString().slice(0,10);
+    _mobCalSelDate=todayStr.slice(0,7)===curMY?todayStr:curMY+'-01';
+  }
+
+  const jobsByDate=_mcBuildJobsByDate();
+  const newHtml=_mcBuildGridHtml(jobsByDate);
+  const clip=document.getElementById('mob-cal-grid-clip');
+  if(!clip) return;
+  const oldGrid=document.getElementById('mob-cal-grid');
+
+  if(dir!==0 && oldGrid){
+    // Slide old grid out, new grid in
+    const newGrid=document.createElement('div');
+    newGrid.id='mob-cal-grid';newGrid.className='mc-grid';
+    newGrid.innerHTML=newHtml;
+    newGrid.style.cssText=`position:absolute;top:0;left:${dir>0?'100%':'-100%'};width:100%;`;
+    clip.style.position='relative';
+    clip.appendChild(newGrid);
+    newGrid.getBoundingClientRect(); // force reflow
+    const dur='0.32s cubic-bezier(.4,0,.2,1)';
+    oldGrid.style.transition=`transform ${dur}`;
+    newGrid.style.transition=`transform ${dur}`;
+    requestAnimationFrame(()=>{
+      oldGrid.style.transform=`translateX(${dir>0?'-100%':'100%'})`;
+      newGrid.style.transform='translateX(0)';
+    });
+    setTimeout(()=>{
+      if(oldGrid.parentNode) oldGrid.remove();
+      newGrid.style.cssText='';
+      clip.style.position='';
+    },330);
+  } else if(oldGrid){
+    oldGrid.innerHTML=newHtml;
+  } else {
+    const g=document.createElement('div');
+    g.id='mob-cal-grid';g.className='mc-grid';
+    g.innerHTML=newHtml;clip.appendChild(g);
+  }
+  // Update the events list for the currently selected date
+  _mcRenderEvents(jobsByDate);
+}
+
+function mobCalSelectDay(dateStr){
+  _mobCalSelDate=dateStr;
+  // Update selection highlights in grid
+  document.querySelectorAll('#mob-cal-grid-clip .mc-cell').forEach(el=>el.classList.remove('mc-sel'));
+  const allCells=document.querySelectorAll('#mob-cal-grid-clip .mc-cell:not(.mc-other)');
+  const d=parseInt(dateStr.slice(8))-1;
+  if(allCells[d]) allCells[d].classList.add('mc-sel');
+  // Update events
+  _mcRenderEvents(_mcBuildJobsByDate());
+}
+
+function _mcRenderEvents(jobsByDate){
+  const d=new Date(_mobCalSelDate+'T12:00:00');
+  const titleEl=document.getElementById('mob-cal-day-title');
+  if(titleEl) titleEl.textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const body=document.getElementById('mob-cal-events-body');
+  if(!body) return;
+  const dateStr=_mobCalSelDate;
+  const dayJobs=savedJobs.filter(j=>j.date===dateStr);
+  const dayEvts=calEventsLoad().filter(ev=>{
+    return dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date);
+  });
+  let html='';
+  dayEvts.forEach(ev=>{
+    const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    html+=`<div style="padding:10px 12px;border:1px solid ${td.color}55;border-left:4px solid ${td.color};border-radius:10px;margin-bottom:8px;background:${td.bg}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:700;color:var(--white)">${td.icon} ${ev.title}</span>
+        <button onclick="deleteCalEvent('${ev.id}');mobCalSelectDay('${dateStr}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px">🗑</button>
+      </div>
+      ${ev.memberName?`<div style="font-size:11px;color:${td.color};font-weight:600">👤 ${ev.memberName}</div>`:''}
+      ${ev.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${ev.notes}</div>`:''}
+    </div>`;
+  });
+  dayJobs.forEach(j=>{
+    const creator=getJobCreator(j);
+    const col=getCreatorColor(creator);
+    html+=`<div style="padding:10px 12px;border:1px solid ${col.border};border-radius:10px;margin-bottom:8px;background:${col.bg}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:600;color:var(--white);flex:1">📸 ${j.name}</span>
+        <span class="status-badge status-${j.status||'quoted'}">${j.status||'quoted'}</span>
+      </div>
+      ${j.shootTime?`<div style="font-size:12px;color:var(--amber);margin-bottom:2px">🕐 ${j.shootTime}${j.duration?' ('+j.duration+' hr)':''}</div>`:''}
+      ${creator?`<div style="font-size:11px;color:${col.text};font-weight:600;margin-bottom:2px">👤 ${creator}</div>`:''}
+      <div style="font-size:11px;color:var(--muted)">${j.address||''}</div>
+      ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id})" style="display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:4px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;cursor:pointer;font-weight:600">Invoice</button>`:''}
+    </div>`;
+  });
+  if(!html) html=`<div style="padding:28px 0;text-align:center;color:var(--muted);font-size:13px">No events · <button onclick="openCalEventModal('${dateStr}')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:13px;padding:0;font-weight:600">+ add one</button></div>`;
+  // Fade in
+  body.style.opacity='0';
+  body.innerHTML=html;
+  requestAnimationFrame(()=>{ body.style.transition='opacity .18s'; body.style.opacity='1'; });
 }
 
 // ─── CONTRACTOR SETTINGS ─────────────────────────────────────────────────────
@@ -29021,26 +29310,7 @@ function initGoogleMaps(){
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     MOBILE CALENDAR DAY DETAIL — bottom sheet (Apple Calendar style)
-     ══════════════════════════════════════════════════════════════ -->
-<div id="mob-cal-sheet-overlay" onclick="mobCalCloseSheet()"></div>
-<div id="mob-cal-sheet">
-  <!-- Drag handle -->
-  <div style="display:flex;justify-content:center;padding:10px 0 2px">
-    <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright)"></div>
-  </div>
-  <!-- Header: date title + Add button + close -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 12px">
-    <div id="mob-cal-sheet-title" style="font-size:15px;font-weight:700;color:var(--white);flex:1;min-width:0;margin-right:10px"></div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-      <button onclick="openCalEventModal()" style="padding:5px 13px;border:1px solid var(--blue);border-radius:8px;font-size:11px;background:rgba(91,141,239,.14);color:var(--blue-bright);cursor:pointer;font-weight:700">+ Add</button>
-      <button onclick="mobCalCloseSheet()" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;border-radius:50%;background:var(--navy-lift);color:var(--muted);cursor:pointer;font-size:16px;line-height:1">✕</button>
-    </div>
-  </div>
-  <!-- Events body -->
-  <div id="mob-cal-sheet-body" style="padding:0 16px 28px;"></div>
-</div>
+<!-- mob-cal-sheet removed — replaced by inline Apple-style split-screen calendar -->
 
 </body>
 </html>
