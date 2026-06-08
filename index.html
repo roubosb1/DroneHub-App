@@ -785,6 +785,104 @@ button{font-family:var(--font);}
   /* DM list items — bigger tap targets */
   .lc-dm-item{padding:12px 16px!important;min-height:64px!important;}
 
+  /* ── IMMERSIVE CHAT MODE: full-screen, hides top bar + bottom nav ── */
+  body.lc-chat-full .app-header{display:none!important;}
+  body.lc-chat-full #mobile-bottom-nav{display:none!important;}
+  body.lc-chat-full #lc-flex-container{
+    top:0!important;
+    bottom:0!important;
+  }
+
+  /* ── Mobile chat header: IG-style ── */
+  body.lc-chat-full #lc-main > div:first-child{
+    height:58px!important;
+    padding:0 8px 0 4px!important;
+    display:flex!important;align-items:center!important;
+    justify-content:space-between!important;
+    border-bottom:1px solid var(--border)!important;
+    flex-shrink:0!important;
+    background:var(--navy-card)!important;
+  }
+  body.lc-chat-full #lc-chat-header{gap:4px!important;}
+  body.lc-chat-full #lc-mob-back-btn{
+    padding:6px 6px 6px 2px!important;
+    color:var(--blue-bright)!important;
+  }
+  body.lc-chat-full #lc-channel-icon{
+    width:34px!important;height:34px!important;border-radius:50%!important;
+    background:var(--navy-lift)!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    font-size:16px!important;flex-shrink:0!important;
+  }
+  body.lc-chat-full #lc-channel-title{font-size:15px!important;font-weight:700!important;}
+  body.lc-chat-full #lc-channel-desc{font-size:11px!important;color:var(--muted)!important;}
+  /* Hide desktop action buttons in chat header */
+  body.lc-chat-full #lc-channel-actions{display:none!important;}
+  /* Mobile video call button */
+  #lc-mob-vc-btn{display:none;}
+  body.lc-chat-full #lc-mob-vc-btn{
+    display:flex!important;align-items:center;justify-content:center;
+    width:38px;height:38px;border-radius:50%;border:none;
+    background:rgba(91,141,239,.12);color:var(--blue-bright);
+    cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+    margin-left:auto;
+  }
+
+  /* ── Hide desktop input area on mobile, show IG bar ── */
+  body.lc-chat-full #lc-input-area{display:none!important;}
+  /* Always hide IG bar normally — only show in chat-full mode */
+  #lc-mob-ig-bar{display:none!important;}
+  body.lc-chat-full #lc-mob-ig-bar{
+    display:flex!important;align-items:center;gap:8px;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));
+    border-top:1px solid var(--border);
+    background:var(--navy-card);flex-shrink:0;
+  }
+  /* Camera button */
+  .lc-ig-cam{
+    width:40px;height:40px;border-radius:50%;border:2px solid var(--border-bright);
+    background:transparent;color:var(--offwhite);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+    transition:border-color .15s,background .15s;
+  }
+  .lc-ig-cam:active{background:rgba(255,255,255,.07);}
+  /* Pill input */
+  .lc-ig-pill{
+    flex:1;min-width:0;
+    background:var(--navy-lift);border:1px solid var(--border-bright);
+    border-radius:24px;padding:8px 14px;
+    display:flex;align-items:center;
+  }
+  .lc-ig-pill textarea{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--white);font-size:15px!important;font-family:var(--font);
+    resize:none;line-height:1.4;max-height:100px;
+    -webkit-appearance:none;
+  }
+  .lc-ig-pill textarea::placeholder{color:var(--muted);}
+  /* Right icons row */
+  .lc-ig-right{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+  .lc-ig-right button{
+    width:38px;height:38px;border-radius:50%;border:none;
+    background:transparent;color:var(--offwhite);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:background .12s;
+  }
+  .lc-ig-right button:active{background:rgba(255,255,255,.08);}
+  /* Send button */
+  .lc-ig-send{
+    width:38px;height:38px;border-radius:50%;border:none;
+    background:var(--blue);
+    display:none;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;
+    transition:transform .1s,opacity .15s;
+  }
+  .lc-ig-send:active{transform:scale(.92);}
+  /* Desktop hint line hidden on mobile */
+  body.lc-chat-full #lc-input-area > div:last-child{display:none!important;}
+
   /* ── Finance chart container ── */
   #finance-chart{max-height:200px;}
 
@@ -2733,6 +2831,10 @@ button{font-family:var(--font);}
             <div style="font-size:11px;color:var(--muted)" id="lc-channel-desc">Choose a channel from the sidebar</div>
           </div>
         </div>
+        <!-- Mobile-only video call button (shown in immersive mode) -->
+        <button id="lc-mob-vc-btn" onclick="lcStartGoogleMeet()" aria-label="Video call">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </button>
         <div id="lc-channel-actions" style="display:none;gap:8px;align-items:center">
           <button onclick="lcOpenMembersPanel()" id="lc-members-btn" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -2855,6 +2957,36 @@ button{font-family:var(--font);}
           <span style="color:rgba(168,180,208,.4)">|</span>
           <span>📎 Drag & drop files here to attach</span>
         </div>
+      </div>
+
+      <!-- ── MOBILE INSTAGRAM-STYLE INPUT BAR (hidden on desktop) ──── -->
+      <div id="lc-mob-ig-bar">
+        <!-- Camera button -->
+        <button class="lc-ig-cam" onclick="document.getElementById('lc-file-camera').click()" aria-label="Camera">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+        <!-- Pill input wrap -->
+        <div class="lc-ig-pill">
+          <textarea id="lc-ig-input" placeholder="Message…" rows="1"
+            oninput="lcIgInputChange(this)"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();lcIgSend();}"></textarea>
+        </div>
+        <!-- Right icons (visible when not typing) -->
+        <div class="lc-ig-right" id="lc-ig-right">
+          <button onclick="document.getElementById('lc-file-image').click()" aria-label="Photo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+          <button onclick="lcIgToggleEmoji()" aria-label="Emoji">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke-width="2.5"/><line x1="15" y1="9" x2="15.01" y2="9" stroke-width="2.5"/></svg>
+          </button>
+          <button aria-label="Voice">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+        <!-- Send button (visible when typing) -->
+        <button class="lc-ig-send" id="lc-ig-send" onclick="lcIgSend()" aria-label="Send">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
       </div>
 
       <!-- ── VIDEO CALL VIEW ─────────────────────────────────────────── -->
@@ -5994,7 +6126,10 @@ function showPane(id,ev){
     } else {
       lcRenderMessages();
       // On mobile, if we have an active channel make sure the chat panel is visible
-      if(window.innerWidth<=768) document.getElementById('lc-flex-container')?.classList.add('lc-mob-chat-open');
+      if(window.innerWidth<=768){
+        document.getElementById('lc-flex-container')?.classList.add('lc-mob-chat-open');
+        document.body.classList.add('lc-chat-full');
+      }
     }
     // Check for unread @mentions on each visit (async, non-blocking)
     lcCheckMentions().catch(()=>{});
@@ -16911,15 +17046,61 @@ function renderLouChat(){
 
 function lcMobBack(){
   document.getElementById('lc-flex-container')?.classList.remove('lc-mob-chat-open');
+  document.body.classList.remove('lc-chat-full');
+}
+
+/* ── Instagram-style mobile input bar ──────────────────────── */
+function lcIgInputChange(el){
+  // Auto-grow textarea
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,100)+'px';
+  const hasText=el.value.length>0;
+  const rightEl=document.getElementById('lc-ig-right');
+  const sendEl=document.getElementById('lc-ig-send');
+  const camEl=document.querySelector('.lc-ig-cam');
+  if(rightEl) rightEl.style.display=hasText?'none':'flex';
+  if(sendEl)  sendEl.style.display=hasText?'flex':'none';
+  if(camEl)   camEl.style.display=hasText?'none':'flex';
+}
+
+function lcIgSend(){
+  const igEl=document.getElementById('lc-ig-input');
+  const mainEl=document.getElementById('lc-msg-input');
+  if(!igEl||!igEl.value.trim()) return;
+  // Copy to main input then call the regular send
+  mainEl.value=igEl.value;
+  igEl.value='';
+  igEl.style.height='auto';
+  lcIgInputChange(igEl); // reset icons
+  lcSendMessage();
+}
+
+function lcIgToggleEmoji(){
+  // Reuse the existing emoji picker (positioned inside lc-input-area)
+  // Temporarily show lc-input-area just to show the emoji picker, then hide again
+  lcToggleEmojiPicker();
+  const ia=document.getElementById('lc-input-area');
+  if(ia){
+    const ep=document.getElementById('lc-emoji-picker');
+    if(ep&&ep.style.display!=='none'){
+      // Show input area so emoji picker is visible, but hide input row
+      ia.style.display='block';
+      const inputRow=ia.querySelector('div[style*="align-items:flex-end"]');
+      if(inputRow) inputRow.style.display='none';
+    } else {
+      ia.style.display='none';
+    }
+  }
 }
 
 function lcOpenChannel(channelId){
   const prevChannel=lcActiveChannel;
   lcActiveChannel=channelId;
   markLcRead(channelId);
-  // Mobile: slide to chat panel
+  // Mobile: slide to chat panel + enter immersive fullscreen mode
   if(window.innerWidth<=768){
     document.getElementById('lc-flex-container')?.classList.add('lc-mob-chat-open');
+    document.body.classList.add('lc-chat-full');
   }
 
   // Always restore normal chat layout when opening a real channel
