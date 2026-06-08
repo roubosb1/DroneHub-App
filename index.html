@@ -779,7 +779,7 @@ button{font-family:var(--font);}
 /* ── Mobile Profile Pane ── */
 .mob-pf-tab{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:10px 4px;border:none;background:transparent;
+  padding:8px 4px;border:none;background:transparent;
   color:var(--muted);font-size:9px;font-family:var(--font);font-weight:700;
   cursor:pointer;text-transform:uppercase;letter-spacing:.05em;
   border-bottom:2px solid transparent;transition:color .15s,border-color .15s;
@@ -28589,38 +28589,38 @@ function initGoogleMaps(){
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))">
 
     <!-- IG-style top section: avatar LEFT, name+role+stats RIGHT -->
-    <div style="padding:20px 16px 0">
-      <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px">
+    <div style="padding:12px 16px 0">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:10px">
         <!-- Avatar (left) -->
-        <div id="mob-pf-avatar" style="width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0;border:3px solid var(--border-bright);overflow:hidden">?</div>
-        <!-- Right column: name, role, stats -->
-        <div style="flex:1;padding-top:6px">
-          <div id="mob-pf-name" style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:2px;line-height:1.2"></div>
-          <div id="mob-pf-role" style="font-size:11px;color:var(--muted);margin-bottom:12px;font-weight:600"></div>
-          <!-- Stats row -->
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;text-align:center">
-            <div>
-              <div id="mob-pf-stat-active" style="font-size:17px;font-weight:800;color:var(--blue-bright)">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Active</div>
+        <div id="mob-pf-avatar" style="width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;flex-shrink:0;border:3px solid var(--border-bright);overflow:hidden">?</div>
+        <!-- Right column: name, role, stats — all tight to top -->
+        <div style="flex:1;padding-top:2px">
+          <div id="mob-pf-name" style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:1px;line-height:1.2"></div>
+          <div id="mob-pf-role" style="font-size:10px;color:var(--muted);margin-bottom:8px;font-weight:600"></div>
+          <!-- Stats row — compact flex, not stretched grid -->
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="text-align:center">
+              <div id="mob-pf-stat-active" style="font-size:15px;font-weight:800;color:var(--blue-bright);line-height:1.1">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Active</div>
             </div>
-            <div>
-              <div id="mob-pf-stat-done" style="font-size:17px;font-weight:800;color:var(--green)">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Done</div>
+            <div style="text-align:center">
+              <div id="mob-pf-stat-done" style="font-size:15px;font-weight:800;color:var(--green);line-height:1.1">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Done</div>
             </div>
-            <div>
-              <div id="mob-pf-stat-hrs" style="font-size:17px;font-weight:800;color:var(--amber)">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Hrs</div>
+            <div style="text-align:center">
+              <div id="mob-pf-stat-hrs" style="font-size:15px;font-weight:800;color:var(--amber);line-height:1.1">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Hrs</div>
             </div>
-            <div>
-              <div id="mob-pf-stat-portfolio" style="font-size:17px;font-weight:800;color:#A78BFA">0</div>
-              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Videos</div>
+            <div style="text-align:center">
+              <div id="mob-pf-stat-portfolio" style="font-size:15px;font-weight:800;color:#A78BFA;line-height:1.1">0</div>
+              <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Videos</div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tab bar -->
+    <!-- Tab bar — pulled up tight with minimal gap -->
     <div style="display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--navy-card);position:sticky;top:0;z-index:10">
       <button id="mob-pftab-overview"  class="mob-pf-tab active"  onclick="mobPfSwitchTab('overview')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
