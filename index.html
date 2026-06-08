@@ -747,6 +747,21 @@ button{font-family:var(--font);}
   /* Prevent double-tap zoom on buttons/interactive elements */
   button,a,[onclick]{touch-action:manipulation;}
 
+  /* ── Date / time inputs: consistent height + appearance on iOS ── */
+  input[type=date],input[type=time]{
+    -webkit-appearance:none!important;
+    appearance:none!important;
+    min-height:44px!important;
+    line-height:1.4!important;
+    display:block!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+  }
+  /* ── Job form: 4-col date grid → 2-col on mobile ── */
+  .job-form-date-grid{
+    grid-template-columns:1fr 1fr!important;
+  }
+
   /* ── Tables: horizontal scroll ── */
   .tier-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
 
@@ -2167,7 +2182,7 @@ button{font-family:var(--font);}
         <option value="other_us">🇺🇸 Other US</option>
       </select>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+    <div class="job-form-date-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Shoot date</label>
         <input type="date" id="job-date-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
@@ -6016,11 +6031,11 @@ function mobPfRenderTimeOff(member){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div>
         <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Start Date</div>
-        <input type="date" id="mob-toff-start" style="width:100%;padding:9px 10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+        <input type="date" id="mob-toff-start" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:9px 10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
       </div>
       <div>
         <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">End Date</div>
-        <input type="date" id="mob-toff-end" style="width:100%;padding:9px 10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+        <input type="date" id="mob-toff-end" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:9px 10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -7423,11 +7438,11 @@ function tpRenderTimeOff(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Start Date</div>
-          <input type="date" id="tp-toff-start" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+          <input type="date" id="tp-toff-start" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
         </div>
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">End Date</div>
-          <input type="date" id="tp-toff-end" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+          <input type="date" id="tp-toff-end" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
