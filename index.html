@@ -987,6 +987,58 @@ button{font-family:var(--font);}
 .dh-toast-close{flex-shrink:0;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;align-self:flex-start}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
 @keyframes bellShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(8deg)}}
+
+/* ── Mobile Calendar — Apple-style ── */
+/* Dot indicators for event colours (hidden on desktop) */
+.mob-cal-dots{display:none;gap:3px;justify-content:center;flex-wrap:wrap;min-height:7px;}
+.mob-cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* Mobile calendar bottom sheet */
+#mob-cal-sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:850;}
+#mob-cal-sheet{
+  display:none;position:fixed;
+  bottom:calc(64px + env(safe-area-inset-bottom,0px));
+  left:0;right:0;
+  background:var(--navy-card);
+  border-radius:18px 18px 0 0;
+  border-top:1px solid var(--border-bright);
+  z-index:851;
+  max-height:72vh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 -6px 32px rgba(0,0,0,.5);
+}
+#mob-cal-sheet.mob-cal-sheet-open{transform:translateY(0);}
+
+@media(max-width:768px){
+  /* ── Calendar pane: compact padding ── */
+  #pane-calendar{padding:8px 10px!important;}
+  /* Hide desktop-only controls */
+  #cal-type-filter-bar,#cal-legend,#cal-day-detail,#cal-gcal-events{display:none!important;}
+  /* Hide right side of controls row (filter dropdown, Add Event, Google Calendar) */
+  #pane-calendar > div:first-child > div:last-child{display:none!important;}
+  /* Hide vacation tracker container */
+  div:has(> #vac-tracker-panel){display:none!important;}
+  /* Compact cells */
+  .cal-cell{
+    min-height:0!important;padding:5px 2px 8px!important;
+    display:flex!important;flex-direction:column!important;
+    align-items:center!important;gap:3px!important;
+  }
+  /* Hide event-label badges, show coloured dots */
+  .cal-cell-badges{display:none!important;}
+  .mob-cal-dots{display:flex!important;}
+  /* Selected cell highlight */
+  .cal-cell.mob-cal-selected{background:rgba(91,141,239,.22)!important;}
+  /* Date number sizing in cells */
+  .cal-cell > div:first-child{margin-bottom:0!important;line-height:1.1!important;}
+  /* On mobile never show #mob-cal-sheet on desktop */
+  #mob-cal-sheet,#mob-cal-sheet-overlay{display:none;}
+}
+@media(min-width:769px){
+  #mob-cal-sheet,#mob-cal-sheet-overlay{display:none!important;}
+}
 </style>
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -8937,9 +8989,16 @@ function renderCalendar(){
       </div>`;
     }).join('');
     const more=dayItems.length>4?`<div style="font-size:9px;color:var(--muted);padding:1px 4px">+${dayItems.length-4} more</div>`:'';
+    // Mobile colour dots (one per event, max 5)
+    const dots=dayItems.slice(0,5).map(j=>{
+      if(j._customEvt) return `<span class="mob-cal-dot" style="background:${j._typeDef.color}"></span>`;
+      const col=getCreatorColor(j._creator);
+      return `<span class="mob-cal-dot" style="background:${col.border}"></span>`;
+    }).join('');
     html+=`<div class="cal-cell${isToday?' today':''}" onclick="showCalDay('${dateStr}',event)">
       <div style="font-size:${isToday?'17':'14'}px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};margin-bottom:8px;line-height:1">${d}${isToday?'<span style="font-size:9px;font-weight:700;color:var(--blue-bright);padding:1px 5px;border-radius:5px;background:rgba(91,141,239,.15);margin-left:4px">TODAY</span>':''}</div>
-      ${badges}${more}
+      <div class="cal-cell-badges">${badges}${more}</div>
+      <div class="mob-cal-dots">${dots}</div>
     </div>`;
   }
   const total=Math.ceil((firstDay+daysInMonth)/7)*7;
@@ -8955,11 +9014,7 @@ function showCalDay(dateStr,e){
     const s=ev.date, end=ev.endDate||ev.date;
     return dateStr>=s&&dateStr<=end;
   });
-  const panel=document.getElementById('cal-day-detail');
-  const title=document.getElementById('cal-day-title');
-  const jobsEl=document.getElementById('cal-day-jobs');
   const d=new Date(dateStr+'T12:00:00');
-  title.textContent=d.toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   let html='';
   // Custom events first
   dayCustomEvts.forEach(ev=>{
@@ -8998,9 +9053,44 @@ function showCalDay(dateStr,e){
       </div>`;
     }).join('');
   }
-  if(!html) html='<div style="font-size:12px;color:#7A8AAA">Nothing scheduled — <button onclick="openCalEventModal(\''+dateStr+'\')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;padding:0;font-weight:600">+ add event</button></div>';
-  jobsEl.innerHTML=html;
-  panel.style.display='block';
+  if(!html) html=`<div style="padding:24px 0;text-align:center;color:var(--muted);font-size:13px">Nothing scheduled — <button onclick="openCalEventModal('${dateStr}')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:13px;padding:0;font-weight:600">+ add event</button></div>`;
+
+  if(window.innerWidth<=768){
+    // ── Mobile: slide-up bottom sheet ──
+    const sheet=document.getElementById('mob-cal-sheet');
+    const overlay=document.getElementById('mob-cal-sheet-overlay');
+    const titleEl=document.getElementById('mob-cal-sheet-title');
+    const bodyEl=document.getElementById('mob-cal-sheet-body');
+    if(!sheet) return;
+    // Highlight selected cell
+    document.querySelectorAll('.cal-cell.mob-cal-selected').forEach(el=>el.classList.remove('mob-cal-selected'));
+    const cellEl=e&&e.currentTarget?e.currentTarget:(document.querySelector(`.cal-cell[onclick*="'${dateStr}'"]`));
+    if(cellEl) cellEl.classList.add('mob-cal-selected');
+    titleEl.textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+    bodyEl.innerHTML=html;
+    overlay.style.display='block';
+    sheet.style.display='block';
+    // Double rAF so display:block is painted before the transition fires
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ sheet.classList.add('mob-cal-sheet-open'); }));
+  } else {
+    // ── Desktop: existing inline panel ──
+    const panel=document.getElementById('cal-day-detail');
+    const title=document.getElementById('cal-day-title');
+    const jobsEl=document.getElementById('cal-day-jobs');
+    title.textContent=d.toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    jobsEl.innerHTML=html;
+    panel.style.display='block';
+  }
+}
+function mobCalCloseSheet(){
+  const sheet=document.getElementById('mob-cal-sheet');
+  const overlay=document.getElementById('mob-cal-sheet-overlay');
+  if(sheet) sheet.classList.remove('mob-cal-sheet-open');
+  setTimeout(()=>{
+    if(sheet) sheet.style.display='none';
+    if(overlay) overlay.style.display='none';
+  },320);
+  document.querySelectorAll('.cal-cell.mob-cal-selected').forEach(el=>el.classList.remove('mob-cal-selected'));
 }
 
 // ─── CONTRACTOR SETTINGS ─────────────────────────────────────────────────────
@@ -28907,6 +28997,27 @@ function initGoogleMaps(){
 
     </div>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MOBILE CALENDAR DAY DETAIL — bottom sheet (Apple Calendar style)
+     ══════════════════════════════════════════════════════════════ -->
+<div id="mob-cal-sheet-overlay" onclick="mobCalCloseSheet()"></div>
+<div id="mob-cal-sheet">
+  <!-- Drag handle -->
+  <div style="display:flex;justify-content:center;padding:10px 0 2px">
+    <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright)"></div>
+  </div>
+  <!-- Header: date title + Add button + close -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 12px">
+    <div id="mob-cal-sheet-title" style="font-size:15px;font-weight:700;color:var(--white);flex:1;min-width:0;margin-right:10px"></div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <button onclick="openCalEventModal()" style="padding:5px 13px;border:1px solid var(--blue);border-radius:8px;font-size:11px;background:rgba(91,141,239,.14);color:var(--blue-bright);cursor:pointer;font-weight:700">+ Add</button>
+      <button onclick="mobCalCloseSheet()" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;border-radius:50%;background:var(--navy-lift);color:var(--muted);cursor:pointer;font-size:16px;line-height:1">✕</button>
+    </div>
+  </div>
+  <!-- Events body -->
+  <div id="mob-cal-sheet-body" style="padding:0 16px 28px;"></div>
 </div>
 
 </body>
