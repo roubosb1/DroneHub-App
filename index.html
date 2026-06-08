@@ -672,20 +672,20 @@ button{font-family:var(--font);}
    ───────────────────────────────────────────────────────────────────────────── */
 @media(max-width:768px){
 
-  /* ── Header ── */
-  .app-header{height:52px;padding:0 12px;gap:8px;overflow:hidden;}
-  .app-header img{height:20px;flex-shrink:0;}
+  /* ── Header — fixed 52px, logo 20px, only bell + hamburger visible ── */
+  .app-header{height:52px;min-height:52px;max-height:52px;padding:0 12px;gap:8px;overflow:hidden;flex-wrap:nowrap;}
+  .app-header img{height:20px;flex-shrink:0;max-height:20px;}
   #mob-hamburger-btn{display:flex;}
   .header-sub,.header-divider{display:none;}
-  /* On mobile: hide Client Portal, user name text, and sign-out from header
-     (sign-out moves to More drawer) */
+  /* Hide everything in header-right except notification bell + hamburger */
   #header-client-portal-btn{display:none!important;}
   #header-my-profile-btn{display:none!important;}
   #app-user-display{display:none!important;}
   #header-signout-btn{display:none!important;}
-  /* Show just a compact avatar initial in header */
-  #header-right{gap:8px;}
-  #header-user-wrap{gap:6px;}
+  #header-platform-btn{display:none!important;}
+  /* Tighten header-right so it doesn't push width */
+  #header-right{gap:4px;flex-shrink:0;}
+  #header-user-wrap{gap:4px;}
 
   /* ── Nav ── */
   .tabs{display:none;}
