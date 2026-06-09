@@ -620,22 +620,25 @@ button{font-family:var(--font);}
    MOBILE BOTTOM NAV — always in DOM, shown/hidden by media query
    ───────────────────────────────────────────────────────────────────────────── */
 #mobile-bottom-nav{
-  display:none;position:fixed;bottom:0;left:0;right:0;
-  /* 52px compact icon-only nav + safe area for iPhone home bar */
-  height:calc(52px + env(safe-area-inset-bottom,0px));
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  background:rgba(10,13,24,.92);
-  -webkit-backdrop-filter:blur(24px) saturate(1.8);
-  backdrop-filter:blur(24px) saturate(1.8);
-  border-top:1px solid rgba(255,255,255,.07);
+  display:none;
+  position:fixed;
+  /* floating pill — sits above bottom edge with side margins */
+  bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  left:16px;right:16px;
+  height:56px;
+  border-radius:24px;
+  background:rgba(12,15,26,.88);
+  -webkit-backdrop-filter:blur(28px) saturate(2);
+  backdrop-filter:blur(28px) saturate(2);
+  border:1px solid rgba(255,255,255,.08);
   z-index:900;align-items:stretch;
-  box-shadow:0 -1px 0 rgba(255,255,255,.04), 0 -8px 32px rgba(0,0,0,.5);
-  /* scroll-hide slide transition */
-  transition:transform .32s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 8px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  transition:transform .32s cubic-bezier(.4,0,.2,1), opacity .32s ease;
 }
-/* When scrolling down — hides nav off-screen */
+/* Slide down + fade when scroll hides it */
 #mobile-bottom-nav.nav-hidden{
-  transform:translateY(100%);
+  transform:translateY(calc(100% + 14px + env(safe-area-inset-bottom,0px)));
+  opacity:0;
 }
 .mob-nav-btn{
   flex:1;display:flex;align-items:center;justify-content:center;
@@ -649,10 +652,12 @@ button{font-family:var(--font);}
 .mob-nav-btn.active{color:rgba(255,255,255,.95);}
 .mob-nav-btn.active svg{stroke:rgba(255,255,255,.95);}
 .mob-nav-btn.active::after{
-  content:'';position:absolute;bottom:5px;left:50%;
+  content:'';position:absolute;bottom:6px;left:50%;
   transform:translateX(-50%);width:4px;height:4px;
-  border-radius:50%;background:rgba(255,255,255,.9);
+  border-radius:50%;background:rgba(255,255,255,.85);
 }
+/* No dot for + (it's an action, not a destination) */
+#mobnav-plus::after{display:none!important;}
 /* Center logo button */
 #mobnav-home{flex:1.2;}
 #mobnav-home img{
@@ -672,7 +677,7 @@ button{font-family:var(--font);}
 }
 #mobile-more-drawer{
   position:fixed;left:0;right:0;
-  bottom:calc(52px + env(safe-area-inset-bottom,0px));
+  bottom:calc(66px + env(safe-area-inset-bottom,0px));
   background:var(--navy-card);border:1px solid var(--border-bright);
   border-radius:20px 20px 0 0;z-index:601;padding:16px 16px 20px;
   transform:translateY(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);
@@ -795,7 +800,7 @@ button{font-family:var(--font);}
   #lc-flex-container{
     position:fixed!important;
     top:52px!important;
-    bottom:calc(52px + env(safe-area-inset-bottom,0px))!important;
+    bottom:calc(66px + env(safe-area-inset-bottom,0px))!important;
     left:0!important;right:0!important;
     height:auto!important;min-height:0!important;
     border:none!important;border-radius:0!important;
@@ -979,7 +984,7 @@ button{font-family:var(--font);}
   /* ── Mobile Tracker: full-screen pane like calendar ── */
   #pane-tracker{
     position:fixed!important;top:52px!important;
-    bottom:calc(52px + env(safe-area-inset-bottom,0px))!important;
+    bottom:calc(66px + env(safe-area-inset-bottom,0px))!important;
     left:0!important;right:0!important;padding:0!important;
     overflow:hidden!important;display:none;flex-direction:column!important;
     height:auto!important;min-height:0!important;
@@ -1346,7 +1351,7 @@ button{font-family:var(--font);}
   /* Full-screen fixed pane */
   #pane-calendar{
     position:fixed!important;top:52px!important;
-    bottom:calc(52px + env(safe-area-inset-bottom,0px))!important;
+    bottom:calc(66px + env(safe-area-inset-bottom,0px))!important;
     left:0!important;right:0!important;padding:0!important;
     overflow:hidden!important;display:none;flex-direction:column!important;
     height:auto!important;min-height:0!important;
@@ -10058,7 +10063,7 @@ function _mcOpenDetailSheet(title, bodyHtml, accentColor){
     ov.onclick=mcCloseEventDetail;
     sheet=document.createElement('div');
     sheet.id='mc-event-detail-sheet';
-    sheet.style.cssText='position:fixed;bottom:calc(52px + env(safe-area-inset-bottom,0px));left:0;right:0;background:var(--navy-card);border-radius:18px 18px 0 0;border-top:1px solid var(--border-bright);z-index:2101;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -6px 32px rgba(0,0,0,.5);padding:0 18px 24px;';
+    sheet.style.cssText='position:fixed;bottom:calc(66px + env(safe-area-inset-bottom,0px));left:0;right:0;background:var(--navy-card);border-radius:18px 18px 0 0;border-top:1px solid var(--border-bright);z-index:2101;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -6px 32px rgba(0,0,0,.5);padding:0 18px 24px;';
     document.body.appendChild(ov);
     document.body.appendChild(sheet);
   }
@@ -30169,7 +30174,7 @@ function initGoogleMaps(){
   </div>
 
   <!-- Scrollable body -->
-  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(52px + env(safe-area-inset-bottom,0px))">
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))">
 
     <!-- IG-style top section: avatar LEFT, name+role+stats RIGHT -->
     <div style="padding:12px 16px 0">
