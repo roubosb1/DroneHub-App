@@ -621,32 +621,58 @@ button{font-family:var(--font);}
    ───────────────────────────────────────────────────────────────────────────── */
 #mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
-  /* 64px nav + safe area for iPhone home bar */
-  height:calc(64px + env(safe-area-inset-bottom,0px));
+  /* 52px compact icon-only nav + safe area for iPhone home bar */
+  height:calc(52px + env(safe-area-inset-bottom,0px));
   padding-bottom:env(safe-area-inset-bottom,0px);
-  background:var(--navy-card);border-top:1px solid var(--border-bright);
+  background:rgba(10,13,24,.92);
+  -webkit-backdrop-filter:blur(24px) saturate(1.8);
+  backdrop-filter:blur(24px) saturate(1.8);
+  border-top:1px solid rgba(255,255,255,.07);
   z-index:900;align-items:stretch;
-  /* Always sits above profile pane and other overlays */
-  box-shadow:0 -2px 20px rgba(0,0,0,.4);
+  box-shadow:0 -1px 0 rgba(255,255,255,.04), 0 -8px 32px rgba(0,0,0,.5);
+  /* scroll-hide slide transition */
+  transition:transform .32s cubic-bezier(.4,0,.2,1);
+}
+/* When scrolling down — hides nav off-screen */
+#mobile-bottom-nav.nav-hidden{
+  transform:translateY(100%);
 }
 .mob-nav-btn{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:3px;border:none;background:transparent;
-  color:var(--muted);font-size:9px;font-family:var(--font);font-weight:700;
-  cursor:pointer;padding:6px 4px;letter-spacing:.04em;text-transform:uppercase;
-  transition:color .15s;-webkit-tap-highlight-color:transparent;
-  border-top:2px solid transparent;
+  flex:1;display:flex;align-items:center;justify-content:center;
+  border:none;background:transparent;color:rgba(255,255,255,.38);
+  cursor:pointer;padding:0;
+  transition:color .18s;-webkit-tap-highlight-color:transparent;
+  position:relative;
 }
-.mob-nav-btn svg{flex-shrink:0;transition:stroke .15s;}
-.mob-nav-btn.active{color:var(--blue-bright);border-top-color:var(--blue-bright);}
-.mob-nav-btn.active svg{stroke:var(--blue-bright);}
+.mob-nav-btn svg{flex-shrink:0;transition:stroke .18s,opacity .18s;}
+/* Active: white icon + tiny dot below */
+.mob-nav-btn.active{color:rgba(255,255,255,.95);}
+.mob-nav-btn.active svg{stroke:rgba(255,255,255,.95);}
+.mob-nav-btn.active::after{
+  content:'';position:absolute;bottom:5px;left:50%;
+  transform:translateX(-50%);width:4px;height:4px;
+  border-radius:50%;background:rgba(255,255,255,.9);
+}
+/* Center logo button */
+#mobnav-home{flex:1.2;}
+#mobnav-home img{
+  height:20px;width:auto;
+  filter:brightness(0) invert(1);
+  opacity:.45;
+  transition:opacity .18s;
+}
+#mobnav-home.active img{opacity:.95;}
+#mobnav-home::after{display:none;}
+/* Plus button styling */
+#mobnav-plus{color:rgba(255,255,255,.55);}
+#mobnav-plus svg{opacity:1;}
 #mobile-more-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
   z-index:600;-webkit-tap-highlight-color:transparent;
 }
 #mobile-more-drawer{
   position:fixed;left:0;right:0;
-  bottom:calc(64px + env(safe-area-inset-bottom,0px));
+  bottom:calc(52px + env(safe-area-inset-bottom,0px));
   background:var(--navy-card);border:1px solid var(--border-bright);
   border-radius:20px 20px 0 0;z-index:601;padding:16px 16px 20px;
   transform:translateY(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);
@@ -769,7 +795,7 @@ button{font-family:var(--font);}
   #lc-flex-container{
     position:fixed!important;
     top:52px!important;
-    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    bottom:calc(52px + env(safe-area-inset-bottom,0px))!important;
     left:0!important;right:0!important;
     height:auto!important;min-height:0!important;
     border:none!important;border-radius:0!important;
@@ -953,7 +979,7 @@ button{font-family:var(--font);}
   /* ── Mobile Tracker: full-screen pane like calendar ── */
   #pane-tracker{
     position:fixed!important;top:52px!important;
-    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    bottom:calc(52px + env(safe-area-inset-bottom,0px))!important;
     left:0!important;right:0!important;padding:0!important;
     overflow:hidden!important;display:none;flex-direction:column!important;
     height:auto!important;min-height:0!important;
@@ -1320,7 +1346,7 @@ button{font-family:var(--font);}
   /* Full-screen fixed pane */
   #pane-calendar{
     position:fixed!important;top:52px!important;
-    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    bottom:calc(52px + env(safe-area-inset-bottom,0px))!important;
     left:0!important;right:0!important;padding:0!important;
     overflow:hidden!important;display:none;flex-direction:column!important;
     height:auto!important;min-height:0!important;
@@ -5935,22 +5961,67 @@ const aqty={reel:1};
 
 // ── MOBILE NAV ────────────────────────────────────────────────────────────────
 // Maps pane IDs → bottom-nav button IDs (primary 5 tabs)
-const MOB_NAV_MAP={tracker:'mobnav-tracker',finance:'mobnav-finance',louchat:'mobnav-louchat',calendar:'mobnav-calendar'};
-// Maps pane IDs → more-drawer button IDs (secondary tabs)
-const MOB_MORE_MAP={quote:'mobmore-quote',jobs:'mobmore-sales',clients:'mobmore-sales',sales:'mobmore-sales',team:'mobmore-team',social:'mobmore-social',settings:'mobmore-settings'};
+// Primary bottom-nav buttons (only these 5 are in the compact bar)
+const MOB_NAV_MAP={tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
+// Maps pane IDs → hamburger-dropdown button IDs
+const MOB_MORE_MAP={quote:'mobmore-quote',jobs:'mobmore-sales',clients:'mobmore-sales',sales:'mobmore-sales',team:'mobmore-team',social:'mobmore-social',settings:'mobmore-settings',finance:'mobmore-finance',calendar:'mobmore-calendar'};
 
 function syncMobileNav(paneId){
+  // Always reveal nav when explicitly navigating
+  const nav = document.getElementById('mobile-bottom-nav');
+  if(nav) nav.classList.remove('nav-hidden');
   // Clear all primary nav active states
   document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.mob-more-item').forEach(b=>b.classList.remove('mob-more-active'));
-  // Highlight "More" button when a secondary pane is active
+  // Highlight matching primary nav button
   if(MOB_NAV_MAP[paneId]){
     document.getElementById(MOB_NAV_MAP[paneId])?.classList.add('active');
   } else if(MOB_MORE_MAP[paneId]){
-    document.getElementById('mobnav-more')?.classList.add('active');
     document.getElementById(MOB_MORE_MAP[paneId])?.classList.add('mob-more-active');
   }
 }
+
+// Home button — always goes back to tracker (main hub)
+function mobNavHome(){
+  showPane('tracker', null);
+}
+
+// Plus button — context-aware quick add
+function mobNavPlus(){
+  const pane = localStorage.getItem('dronehub_active_pane') || 'tracker';
+  if(pane === 'tracker')  { mobTrkAdd?.(); return; }
+  if(pane === 'calendar') { document.getElementById('mobnav-calendar-add')?.click?.(); return; }
+  if(pane === 'louchat')  { document.getElementById('lc-new-channel-btn')?.click?.(); return; }
+  // Default: open the hamburger for more options
+  toggleMobTopDropdown?.();
+}
+
+// ── Scroll-hide nav behaviour (hides on scroll-down, reveals on scroll-up) ──
+(function(){
+  let _sy = 0;
+  let _hidden = false;
+  function _hide(){ const n=document.getElementById('mobile-bottom-nav'); if(n&&!_hidden){n.classList.add('nav-hidden');_hidden=true;} }
+  function _show(){ const n=document.getElementById('mobile-bottom-nav'); if(n&&_hidden){n.classList.remove('nav-hidden');_hidden=false;} }
+
+  // Touch-based (most reliable on iOS — works inside any scroll container)
+  document.addEventListener('touchstart', e=>{ _sy = e.touches[0].clientY; }, {passive:true});
+  document.addEventListener('touchmove',  e=>{
+    if(window.innerWidth > 768) return;
+    const dy = _sy - e.touches[0].clientY;
+    if(dy > 14) _hide();
+    else if(dy < -14) _show();
+  }, {passive:true});
+
+  // Fallback: scroll events on the window (catches non-touch scrolling)
+  let _wsy = 0;
+  window.addEventListener('scroll', ()=>{
+    if(window.innerWidth > 768) return;
+    const cur = window.scrollY;
+    if(cur - _wsy > 10) _hide();
+    else if(_wsy - cur > 10) _show();
+    _wsy = cur;
+  }, {passive:true});
+})();
 
 function toggleMobileMore(){
   const overlay=document.getElementById('mobile-more-overlay');
@@ -6011,10 +6082,12 @@ function mobShowProfile(){
       avatarEl.style.background = 'linear-gradient(135deg,#5B8DEF,#A78BFA)';
     }
   }
-  // Copy DroneHub logo from main header into profile header
+  // Copy DroneHub logo from main header into profile header and bottom nav
   const mainLogo = document.querySelector('.app-header img');
   const pfLogoEl = document.getElementById('mob-pf-logo');
   if(mainLogo && pfLogoEl) pfLogoEl.src = mainLogo.src;
+  const navLogoEl = document.getElementById('mob-nav-logo-img');
+  if(mainLogo && navLogoEl) navLogoEl.src = mainLogo.src;
   // Sync notification badge
   const mainBadge = document.getElementById('notif-badge');
   const pfBadge = document.getElementById('mob-pf-notif-badge');
@@ -9985,7 +10058,7 @@ function _mcOpenDetailSheet(title, bodyHtml, accentColor){
     ov.onclick=mcCloseEventDetail;
     sheet=document.createElement('div');
     sheet.id='mc-event-detail-sheet';
-    sheet.style.cssText='position:fixed;bottom:calc(64px + env(safe-area-inset-bottom,0px));left:0;right:0;background:var(--navy-card);border-radius:18px 18px 0 0;border-top:1px solid var(--border-bright);z-index:2101;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -6px 32px rgba(0,0,0,.5);padding:0 18px 24px;';
+    sheet.style.cssText='position:fixed;bottom:calc(52px + env(safe-area-inset-bottom,0px));left:0;right:0;background:var(--navy-card);border-radius:18px 18px 0 0;border-top:1px solid var(--border-bright);z-index:2101;max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -6px 32px rgba(0,0,0,.5);padding:0 18px 24px;';
     document.body.appendChild(ov);
     document.body.appendChild(sheet);
   }
@@ -29981,34 +30054,29 @@ function initGoogleMaps(){
 <!-- ═══ MOBILE BOTTOM NAV ═══ -->
 <nav id="mobile-bottom-nav">
 
-  <!-- Projects -->
-  <button class="mob-nav-btn" id="mobnav-tracker" onclick="showPane('tracker',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    <span>Projects</span>
+  <!-- Projects / Tracker -->
+  <button class="mob-nav-btn" id="mobnav-tracker" onclick="showPane('tracker',event)" aria-label="Projects">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
   </button>
 
-  <!-- Finance -->
-  <button class="mob-nav-btn" id="mobnav-finance" onclick="showPane('finance',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    <span>Finance</span>
+  <!-- Quick Add (context-aware +) -->
+  <button class="mob-nav-btn" id="mobnav-plus" onclick="mobNavPlus()" aria-label="Add">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+  </button>
+
+  <!-- DroneHub Logo (Home / center brand) -->
+  <button class="mob-nav-btn" id="mobnav-home" onclick="mobNavHome()" aria-label="Home">
+    <img id="mob-nav-logo-img" src="" alt="DroneHub">
   </button>
 
   <!-- LouChat -->
-  <button class="mob-nav-btn" id="mobnav-louchat" onclick="showPane('louchat',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-    <span>LouChat</span>
-  </button>
-
-  <!-- Calendar -->
-  <button class="mob-nav-btn" id="mobnav-calendar" onclick="showPane('calendar',event)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    <span>Calendar</span>
+  <button class="mob-nav-btn" id="mobnav-louchat" onclick="showPane('louchat',event)" aria-label="Chat">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   </button>
 
   <!-- Profile -->
-  <button class="mob-nav-btn" id="mobnav-profile" onclick="mobShowProfile()">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span>Profile</span>
+  <button class="mob-nav-btn" id="mobnav-profile" onclick="mobShowProfile()" aria-label="Profile">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
   </button>
 
 </nav>
@@ -30028,6 +30096,16 @@ function initGoogleMaps(){
   <button class="mob-dd-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobTopDropdown()">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     Sales
+  </button>
+
+  <button class="mob-dd-item" id="mobmore-finance" onclick="showPane('finance',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Finance
+  </button>
+
+  <button class="mob-dd-item" id="mobmore-calendar" onclick="showPane('calendar',event);closeMobTopDropdown()">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Calendar
   </button>
 
   <button class="mob-dd-item" id="mobmore-team" onclick="showPane('team',event);closeMobTopDropdown()">
@@ -30077,7 +30155,7 @@ function initGoogleMaps(){
   </div>
 
   <!-- Scrollable body -->
-  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))">
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(52px + env(safe-area-inset-bottom,0px))">
 
     <!-- IG-style top section: avatar LEFT, name+role+stats RIGHT -->
     <div style="padding:12px 16px 0">
