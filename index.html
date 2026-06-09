@@ -711,18 +711,36 @@ button{font-family:var(--font);}
 @media(max-width:768px){
 
   /* ── Header — fixed 52px, logo 20px, only bell + hamburger visible ── */
-  .app-header{height:52px;min-height:52px;max-height:52px;padding:0 12px;gap:8px;overflow:hidden;flex-wrap:nowrap;}
-  .app-header img{height:20px;flex-shrink:0;max-height:20px;}
+  .app-header{
+    height:52px;min-height:52px;max-height:52px;
+    padding:0 12px;gap:8px;overflow:hidden;flex-wrap:nowrap;
+    /* Logo centred, left/right groups equal width so it's truly centred */
+    display:grid!important;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+  }
+  /* Left slot: empty spacer (keeps logo centred) */
+  .app-header > *:first-child{ justify-self:start; }
+  /* Centre slot: logo */
+  .app-header img{
+    height:20px;max-height:20px;flex-shrink:0;
+    grid-column:2;justify-self:center;
+  }
+  /* Right slot: + bell hamburger */
+  #header-right{
+    grid-column:3;justify-self:end;
+    gap:4px;flex-shrink:0;margin-left:0!important;
+  }
   #mob-hamburger-btn{display:flex!important;}
+  /* Mobile quick-add + button in header */
+  #mob-header-plus{display:flex!important;}
   .header-sub,.header-divider{display:none;}
-  /* Hide everything in header-right except notification bell + hamburger */
+  /* Hide desktop-only header items */
   #header-client-portal-btn{display:none!important;}
   #header-my-profile-btn{display:none!important;}
   #app-user-display{display:none!important;}
   #header-signout-btn{display:none!important;}
   #header-platform-btn{display:none!important;}
-  /* Tighten header-right so it doesn't push width */
-  #header-right{gap:4px;flex-shrink:0;}
   #header-user-wrap{gap:4px;}
 
   /* ── Nav ── */
@@ -2047,6 +2065,10 @@ button{font-family:var(--font);}
       <button id="header-platform-btn" onclick="showPane('platform')" title="Platform Dashboard" style="display:none;padding:5px 10px;border-radius:20px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Platform</button>
       <button id="header-signout-btn" onclick="gateLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Sign out</button>
     </div>
+    <!-- Mobile-only quick-add + (hidden on desktop) -->
+    <button id="mob-header-plus" onclick="mobNavPlus()" aria-label="Add" style="display:none;width:34px;height:34px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
     <!-- Mobile-only hamburger ≡ — opens top dropdown instead of bottom drawer -->
     <button id="mob-hamburger-btn" onclick="toggleMobTopDropdown()" aria-label="Menu">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -5974,9 +5996,9 @@ const aqty={reel:1};
 // ── MOBILE NAV ────────────────────────────────────────────────────────────────
 // Maps pane IDs → bottom-nav button IDs (primary 5 tabs)
 // Primary bottom-nav buttons (only these 5 are in the compact bar)
-const MOB_NAV_MAP={tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
+const MOB_NAV_MAP={tracker:'mobnav-tracker',finance:'mobnav-finance',louchat:'mobnav-louchat',calendar:'mobnav-calendar'};
 // Maps pane IDs → hamburger-dropdown button IDs
-const MOB_MORE_MAP={quote:'mobmore-quote',jobs:'mobmore-sales',clients:'mobmore-sales',sales:'mobmore-sales',team:'mobmore-team',social:'mobmore-social',settings:'mobmore-settings',finance:'mobmore-finance',calendar:'mobmore-calendar'};
+const MOB_MORE_MAP={quote:'mobmore-quote',jobs:'mobmore-sales',clients:'mobmore-sales',sales:'mobmore-sales',team:'mobmore-team',social:'mobmore-social',settings:'mobmore-settings'};
 
 function syncMobileNav(paneId){
   // Always reveal nav when explicitly navigating
@@ -19840,8 +19862,8 @@ function gateShowTeamView(session){
   applySalesAccess(session);
 
   // Hide mobile bottom-nav buttons for non-allowed panes
-  const _mobPaneMap={quote:'mobnav-quote',sales:'mobnav-sales',tracker:'mobnav-tracker',louchat:'mobnav-louchat'};
-  const _mobMoreMap={finance:'mobmore-finance',calendar:'mobmore-calendar',team:'mobmore-team',settings:'mobmore-settings',social:'mobmore-social',payroll:'mobmore-payroll'};
+  const _mobPaneMap={tracker:'mobnav-tracker',finance:'mobnav-finance',louchat:'mobnav-louchat',calendar:'mobnav-calendar'};
+  const _mobMoreMap={team:'mobmore-team',settings:'mobmore-settings',social:'mobmore-social',payroll:'mobmore-payroll'};
   Object.entries(_mobPaneMap).forEach(([pane,btnId])=>{
     const b=document.getElementById(btnId);
     if(b) b.style.display=allowed.includes(pane)?'':'none';
@@ -29720,9 +29742,9 @@ function showToast(msg, duration=4000){
 /* ═══════════════════════════════════════════════════
    MOBILE TRACKER
    ═══════════════════════════════════════════════════ */
-let _mobTrkTab = 'upcoming';      // 'upcoming' | 'active' | 'completed'
-let _mobTrkMineOnly = true;       // My Projects vs All
-let _mobTrkOpenJobId = null;      // currently open project
+var _mobTrkTab = 'upcoming';      // 'upcoming' | 'active' | 'completed'
+var _mobTrkMineOnly = true;       // My Projects vs All
+var _mobTrkOpenJobId = null;      // currently open project
 
 function mobTrkSetTab(tab){
   _mobTrkTab = tab;
@@ -30102,29 +30124,29 @@ function initGoogleMaps(){
 <!-- ═══ MOBILE BOTTOM NAV ═══ -->
 <nav id="mobile-bottom-nav">
 
-  <!-- Projects / Tracker -->
+  <!-- Projects -->
   <button class="mob-nav-btn" id="mobnav-tracker" onclick="showPane('tracker',event)" aria-label="Projects">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
   </button>
 
-  <!-- Quick Add (context-aware +) -->
-  <button class="mob-nav-btn" id="mobnav-plus" onclick="mobNavPlus()" aria-label="Add">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </button>
-
-  <!-- DroneHub Logo (Home / center brand) -->
-  <button class="mob-nav-btn" id="mobnav-home" onclick="mobNavHome()" aria-label="Home">
-    <img id="mob-nav-logo-img" src="" alt="DroneHub">
+  <!-- Finance -->
+  <button class="mob-nav-btn" id="mobnav-finance" onclick="showPane('finance',event)" aria-label="Finance">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   </button>
 
   <!-- LouChat -->
   <button class="mob-nav-btn" id="mobnav-louchat" onclick="showPane('louchat',event)" aria-label="Chat">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+
+  <!-- Calendar -->
+  <button class="mob-nav-btn" id="mobnav-calendar" onclick="showPane('calendar',event)" aria-label="Calendar">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
   </button>
 
   <!-- Profile -->
   <button class="mob-nav-btn" id="mobnav-profile" onclick="mobShowProfile()" aria-label="Profile">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
   </button>
 
 </nav>
@@ -30144,16 +30166,6 @@ function initGoogleMaps(){
   <button class="mob-dd-item" id="mobmore-sales" onclick="showPane('sales',event);closeMobTopDropdown()">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     Sales
-  </button>
-
-  <button class="mob-dd-item" id="mobmore-finance" onclick="showPane('finance',event);closeMobTopDropdown()">
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    Finance
-  </button>
-
-  <button class="mob-dd-item" id="mobmore-calendar" onclick="showPane('calendar',event);closeMobTopDropdown()">
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    Calendar
   </button>
 
   <button class="mob-dd-item" id="mobmore-team" onclick="showPane('team',event);closeMobTopDropdown()">
