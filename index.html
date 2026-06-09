@@ -633,12 +633,19 @@ button{font-family:var(--font);}
   border:1px solid rgba(255,255,255,.08);
   z-index:900;align-items:stretch;
   box-shadow:0 8px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
-  transition:transform .32s cubic-bezier(.4,0,.2,1), opacity .32s ease;
+  transform-origin:center bottom;
+  transition:transform .35s cubic-bezier(.4,0,.2,1), opacity .35s ease;
 }
-/* Slide down + fade when scroll hides it */
+/* Scroll down → shrinks like Instagram */
+#mobile-bottom-nav.nav-small{
+  transform:scale(0.78);
+  opacity:0.55;
+}
+/* Scroll way down → disappears entirely */
 #mobile-bottom-nav.nav-hidden{
-  transform:translateY(calc(100% + 14px + env(safe-area-inset-bottom,0px)));
+  transform:scale(0.6) translateY(30px);
   opacity:0;
+  pointer-events:none;
 }
 .mob-nav-btn{
   flex:1;display:flex;align-items:center;justify-content:center;
@@ -6001,29 +6008,51 @@ function mobNavPlus(){
   toggleMobTopDropdown?.();
 }
 
-// ── Scroll-hide nav behaviour (hides on scroll-down, reveals on scroll-up) ──
+// ── Scroll-aware nav: shrinks on scroll-down (like Instagram), full size on scroll-up ──
 (function(){
   let _sy = 0;
-  let _hidden = false;
-  function _hide(){ const n=document.getElementById('mobile-bottom-nav'); if(n&&!_hidden){n.classList.add('nav-hidden');_hidden=true;} }
-  function _show(){ const n=document.getElementById('mobile-bottom-nav'); if(n&&_hidden){n.classList.remove('nav-hidden');_hidden=false;} }
+  // 0 = full, 1 = small, 2 = hidden
+  let _state = 0;
 
-  // Touch-based (most reliable on iOS — works inside any scroll container)
-  document.addEventListener('touchstart', e=>{ _sy = e.touches[0].clientY; }, {passive:true});
-  document.addEventListener('touchmove',  e=>{
-    if(window.innerWidth > 768) return;
-    const dy = _sy - e.touches[0].clientY;
-    if(dy > 14) _hide();
-    else if(dy < -14) _show();
+  function _setState(s){
+    if(_state === s) return;
+    _state = s;
+    const n = document.getElementById('mobile-bottom-nav');
+    if(!n) return;
+    n.classList.toggle('nav-small',   s === 1);
+    n.classList.toggle('nav-hidden',  s === 2);
+    if(s < 2) n.style.pointerEvents = '';
+  }
+
+  // Touch-based (works inside any iOS scroll container)
+  let _totalDy = 0;
+  document.addEventListener('touchstart', e=>{
+    _sy = e.touches[0].clientY;
+    _totalDy = 0;
   }, {passive:true});
 
-  // Fallback: scroll events on the window (catches non-touch scrolling)
+  document.addEventListener('touchmove', e=>{
+    if(window.innerWidth > 768) return;
+    const dy = _sy - e.touches[0].clientY; // positive = scrolling down
+    _totalDy += dy;
+    _sy = e.touches[0].clientY;
+
+    if(_totalDy > 60)      _setState(2); // scrolled a lot → hide
+    else if(_totalDy > 10) _setState(1); // scrolled a bit → shrink
+    else if(_totalDy < -8) _setState(0); // scrolling up → full size
+  }, {passive:true});
+
+  document.addEventListener('touchend', ()=>{ _totalDy = 0; }, {passive:true});
+
+  // Fallback for non-touch
   let _wsy = 0;
   window.addEventListener('scroll', ()=>{
     if(window.innerWidth > 768) return;
     const cur = window.scrollY;
-    if(cur - _wsy > 10) _hide();
-    else if(_wsy - cur > 10) _show();
+    const d = cur - _wsy;
+    if(d > 40)       _setState(2);
+    else if(d > 5)   _setState(1);
+    else if(d < -5)  _setState(0);
     _wsy = cur;
   }, {passive:true});
 })();
