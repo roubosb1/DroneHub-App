@@ -29610,19 +29610,22 @@ function mobTrkSetTab(tab){
     if(!btn) return;
     btn.className = 'mob-trk-tab' + (t===tab ? ' active-'+t : '');
   });
-  mobTrkRenderCards();
+  _mobTrkRenderCardsSafe();
 }
 
 function mobTrkSetMine(mine){
   _mobTrkMineOnly = mine;
   document.getElementById('mob-trk-mine-btn')?.classList.toggle('active', mine);
   document.getElementById('mob-trk-all-btn')?.classList.toggle('active', !mine);
-  mobTrkRenderCards();
+  _mobTrkRenderCardsSafe();
 }
 
 function mobTrkRenderCards(){
   const el = document.getElementById('mob-trk-cards');
   if(!el) return;
+
+  // Refresh savedJobs from localStorage so newly added jobs appear immediately
+  try{ savedJobs = JSON.parse(localStorage.getItem('dronehub_jobs')||'[]'); }catch(e){}
 
   const _isPhoto = _trackerMode === 'photo';
   const _getStage = _isPhoto ? getPhotoTrackerStage : getTrackerStage;
@@ -29669,25 +29672,28 @@ function mobTrkRenderCards(){
     }
   });
 
+  // "My Projects" filter (apply BEFORE tab filter so we can count all tabs)
+  const sess = gateGetSession();
+  const myName = (sess?.name||'').toLowerCase();
+  if(_mobTrkMineOnly && myName){
+    jobs = jobs.filter(j=>{
+      const ts=_getStage(j.id);
+      const editor=(ts.claimedBy||'').toLowerCase();
+      const vg=(ts.videographer||'').toLowerCase();
+      const creator=(getJobCreator?.(j)||'').toLowerCase();
+      return editor.includes(myName)||vg.includes(myName)||creator.includes(myName);
+    });
+  }
+
+  // Count jobs per tab BEFORE filtering so we can suggest alternatives
+  const countUpcoming = jobs.filter(j=>_upcomingSt.includes(_getStage(j.id).editStatus||'')).length;
+  const countActive   = jobs.filter(j=>_inprogressSt.includes(_getStage(j.id).editStatus||'')).length;
+  const countDone     = jobs.filter(j=>_completedSt.includes(_getStage(j.id).editStatus||'')).length;
+
   // Tab filter
   if(_mobTrkTab==='upcoming') jobs=jobs.filter(j=>_upcomingSt.includes(_getStage(j.id).editStatus||''));
   else if(_mobTrkTab==='active') jobs=jobs.filter(j=>_inprogressSt.includes(_getStage(j.id).editStatus||''));
   else jobs=jobs.filter(j=>_completedSt.includes(_getStage(j.id).editStatus||''));
-
-  // "My Projects" filter
-  if(_mobTrkMineOnly){
-    const sess = gateGetSession();
-    const myName = (sess?.name||'').toLowerCase();
-    if(myName){
-      jobs = jobs.filter(j=>{
-        const ts=_getStage(j.id);
-        const editor=(ts.claimedBy||'').toLowerCase();
-        const vg=(ts.videographer||'').toLowerCase();
-        const creator=(getJobCreator?.(j)||'').toLowerCase();
-        return editor.includes(myName)||vg.includes(myName)||creator.includes(myName);
-      });
-    }
-  }
 
   // Sort
   jobs.sort((a,b)=>{
@@ -29698,7 +29704,13 @@ function mobTrkRenderCards(){
   });
 
   if(!jobs.length){
-    el.innerHTML=`<div class="mob-trk-empty"><div style="font-size:36px;margin-bottom:8px">📋</div>No projects${_mobTrkMineOnly?' assigned to you':''}</div>`;
+    // Build a helpful hint about which other tabs have results
+    const hints=[];
+    if(_mobTrkTab!=='upcoming'&&countUpcoming>0) hints.push(`<button onclick="mobTrkSetTab('upcoming')" style="margin-top:10px;padding:8px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">📋 Upcoming (${countUpcoming})</button>`);
+    if(_mobTrkTab!=='active'&&countActive>0)     hints.push(`<button onclick="mobTrkSetTab('active')"   style="margin-top:10px;padding:8px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">🔄 Active (${countActive})</button>`);
+    if(_mobTrkTab!=='completed'&&countDone>0)    hints.push(`<button onclick="mobTrkSetTab('completed')" style="margin-top:10px;padding:8px 18px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">✅ Done (${countDone})</button>`);
+    const hintHtml = hints.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px">${hints.join('')}</div>` : '';
+    el.innerHTML=`<div class="mob-trk-empty"><div style="font-size:36px;margin-bottom:8px">📋</div><div>No projects${_mobTrkMineOnly&&myName?' assigned to you':''} in this tab</div>${hintHtml}</div>`;
     return;
   }
 
@@ -29726,6 +29738,15 @@ function mobTrkRenderCards(){
   }).join('');
 }
 
+function _mobTrkRenderCardsSafe(){
+  try{ mobTrkRenderCards(); }
+  catch(e){
+    console.error('[mobTrkRenderCards]',e);
+    const el=document.getElementById('mob-trk-cards');
+    if(el) el.innerHTML=`<div class="mob-trk-empty" style="color:#ef4444">⚠ Error loading projects<br><span style="font-size:11px;opacity:.7">${e.message}</span></div>`;
+  }
+}
+
 function mobTrkOpenProject(jobId){
   _mobTrkOpenJobId = jobId;
   mobTrkBuildDetail(jobId);
@@ -29735,7 +29756,7 @@ function mobTrkOpenProject(jobId){
 function mobTrkBackToList(){
   document.getElementById('mob-tracker-main')?.classList.remove('mtrk-detail-open');
   _mobTrkOpenJobId = null;
-  mobTrkRenderCards(); // re-render to pick up any saves
+  _mobTrkRenderCardsSafe(); // re-render to pick up any saves
 }
 
 function mobTrkAdd(){
@@ -29935,7 +29956,7 @@ function mobTrkSaveLinks(jobId, overlayEl){
 // Called after renderTracker() or when pane becomes active on mobile
 function mobTrkRefresh(){
   if(window.innerWidth>768) return;
-  mobTrkRenderCards();
+  _mobTrkRenderCardsSafe();
 }
 
 // Close notification panel when clicking outside
