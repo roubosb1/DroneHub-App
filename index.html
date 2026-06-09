@@ -24576,10 +24576,12 @@ function salesSave(arr){
   arr.forEach(c=>{ const l=c.list||'other'; if(byList[l]) byList[l].push(c); else byList['other'].push(c); });
   SALES_LISTS.forEach(l=>{
     if(_salesByList[l] === null) return; // not loaded yet — skip
-    // Quick structural diff: only write if something actually changed
-    if(JSON.stringify(_salesByList[l]) !== JSON.stringify(byList[l])){
-      salesSaveList(l, byList[l]);
-    }
+    // NOTE: diff-check removed. salesLoad() returns the same object references that live
+    // inside _salesByList, so callers that mutate contacts (c.x = ...) also silently
+    // mutate _salesByList before salesSave() runs, making the diff always equal → silent
+    // data loss. Always writing loaded lists is safe; Firebase writes are async and cheap
+    // relative to losing contact edits.
+    salesSaveList(l, byList[l]);
   });
 }
 
@@ -25012,9 +25014,10 @@ async function salesToggleUnsub(id){
 async function salesToggleDNE(id){
   await salesEnsureLoaded();
   const all = salesLoad();
-  const c   = all.find(x=>x.id===id);
-  if(!c) return;
-  c.doNotEmail = !c.doNotEmail;
+  const idx = all.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const updated = {...all[idx], doNotEmail: !all[idx].doNotEmail};
+  all[idx] = updated; // break reference so diff-check fires
   salesSave(all);
   renderSalesTable();
 }
@@ -25022,10 +25025,13 @@ async function salesToggleDNE(id){
 async function salesToggleClientType(id){
   await salesEnsureLoaded();
   const all = salesLoad();
-  const c   = all.find(x=>x.id===id);
-  if(!c) return;
-  c.clientType = (c.clientType||'active') === 'active' ? 'past' : 'active';
-  c._clientTypeManual = true; // prevent auto-detect from overwriting
+  const idx = all.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const updated = {...all[idx],
+    clientType: (all[idx].clientType||'active') === 'active' ? 'past' : 'active',
+    _clientTypeManual: true,
+  };
+  all[idx] = updated; // break reference so diff-check fires
   salesSave(all);
   renderSalesTable();
 }
@@ -25188,28 +25194,36 @@ async function saveSalesContact(){
   if(salesEditingId){
     const idx = all.findIndex(c=>c.id===salesEditingId);
     if(idx>=0){
+      // Shallow-clone the contact BEFORE modifying it. salesLoad() returns the same
+      // object references that live inside _salesByList, so mutating all[idx] directly
+      // also mutates _salesByList — making salesSave()'s diff-check see no change and
+      // skip the write entirely (silent data loss on every edit). Breaking the reference
+      // here ensures the diff correctly detects the update and persists it.
+      const updated = {...all[idx]};
+      all[idx] = updated;
+
       const _editName = splitSalesName(document.getElementById('sc-fname').value, document.getElementById('sc-lname').value);
       // Auto-extract company from last name if it contains " - Company" pattern
       const _autoExtracted = _salesExtractCompanyFromLastName(_editName.firstName, _editName.lastName);
       const _rawCompany = document.getElementById('sc-company').value.trim();
-      all[idx].firstName  = _autoExtracted.firstName;
-      all[idx].lastName   = _autoExtracted.lastName;
+      updated.firstName  = _autoExtracted.firstName;
+      updated.lastName   = _autoExtracted.lastName;
       // Use auto-extracted company if field is blank, otherwise keep what user typed
-      all[idx].company    = _rawCompany || _autoExtracted.company || '';
-      all[idx].phone      = document.getElementById('sc-phone').value.trim();
-      all[idx].email      = email;
-      all[idx].city       = (document.getElementById('sc-city')?.value||'').trim();
-      all[idx].list       = document.getElementById('sc-list').value;
-      all[idx].status     = document.getElementById('sc-status').value;
-      all[idx].notes      = document.getElementById('sc-notes').value.trim();
-      all[idx].field      = (document.getElementById('sc-field')?.value||'').trim()||undefined;
-      all[idx].doNotEmail = typeof _scDNE !== 'undefined' ? !!_scDNE : !!all[idx].doNotEmail;
-      if(all[idx].list === 'clients'){
+      updated.company    = _rawCompany || _autoExtracted.company || '';
+      updated.phone      = document.getElementById('sc-phone').value.trim();
+      updated.email      = email;
+      updated.city       = (document.getElementById('sc-city')?.value||'').trim();
+      updated.list       = document.getElementById('sc-list').value;
+      updated.status     = document.getElementById('sc-status').value;
+      updated.notes      = document.getElementById('sc-notes').value.trim();
+      updated.field      = (document.getElementById('sc-field')?.value||'').trim()||undefined;
+      updated.doNotEmail = typeof _scDNE !== 'undefined' ? !!_scDNE : !!updated.doNotEmail;
+      if(updated.list === 'clients'){
         const ctChecked = document.querySelector('input[name="sc-clienttype"]:checked')?.value || 'active';
-        all[idx].clientType = ctChecked;
-        all[idx]._clientTypeManual = true;
+        updated.clientType = ctChecked;
+        updated._clientTypeManual = true;
       }
-      all[idx].updatedAt  = new Date().toISOString();
+      updated.updatedAt  = new Date().toISOString();
     }
     salesSave(all);
     // Sync to clients tab if this contact is in the clients list
