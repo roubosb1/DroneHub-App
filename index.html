@@ -3788,8 +3788,8 @@ button{font-family:var(--font);}
       <!-- Day / Week / Month switcher -->
       <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--navy-lift)">
         <button id="cal-vbtn-day" onclick="setCalView('day')" style="padding:5px 14px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Day</button>
-        <button id="cal-vbtn-week" onclick="setCalView('week')" style="padding:5px 14px;border:none;border-left:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Week</button>
-        <button id="cal-vbtn-month" onclick="setCalView('month')" style="padding:5px 14px;border:none;border-left:1px solid var(--border);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Month</button>
+        <button id="cal-vbtn-week" onclick="setCalView('week')" style="padding:5px 14px;border:none;border-left:1px solid var(--border);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Week</button>
+        <button id="cal-vbtn-month" onclick="setCalView('month')" style="padding:5px 14px;border:none;border-left:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Month</button>
       </div>
       <select id="cal-filter-contractor" onchange="calViewRefresh()" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
         <option value="">All contractors</option>
@@ -3800,7 +3800,7 @@ button{font-family:var(--font);}
   </div>
 
   <!-- ══ MONTH VIEW ══ -->
-  <div id="cal-month-view">
+  <div id="cal-month-view" style="display:none">
     <!-- Event type filter pills -->
     <div id="cal-type-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
     <!-- Creator color legend -->
@@ -3837,7 +3837,7 @@ button{font-family:var(--font);}
   </div>
 
   <!-- ══ WEEK VIEW ══ -->
-  <div id="cal-week-view" style="display:none">
+  <div id="cal-week-view">
     <div id="cal-week-view-content"></div>
   </div>
 
@@ -6576,7 +6576,7 @@ function showPane(id,ev){
       renderTeam();
     },500);
   }
-  if(id==='calendar'){populateCalNameDropdown();renderCalendar();calEventsSyncFirebase().then(()=>renderCalendar());renderVacationTracker();syncGcalLinks().catch(()=>{});}
+  if(id==='calendar'){populateCalNameDropdown();renderVacationTracker();syncGcalLinks().catch(()=>{});if(window.innerWidth>768){setCalView(_calView||'week');}else{renderCalendar();}calEventsSyncFirebase().then(()=>{if(window.innerWidth>768)setCalView(_calView||'week');else renderCalendar();});}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();renderSettingsProfile();}
   if(id==='tracker'){renderTracker();}
   if(id==='finance'){
@@ -7335,7 +7335,7 @@ let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 let _mcNavDir=0; // direction hint for mobile slide animation (set before renderCalendar)
 let _mobCalSelDate=new Date().toISOString().slice(0,10);
 
-var _calView='month';
+var _calView='week';
 var _calSelectedDate=new Date().toISOString().slice(0,10);
 
 function calNav(dir){
