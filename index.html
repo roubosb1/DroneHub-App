@@ -3799,10 +3799,11 @@ button{font-family:var(--font);}
     </div>
   </div>
 
+  <!-- ══ Event type filter pills (always visible across all views) ══ -->
+  <div id="cal-type-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+
   <!-- ══ MONTH VIEW ══ -->
   <div id="cal-month-view" style="display:none">
-    <!-- Event type filter pills -->
-    <div id="cal-type-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
     <!-- Creator color legend -->
     <div id="cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px"></div>
     <!-- Grid -->
@@ -7455,6 +7456,7 @@ function renderCalDayView(dateStr){
   const d=new Date(dateStr+'T12:00:00');
   const label=document.getElementById('cal-month-label');
   if(label) label.textContent=DAYS[d.getDay()]+', '+MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  renderCalFilterBar();
   const evts=calGetDayEvents(dateStr);
   const timedEvts=evts.filter(e=>e._time);
   const allDayEvts=evts.filter(e=>!e._time);
@@ -7513,6 +7515,26 @@ function calDayEventPill(e,dateStr){
   return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:${e._job?'pointer':'default'};margin-bottom:4px">${time}${gcalIcon}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
 }
 
+// ── Shared filter pill bar (All / Shoots / event types) ──────────────────────
+function renderCalFilterBar(){
+  const pillBar=document.getElementById('cal-type-filter-bar');
+  if(!pillBar) return;
+  const allActive=_calTypeFilters===null;
+  const pills=[
+    {id:'all',    label:'All',    color:'var(--blue-bright)', svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'},
+    {id:'shoots', label:'Shoots', color:'#22D97A',           svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'},
+    ...CAL_EVENT_TYPES
+  ];
+  pillBar.innerHTML=pills.map(p=>{
+    const active=p.id==='all'?allActive:(!allActive&&_calTypeFilters.has(p.id));
+    const col=p.color||'var(--blue-bright)';
+    return `<button onclick="${p.id==='all'?'calSetAllFilters()':'calToggleTypeFilter(\''+p.id+'\')'}"
+      style="padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;border:1px solid ${active?col:'var(--border)'};background:${active?col+'22':'transparent'};color:${active?col:'var(--muted)'};transition:all .15s;display:inline-flex;align-items:center;gap:5px">
+      ${p.svg||''} ${p.label}
+    </button>`;
+  }).join('');
+}
+
 // ── Week View ─────────────────────────────────────────────────────────────────
 function renderCalWeekView(dateStr){
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -7530,6 +7552,7 @@ function renderCalWeekView(dateStr){
     const sameMonth=s.getMonth()===e.getMonth();
     label.textContent=sameMonth?MONTHS[s.getMonth()]+' '+s.getDate()+'–'+e.getDate()+', '+s.getFullYear():MONTHS[s.getMonth()]+' '+s.getDate()+' – '+MONTHS[e.getMonth()]+' '+e.getDate()+', '+e.getFullYear();
   }
+  renderCalFilterBar();
   const todayStr=new Date().toISOString().slice(0,10);
   const now=new Date(); const nowHour=now.getHours(); const nowMin=now.getMinutes();
   // Collect events for each day
@@ -7678,9 +7701,9 @@ function calToggleTypeFilter(typeId){
   if(_calTypeFilters===null) _calTypeFilters=new Set(CAL_EVENT_TYPES.map(t=>t.id).concat(['shoots']));
   if(_calTypeFilters.has(typeId)) _calTypeFilters.delete(typeId);
   else _calTypeFilters.add(typeId);
-  renderCalendar();
+  calViewRefresh();
 }
-function calSetAllFilters(){_calTypeFilters=null;renderCalendar();}
+function calSetAllFilters(){_calTypeFilters=null;calViewRefresh();}
 
 // Open add-event modal
 function openCalEventModal(prefillDate){
@@ -9913,24 +9936,8 @@ function renderCalendar(){
   const daysInPrev=new Date(calYear,calMonth,0).getDate();
   const todayStr=new Date().toISOString().slice(0,10);
 
-  // Render type-filter pill bar
-  const pillBar=document.getElementById('cal-type-filter-bar');
-  if(pillBar){
-    const allActive=_calTypeFilters===null;
-    const pills=[
-      {id:'all',    label:'All',    color:'var(--blue-bright)', svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'},
-      {id:'shoots', label:'Shoots', color:'#22D97A',           svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'},
-      ...CAL_EVENT_TYPES
-    ];
-    pillBar.innerHTML=pills.map(p=>{
-      const active=p.id==='all'?allActive:(!allActive&&_calTypeFilters.has(p.id));
-      const col=p.color||'var(--blue-bright)';
-      return `<button onclick="${p.id==='all'?'calSetAllFilters()':'calToggleTypeFilter(\''+p.id+'\')'}"
-        style="padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;border:1px solid ${active?col:'var(--border)'};background:${active?col+'22':'transparent'};color:${active?col:'var(--muted)'};transition:all .15s;display:inline-flex;align-items:center;gap:5px">
-        ${p.svg||''} ${p.label}
-      </button>`;
-    }).join('');
-  }
+  // Render type-filter pill bar (shared with week/day views)
+  renderCalFilterBar();
 
   // Map jobs to dates
   const jobsByDate={};
