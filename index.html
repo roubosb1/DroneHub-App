@@ -19966,6 +19966,19 @@ async function gateEnterApp(session){
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
 
+  // ── Sync any locally-saved 2FA data to Firebase (handles offline-setup case) ──
+  if(_fbToken()){
+    try{
+      const local2fa=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+      if(Object.keys(local2fa).length){
+        let fb2fa={};
+        try{const r=await fbGet('orgs',ORG_ID+':2fa');if(r?.data)fb2fa=JSON.parse(r.data);}catch(e){}
+        const merged={...fb2fa,...local2fa};
+        await fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(merged),updatedAt:Date.now()});
+      }
+    }catch(e){console.warn('[2FA sync] could not sync 2FA to cloud:',e.message);}
+  }
+
   // ── Sync team roster from Firebase so every device has current data ──────
   // This fixes: (1) team members getting "Link to team" on their own device,
   // (2) lastSeen/status never updating because localStorage was always empty.
@@ -20541,19 +20554,34 @@ async function gateShow2faSetup(session){
   gate.innerHTML=`<div style="text-align:center;color:var(--muted);padding:60px;font-size:14px">Setting up 2FA…</div>`;
 
   let secret;
+  let _cloudSaveOk=false;
   try{
     secret=totp2faGenerateSecretRaw();
     await totp2faSaveSecret(email,secret); // Firebase-first — throws if save fails
+    _cloudSaveOk=true;
   }catch(e){
-    gate.innerHTML=`<div style="text-align:center;max-width:380px;width:100%;padding:20px">
-      <div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:20px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
-      <div style="background:var(--navy-card);border-radius:18px;border:1px solid rgba(255,80,80,.4);padding:28px">
-        <div style="color:#FF7070;font-size:15px;font-weight:700;margin-bottom:10px">⚠ Could not save 2FA to cloud</div>
-        <div style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">${e.message}<br><br>Check your internet connection and try again.</div>
-        <button onclick="gateShow2faSetup(_pending2faSession)" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Retry</button>
-        <button onclick="location.reload()" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:8px">← Back to sign in</button>
-      </div></div>`;
-    return;
+    const isAuthErr=e.message&&(e.message.includes('Not authenticated')||e.message.includes('Session expired'));
+    if(!isAuthErr){
+      // Real cloud error (network down, server 5xx, etc.) — show retry screen
+      gate.innerHTML=`<div style="text-align:center;max-width:380px;width:100%;padding:20px">
+        <div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:20px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
+        <div style="background:var(--navy-card);border-radius:18px;border:1px solid rgba(255,80,80,.4);padding:28px">
+          <div style="color:#FF7070;font-size:15px;font-weight:700;margin-bottom:10px">⚠ Could not save 2FA to cloud</div>
+          <div style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">${e.message}<br><br>Check your internet connection and try again.</div>
+          <button onclick="gateShow2faSetup(_pending2faSession)" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Retry</button>
+          <button onclick="location.reload()" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-top:8px">← Back to sign in</button>
+        </div></div>`;
+      return;
+    }
+    // Auth token not yet available (token fetch failed during login — offline/slow network).
+    // Save to localStorage only and continue setup. The secret will sync to Firebase
+    // automatically on the next successful login when a token is available.
+    try{
+      let d={};try{d=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');}catch(ex){}
+      d[email.toLowerCase()]={secret,verified:false,createdAt:new Date().toISOString()};
+      localStorage.setItem('dronehub_2fa',JSON.stringify(d));
+    }catch(ex){}
+    // _cloudSaveOk stays false — we'll show a soft warning on the QR screen
   }
 
   const uri=totp2faGetUri(email,secret);
@@ -20561,6 +20589,7 @@ async function gateShow2faSetup(session){
   <div style="text-align:center;max-width:420px;width:100%;padding:20px">
     <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:4px">DRONE<span style="color:var(--blue-bright)">HUB.</span></div>
     <div style="font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:28px">Set up 2-Factor Auth</div>
+    ${!_cloudSaveOk?`<div style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);font-size:11px;color:#F59E0B;text-align:left;line-height:1.5">⚠️ <strong>Saved locally only</strong> — cloud sync will complete after you log in on a stable connection. Setup will still work.</div>`:''}
     <div style="background:var(--navy-card);border-radius:18px;border:1px solid var(--border-bright);padding:28px">
       <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:8px">📱 Scan with Google Authenticator</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">Open <strong style="color:var(--offwhite)">Google Authenticator</strong> on your phone, tap <strong style="color:var(--offwhite)">+</strong> → <strong style="color:var(--offwhite)">Scan QR code</strong>, then scan below.</div>
@@ -20595,9 +20624,20 @@ async function gateVerify2faSetup(){
     try{
       await totp2faMarkVerified(_pending2faSession.email); // Firebase-first — throws if save fails
     }catch(e){
-      if(err){err.textContent='Code correct but could not save to cloud: '+e.message+'. Check your connection and try again.';err.style.display='block';}
-      if(btn){btn.disabled=false;btn.textContent='Confirm & activate →';}
-      return;
+      // If not authenticated, mark verified in localStorage only and let them in
+      // The cloud sync will happen on the next login when a token is available
+      if(e.message&&(e.message.includes('Not authenticated')||e.message.includes('Session expired'))){
+        try{
+          let d={};try{d=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');}catch(ex){}
+          if(d[_pending2faSession.email.toLowerCase()]) d[_pending2faSession.email.toLowerCase()].verified=true;
+          localStorage.setItem('dronehub_2fa',JSON.stringify(d));
+        }catch(ex){}
+        // Fall through to enter app
+      } else {
+        if(err){err.textContent='Code correct but could not save to cloud: '+e.message+'. Check your connection and try again.';err.style.display='block';}
+        if(btn){btn.disabled=false;btn.textContent='Confirm & activate →';}
+        return;
+      }
     }
     totp2faRememberDevice(_pending2faSession.email);
     gateEnterApp(_pending2faSession);
