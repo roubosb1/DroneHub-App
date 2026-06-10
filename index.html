@@ -749,12 +749,19 @@ button{font-family:var(--font);}
   #mobile-bottom-nav{display:flex;}
 
   /* ── Wrap ── */
-  /* Extra bottom padding so content isn't hidden behind bottom nav + Safari toolbar */
-  .wrap{padding:.75rem .75rem 7rem;}
-  .wrap:has(#pane-tracker.active){padding-left:0;padding-right:0;}
+  /* Extra bottom padding so content isn't hidden behind bottom nav + safe area */
+  .wrap{padding:.75rem .75rem calc(80px + env(safe-area-inset-bottom,0px));}
+  .wrap:has(#pane-tracker.active){padding-left:0;padding-right:0;padding-bottom:0;}
 
   /* ── Pane ── */
-  .pane.active{min-height:calc(100vh - 52px);}
+  /* Use dvh so iOS Safari's dynamic toolbar doesn't cause height miscalculation */
+  .pane.active{min-height:calc(100dvh - 52px);}
+
+  /* Tracker pane needs explicit height so its internal flex/scroll fills the screen */
+  #pane-tracker.active{
+    height:calc(100dvh - 52px);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
 
   /* ── Cards ── */
   .card{padding:.875rem 1rem;border-radius:12px;}
@@ -1087,7 +1094,7 @@ button{font-family:var(--font);}
   .mob-trk-tab.active-completed{background:linear-gradient(135deg,var(--green),#16A34A);color:#fff;}
 
   /* Cards scroll area */
-  #mob-trk-cards{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px;}
+  #mob-trk-cards{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px calc(80px + env(safe-area-inset-bottom,0px));}
 
   /* Individual project card */
   .mob-trk-card{
