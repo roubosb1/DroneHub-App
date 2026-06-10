@@ -4649,14 +4649,9 @@ button{font-family:var(--font);}
 <div id="pane-social" class="pane">
 
   <!-- Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-    <div style="display:flex;align-items:center;gap:10px">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-      <span style="font-size:20px;font-weight:700;color:var(--white)">Social Media</span>
-    </div>
-    <button onclick="openSocialWorkspaceModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Workspace
-    </button>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+    <span style="font-size:20px;font-weight:700;color:var(--white)">Social Media</span>
   </div>
 
   <!-- Sub-tabs -->
@@ -6047,6 +6042,7 @@ function mobNavPlus(){
   if(pane === 'tracker')  { mobTrkAdd?.(); return; }
   if(pane === 'calendar') { openCalEventModal?.(); return; }
   if(pane === 'louchat')  { mobChatPlusOpen(); return; }
+  if(pane === 'social')   { openSocialWorkspaceModal?.(); return; }
   // Default: open the hamburger for more options
   toggleMobTopDropdown?.();
 }
