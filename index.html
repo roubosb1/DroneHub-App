@@ -7508,11 +7508,14 @@ function calDayEventPill(e,dateStr){
   const c=e._col;
   if(e._src==='custom'){
     const td=e._typeDef;
-    return `<div onclick="deleteCalEvent('${e._eventId}')" title="Click to delete" style="padding:5px 10px;border-radius:7px;background:${td.bg};border-left:3px solid ${td.color};color:${td.color};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">${td.icon} ${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
+    return `<div onclick="showCalEventDetail('${e._eventId}')" title="${e.name}" style="padding:5px 10px;border-radius:7px;background:${td.bg};border-left:3px solid ${td.color};color:${td.color};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">${td.icon} ${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
   }
   const time=e._time?`<span style="font-size:10px;opacity:.75;margin-right:5px">${e._time.slice(0,5)}</span>`:'';
-  const gcalIcon=e._src==='gcal'?'📅 ':'';
-  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:${e._job?'pointer':'default'};margin-bottom:4px">${time}${gcalIcon}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
+  if(e._src==='gcal'){
+    const safeN=e.name.replace(/'/g,"\\'");const safeC=(e._creator||'').replace(/'/g,"\\'");const safeT=(e._time||'').replace(/'/g,"\\'");
+    return `<div onclick="showGcalEventDetail('${safeN}','${safeC}','${safeT}')" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">${time}📅 ${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
+  }
+  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:${e._job?'pointer':'default'};margin-bottom:4px">${time}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
 }
 
 // ── Shared filter pill bar (All / Shoots / event types) ──────────────────────
@@ -7647,9 +7650,13 @@ function calWeekEventChip(e){
   const c=e._col;
   if(e._src==='custom'){
     const td=e._typeDef;
-    return `<div title="${e.name}" style="padding:2px 5px;border-radius:4px;background:${td.bg};border-left:2px solid ${td.color};color:${td.color};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">${td.icon} ${e.name}</div>`;
+    return `<div onclick="showCalEventDetail('${e._eventId}')" title="${e.name}" style="padding:2px 5px;border-radius:4px;background:${td.bg};border-left:2px solid ${td.color};color:${td.color};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer">${td.icon} ${e.name}</div>`;
   }
-  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:${e._job?'pointer':'default'}">${e._src==='gcal'?'📅 ':''}${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
+  if(e._src==='gcal'){
+    const safeN=e.name.replace(/'/g,"\\'");const safeC=(e._creator||'').replace(/'/g,"\\'");const safeT=(e._time||'').replace(/'/g,"\\'");
+    return `<div onclick="showGcalEventDetail('${safeN}','${safeC}','${safeT}')" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer">📅 ${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
+  }
+  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:${e._job?'pointer':'default'}">${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
 }
 
 // ── CUSTOM EVENT TYPES ────────────────────────────────────────────────────────
@@ -7833,28 +7840,127 @@ function saveCalEvent(){
   if(!title){alert('Please enter a title.');return;}
   if(!start){alert('Please select a start date.');return;}
   if(end<start){alert('End date cannot be before start date.');return;}
-  const evt={
-    id:'cale_'+Date.now(),
-    type,title,
-    date:start,endDate:end,
-    memberName:member,
-    notes,
-    createdAt:new Date().toISOString(),
-  };
-  const arr=calEventsLoad();
-  arr.push(evt);
-  calEventsSave(arr);
+  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,memberName:member,notes,createdAt:new Date().toISOString()};
+  const arr=calEventsLoad();arr.push(evt);calEventsSave(arr);
   document.getElementById('cal-event-modal').remove();
-  renderCalendar();
-  renderVacationTracker();
+  calViewRefresh();renderVacationTracker();
   showDhToast('Event added','','✅','var(--green)',3000);
 }
 
 function deleteCalEvent(id){
   if(!confirm('Delete this event?')) return;
   calEventsSave(calEventsLoad().filter(e=>e.id!==id));
-  renderCalendar();
-  renderVacationTracker();
+  calViewRefresh();renderVacationTracker();
+}
+
+// ── Event detail pop-up ───────────────────────────────────────────────────────
+function showCalEventDetail(eventId){
+  const evt=calEventsLoad().find(e=>e.id===eventId);
+  if(!evt) return;
+  const td=CAL_EVENT_TYPES.find(t=>t.id===evt.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+  const fmtD=d=>{const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});};
+  const dateLabel=(!evt.endDate||evt.date===evt.endDate)?fmtD(evt.date):fmtD(evt.date)+' – '+fmtD(evt.endDate);
+  document.getElementById('cal-detail-modal')?.remove();
+  const modal=document.createElement('div');
+  modal.id='cal-detail-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:420px;border:1px solid var(--border-bright)" onclick="event.stopPropagation()">
+    <div style="background:${td.bg};padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;border-radius:16px 16px 0 0">
+      <div>
+        <div style="font-size:22px;margin-bottom:4px">${td.icon}</div>
+        <div style="font-size:15px;font-weight:700;color:${td.color}">${evt.title}</div>
+        <div style="font-size:11px;color:${td.color};opacity:.75;margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">${td.label}</div>
+      </div>
+      <button onclick="document.getElementById('cal-detail-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;margin-top:-2px">✕</button>
+    </div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span style="font-size:13px;color:var(--offwhite)">${dateLabel}</span>
+      </div>
+      ${evt.memberName?`<div style="display:flex;align-items:center;gap:10px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style="font-size:13px;color:var(--offwhite)">${evt.memberName}</span>
+      </div>`:''}
+      ${evt.notes?`<div style="display:flex;align-items:flex-start;gap:10px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span style="font-size:13px;color:var(--muted);white-space:pre-wrap">${evt.notes}</span>
+      </div>`:''}
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="document.getElementById('cal-detail-modal').remove();editCalEvent('${eventId}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">✏️ Edit</button>
+        <button onclick="document.getElementById('cal-detail-modal').remove();deleteCalEvent('${eventId}')" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#EF4444;font-size:13px;font-weight:600;cursor:pointer">🗑 Delete</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function showGcalEventDetail(name,creator,time){
+  document.getElementById('cal-detail-modal')?.remove();
+  const modal=document.createElement('div');
+  modal.id='cal-detail-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:380px;border:1px solid var(--border-bright)" onclick="event.stopPropagation()">
+    <div style="background:rgba(6,182,212,.1);padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;border-radius:16px 16px 0 0">
+      <div>
+        <div style="font-size:22px;margin-bottom:4px">📅</div>
+        <div style="font-size:15px;font-weight:700;color:var(--white)">${name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Google Calendar</div>
+      </div>
+      <button onclick="document.getElementById('cal-detail-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;margin-top:-2px">✕</button>
+    </div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+      ${time?`<div style="display:flex;align-items:center;gap:10px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span style="font-size:13px;color:var(--offwhite)">${time.slice(0,5)}</span>
+      </div>`:''}
+      ${creator?`<div style="display:flex;align-items:center;gap:10px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style="font-size:13px;color:var(--offwhite)">${creator}</span>
+      </div>`:''}
+      <div style="margin-top:4px;padding:8px 12px;border-radius:8px;background:var(--navy-mid);font-size:11px;color:var(--muted)">Google Calendar events can be edited in Google Calendar directly.</div>
+      <button onclick="document.getElementById('cal-detail-modal').remove()" style="padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer">Close</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function editCalEvent(eventId){
+  const evt=calEventsLoad().find(e=>e.id===eventId);
+  if(!evt) return;
+  openCalEventModal(evt.date);
+  setTimeout(()=>{
+    const t=document.getElementById('cae-title');const ty=document.getElementById('cae-type');
+    const s=document.getElementById('cae-start');const en=document.getElementById('cae-end');
+    const m=document.getElementById('cae-member');const n=document.getElementById('cae-notes');
+    if(t) t.value=evt.title;if(ty) ty.value=evt.type;
+    if(s) s.value=evt.date;if(en) en.value=evt.endDate||evt.date;
+    if(m) m.value=evt.memberName||'';if(n) n.value=evt.notes||'';
+    const hdr=document.querySelector('#cal-event-modal div[style*="Add Calendar Event"]');
+    if(hdr) hdr.textContent='Edit Event';
+    const sBtn=document.querySelector('#cal-event-modal button[onclick="saveCalEvent()"]');
+    if(sBtn){sBtn.textContent='Update event';sBtn.setAttribute('onclick','updateCalEvent(\''+eventId+'\')');}
+  },60);
+}
+
+function updateCalEvent(eventId){
+  const title=document.getElementById('cae-title')?.value.trim();
+  const type=document.getElementById('cae-type')?.value;
+  const start=document.getElementById('cae-start')?.value;
+  const end=document.getElementById('cae-end')?.value||start;
+  const member=document.getElementById('cae-member')?.value||'';
+  const notes=document.getElementById('cae-notes')?.value.trim()||'';
+  if(!title){alert('Please enter a title.');return;}
+  if(!start){alert('Please select a start date.');return;}
+  if(end<start){alert('End date cannot be before start date.');return;}
+  const arr=calEventsLoad();const idx=arr.findIndex(e=>e.id===eventId);if(idx===-1) return;
+  arr[idx]={...arr[idx],type,title,date:start,endDate:end,memberName:member,notes,updatedAt:new Date().toISOString()};
+  calEventsSave(arr);
+  document.getElementById('cal-event-modal')?.remove();
+  calViewRefresh();renderVacationTracker();
+  showDhToast('Event updated','','✅','var(--green)',3000);
 }
 
 // Vacation tracker panel
