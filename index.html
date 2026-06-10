@@ -1285,6 +1285,9 @@ button{font-family:var(--font);}
   #lc-mob-back-btn{display:none!important;}
   #mobile-more-overlay,#mobile-more-drawer{display:none!important;}
 }
+@media(max-width:768px){
+  #lc-add-section{display:none!important;}
+}
 
 /* ── Sales CRM ── */
 .sales-list-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
@@ -6044,9 +6047,73 @@ function mobNavPlus(){
   const pane = localStorage.getItem('dronehub_active_pane') || 'tracker';
   if(pane === 'tracker')  { mobTrkAdd?.(); return; }
   if(pane === 'calendar') { document.getElementById('mobnav-calendar-add')?.click?.(); return; }
-  if(pane === 'louchat')  { document.getElementById('lc-new-channel-btn')?.click?.(); return; }
+  if(pane === 'louchat')  { mobChatPlusOpen(); return; }
   // Default: open the hamburger for more options
   toggleMobTopDropdown?.();
+}
+
+// ── Mobile Chat + action sheet ─────────────────────────────────────────────
+function mobChatPlusOpen(){
+  const sheet=document.getElementById('mob-chat-plus-sheet');
+  const overlay=document.getElementById('mob-chat-plus-overlay');
+  if(!sheet) return;
+  const isOpen=sheet.style.display!=='none';
+  sheet.style.display=isOpen?'none':'block';
+  overlay.style.display=isOpen?'none':'block';
+}
+function mobChatPlusClose(){
+  const sheet=document.getElementById('mob-chat-plus-sheet');
+  const overlay=document.getElementById('mob-chat-plus-overlay');
+  if(sheet) sheet.style.display='none';
+  if(overlay) overlay.style.display='none';
+}
+var _mobChatCreateMode='channel';
+function mobChatNewChannel(){
+  mobChatPlusClose();
+  const s=gateGetSession();
+  if(s?.type!=='admin'&&s?.role!=='admin'){alert('Only admins can create channels.');return;}
+  _mobChatCreateMode='channel';
+  document.getElementById('mob-chat-create-title').textContent='New Channel';
+  document.getElementById('mob-chat-create-name').placeholder='channel-name';
+  document.getElementById('mob-chat-create-name').value='';
+  document.getElementById('mob-chat-create-type-wrap').style.display='block';
+  const modal=document.getElementById('mob-chat-create-modal');
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('mob-chat-create-name').focus(),150);
+}
+function mobChatNewMessage(){
+  mobChatPlusClose();
+  const s=gateGetSession();
+  if(s?.type!=='admin'&&s?.role!=='admin'){alert('Only admins can create conversations.');return;}
+  _mobChatCreateMode='dm';
+  document.getElementById('mob-chat-create-title').textContent='New Message';
+  document.getElementById('mob-chat-create-name').placeholder='e.g. john-smith or project-name';
+  document.getElementById('mob-chat-create-name').value='';
+  document.getElementById('mob-chat-create-type-wrap').style.display='none';
+  const modal=document.getElementById('mob-chat-create-modal');
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('mob-chat-create-name').focus(),150);
+}
+function mobChatVideoCall(){
+  mobChatPlusClose();
+  lcStartGoogleMeet?.();
+}
+function mobChatCreateClose(){
+  document.getElementById('mob-chat-create-modal').style.display='none';
+}
+function mobChatCreateConfirm(){
+  const raw=document.getElementById('mob-chat-create-name').value.trim();
+  const name=raw.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  const type=_mobChatCreateMode==='dm'?'general':(document.getElementById('mob-chat-create-type').value||'general');
+  if(!name){alert('Please enter a name.');return;}
+  const channels=getLcChannels();
+  if(channels.find(c=>c.name===name)){alert('A channel with that name already exists.');return;}
+  const newChannel={id:'lc_'+Date.now(),name,type,topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]};
+  channels.push(newChannel);
+  saveLcChannels(channels);
+  mobChatCreateClose();
+  renderLouChat();
+  lcOpenChannel(newChannel.id);
 }
 
 // ── Scroll-aware nav: shrinks on scroll-down (like Instagram), full size on scroll-up ──
@@ -30501,6 +30568,47 @@ function initGoogleMaps(){
 </div>
 
 <!-- mob-cal-sheet removed — replaced by inline Apple-style split-screen calendar -->
+
+<!-- ── Mobile Chat + action sheet ───────────────────────────────────────── -->
+<div id="mob-chat-plus-overlay" onclick="mobChatPlusClose()" style="display:none;position:fixed;inset:0;z-index:948;"></div>
+<div id="mob-chat-plus-sheet" style="display:none;position:fixed;top:62px;left:12px;right:12px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;z-index:949;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4);">
+  <button onclick="mobChatNewChannel()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left" onmousedown="this.style.background='rgba(255,255,255,.06)'" onmouseup="this.style.background='transparent'" ontouchstart="this.style.background='rgba(255,255,255,.06)'" ontouchend="this.style.background='transparent'">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(91,141,239,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue-bright)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    <div><div style="color:var(--offwhite)">New Channel</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Create a topic, project, or team channel</div></div>
+  </button>
+  <button onclick="mobChatNewMessage()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left" onmousedown="this.style.background='rgba(255,255,255,.06)'" onmouseup="this.style.background='transparent'" ontouchstart="this.style.background='rgba(255,255,255,.06)'" ontouchend="this.style.background='transparent'">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(52,199,89,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    <div><div style="color:var(--offwhite)">New Message</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Start a direct or group conversation</div></div>
+  </button>
+  <button onclick="mobChatVideoCall()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left" onmousedown="this.style.background='rgba(255,255,255,.06)'" onmouseup="this.style.background='transparent'" ontouchstart="this.style.background='rgba(255,255,255,.06)'" ontouchend="this.style.background='transparent'">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(255,69,58,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#FF453A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span>
+    <div><div style="color:var(--offwhite)">Video Call</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Start a Google Meet with your team</div></div>
+  </button>
+</div>
+
+<!-- ── Mobile Chat create modal (channel or message) ────────────────────── -->
+<div id="mob-chat-create-modal" onclick="if(event.target===this)mobChatCreateClose()" style="display:none;position:fixed;inset:0;z-index:1050;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center;">
+  <div style="background:var(--navy-card);border-radius:20px 20px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px));width:100%;border-top:1px solid var(--border-bright);box-shadow:0 -8px 32px rgba(0,0,0,.4);">
+    <div style="width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 18px;"></div>
+    <div id="mob-chat-create-title" style="font-size:17px;font-weight:700;color:var(--white);margin-bottom:18px;">New Channel</div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;letter-spacing:.03em">NAME</div>
+    <input type="text" id="mob-chat-create-name" placeholder="channel-name" onkeydown="if(event.key==='Enter')mobChatCreateConfirm()" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:15px;background:var(--navy-lift);color:var(--white);outline:none;margin-bottom:14px;font-family:var(--font)">
+    <div id="mob-chat-create-type-wrap">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;letter-spacing:.03em">TYPE</div>
+      <select id="mob-chat-create-type" style="width:100%;padding:11px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:15px;background:var(--navy-lift);color:var(--white);margin-bottom:18px;font-family:var(--font)">
+        <option value="general">💬 General</option>
+        <option value="project">📋 Project</option>
+        <option value="client">👤 Client</option>
+        <option value="social">📱 Social media</option>
+        <option value="admin">🔒 Admin</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="mobChatCreateClose()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:15px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent">Cancel</button>
+      <button onclick="mobChatCreateConfirm()" style="flex:1;padding:13px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">Create</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
