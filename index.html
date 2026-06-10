@@ -19721,11 +19721,18 @@ async function gateLogin(){
 
   // Fetch a Firebase proxy token from the server-side auth endpoint.
   // Awaited so the token is available before 2FA and data-sync checks run.
+  // We send the locally-stored passHash so the server can skip its Firestore
+  // lookup (fast path) — avoids cold-start timeout on mobile networks.
   try{
+    const _authBody={email,password:pass,orgId:ORG_ID,
+      localPassHash:user.passHash||'',
+      localRole:user.role||'',
+      localType:user.type||'',
+      localName:user.name||''};
     const _authR=await fetch('/.netlify/functions/auth',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,password:pass,orgId:ORG_ID})
+      body:JSON.stringify(_authBody)
     });
     if(_authR.ok){
       const {token}=await _authR.json();
@@ -19736,13 +19743,11 @@ async function gateLogin(){
         setTimeout(()=>lcCheckMentions().catch(()=>{}),2000); // check for @mention notifications
       }
     } else {
-      // Auth endpoint returned an error (500, 503, etc.) — clear any stale
-      // token so we don't keep sending an expired/invalid one on every request
+      // Auth endpoint returned an error (500, 503, etc.) — clear any stale token
       _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
     }
   }catch(e){
-    // Network/server error — clear any stale token so we don't send expired
-    // credentials and get a confusing HTTP 401 on every subsequent request
+    // Network/server error — log and continue in local-only mode
     _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(ex){}
     console.log('Firebase proxy token unavailable (offline?) — local-only mode');
   }

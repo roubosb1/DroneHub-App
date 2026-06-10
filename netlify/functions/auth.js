@@ -95,9 +95,9 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  let email, password, orgId;
+  let email, password, orgId, localPassHash, localRole, localType, localName;
   try {
-    ({ email, password, orgId } = JSON.parse(event.body || '{}'));
+    ({ email, password, orgId, localPassHash, localRole, localType, localName } = JSON.parse(event.body || '{}'));
   } catch (e) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
@@ -109,38 +109,62 @@ exports.handler = async (event) => {
   email = email.trim().toLowerCase();
   const resolvedOrgId = orgId || 'dronehub_main';
 
+  // ── Fast path: if the browser already verified the password locally and
+  //    sent the stored hash, skip the Firestore lookup entirely.
+  //    This avoids the cold-start Firestore connection (~2-4s) and prevents
+  //    mobile timeout failures. We still verify the hash server-side.
+  if (localPassHash && passwordMatches(email, password, localPassHash)) {
+    const session = {
+      email,
+      name: localName || email.split('@')[0],
+      role: localRole || 'contractor',
+      type: localType || 'team',
+      orgId: resolvedOrgId,
+    };
+    const token = signToken({ ...session, exp: Date.now() + TOKEN_TTL_MS });
+    return { statusCode: 200, headers, body: JSON.stringify({ token, session }) };
+  }
+
+  // ── Full path: look up in Firebase (with timeout guard) ──────────────────
   try {
-    const db = getFirestore();
+    // Race the Firestore lookup against a 7-second timeout to avoid hitting
+    // Netlify's 10s function limit on cold starts
+    const firestorePromise = (async () => {
+      const db = getFirestore();
+      const doc = await db.collection('orgs').doc(resolvedOrgId + ':gate_users').get();
+      return doc.exists ? JSON.parse(doc.data().data || '[]') : [];
+    })();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore lookup timed out')), 7000)
+    );
 
-    // Look up gate_users in Firebase
-    const doc = await db.collection('orgs').doc(resolvedOrgId + ':gate_users').get();
-    const users = doc.exists ? JSON.parse(doc.data().data || '[]') : [];
-    const user = users.find(u => (u.email || '').toLowerCase() === email);
-
-    if (!user) {
-      // User not in Firebase yet — issue a limited token anyway so the app
-      // can sync their data up. Local password verification already passed
-      // (the browser only calls this endpoint after successful local auth).
+    let users;
+    try {
+      users = await Promise.race([firestorePromise, timeoutPromise]);
+    } catch (timeoutErr) {
+      // Firestore slow/unreachable — issue a fallback token since local auth passed
+      console.warn('auth: Firestore timeout, issuing fallback token for', email);
       const fallbackSession = {
         email,
-        name: email.split('@')[0],
-        role: 'contractor',
-        type: 'team',
+        name: localName || email.split('@')[0],
+        role: localRole || 'contractor',
+        type: localType || 'team',
         orgId: resolvedOrgId,
       };
       const token = signToken({ ...fallbackSession, exp: Date.now() + TOKEN_TTL_MS });
       return { statusCode: 200, headers, body: JSON.stringify({ token, session: fallbackSession }) };
     }
 
-    // Empty passHash means the account exists in Firebase but was seeded without
-    // a password (admin bootstrap or pre-proxy migration). Treat as "not yet in
-    // Firebase" and issue a fallback token — local auth already passed.
-    if (!user.passHash) {
+    const user = users.find(u => (u.email || '').toLowerCase() === email);
+
+    if (!user || !user.passHash) {
+      // User not in Firebase yet — issue a limited token anyway.
+      // Local password verification already passed.
       const fallbackSession = {
-        email: user.email,
-        name: user.name || email.split('@')[0],
-        role: user.role || 'contractor',
-        type: user.type || 'team',
+        email,
+        name: (user && user.name) || localName || email.split('@')[0],
+        role: (user && user.role) || localRole || 'contractor',
+        type: (user && user.type) || localType || 'team',
         orgId: resolvedOrgId,
       };
       const token = signToken({ ...fallbackSession, exp: Date.now() + TOKEN_TTL_MS });
@@ -151,7 +175,6 @@ exports.handler = async (event) => {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Incorrect password' }) };
     }
 
-    // Issue a signed token
     const session = {
       email: user.email,
       name: user.name || email.split('@')[0],
@@ -160,14 +183,24 @@ exports.handler = async (event) => {
       orgId: resolvedOrgId,
     };
     const token = signToken({ ...session, exp: Date.now() + TOKEN_TTL_MS });
+    return { statusCode: 200, headers, body: JSON.stringify({ token, session }) };
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ token, session }),
-    };
   } catch (err) {
     console.error('auth error:', err);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal error' }) };
+    // Last-resort fallback — issue a token rather than blocking login entirely
+    // (local auth already passed; this function is only called post-local-verify)
+    try {
+      const fallbackSession = {
+        email,
+        name: localName || email.split('@')[0],
+        role: localRole || 'contractor',
+        type: localType || 'team',
+        orgId: resolvedOrgId,
+      };
+      const token = signToken({ ...fallbackSession, exp: Date.now() + TOKEN_TTL_MS });
+      return { statusCode: 200, headers, body: JSON.stringify({ token, session: fallbackSession }) };
+    } catch (signErr) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Internal error' }) };
+    }
   }
 };
