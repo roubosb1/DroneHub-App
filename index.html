@@ -19721,18 +19721,11 @@ async function gateLogin(){
 
   // Fetch a Firebase proxy token from the server-side auth endpoint.
   // Awaited so the token is available before 2FA and data-sync checks run.
-  // We send the locally-stored passHash so the server can skip its Firestore
-  // lookup (fast path) — avoids cold-start timeout on mobile networks.
   try{
-    const _authBody={email,password:pass,orgId:ORG_ID,
-      localPassHash:user.passHash||'',
-      localRole:user.role||'',
-      localType:user.type||'',
-      localName:user.name||''};
     const _authR=await fetch('/.netlify/functions/auth',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(_authBody)
+      body:JSON.stringify({email,password:pass,orgId:ORG_ID})
     });
     if(_authR.ok){
       const {token}=await _authR.json();
