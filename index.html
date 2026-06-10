@@ -417,7 +417,8 @@ function renderAppHeader(){
   --font-head:'Barlow Condensed','Barlow','Inter',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var(--navy);min-height:100vh;padding:0;}
+html{background:var(--navy);}
+body{font-family:var(--font);font-size:15px;color:var(--offwhite);background:var(--navy);min-height:100dvh;padding:0;}
 .app-header{background:linear-gradient(135deg,var(--navy-mid) 0%,#0D1438 100%);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;gap:20px;height:64px;position:sticky;top:0;z-index:100;}
 .header-divider{width:1px;height:28px;background:var(--border);flex-shrink:0;}
 .header-sub{font-size:11px;color:var(--offwhite);font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.7}
@@ -630,7 +631,7 @@ button{font-family:var(--font);}
   background:rgba(28,35,51,.95);
   -webkit-backdrop-filter:blur(24px) saturate(1.6);
   backdrop-filter:blur(24px) saturate(1.6);
-  border:1px solid rgba(255,255,255,.1);
+  border:none;
   z-index:900;align-items:stretch;
   box-shadow:0 8px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
   transform-origin:center bottom;
