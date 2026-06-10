@@ -753,6 +753,7 @@ button{font-family:var(--font);}
   /* Extra bottom padding so content isn't hidden behind bottom nav + safe area */
   .wrap{padding:.75rem .75rem calc(80px + env(safe-area-inset-bottom,0px));}
   .wrap:has(#pane-tracker.active){padding-left:0;padding-right:0;padding-bottom:0;}
+  .wrap:has(#pane-calendar.active){padding-left:0;padding-right:0;padding-bottom:0;}
 
   /* ── Pane ── */
   /* Use dvh so iOS Safari's dynamic toolbar doesn't cause height miscalculation */
@@ -1391,11 +1392,14 @@ button{font-family:var(--font);}
     height:auto!important;min-height:0!important;
     background:var(--navy-card)!important;border-radius:0!important;
   }
-  #pane-calendar.active{display:flex!important;}
+  #pane-calendar.active{
+    display:flex!important;flex-direction:column;
+    height:calc(100dvh - 52px);overflow:hidden;
+  }
   #pane-calendar > *:not(#mob-cal-main){display:none!important;}
 
   /* ── Shell ── */
-  #mob-cal-main{display:flex!important;flex-direction:column;flex:1;overflow:hidden;}
+  #mob-cal-main{display:flex!important;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
   /* Two-screen sliding container */
   #mob-cal-view-wrap{
     flex:1;overflow:hidden;position:relative;
@@ -1404,6 +1408,8 @@ button{font-family:var(--font);}
   /* Month screen */
   #mob-cal-month-screen{
     width:100%;flex-shrink:0;display:flex;flex-direction:column;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));
     transition:transform .32s cubic-bezier(.4,0,.2,1);
   }
   /* Day screen — starts off-screen right */
@@ -1523,7 +1529,7 @@ button{font-family:var(--font);}
   /* ── Day events scroll ── */
   #mob-cal-dv-events{
     flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding:10px 14px 24px;
+    padding:10px 14px calc(80px + env(safe-area-inset-bottom,0px));
   }
   /* Event row */
   .mc-ev-row{
