@@ -649,7 +649,7 @@ button{font-family:var(--font);}
 }
 .mob-nav-btn{
   flex:1;display:flex;align-items:center;justify-content:center;
-  border:none;background:transparent;color:rgba(255,255,255,.58);
+  border:none;background:transparent;color:rgba(255,255,255,1);
   cursor:pointer;padding:0;
   transition:color .18s;-webkit-tap-highlight-color:transparent;
   position:relative;
@@ -729,8 +729,9 @@ button{font-family:var(--font);}
   /* Right slot: hamburger */
   #header-right{
     grid-column:3;justify-self:end;
-    gap:4px;flex-shrink:0;margin-left:0!important;
+    gap:2px;flex-shrink:0;margin-left:0!important;
   }
+  #header-user-wrap{gap:2px!important;}
   #mob-hamburger-btn{display:flex!important;}
   /* Mobile quick-add + button in header */
   #mob-header-plus{display:flex!important;}
@@ -2060,7 +2061,7 @@ button{font-family:var(--font);}
       <span id="app-user-display" style="font-size:12px;color:var(--muted)"></span>
       <button onclick="openTeamMemberProfile('me')" id="header-my-profile-btn" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">👤 My Profile</button>
       <div style="position:relative">
-        <button id="notif-bell-btn" onclick="toggleNotificationPanel()" style="position:relative;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <button id="notif-bell-btn" onclick="toggleNotificationPanel()" style="position:relative;width:28px;height:28px;border-radius:0;border:none;background:transparent;color:rgba(255,255,255,.75);cursor:pointer;display:flex;align-items:center;justify-content:center">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--navy-mid)"></span>
         </button>
