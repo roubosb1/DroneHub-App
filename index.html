@@ -7461,45 +7461,46 @@ function renderCalDayView(dateStr){
   // All-day section
   let adHtml='';
   if(allDayEvts.length){
-    adHtml=`<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px">
+    adHtml=`<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">All Day</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">`+
       allDayEvts.map(e=>calDayEventPill(e,dateStr)).join('')+
     `</div></div>`;
   }
-  // Timeline rows (12 AM – 11 PM)
+  // Timeline rows – in scrollable container
   const now=new Date(); const todayStr=now.toISOString().slice(0,10);
   const isToday=dateStr===todayStr;
   const nowHour=now.getHours(); const nowMin=now.getMinutes();
-  let timelineHtml='<div style="display:grid;grid-template-columns:52px 1fr;border:1px solid var(--border);border-radius:10px;overflow:hidden">';
+  let rowsHtml='';
   for(let h=0;h<24;h++){
     const lbl=h===0?'12 AM':h<12?h+' AM':h===12?'12 PM':(h-12)+' PM';
-    const hStr=String(h).padStart(2,'0');
     const hEvts=timedEvts.filter(e=>{
       if(!e._time) return false;
       const parts=e._time.split(':'); return parseInt(parts[0],10)===h;
     });
     const isNowHour=isToday&&h===nowHour;
     const border=h>0?'border-top:1px solid var(--border);':'';
-    timelineHtml+=`<div style="padding:0 6px;text-align:right;font-size:10px;color:var(--muted);line-height:1;padding-top:8px;min-height:52px;${border}background:var(--navy-mid)">${lbl}</div>`;
-    timelineHtml+=`<div style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative">`;
+    rowsHtml+=`<div style="padding:0 6px;text-align:right;font-size:10px;color:var(--muted);line-height:1;padding-top:8px;min-height:52px;${border}background:var(--navy-mid)">${lbl}</div>`;
+    rowsHtml+=`<div style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative">`;
     if(isNowHour){
       const pct=(nowMin/60)*100;
-      timelineHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"><span style="position:absolute;left:-6px;top:-4px;width:10px;height:10px;background:var(--blue-bright);border-radius:50%;display:block"></span></div>`;
+      rowsHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"><span style="position:absolute;left:-6px;top:-4px;width:10px;height:10px;background:var(--blue-bright);border-radius:50%;display:block"></span></div>`;
     }
-    hEvts.forEach(e=>{timelineHtml+=calDayEventPill(e,dateStr);});
-    timelineHtml+='</div>';
+    hEvts.forEach(e=>{rowsHtml+=calDayEventPill(e,dateStr);});
+    rowsHtml+='</div>';
   }
-  timelineHtml+='</div>';
+  const timelineHtml=`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden"><div id="cal-day-scroll" style="overflow-y:auto;max-height:calc(100vh - 240px)"><div style="display:grid;grid-template-columns:52px 1fr">${rowsHtml}</div></div></div>`;
   const cont=document.getElementById('cal-day-view-content');
-  if(cont) cont.innerHTML=`<div style="margin-bottom:4px;display:flex;align-items:center;gap:8px">
-    <button onclick="setCalView('month')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;font-weight:600;padding:0;display:flex;align-items:center;gap:4px">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>Month
-    </button>
-    <span style="color:var(--border);font-size:12px">/</span>
-    <span style="font-size:12px;color:var(--muted)">${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}</span>
-    <button onclick="openCalEventModal('${dateStr}')" style="margin-left:auto;padding:4px 12px;border:1px solid var(--blue);border-radius:7px;font-size:12px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-weight:700">+ Add Event</button>
-  </div>${adHtml}${timelineHtml}`;
+  if(cont){
+    cont.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <button onclick="setCalView('month')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;font-weight:600;padding:0;display:flex;align-items:center;gap:4px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>Month
+      </button>
+      <span style="color:var(--border);font-size:12px">/</span>
+      <span style="font-size:12px;color:var(--muted)">${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}</span>
+    </div>${adHtml}${timelineHtml}`;
+    setTimeout(()=>{const sc=document.getElementById('cal-day-scroll');if(sc)sc.scrollTop=7*52;},50);
+  }
 }
 function calDayEventPill(e,dateStr){
   const c=e._col;
@@ -7533,49 +7534,56 @@ function renderCalWeekView(dateStr){
   const now=new Date(); const nowHour=now.getHours(); const nowMin=now.getMinutes();
   // Collect events for each day
   const dayEvts=weekDays.map(dd=>calGetDayEvents(dd.toISOString().slice(0,10)));
-  // All-day row
   const hasAllDay=dayEvts.some(evts=>evts.some(e=>!e._time));
-  let adHtml='';
+
+  // ── Sticky column headers ──
+  let colHeaderHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);position:sticky;top:0;z-index:10;background:var(--navy-mid);border-bottom:1px solid var(--border)">`;
+  colHeaderHtml+=`<div style="border-right:1px solid var(--border);padding:6px"></div>`;
+  colHeaderHtml+=weekDays.map((dd,i)=>{
+    const ds=dd.toISOString().slice(0,10);
+    const isToday=ds===todayStr;
+    return `<div onclick="setCalView('day','${ds}')" style="${i<6?'border-right:1px solid var(--border);':''}padding:8px 4px;text-align:center;cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background=''">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">${DAYS[dd.getDay()]}</div>
+      <div style="font-size:${isToday?'16':'14'}px;font-weight:${isToday?'800':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};line-height:1.2;margin-top:2px">${dd.getDate()}${isToday?'<div style="width:6px;height:6px;background:var(--blue-bright);border-radius:50%;margin:2px auto 0"></div>':''}</div>
+    </div>`;
+  }).join('');
+  colHeaderHtml+='</div>';
+
+  // ── Optional sticky all-day row ──
+  let allDayHtml='';
   if(hasAllDay){
-    adHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);border:1px solid var(--border);border-radius:10px 10px 0 0;overflow:hidden;margin-bottom:0">
-      <div style="background:var(--navy-mid);padding:6px;font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;border-right:1px solid var(--border)">All day</div>`+
-      weekDays.map((dd,i)=>`<div style="background:var(--navy-mid);padding:4px 4px;min-height:32px;${i<6?'border-right:1px solid var(--border);':''}">
-        ${dayEvts[i].filter(e=>!e._time).map(e=>calWeekEventChip(e)).join('')}
-      </div>`).join('')+
-    '</div>';
+    allDayHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);position:sticky;top:44px;z-index:9;background:var(--navy-mid);border-bottom:1px solid var(--border)">`;
+    allDayHtml+=`<div style="padding:6px;font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;border-right:1px solid var(--border)">All day</div>`;
+    allDayHtml+=weekDays.map((dd,i)=>`<div style="padding:4px;min-height:32px;${i<6?'border-right:1px solid var(--border);':''}">
+      ${dayEvts[i].filter(e=>!e._time).map(e=>calWeekEventChip(e)).join('')}
+    </div>`).join('');
+    allDayHtml+='</div>';
   }
-  // Timeline
-  let timelineHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);border:1px solid var(--border);border-top:${hasAllDay?'none':'1px solid var(--border)'};border-radius:${hasAllDay?'0 0 10px 10px':'10px'};overflow:hidden">`;
-  // Column headers
-  timelineHtml+=`<div style="background:var(--navy-mid);border-bottom:1px solid var(--border)"></div>`+
-    weekDays.map((dd,i)=>{
-      const ds=dd.toISOString().slice(0,10);
-      const isToday=ds===todayStr;
-      return `<div onclick="setCalView('day','${ds}')" style="background:var(--navy-mid);border-bottom:1px solid var(--border);${i<6?'border-right:1px solid var(--border);':''}padding:8px 4px;text-align:center;cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='var(--navy-mid)'">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">${DAYS[dd.getDay()]}</div>
-        <div style="font-size:${isToday?'16':'14'}px;font-weight:${isToday?'800':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};line-height:1.2;margin-top:2px">${dd.getDate()}${isToday?'<div style="width:6px;height:6px;background:var(--blue-bright);border-radius:50%;margin:2px auto 0"></div>':''}</div>
-      </div>`;
-    }).join('');
-  // Hour rows
+
+  // ── Hour rows ──
+  let hoursHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr)">`;
   for(let h=0;h<24;h++){
     const lbl=h===0?'12 AM':h<12?h+' AM':h===12?'12 PM':(h-12)+' PM';
-    timelineHtml+=`<div style="font-size:10px;color:var(--muted);padding:8px 6px 0;text-align:right;min-height:52px;border-top:1px solid var(--border);background:var(--navy-mid)">${lbl}</div>`;
+    hoursHtml+=`<div style="font-size:10px;color:var(--muted);padding:8px 6px 0;text-align:right;min-height:52px;${h>0?'border-top:1px solid var(--border);':''}background:var(--navy-mid)">${lbl}</div>`;
     weekDays.forEach((dd,i)=>{
       const ds=dd.toISOString().slice(0,10);
       const isToday=ds===todayStr;
       const hEvts=dayEvts[i].filter(e=>e._time&&parseInt(e._time.split(':')[0],10)===h);
       const isNowHour=isToday&&h===nowHour;
-      timelineHtml+=`<div style="min-height:52px;border-top:1px solid var(--border);${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative">`;
-      if(isNowHour){const pct=(nowMin/60)*100;timelineHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
-      hEvts.forEach(e=>{timelineHtml+=calWeekEventChip(e);});
-      timelineHtml+='</div>';
+      hoursHtml+=`<div style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative">`;
+      if(isNowHour){const pct=(nowMin/60)*100;hoursHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
+      hEvts.forEach(e=>{hoursHtml+=calWeekEventChip(e);});
+      hoursHtml+='</div>';
     });
   }
-  timelineHtml+='</div>';
+  hoursHtml+='</div>';
+
   const cont=document.getElementById('cal-week-view-content');
-  if(cont) cont.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:flex-end">
-    <button onclick="openCalEventModal()" style="padding:4px 12px;border:1px solid var(--blue);border-radius:7px;font-size:12px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-weight:700">+ Add Event</button>
-  </div>${adHtml}${timelineHtml}`;
+  if(cont){
+    cont.innerHTML=`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden"><div id="cal-week-scroll" style="overflow-y:auto;max-height:calc(100vh - 220px)">${colHeaderHtml}${allDayHtml}${hoursHtml}</div></div>`;
+    // Auto-scroll to 7 AM (7 rows × 52px each)
+    setTimeout(()=>{const sc=document.getElementById('cal-week-scroll');if(sc)sc.scrollTop=7*52;},50);
+  }
 }
 function calWeekEventChip(e){
   const c=e._col;
