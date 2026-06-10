@@ -3799,13 +3799,12 @@ button{font-family:var(--font);}
     </div>
   </div>
 
-  <!-- ══ Event type filter pills (always visible across all views) ══ -->
+  <!-- ══ Event type filter pills + contractor legend (always visible across all views) ══ -->
   <div id="cal-type-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+  <div id="cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px"></div>
 
   <!-- ══ MONTH VIEW ══ -->
   <div id="cal-month-view" style="display:none">
-    <!-- Creator color legend -->
-    <div id="cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px"></div>
     <!-- Grid -->
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:var(--border);border-radius:12px;overflow:hidden">
       <div style="background:var(--navy-mid);text-align:center;padding:12px 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Sun</div>
@@ -7457,6 +7456,7 @@ function renderCalDayView(dateStr){
   const label=document.getElementById('cal-month-label');
   if(label) label.textContent=DAYS[d.getDay()]+', '+MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
   renderCalFilterBar();
+  renderCalLegend();
   const evts=calGetDayEvents(dateStr);
   const timedEvts=evts.filter(e=>e._time);
   const allDayEvts=evts.filter(e=>!e._time);
@@ -7535,6 +7535,40 @@ function renderCalFilterBar(){
   }).join('');
 }
 
+// ── Shared contractor legend ──────────────────────────────────────────────────
+function renderCalLegend(){
+  const legend=document.getElementById('cal-legend');
+  if(!legend) return;
+  const filterCreator=document.getElementById('cal-filter-contractor')?.value||'';
+  const allNames=new Set();
+  savedJobs.forEach(j=>{
+    Object.values(j.payouts||{}).forEach(p=>{
+      if(p.name&&!p.name.includes('unassigned')&&!p.name.includes('no ')) allNames.add(p.name);
+    });
+    const ts=getTrackerStage(j.id);
+    if(ts.videographer) allNames.add(ts.videographer);
+    if(ts.claimedBy) allNames.add(ts.claimedBy);
+  });
+  Object.values(CONTRACTORS).forEach(c=>allNames.add(c.name));
+  getGcalLinks().forEach(l=>allNames.add(l.creatorName));
+  calEventsLoad().forEach(e=>{if(e.memberName)allNames.add(e.memberName);});
+  const used=filterCreator?new Set([filterCreator]):allNames;
+  if(used.size){
+    legend.style.display='flex';
+    legend.innerHTML=Array.from(used).sort().map(name=>{
+      const col=getCreatorColor(name);
+      const isActive=filterCreator===name;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:10px;background:${col.bg};border:1px solid ${isActive?col.text:col.border};cursor:pointer;opacity:${filterCreator&&!isActive?.45:1};transition:opacity .15s,border-color .15s" onclick="(function(){var el=document.getElementById('cal-filter-contractor');el.value=el.value==='${name}'?'':'${name}';calViewRefresh();})()">
+        <span style="width:8px;height:8px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
+        <span style="font-size:11px;font-weight:600;color:${col.text}">${name}</span>
+        ${isActive?`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${col.text}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`:''}
+      </div>`;
+    }).join('');
+  } else {
+    legend.style.display='none';
+  }
+}
+
 // ── Week View ─────────────────────────────────────────────────────────────────
 function renderCalWeekView(dateStr){
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -7553,6 +7587,7 @@ function renderCalWeekView(dateStr){
     label.textContent=sameMonth?MONTHS[s.getMonth()]+' '+s.getDate()+'–'+e.getDate()+', '+s.getFullYear():MONTHS[s.getMonth()]+' '+s.getDate()+' – '+MONTHS[e.getMonth()]+' '+e.getDate()+', '+e.getFullYear();
   }
   renderCalFilterBar();
+  renderCalLegend();
   const todayStr=new Date().toISOString().slice(0,10);
   const now=new Date(); const nowHour=now.getHours(); const nowMin=now.getMinutes();
   // Collect events for each day
@@ -9989,37 +10024,8 @@ function renderCalendar(){
     }
   });
 
-  // Legend
-  const legend=document.getElementById('cal-legend');
-  if(legend){
-    const allNames=new Set();
-    savedJobs.forEach(j=>{
-      Object.values(j.payouts||{}).forEach(p=>{
-        if(p.name&&!p.name.includes('unassigned')&&!p.name.includes('no ')) allNames.add(p.name);
-      });
-      const ts=getTrackerStage(j.id);
-      if(ts.videographer) allNames.add(ts.videographer);
-      if(ts.claimedBy) allNames.add(ts.claimedBy);
-    });
-    Object.values(CONTRACTORS).forEach(c=>allNames.add(c.name));
-    getGcalLinks().forEach(l=>allNames.add(l.creatorName));
-    calEventsLoad().forEach(e=>{if(e.memberName)allNames.add(e.memberName);});
-    const used=filterCreator?new Set([filterCreator]):allNames;
-    if(used.size){
-      legend.style.display='flex';
-      legend.innerHTML=Array.from(used).sort().map(name=>{
-        const col=getCreatorColor(name);
-        const isActive = filterCreator === name;
-        return `<div style="display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:10px;background:${col.bg};border:1px solid ${isActive?col.text:col.border};cursor:pointer;opacity:${filterCreator&&!isActive?.45:1};transition:opacity .15s,border-color .15s" onclick="(function(){var el=document.getElementById('cal-filter-contractor');el.value=el.value==='${name}'?'':'${name}';renderCalendar();})()">
-          <span style="width:8px;height:8px;border-radius:50%;background:${col.border};flex-shrink:0"></span>
-          <span style="font-size:11px;font-weight:600;color:${col.text}">${name}</span>
-          ${isActive?`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${col.text}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`:''}
-        </div>`;
-      }).join('');
-    } else {
-      legend.style.display='none';
-    }
-  }
+  // Contractor legend (shared with week/day views)
+  renderCalLegend();
 
   let html='';
   for(let i=firstDay-1;i>=0;i--)
