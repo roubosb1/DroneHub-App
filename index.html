@@ -749,6 +749,10 @@ button{font-family:var(--font);}
   .tabs{display:none;}
   #mobile-bottom-nav{display:flex;}
 
+  /* ── Hide scrollbars on horizontal tab strips ── */
+  .no-scrollbar{scrollbar-width:none;-ms-overflow-style:none;}
+  .no-scrollbar::-webkit-scrollbar{display:none;}
+
   /* ── Wrap ── */
   /* Extra bottom padding so content isn't hidden behind bottom nav + safe area */
   .wrap{padding:.75rem .75rem calc(80px + env(safe-area-inset-bottom,0px));}
@@ -2821,7 +2825,7 @@ button{font-family:var(--font);}
 <div id="pane-finance" class="pane">
 
   <!-- Finance sub-tab switcher -->
-  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
+  <div class="no-scrollbar" style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);overflow-x:auto">
     <button id="fin-sub-tab-overview" onclick="setFinanceSubTab('overview')" style="padding:10px 20px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Overview
@@ -3945,7 +3949,7 @@ button{font-family:var(--font);}
 <div id="pane-sales" class="pane">
 
   <!-- Top-level view switcher: Jobs / Clients / Contacts / Pipeline -->
-  <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto">
+  <div class="no-scrollbar" style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto">
     <button id="sales-view-jobs-btn" onclick="setSalesView('jobs')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> Jobs</button>
     <button id="sales-view-clients-btn" onclick="setSalesView('clients')" style="padding:9px 18px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Clients</button>
     <button id="sales-view-contacts-btn" onclick="setSalesView('contacts')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts</button>
@@ -4654,7 +4658,7 @@ button{font-family:var(--font);}
   </div>
 
   <!-- Sub-tabs -->
-  <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto">
+  <div class="no-scrollbar" style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto">
     <button id="social-stab-workspaces" onclick="setSocialSubTab('workspaces')" style="padding:10px 18px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Workspaces
     </button>
@@ -30222,7 +30226,7 @@ function initGoogleMaps(){
     <img id="mob-pf-logo" src="" alt="DroneHub" style="grid-column:2;justify-self:center;height:20px;object-fit:contain">
     <!-- Right slot: bell + hamburger -->
     <div style="grid-column:3;justify-self:end;display:flex;align-items:center;gap:2px">
-      <button onclick="toggleNotificationPanel()" style="position:relative;width:32px;height:32px;border:none;background:transparent;color:rgba(255,255,255,.75);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-right:-5px;-webkit-tap-highlight-color:transparent">
+      <button onclick="toggleNotificationPanel()" style="position:relative;width:32px;height:32px;border:none;background:transparent;color:rgba(255,255,255,.75);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:10px;margin-right:-5px;-webkit-tap-highlight-color:transparent">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span id="mob-pf-notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--navy-card)"></span>
       </button>
