@@ -3892,7 +3892,6 @@ button{font-family:var(--font);}
           <button id="mob-cal-today-btn" onclick="calToday()">Today</button>
           <button class="mc-nav-btn" onclick="calNav(-1)">‹</button>
           <button class="mc-nav-btn" onclick="calNav(1)">›</button>
-          <button id="mob-cal-add-btn" onclick="openCalEventModal()">+</button>
         </div>
         <div id="mob-cal-dow">
           <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
@@ -6046,7 +6045,7 @@ function mobNavHome(){
 function mobNavPlus(){
   const pane = localStorage.getItem('dronehub_active_pane') || 'tracker';
   if(pane === 'tracker')  { mobTrkAdd?.(); return; }
-  if(pane === 'calendar') { document.getElementById('mobnav-calendar-add')?.click?.(); return; }
+  if(pane === 'calendar') { openCalEventModal?.(); return; }
   if(pane === 'louchat')  { mobChatPlusOpen(); return; }
   // Default: open the hamburger for more options
   toggleMobTopDropdown?.();
