@@ -19577,22 +19577,26 @@ function gateShowTab(tab){
 }
 
 async function gateLogin(){
+  // Give immediate visual feedback — disable button and show spinner right away
+  const _loginBtn=document.querySelector('#gate-login-form button[onclick="gateLogin()"]');
+  if(_loginBtn){_loginBtn.disabled=true;_loginBtn.textContent='Signing in…';_loginBtn.style.opacity='.7';}
+  const _restoreBtn=()=>{if(_loginBtn){_loginBtn.disabled=false;_loginBtn.textContent='Sign in →';_loginBtn.style.opacity='1';}};
   try{
   const email=(document.getElementById('gate-login-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('gate-login-pass')?.value||'';
   const errEl=document.getElementById('gate-login-error');
-  if(!errEl) return;
+  if(!errEl){_restoreBtn();return;}
   errEl.style.display='none';
 
-  if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
+  if(!email||!pass){errEl.textContent='Please enter your email and password.';errEl.style.display='block';_restoreBtn();return;}
 
   // Revoked accounts — login permanently blocked
   const REVOKED_EMAILS=['adrian@dronehubmedia.com'];
-  if(REVOKED_EMAILS.includes(email)){errEl.textContent='This account has been deactivated. Please contact your administrator.';errEl.style.display='block';return;}
+  if(REVOKED_EMAILS.includes(email)){errEl.textContent='This account has been deactivated. Please contact your administrator.';errEl.style.display='block';_restoreBtn();return;}
 
   // Rate limit check — block after 5 failures for 15 min
   const _rateLock=checkRateLimit(email);
-  if(_rateLock){errEl.textContent=_rateLock;errEl.style.display='block';return;}
+  if(_rateLock){errEl.textContent=_rateLock;errEl.style.display='block';_restoreBtn();return;}
 
   // Check admin hardcoded accounts (password stored in gate_users)
   const users=gateGetUsers();
@@ -19678,7 +19682,7 @@ async function gateLogin(){
         }catch(e){console.warn('Team roster fallback failed:',e);}
       }
     }
-    if(!user){errEl.textContent='No account found for that email. Please sign up first or ask your admin to reset your access.';errEl.style.display='block';return;}
+    if(!user){errEl.textContent='No account found for that email. Please sign up first or ask your admin to reset your access.';errEl.style.display='block';_restoreBtn();return;}
     errEl.style.display='none';
     // If auth.js already validated the password, skip the local password check below
     if(_earlyAuthOk && user.passHash) user._earlyAuthOk=true;
@@ -19706,7 +19710,7 @@ async function gateLogin(){
     const _remaining=_RATE_LIMIT-(_getRateData()[email]?.count||0);
     const _lockMsg=checkRateLimit(email);
     errEl.textContent=_lockMsg||((_remaining>0&&_remaining<_RATE_LIMIT)?`Incorrect password. ${_remaining} attempt${_remaining===1?'':'s'} left before temporary lockout.`:'Incorrect password.');
-    errEl.style.display='block';
+    errEl.style.display='block';_restoreBtn();
     return;
   }
   // Migrate legacy hash to SHA-256 on next login (seamless, no user action needed)
@@ -19807,6 +19811,7 @@ async function gateLogin(){
     console.error('Login error:',e);
     const errEl=document.getElementById('gate-login-error');
     if(errEl){errEl.textContent='Login error: '+e.message+' — please refresh and try again.';errEl.style.display='block';}
+    _restoreBtn();
   }
 }
 
