@@ -24701,6 +24701,7 @@ function getExtraServiceLines(){
 let salesActiveList  = 'realestate';
 let _salesClientSub  = 'all';
 let _salesOtherType  = 'all';
+let _salesQuickFilter = null; // 'warm' | 'unsubscribed' | 'dne' | null — stat-chip quick-filter
 let salesSortCol     = 'name';
 let salesSortDir     = 'asc';
 let salesView        = 'clients';
@@ -25401,6 +25402,7 @@ function setSalesList(listId){
   try{localStorage.setItem('dronehub_sales_list', listId);}catch(e){}
   if(listId !== 'clients') _salesClientSub = 'all';
   _salesOtherType = 'all'; // reset type filter on every tab switch
+  _salesQuickFilter = null; // clear stat-chip quick-filter on list switch
   document.querySelectorAll('.sales-list-tab').forEach(b=>{
     b.classList.toggle('active', b.id === 'sltab-'+listId);
   });
@@ -26161,6 +26163,13 @@ function processSalesImportFile(file, listId, overwriteDupes, defaultOtherType){
   reader.readAsBinaryString(file);
 }
 
+// Toggle a stat-chip quick filter; clicking the same chip again clears it
+function salesSetQuickFilter(f){
+  _salesQuickFilter = (_salesQuickFilter === f) ? null : f;
+  _salesPage = 0; // reset to first page
+  renderSalesTable();
+}
+
 // ── Sales view switcher ──
 // salesView declared early above (TDZ fix)
 function setSalesView(v){
@@ -26221,7 +26230,13 @@ function renderSalesTable(){
     subList = list.filter(c=>(c.clientType||'active')===_salesClientSub);
   }
 
-  let filtered = q ? subList.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : subList;
+  // Apply stat-chip quick filter (overrides list — shows matching contacts from all lists)
+  let quickFiltered = subList;
+  if(_salesQuickFilter === 'warm')         quickFiltered = all.filter(c=>!c._deleted && (c.status==='warm'||c.list==='warm'));
+  else if(_salesQuickFilter === 'unsubscribed') quickFiltered = all.filter(c=>!c._deleted && c.unsubscribed);
+  else if(_salesQuickFilter === 'dne')     quickFiltered = all.filter(c=>!c._deleted && c.doNotEmail);
+
+  let filtered = q ? quickFiltered.filter(c=>[c.firstName,c.lastName,c.company,c.email,c.phone,c.city,c.notes].join(' ').toLowerCase().includes(q)) : quickFiltered;
 
   // ── Apply sort ──
   const STATUS_ORDER = {new:0, contacted:1, warm:2, client:3, unsubscribed:4};
@@ -26249,22 +26264,29 @@ function renderSalesTable(){
   const statsBar = document.getElementById('sales-stats-bar');
   if(statsBar){
     const total  = all.filter(c=>!c._deleted).length;
-    const warm   = all.filter(c=>c.list==='warm'&&!c._deleted).length;
+    // Warm = contacts with status 'warm' (across all lists) OR in the warm list
+    const warm   = all.filter(c=>!c._deleted && (c.status==='warm' || c.list==='warm')).length;
     const unsub  = all.filter(c=>c.unsubscribed&&!c._deleted).length;
     const dne    = all.filter(c=>c.doNotEmail&&!c._deleted).length;
     const allClients = all.filter(c=>c.list==='clients'&&!c._deleted);
     const activeClients = allClients.filter(c=>(c.clientType||'active')==='active').length;
     const pastClients   = allClients.filter(c=>c.clientType==='past').length;
     const isClientsView = salesActiveList === 'clients';
+    const qf = _salesQuickFilter;
+    // Helper: chip style — highlighted when active, normal otherwise
+    const chipStyle = (active, accentColor, activeBg) =>
+      active
+        ? `background:${activeBg};border:2px solid ${accentColor};border-radius:10px;padding:7px 13px;font-size:12px;color:${accentColor};cursor:pointer;user-select:none`
+        : `background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none`;
     statsBar.innerHTML = [
       `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>Total Contacts</div>`,
       isClientsView
         ? `<div style="background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--green);display:block">${activeClients}</span>Active Clients</div>`
-        : `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>Warm Leads</div>`,
+        : `<div onclick="salesSetQuickFilter('warm')" title="Click to filter by Warm status" style="${chipStyle(qf==='warm','#F5C842','rgba(245,200,66,.1)')}"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>${qf==='warm'?'✕ ':''}Warm Leads</div>`,
       isClientsView
         ? `<div style="background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--blue-bright);display:block">${pastClients}</span>Past Clients</div>`
-        : `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>Unsubscribed</div>`,
-      !isClientsView && dne>0 ? `<div style="background:rgba(240,82,82,.07);border:1px solid rgba(240,82,82,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--red);display:block">${dne}</span>Do Not Email</div>` : '',
+        : `<div onclick="salesSetQuickFilter('unsubscribed')" title="Click to filter by Unsubscribed" style="${chipStyle(qf==='unsubscribed','#FF7070','rgba(255,112,112,.1)')}"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>${qf==='unsubscribed'?'✕ ':''}Unsubscribed</div>`,
+      !isClientsView && dne>0 ? `<div onclick="salesSetQuickFilter('dne')" title="Click to filter by Do Not Email" style="${chipStyle(qf==='dne','var(--red)','rgba(240,82,82,.1)')}"><span style="font-size:16px;font-weight:700;color:var(--red);display:block">${dne}</span>${qf==='dne'?'✕ ':''}Do Not Email</div>` : '',
     ].join('');
   }
 
