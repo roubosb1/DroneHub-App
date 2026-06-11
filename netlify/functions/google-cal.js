@@ -15,7 +15,22 @@
  *   ORG_ID (optional, defaults to 'dronehub_main')
  */
 
-const { verifyToken } = require('./auth');
+const crypto = require('crypto');
+
+// verifyToken inlined to avoid cross-function require('./auth') that can break bundling
+function verifyToken(token) {
+  try {
+    const [data, sig] = token.split('.');
+    const secret = process.env.JWT_SECRET || 'change-me-set-JWT_SECRET-env-var';
+    const expected = crypto.createHmac('sha256', secret).update(data).digest('hex');
+    if (sig !== expected) return null;
+    const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
+    if (payload.exp < Date.now()) return null;
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
 
 // ── Firebase Admin (lazy singleton) ─────────────────────────────────────────
 let _db = null;

@@ -15,7 +15,23 @@
  *   JWT_SECRET                — same secret used by auth.js to sign tokens
  */
 
-const { verifyToken } = require('./auth');
+const crypto = require('crypto');
+
+// verifyToken is inlined here (same logic as auth.js) to avoid a cross-function
+// require('./auth') that can break with some Netlify bundlers (nft, esbuild).
+function verifyToken(token) {
+  try {
+    const [data, sig] = token.split('.');
+    const secret = process.env.JWT_SECRET || 'change-me-set-JWT_SECRET-env-var';
+    const expected = crypto.createHmac('sha256', secret).update(data).digest('hex');
+    if (sig !== expected) return null;
+    const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
+    if (payload.exp < Date.now()) return null; // expired
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
 
 // ── Firebase Admin init (lazy, singleton) ───────────────────────────────────
 let _db = null;

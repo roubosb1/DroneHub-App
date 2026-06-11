@@ -118,11 +118,21 @@ async function fbDelete(col,docId){
 async function fbSetStrict(col,docId,data,_attempt=0){
   const tok=_fbToken();
   if(!tok) throw new Error('Not authenticated — please log in again');
-  const r=await fetch(_PROXY,{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
-    body:JSON.stringify({action:'set',col,docId,data}),
-  });
+  let r;
+  try{
+    r=await fetch(_PROXY,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({action:'set',col,docId,data}),
+    });
+  }catch(netErr){
+    // Network-level failure (TypeError: Load failed / Failed to fetch) — retry up to 2×
+    if(_attempt < 2){
+      await new Promise(res=>setTimeout(res, 1200 * (_attempt+1)));
+      return fbSetStrict(col,docId,data,_attempt+1);
+    }
+    throw new Error(netErr.message||'Network error');
+  }
   if(r.status===401){
     // Token invalid/expired — clear it and show the session-expired screen
     _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
@@ -185,11 +195,20 @@ async function fbSubClear(subCol){
 async function fbSubSetStrict(subCol,docId,data,_attempt=0){
   const tok=_fbToken();
   if(!tok) throw new Error('Not authenticated — please log in again');
-  const r=await fetch(_PROXY,{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
-    body:JSON.stringify({action:'setSubDoc',col:'orgs',subCol,docId:String(docId),data}),
-  });
+  let r;
+  try{
+    r=await fetch(_PROXY,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({action:'setSubDoc',col:'orgs',subCol,docId:String(docId),data}),
+    });
+  }catch(netErr){
+    if(_attempt<2){
+      await new Promise(res=>setTimeout(res,1200*(_attempt+1)));
+      return fbSubSetStrict(subCol,docId,data,_attempt+1);
+    }
+    throw new Error(netErr.message||'Network error');
+  }
   if(r.status===401){
     _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
     _fbShowSessionExpired();
