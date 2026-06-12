@@ -47,6 +47,9 @@ function getDb() {
   return _db;
 }
 
+// Warm up gRPC channel on cold start (same pattern as auth.js / firebase-proxy.js)
+(async () => { try { await getDb().collection('_ping').doc('_ping').get(); } catch(e){} })();
+
 // ── Token helpers ────────────────────────────────────────────────────────────
 async function getAccessToken(refreshToken) {
   const res = await fetch('https://oauth2.googleapis.com/token', {

@@ -48,6 +48,24 @@ function getDb() {
   return _db;
 }
 
+// ── Eager cold-start warmup ──────────────────────────────────────────────────
+// Establish the Firebase gRPC channel at module-load time so it's ready before
+// the first request arrives. Without this, a cold-start request must wait for
+// both app init AND gRPC handshake, which can exceed Netlify's 10 s limit and
+// cause the connection to drop (browser sees "Load failed" / "Failed to fetch").
+let _warmUpPromise = null;
+function _warmUp() {
+  if (_warmUpPromise) return _warmUpPromise;
+  _warmUpPromise = (async () => {
+    try {
+      const db = getDb();
+      await db.collection('_ping').doc('_ping').get();
+    } catch (e) { /* ignore — warmup errors must never crash the function */ }
+  })();
+  return _warmUpPromise;
+}
+_warmUp().catch(() => {}); // kick off immediately on cold start
+
 // ── Simple in-memory rate limiter (per IP, resets on cold start) ─────────────
 const _rateCounts = {};
 const RATE_LIMIT = 600;  // max requests per minute per IP (team login fires ~40 reads each; 10 users = 400/min)
