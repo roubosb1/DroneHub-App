@@ -2806,7 +2806,7 @@ button{font-family:var(--font);}
 
   <!-- Spreadsheet table -->
   <div id="tracker-scroll-container">
-    <table id="tracker-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1400px">
+    <table id="tracker-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1000px">
       <thead>
         <tr>
           <th id="tracker-col-pid" style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Project ID</th>
@@ -2817,10 +2817,6 @@ button{font-family:var(--font);}
           <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:60px">Files Recv'd</th>
           <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:100px">Assigned Editor</th>
           <th id="tracker-col-status-header" style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Edit Status</th>
-          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Approx Edit Hrs</th>
-          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Approx Film Hrs</th>
-          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:100px">Priority / Due Date</th>
-          <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:100px">Completion Date</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:220px">Project Notes / Branding / Assets</th>
           <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:160px">Filemail / Download Link</th>
         </tr>
@@ -22514,25 +22510,6 @@ function renderTracker(){
       <td style="padding:6px 8px;text-align:center">
         <select onchange="trackerSetEditStatus('${j.id}',this.value,'${_trackerMode}')" title="Change edit status" style="padding:4px 6px;border-radius:6px;border:1px solid ${ss.color}55;background:${ss.bg};color:${ss.color};font-size:11px;font-weight:700;cursor:pointer;max-width:170px;outline:none">${editStatusSelectOpts}</select>${draftCharge}
       </td>
-      <td style="padding:6px 8px;text-align:center">
-        <input class="tracker-cell-edit" value="${editHrs}" title="Approx Edit Hours" placeholder="—"
-          onblur="trackerInlineSave('${j.id}','approxEditHours',this.value,'${_trackerMode}')"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${editHrs}';this.blur()}"
-          style="text-align:center;width:48px;color:${txtMuted}">
-      </td>
-      <td style="padding:6px 8px;text-align:center">
-        <input class="tracker-cell-edit" value="${filmHrs}" title="Approx Film Hours" placeholder="—"
-          onblur="trackerInlineSave('${j.id}','approxFilmHours',this.value,'${_trackerMode}')"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${filmHrs}';this.blur()}"
-          style="text-align:center;width:48px;color:${txtMuted}">
-      </td>
-      <td style="padding:6px 8px;text-align:center;white-space:nowrap">
-        <input type="date" class="tracker-cell-edit" value="${dueDate}" title="${isOverdue?'⚠ OVERDUE: ':''}Due / Priority Date"
-          onblur="trackerInlineSave('${j.id}','completionDate',this.value,'${_trackerMode}')"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')this.blur()"
-          style="text-align:center;width:120px;color:${dueDateColor};font-weight:${dueDateWeight};background:${isOverdue?'rgba(240,82,82,.1)':'transparent'};border-radius:4px">
-      </td>
-      <td style="padding:8px 10px;text-align:center;color:${txtMuted};white-space:nowrap">${ts.completionDate||'—'}</td>
       <td style="padding:6px 8px;max-width:260px">
         <input class="tracker-cell-edit" value="${notes.replace(/"/g,'&quot;')}" title="Notes — click to edit" placeholder="Add notes…"
           onblur="trackerInlineSave('${j.id}','notes',this.value,'${_trackerMode}')"
