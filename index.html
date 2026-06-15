@@ -19589,10 +19589,11 @@ function trackerSetTab(tab){
       inactiveBorder:_trackerLightMode?'rgba(245,166,35,.3)':'rgba(245,166,35,.2)',
     },
     active:{
-      active:'linear-gradient(135deg,var(--blue),#3B6FD4)', activeColor:'#fff',
-      inactiveBg:_trackerLightMode?'rgba(91,141,239,.12)':'rgba(91,141,239,.1)',
-      inactiveColor:_trackerLightMode?'#2563eb':'var(--blue-bright)',
-      inactiveBorder:_trackerLightMode?'rgba(91,141,239,.5)':'rgba(91,141,239,.3)',
+      active:_trackerLightMode?'rgba(91,141,239,.15)':'rgba(91,141,239,.13)', activeColor:_trackerLightMode?'#1d4ed8':'var(--blue-bright)',
+      activeBorder:_trackerLightMode?'rgba(91,141,239,.55)':'rgba(91,141,239,.5)',
+      inactiveBg:_trackerLightMode?'rgba(91,141,239,.07)':'rgba(91,141,239,.06)',
+      inactiveColor:_trackerLightMode?'#2563eb':'rgba(91,141,239,.75)',
+      inactiveBorder:_trackerLightMode?'rgba(91,141,239,.3)':'rgba(91,141,239,.2)',
     },
     completed:{
       active:'linear-gradient(135deg,var(--green),#16A34A)', activeColor:'#fff',
@@ -23023,7 +23024,7 @@ function renderTracker(){
     const editBtnBorder = _isPhoto ? '232,121,249' : '245,166,35';
 
     // Queue number for Upcoming + In Progress tabs
-    const _queueColor=_trackerTab==='active'?'#5B8DEF':'#D97706';
+    const _queueColor='#D97706';
     const _queueLabel=_trackerTab==='active'?'In Prog':'Up Next';
     const queueCell=(_trackerTab==='upcoming'||_trackerTab==='active')
       ?`<td style="padding:4px 6px;overflow:hidden;background:${rowBg};${_trackerTab==='upcoming'?'cursor:grab;user-select:none':''}" ${_trackerTab==='upcoming'?'title="Drag to reorder queue"':''}>
