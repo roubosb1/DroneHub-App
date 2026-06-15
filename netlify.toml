@@ -33,6 +33,8 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
     # Prevent this page being embedded in iframes on other sites (clickjacking)
     X-Frame-Options = "DENY"
     # Stop browsers guessing content type — serves exactly what we say
