@@ -22986,21 +22986,21 @@ function renderTracker(){
     const dueDate=ts.completionDate||'';
     const isOverdue=dueDate&&dueDate<today&&!_completedSt.includes(editStatus);
 
-    // Row background: light vs dark mode, rush > overdue > status accent
-    // In Progress tab uses neutral bg (no status-color overlay) to match Upcoming readability
-    const _useAccent=_trackerTab!=='active';
+    // Row background: use "ready" status styling for In Progress tab to match Upcoming look exactly
+    const _rowStatus=_trackerTab==='active'?'ready':editStatus;
+    const _rowSs=_activeStatusStyles[_rowStatus]||_activeStatusStyles.ready;
     const rowBg=_lm
-      ?(isRush?'#fef2f2':isOverdue?'#fff1f2':(_useAccent?(_activeRowAccent[editStatus]||'#ffffff'):'#ffffff'))
-      :(isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(_useAccent?(_activeRowAccent[editStatus]||'rgba(255,255,255,.01)'):'rgba(255,255,255,.01)'));
+      ?(isRush?'#fef2f2':isOverdue?'#fff1f2':(_activeRowAccent[_rowStatus]||'#ffffff'))
+      :(isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(_activeRowAccent[_rowStatus]||'rgba(255,255,255,.01)'));
     const hoverBg=_lm
       ?(isRush?'#fee2e2':isOverdue?'#fee2e2':'#e0e7ff')
       :(isRush?'rgba(240,82,82,.18)':isOverdue?'rgba(240,82,82,.15)':'rgba(91,141,239,.1)');
     const borderColor=_lm
       ?(isRush?'#fca5a5':isOverdue?'#fca5a5':'rgba(0,0,0,.07)')
-      :(isRush?'rgba(240,82,82,.3)':isOverdue?'rgba(240,82,82,.2)':(ss.color+'28'));
+      :(isRush?'rgba(240,82,82,.3)':isOverdue?'rgba(240,82,82,.2)':(_rowSs.color+'28'));
     const leftAccent=isRush||isOverdue
       ?`border-left:3px solid ${isRush?'#ef4444':'#f97316'};`
-      :_lm?`border-left:3px solid ${ss.color}99;`:`border-left:3px solid ${ss.color}44;`;
+      :_lm?`border-left:3px solid ${_rowSs.color}99;`:`border-left:3px solid ${_rowSs.color}44;`;
 
     // Text colors
     const txtPrimary=_lm?'#111827':'var(--white)';
