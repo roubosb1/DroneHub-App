@@ -22936,7 +22936,7 @@ function renderTracker(){
   if(emptyState) emptyState.style.display='none';
 
   const pidHeader=document.getElementById('tracker-col-pid');
-  if(pidHeader) pidHeader.textContent=_trackerTab==='upcoming'?'Queue':'Project ID';
+  if(pidHeader) pidHeader.textContent=(_trackerTab==='upcoming'||_trackerTab==='active')?'Queue':'Project ID';
 
   // Per-status row accent colors — dark mode
   const ROW_ACCENT={
@@ -23020,13 +23020,15 @@ function renderTracker(){
     const editBtnColor = _isPhoto ? (_lm?'#7e22ce':'#E879F9') : (_lm?'#92400e':'var(--amber)');
     const editBtnBorder = _isPhoto ? '232,121,249' : '245,166,35';
 
-    // Queue number for Upcoming tab
-    const queueCell=_trackerTab==='upcoming'
-      ?`<td style="padding:4px 6px;overflow:hidden;background:${rowBg};cursor:grab;user-select:none" title="Drag to reorder queue">
+    // Queue number for Upcoming + In Progress tabs
+    const _queueColor=_trackerTab==='active'?'#5B8DEF':'#D97706';
+    const _queueLabel=_trackerTab==='active'?'In Prog':'Up Next';
+    const queueCell=(_trackerTab==='upcoming'||_trackerTab==='active')
+      ?`<td style="padding:4px 6px;overflow:hidden;background:${rowBg};${_trackerTab==='upcoming'?'cursor:grab;user-select:none':''}" ${_trackerTab==='upcoming'?'title="Drag to reorder queue"':''}>
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-            <span style="font-size:12px;color:#D97706;opacity:.5;line-height:1;letter-spacing:.05em">⠿</span>
-            <span style="font-size:9px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.06em">Up Next</span>
-            <span style="font-size:16px;font-weight:900;color:${isRush?'#ef4444':'#D97706'};line-height:1">${idx+1}</span>
+            ${_trackerTab==='upcoming'?`<span style="font-size:12px;color:${_queueColor};opacity:.5;line-height:1;letter-spacing:.05em">⠿</span>`:''}
+            <span style="font-size:9px;font-weight:700;color:${_queueColor};text-transform:uppercase;letter-spacing:.06em">${_queueLabel}</span>
+            <span style="font-size:16px;font-weight:900;color:${isRush?'#ef4444':_queueColor};line-height:1">${idx+1}</span>
           </div>
         </td>`
       :`<td style="padding:4px 6px;overflow:hidden;color:${_lm?'#6b7280':'#A8B4D0'};font-family:monospace;font-size:11px;white-space:nowrap;text-overflow:ellipsis">${pid}</td>`;
