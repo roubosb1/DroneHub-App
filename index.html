@@ -2882,14 +2882,14 @@ button{font-family:var(--font);}
             onkeydown="trackerClientSearchKey(event)"
             onfocus="trackerClientSearchInput(this.value)"
             onblur="setTimeout(()=>trackerHideClientDropdown(),200)"
-            style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);width:190px;outline:none">
+            style="padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);width:140px;outline:none">
           <div id="tracker-client-dropdown"
             style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:2px;background:var(--navy-mid);border:1px solid var(--border-bright);border-radius:8px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4)">
           </div>
         </div>
 
         <!-- Status filter -->
-        <select id="tracker-filter-status" onchange="renderTracker()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+        <select id="tracker-filter-status" onchange="renderTracker()" style="padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);max-width:130px">
           <option value="">All statuses</option>
           <optgroup label="── Upcoming ──">
             <option value="footage_pending">Footage Pending</option>
@@ -2910,8 +2910,8 @@ button{font-family:var(--font);}
         </select>
 
         <!-- General keyword search -->
-        <input type="text" id="tracker-search" placeholder="Search address / editor…" oninput="renderTracker()"
-          style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);width:180px">
+        <input type="text" id="tracker-search" placeholder="Search…" oninput="renderTracker()"
+          style="padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);width:110px">
       </div>
     </div>
   </div>
@@ -2956,7 +2956,7 @@ button{font-family:var(--font);}
       <thead>
         <tr>
           <th id="tracker-col-pid" style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:52px">Project ID</th>
-          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:90px">Client</th>
+          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Client</th>
           <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Address / Project</th>
           <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:76px">Shoot Date</th>
           <th id="tracker-col-vg" style="padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:68px">Videographer</th>
@@ -22966,9 +22966,9 @@ function renderTracker(){
 
     return `<tr data-job-id="${j.id}" style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
       ${queueCell}
-      <td style="padding:4px 6px;color:${txtPrimary};font-weight:600;white-space:nowrap">
-        ${clientName}${rushBadge}${overdueBadge}
-        ${company?`<div style="font-size:10px;color:${txtSub};font-weight:400;margin-top:1px">${company}</div>`:''}
+      <td style="padding:4px 6px;max-width:110px;overflow:hidden">
+        <div style="color:${txtPrimary};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clientName}${rushBadge}${overdueBadge}</div>
+        ${company?`<div style="font-size:10px;color:${txtSub};font-weight:400;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${company}</div>`:''}
       </td>
       <td style="padding:4px 6px;max-width:160px">
         <input class="tracker-cell-edit" value="${(j.address||j.name||'').replace(/"/g,'&quot;')}"
