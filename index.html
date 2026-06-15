@@ -576,6 +576,9 @@ body.dh-lc-desktop #lc-flex-container{
   body{overflow-x:hidden;}
   body.dh-lc-desktop .app-header{margin-left:0;width:100%;}
   #pane-tracker{width:100%;}
+  /* Fill full vertical space — override .pane.active min-height */
+  #pane-tracker.active{display:flex!important;flex-direction:column;height:calc(100vh - 64px);min-height:0!important;}
+  #tracker-scroll-container{flex:1;overflow:auto;max-height:none;min-height:0;}
 }
 /* Team member profile modal */
 #team-profile-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:4000;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
