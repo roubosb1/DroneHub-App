@@ -22601,13 +22601,25 @@ function openPhotoTrackerModal(jobId){
       <button onclick="document.getElementById('photo-tracker-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
     </div>
     <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="grid-column:1/-1">
+        <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Client Name</label>
+        <input id="ptm-client" type="text" value="${clientName||''}" placeholder="Client name…" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Property Address / Project</label>
+        <input id="ptm-address" type="text" value="${addr||''}" placeholder="123 Main St – City, Province…" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
       <div>
-        <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Photo Status</label>
-        <select id="ptm-status" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">${statusOpts}</select>
+        <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Shoot Date</label>
+        <input id="ptm-shoot-date" type="date" value="${job?.date||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Photographer</label>
         <input id="ptm-photographer" type="text" value="${ts.photographer||''}" placeholder="Photographer name…" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Photo Status</label>
+        <select id="ptm-status" style="width:100%;padding:9px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">${statusOpts}</select>
       </div>
       <div>
         <label style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Assigned Editor</label>
@@ -22640,7 +22652,7 @@ function openPhotoTrackerModal(jobId){
     </div>
     <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
       <button onclick="document.getElementById('photo-tracker-modal').remove()" style="padding:9px 20px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
-      <button onclick="savePhotoTrackerModal('${jobId}')" style="padding:9px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#E879F9,#9333ea);color:#fff;font-size:13px;font-weight:700;cursor:pointer">💾 Save</button>
+      <button onclick="savePhotoTrackerModal('${jobId}')" style="padding:9px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#E879F9,#9333ea);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Save</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -22660,6 +22672,28 @@ function savePhotoTrackerModal(jobId){
   };
   const existing = getPhotoTrackerStage(jobId);
   setPhotoTrackerStage(jobId, {...existing, ...update});
+  // Persist client / address / shoot date back to the job object
+  const newClient  = document.getElementById('ptm-client')?.value.trim() || '';
+  const newAddress = document.getElementById('ptm-address')?.value.trim() || '';
+  const newDate    = document.getElementById('ptm-shoot-date')?.value || '';
+  const jobIdx = savedJobs.findIndex(j=>String(j.id)===String(jobId));
+  if(jobIdx !== -1){
+    if(newClient)  savedJobs[jobIdx].clientName = newClient;
+    if(newAddress) savedJobs[jobIdx].address    = newAddress;
+    if(newDate)    savedJobs[jobIdx].date        = newDate;
+    if(newAddress) savedJobs[jobIdx].name        = newAddress;
+    try{ localStorage.setItem('dronehub_saved_jobs', JSON.stringify(savedJobs)); }catch(e){}
+  } else {
+    // Standalone photo project — update the standalone store
+    const standalones = getPhotoStandaloneProjects();
+    const spIdx = standalones.findIndex(s=>String(s.id)===String(jobId));
+    if(spIdx !== -1){
+      if(newClient)  standalones[spIdx].clientName = newClient;
+      if(newAddress){ standalones[spIdx].address = newAddress; standalones[spIdx].name = newAddress; }
+      if(newDate)    standalones[spIdx].date = newDate;
+      savePhotoStandaloneProjects(standalones);
+    }
+  }
   document.getElementById('photo-tracker-modal')?.remove();
   renderTracker();
   showDhToast('Photo Tracker', 'Saved ✓', '📸', '#E879F9', 2000);
