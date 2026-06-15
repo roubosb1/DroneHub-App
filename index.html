@@ -2996,16 +2996,16 @@ button{font-family:var(--font);}
 
 <!-- Tracker notes expand modal -->
 <div id="tracker-notes-modal" onclick="if(event.target===this)closeTrackerNotesModal()" style="display:none;position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.78);align-items:center;justify-content:center">
-  <div style="background:#151C2C;border:1px solid rgba(91,141,239,.25);border-radius:16px;padding:0;width:520px;max-width:93vw;box-shadow:0 32px 80px rgba(0,0,0,.7);overflow:hidden">
+  <div style="background:#151C2C;border:1px solid rgba(91,141,239,.25);border-radius:16px;padding:0;width:560px;max-width:93vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.7);overflow:hidden">
     <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="width:32px;height:32px;border-radius:8px;background:rgba(91,141,239,.15);border:1px solid rgba(91,141,239,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5B8DEF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </div>
         <div>
           <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:-.01em">Project Notes</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:1px">Saved per project</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:1px">Organized by draft</div>
         </div>
       </div>
       <button onclick="closeTrackerNotesModal()" title="Close"
@@ -3014,12 +3014,31 @@ button{font-family:var(--font);}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <!-- Body -->
-    <div style="padding:18px 22px 20px">
-      <textarea id="tracker-notes-textarea" placeholder="Add notes, asset links, special instructions, gate codes…"
-        style="width:100%;height:190px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#E8ECF8;font-size:13px;font-family:var(--font);padding:12px 14px;resize:vertical;box-sizing:border-box;outline:none;line-height:1.6;transition:border-color .15s"
+    <!-- Scrollable body -->
+    <div style="flex:1;overflow-y:auto;padding:18px 22px 20px">
+      <!-- Draft selector -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Select Draft</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="tnm-draft-btn" data-draft="general" onclick="trkNotesDraftSelect('general')"
+            style="padding:5px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font)">General</button>
+          <button class="tnm-draft-btn" data-draft="draft1" onclick="trkNotesDraftSelect('draft1')"
+            style="padding:5px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font)">Draft 1</button>
+          <button class="tnm-draft-btn" data-draft="draft2" onclick="trkNotesDraftSelect('draft2')"
+            style="padding:5px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font)">Draft 2</button>
+          <button class="tnm-draft-btn" data-draft="draft3" onclick="trkNotesDraftSelect('draft3')"
+            style="padding:5px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font)">Draft 3</button>
+          <button class="tnm-draft-btn" data-draft="draft4" onclick="trkNotesDraftSelect('draft4')"
+            style="padding:5px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:rgba(255,255,255,.45);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font)">Draft 4+</button>
+        </div>
+      </div>
+      <!-- Textarea for the selected draft -->
+      <textarea id="tracker-notes-textarea" placeholder="Add notes…"
+        style="width:100%;height:150px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#E8ECF8;font-size:13px;font-family:var(--font);padding:12px 14px;resize:vertical;box-sizing:border-box;outline:none;line-height:1.6;transition:border-color .15s"
         onfocus="this.style.borderColor='rgba(91,141,239,.6)'" onblur="this.style.borderColor='rgba(255,255,255,.1)'"
         onkeydown="if(event.key==='Escape'){event.preventDefault();closeTrackerNotesModal()}if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){saveTrackerNotes()}"></textarea>
+      <!-- Other draft notes (read-only, clickable to switch) -->
+      <div id="tnm-prev-notes" style="display:none;margin-top:14px"></div>
       <!-- Footer row -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
         <div style="display:flex;align-items:center;gap:6px">
@@ -23012,6 +23031,13 @@ function renderTracker(){
     const filmHrs=ts.approxFilmHours||j.duration||'';
     const editHrs=ts.approxEditHours||'';
     const notes=ts.notes||'';
+    const _notesObj=parseTrackerNotes(notes);
+    const _notesFilled=Object.entries(_notesObj).filter(([,v])=>v&&v.trim());
+    const _draftShort={general:'Gen',draft1:'D1',draft2:'D2',draft3:'D3',draft4:'D4+'};
+    const _notesDisplay=_notesFilled.length===0?''
+      :_notesFilled.length===1?_notesFilled[0][1]
+      :_notesFilled.map(([k])=>_draftShort[k]||k).join(' · ');
+    const _hasNotes=_notesFilled.length>0;
     const filemaLink=ts.filemailLink||'';
     const dlLink=ts.downloadLink||'';
     const dbxLink=ts.dropboxLink||'';
@@ -23088,10 +23114,10 @@ function renderTracker(){
       <td style="padding:4px 6px;overflow:hidden">
         <div onclick="openTrackerNotesModal('${j.id}','${_trackerMode}',this.dataset.notes)"
           data-notes="${(notes||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"
-          title="${notes?notes.replace(/"/g,'&quot;'):'Click to add notes'}"
-          style="width:100%;font-size:11px;color:${notes?txtMuted:'rgba(255,255,255,.28)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px;padding:2px 4px;border-radius:4px;transition:background .15s"
+          title="${_hasNotes?_notesDisplay.replace(/"/g,'&quot;'):'Click to add notes'}"
+          style="width:100%;font-size:11px;color:${_hasNotes?txtMuted:'rgba(255,255,255,.28)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px;padding:2px 4px;border-radius:4px;transition:background .15s"
           onmouseover="this.style.background='rgba(91,141,239,.12)'"
-          onmouseout="this.style.background='transparent'">${notes||'<span style="font-size:10px">Add notes…</span>'}</div>
+          onmouseout="this.style.background='transparent'">${_hasNotes?_notesDisplay:'<span style="font-size:10px">Add notes…</span>'}</div>
       </td>
       <td style="padding:4px 4px 4px 6px;overflow:hidden">
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
@@ -23159,22 +23185,75 @@ function trkDrop(e,jobId){
 }
 
 // ── Tracker notes modal ───────────────────────────────────────────────────────
-let _trackerNotesJobId='', _trackerNotesMode='';
-function openTrackerNotesModal(jobId, mode, currentNotes){
-  _trackerNotesJobId = String(jobId);
-  _trackerNotesMode  = mode;
-  const modal = document.getElementById('tracker-notes-modal');
-  const ta    = document.getElementById('tracker-notes-textarea');
-  ta.value = currentNotes || '';
-  modal.style.display = 'flex';
-  setTimeout(() => ta.focus(), 60);
+function parseTrackerNotes(raw){
+  if(!raw) return {};
+  try{
+    const p=JSON.parse(raw);
+    if(p&&typeof p==='object'&&!Array.isArray(p)) return p;
+  }catch(e){}
+  return raw.trim()?{general:raw}:{};
+}
+const _trkNotesDraftLabels={general:'General',draft1:'Draft 1',draft2:'Draft 2',draft3:'Draft 3',draft4:'Draft 4+'};
+const _trkNotesDraftHints={
+  general:'Pre-shoot notes, gate codes, special instructions, asset links…',
+  draft1:'Draft 1 revision notes from client…',
+  draft2:'Draft 2 revision notes from client…',
+  draft3:'Draft 3 revision notes from client…',
+  draft4:'Draft 4+ revision notes from client…',
+};
+let _trackerNotesJobId='', _trackerNotesMode='', _trkNotesDraft='general', _trkNotesData={};
+function openTrackerNotesModal(jobId, mode, rawNotes){
+  _trackerNotesJobId=String(jobId);
+  _trackerNotesMode=mode;
+  _trkNotesData=parseTrackerNotes(rawNotes);
+  _trkNotesDraft='general';
+  document.getElementById('tracker-notes-modal').style.display='flex';
+  trkNotesDraftSelect('general');
+  setTimeout(()=>document.getElementById('tracker-notes-textarea').focus(),60);
 }
 function closeTrackerNotesModal(){
-  document.getElementById('tracker-notes-modal').style.display = 'none';
+  document.getElementById('tracker-notes-modal').style.display='none';
+}
+function trkNotesDraftSelect(draft){
+  const ta=document.getElementById('tracker-notes-textarea');
+  if(ta&&_trkNotesDraft) _trkNotesData[_trkNotesDraft]=ta.value;
+  _trkNotesDraft=draft;
+  if(ta){
+    ta.value=_trkNotesData[draft]||'';
+    ta.placeholder=_trkNotesDraftHints[draft]||'Add notes…';
+    ta.focus();
+  }
+  document.querySelectorAll('.tnm-draft-btn').forEach(b=>{
+    const on=b.dataset.draft===draft;
+    b.style.background=on?'rgba(91,141,239,.18)':'rgba(255,255,255,.05)';
+    b.style.color=on?'#5B8DEF':'rgba(255,255,255,.45)';
+    b.style.borderColor=on?'rgba(91,141,239,.45)':'rgba(255,255,255,.12)';
+  });
+  renderTrkPrevNotes();
+}
+function renderTrkPrevNotes(){
+  const el=document.getElementById('tnm-prev-notes');
+  if(!el) return;
+  const others=Object.entries(_trkNotesData).filter(([k,v])=>v&&v.trim()&&k!==_trkNotesDraft);
+  if(!others.length){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='block';
+  el.innerHTML='<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06)">Other Draft Notes</div>'
+    +others.map(([k,v])=>`<div onclick="trkNotesDraftSelect('${k}')" title="Click to edit ${_trkNotesDraftLabels[k]||k}"
+      style="margin-bottom:8px;padding:10px 12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:8px;cursor:pointer;transition:background .15s"
+      onmouseover="this.style.background='rgba(91,141,239,.07)'" onmouseout="this.style.background='rgba(255,255,255,.025)'">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+        <span>${_trkNotesDraftLabels[k]||k}</span>
+        <span style="font-size:9px;color:rgba(91,141,239,.6);font-weight:600">Edit ↑</span>
+      </div>
+      <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.5;white-space:pre-wrap;max-height:56px;overflow:hidden">${v.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
+    </div>`).join('');
 }
 function saveTrackerNotes(){
-  const val = document.getElementById('tracker-notes-textarea').value;
-  trackerInlineSave(_trackerNotesJobId, 'notes', val, _trackerNotesMode);
+  const ta=document.getElementById('tracker-notes-textarea');
+  if(ta) _trkNotesData[_trkNotesDraft]=ta.value;
+  Object.keys(_trkNotesData).forEach(k=>{if(!(_trkNotesData[k]||'').trim())delete _trkNotesData[k];});
+  const serialized=Object.keys(_trkNotesData).length?JSON.stringify(_trkNotesData):'';
+  trackerInlineSave(_trackerNotesJobId,'notes',serialized,_trackerNotesMode);
   closeTrackerNotesModal();
   renderTracker();
 }
