@@ -2960,19 +2960,19 @@ button{font-family:var(--font);}
 
   <!-- Spreadsheet table -->
   <div id="tracker-scroll-container">
-    <table id="tracker-table" style="width:auto;min-width:100%;border-collapse:collapse;font-size:12px">
+    <table id="tracker-table" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px">
       <thead>
         <tr>
-          <th id="tracker-col-pid" style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:52px">Project ID</th>
-          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:70px">Client</th>
-          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Address / Project</th>
-          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:76px">Shoot Date</th>
-          <th id="tracker-col-vg" style="padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:68px">Videographer</th>
-          <th style="padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:44px">Files</th>
-          <th style="padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:76px">Editor</th>
-          <th id="tracker-col-status-header" style="padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:100px">Edit Status</th>
-          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:130px">Notes / Assets</th>
-          <th style="padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;white-space:nowrap;min-width:110px">Links</th>
+          <th id="tracker-col-pid" style="width:6%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Project ID</th>
+          <th style="width:10%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Client</th>
+          <th style="width:16%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Address / Project</th>
+          <th style="width:8%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Shoot Date</th>
+          <th id="tracker-col-vg" style="width:9%;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Videographer</th>
+          <th style="width:4%;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Files</th>
+          <th style="width:9%;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Editor</th>
+          <th id="tracker-col-status-header" style="width:11%;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Edit Status</th>
+          <th style="width:11%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Notes / Assets</th>
+          <th style="width:16%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Links</th>
         </tr>
       </thead>
       <tbody id="tracker-tbody"></tbody>
@@ -22951,13 +22951,13 @@ function renderTracker(){
 
     // Queue number for Upcoming tab
     const queueCell=_trackerTab==='upcoming'
-      ?`<td style="padding:4px 6px;white-space:nowrap;background:${rowBg}">
+      ?`<td style="padding:4px 6px;overflow:hidden;background:${rowBg}">
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
             <span style="font-size:9px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.06em">Up Next</span>
-            <span style="font-size:18px;font-weight:900;color:${isRush?'#ef4444':'#D97706'};line-height:1">${idx+1}</span>
+            <span style="font-size:16px;font-weight:900;color:${isRush?'#ef4444':'#D97706'};line-height:1">${idx+1}</span>
           </div>
         </td>`
-      :`<td style="padding:4px 6px;color:${_lm?'#6b7280':'#A8B4D0'};font-family:monospace;font-size:11px;white-space:nowrap">${pid}</td>`;
+      :`<td style="padding:4px 6px;overflow:hidden;color:${_lm?'#6b7280':'#A8B4D0'};font-family:monospace;font-size:11px;white-space:nowrap;text-overflow:ellipsis">${pid}</td>`;
 
     // Build inline edit-status dropdown options
     const editStatusSelectOpts = _statusOpts.map(s=>`<option value="${s.key}"${editStatus===s.key?' selected':''}>${s.label}</option>`).join('');
@@ -22968,11 +22968,11 @@ function renderTracker(){
 
     return `<tr data-job-id="${j.id}" style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
       ${queueCell}
-      <td style="padding:4px 6px;max-width:110px;overflow:hidden">
+      <td style="padding:4px 6px;overflow:hidden">
         <div style="color:${txtPrimary};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clientName}${rushBadge}${overdueBadge}</div>
         ${company?`<div style="font-size:10px;color:${txtSub};font-weight:400;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${company}</div>`:''}
       </td>
-      <td style="padding:4px 6px;max-width:160px">
+      <td style="padding:4px 6px;overflow:hidden">
         <input class="tracker-cell-edit" value="${(j.address||j.name||'').replace(/"/g,'&quot;')}"
           title="Property address / project name — click to edit"
           placeholder="Enter address…"
@@ -22980,44 +22980,44 @@ function renderTracker(){
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}"
           style="width:100%;color:${txtPrimary};font-size:12px;font-weight:500">
       </td>
-      <td style="padding:4px 6px;color:${txtMuted};white-space:nowrap">${j.date||''}</td>
-      <td style="padding:4px 6px;text-align:center">
+      <td style="padding:4px 6px;overflow:hidden;color:${txtMuted};white-space:nowrap;text-overflow:ellipsis">${j.date||''}</td>
+      <td style="padding:4px 6px;overflow:hidden;text-align:center">
         ${j.isStandalone
           ? `<select onchange="trackerInlineSave('${j.id}','${_isPhoto?'photographer':'videographer'}',this.value,'${_trackerMode}');renderTracker()" title="Assign ${_isPhoto?'photographer':'videographer'}"
-               style="padding:2px 4px;border-radius:6px;border:1px solid ${vidColor(videographer)}66;background:${vidColor(videographer)}22;color:${vidColor(videographer)};font-size:11px;font-weight:700;cursor:pointer;max-width:88px;outline:none">
+               style="width:100%;padding:2px 2px;border-radius:6px;border:1px solid ${vidColor(videographer)}66;background:${vidColor(videographer)}22;color:${vidColor(videographer)};font-size:10px;font-weight:700;cursor:pointer;outline:none">
                ${buildVideographerOptions(videographer)}
              </select>`
-          : `<span style="background:${vidColor(videographer)};color:#fff;padding:2px 6px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap" title="${_isPhoto?'Photographer':'Locked — set during quoting'}">${videographer}</span>`}
+          : `<span style="background:${vidColor(videographer)};color:#fff;padding:2px 5px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap" title="${_isPhoto?'Photographer':'Locked — set during quoting'}">${videographer}</span>`}
       </td>
-      <td style="padding:4px 6px;text-align:center;cursor:pointer" onclick="trackerToggleFiles('${j.id}','${_trackerMode}')" title="Click to toggle files received">
+      <td style="padding:4px 6px;overflow:hidden;text-align:center;cursor:pointer" onclick="trackerToggleFiles('${j.id}','${_trackerMode}')" title="Click to toggle files received">
         ${ts.filesReceived
-          ?'<span style="font-size:18px;color:#22D97A;user-select:none" title="Files received — click to toggle">☑</span>'
-          :`<span style="font-size:18px;color:${_lm?'rgba(0,0,0,.2)':'rgba(255,255,255,.25)'};user-select:none" title="Files not yet received — click to toggle">☐</span>`}
+          ?'<span style="font-size:16px;color:#22D97A;user-select:none">☑</span>'
+          :`<span style="font-size:16px;color:${_lm?'rgba(0,0,0,.2)':'rgba(255,255,255,.25)'};user-select:none">☐</span>`}
       </td>
-      <td style="padding:4px 6px;text-align:center">
+      <td style="padding:4px 6px;overflow:hidden;text-align:center">
         <select onchange="trackerInlineSave('${j.id}','claimedBy',this.value,'${_trackerMode}');renderTracker()" title="Assign Editor"
-          style="padding:2px 4px;border-radius:6px;border:1px solid ${_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${_isDhEditor?'#FF7070':_lm?vidColor(editor):'#fff'};font-size:11px;font-weight:700;cursor:pointer;max-width:90px;outline:none">
+          style="width:100%;padding:2px 2px;border-radius:6px;border:1px solid ${_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${_isDhEditor?'#FF7070':_lm?vidColor(editor):'#fff'};font-size:10px;font-weight:700;cursor:pointer;outline:none">
           ${buildEditorOptions(_rawEditor||'DroneHub')}
         </select>
       </td>
-      <td style="padding:4px 6px;text-align:center">
-        <select onchange="trackerSetEditStatus('${j.id}',this.value,'${_trackerMode}')" title="Change edit status" style="padding:2px 4px;border-radius:6px;border:1px solid ${ss.color}55;background:${ss.bg};color:${ss.color};font-size:11px;font-weight:700;cursor:pointer;max-width:110px;outline:none">${editStatusSelectOpts}</select>${draftCharge}
+      <td style="padding:4px 6px;overflow:hidden;text-align:center">
+        <select onchange="trackerSetEditStatus('${j.id}',this.value,'${_trackerMode}')" title="Change edit status" style="width:100%;padding:2px 2px;border-radius:6px;border:1px solid ${ss.color}55;background:${ss.bg};color:${ss.color};font-size:10px;font-weight:700;cursor:pointer;outline:none">${editStatusSelectOpts}</select>${draftCharge}
       </td>
-      <td style="padding:4px 6px;max-width:150px">
+      <td style="padding:4px 6px;overflow:hidden">
         <input class="tracker-cell-edit" value="${notes.replace(/"/g,'&quot;')}" title="Notes — click to edit" placeholder="Add notes…"
           onblur="trackerInlineSave('${j.id}','notes',this.value,'${_trackerMode}')"
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur()}"
           style="width:100%;font-size:11px;color:${txtMuted}">
       </td>
-      <td style="padding:4px 6px">
-        <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
-          <div style="display:flex;gap:3px;align-items:center">
-            <button onclick="${editModalFn}('${j.id}')" title="Edit project details" style="padding:2px 7px;border-radius:8px;border:1px solid rgba(${editBtnBorder},${_lm?.5:.4});background:rgba(${editBtnBorder},${_lm?.15:.08});color:${editBtnColor};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:3px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
-            <button onclick="deleteTrackerEntry('${j.id}',${j.isStandalone?'true':'false'})" title="Delete this project entry" style="padding:2px 6px;border-radius:8px;border:1px solid rgba(240,82,82,${_lm?.5:.35});background:rgba(240,82,82,${_lm?.12:.07});color:${_lm?'#dc2626':'#FF7070'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:3px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Delete</button>
+      <td style="padding:4px 6px;overflow:hidden">
+        <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">
+          <div style="display:flex;gap:2px;align-items:center">
+            <button onclick="${editModalFn}('${j.id}')" title="Edit project details" style="padding:2px 6px;border-radius:6px;border:1px solid rgba(${editBtnBorder},${_lm?.5:.4});background:rgba(${editBtnBorder},${_lm?.15:.08});color:${editBtnColor};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:3px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
+            <button onclick="deleteTrackerEntry('${j.id}',${j.isStandalone?'true':'false'})" title="Delete this project entry" style="padding:2px 5px;border-radius:6px;border:1px solid rgba(240,82,82,${_lm?.5:.35});background:rgba(240,82,82,${_lm?.12:.07});color:${_lm?'#dc2626':'#FF7070'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:2px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Del</button>
           </div>
-          ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:${_lm?'#047857':'#22D97A'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px" title="${filemaLink}">📦 Filemail ↗</a>`:''}
-          ${dlLink?`<a href="${dlLink}" target="_blank" style="color:${_lm?'#1d4ed8':'#5B8DEF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px" title="${dlLink}">☁ Drive ↗</a>`:''}
-          ${dbxLink?`<a href="${dbxLink}" target="_blank" style="color:${_lm?'#0044cc':'#0061FF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px" title="${dbxLink}">📦 Dropbox ↗</a>`:''}
+          ${filemaLink?`<a href="${filemaLink}" target="_blank" style="color:${_lm?'#047857':'#22D97A'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%" title="${filemaLink}">📦 Filemail ↗</a>`:''}
+          ${dlLink?`<a href="${dlLink}" target="_blank" style="color:${_lm?'#1d4ed8':'#5B8DEF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%" title="${dlLink}">☁ Drive ↗</a>`:''}
+          ${dbxLink?`<a href="${dbxLink}" target="_blank" style="color:${_lm?'#0044cc':'#0061FF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%" title="${dbxLink}">📦 Dropbox ↗</a>`:''}
           ${_isPhoto?'':reviewBtnHtml}
         </div>
       </td>
