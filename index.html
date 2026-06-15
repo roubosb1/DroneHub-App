@@ -22987,9 +22987,11 @@ function renderTracker(){
     const isOverdue=dueDate&&dueDate<today&&!_completedSt.includes(editStatus);
 
     // Row background: light vs dark mode, rush > overdue > status accent
+    // In Progress tab uses neutral bg (no status-color overlay) to match Upcoming readability
+    const _useAccent=_trackerTab!=='active';
     const rowBg=_lm
-      ?(isRush?'#fef2f2':isOverdue?'#fff1f2':(_activeRowAccent[editStatus]||'#ffffff'))
-      :(isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(_activeRowAccent[editStatus]||'rgba(255,255,255,.01)'));
+      ?(isRush?'#fef2f2':isOverdue?'#fff1f2':(_useAccent?(_activeRowAccent[editStatus]||'#ffffff'):'#ffffff'))
+      :(isRush?'rgba(240,82,82,.10)':isOverdue?'rgba(240,82,82,.08)':(_useAccent?(_activeRowAccent[editStatus]||'rgba(255,255,255,.01)'):'rgba(255,255,255,.01)'));
     const hoverBg=_lm
       ?(isRush?'#fee2e2':isOverdue?'#fee2e2':'#e0e7ff')
       :(isRush?'rgba(240,82,82,.18)':isOverdue?'rgba(240,82,82,.15)':'rgba(91,141,239,.1)');
