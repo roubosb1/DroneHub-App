@@ -500,6 +500,8 @@ svg{stroke-width:2.2;}
 .wrap:has(#pane-louchat.active){padding-bottom:0;}
 #pane-louchat.active{min-height:0;}
 /* ── LouChat Instagram-style desktop full-screen ─────────────────────────── */
+/* mob-vc-btn is inside @media(max-width:768px) so it has no display rule on desktop — hide globally */
+#lc-mob-vc-btn{display:none!important;}
 #dh-lc-app-nav{
   display:none;position:fixed;left:0;top:0;bottom:0;
   width:72px;background:#0D1117;border-right:1px solid var(--border);
