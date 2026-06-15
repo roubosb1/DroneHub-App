@@ -509,16 +509,14 @@ svg{stroke-width:2.2;}
 body.dh-lc-desktop #dh-lc-app-nav{display:flex;}
 #dh-lc-app-nav:hover{width:240px;}
 .dh-lc-nav-logo{
-  height:64px;display:flex;align-items:center;padding:0 24px;gap:13px;
+  height:64px;display:flex;align-items:center;justify-content:flex-start;padding:0 20px;
   flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);overflow:hidden;
+  transition:padding .22s cubic-bezier(.4,0,.2,1),justify-content .22s;
 }
-.dh-lc-nav-logo-text{
-  font-size:17px;font-weight:800;white-space:nowrap;letter-spacing:-.3px;
-  background:linear-gradient(135deg,var(--blue-bright) 0%,#a78bfa 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  opacity:0;transition:opacity .14s;
-}
-#dh-lc-app-nav:hover .dh-lc-nav-logo-text{opacity:1;}
+#dh-lc-app-nav:hover .dh-lc-nav-logo{justify-content:center;padding:0;}
+#dh-lc-nav-logo-img{transition:width .22s cubic-bezier(.4,0,.2,1),height .22s cubic-bezier(.4,0,.2,1);}
+#dh-lc-app-nav:hover #dh-lc-nav-logo-img{width:48px!important;height:48px!important;}
+.dh-lc-nav-logo-text{display:none;}
 .dh-lc-nav-items{flex:1;display:flex;flex-direction:column;padding:8px 0;overflow:hidden;}
 .dh-lc-nav-bottom{padding:8px 0;border-top:1px solid rgba(255,255,255,.07);}
 .dh-lc-nav-item{
@@ -6632,6 +6630,8 @@ function showPane(id,ev){
     if(_lcNav) _lcNav.style.display='none';
     const _lcPane=document.getElementById('pane-louchat');
     if(_lcPane){_lcPane.style.position='';_lcPane.style.top='';_lcPane.style.left='';_lcPane.style.right='';_lcPane.style.bottom='';_lcPane.style.zIndex='';_lcPane.style.background='';}
+    const _lcHdr=document.querySelector('.app-header');
+    if(_lcHdr) _lcHdr.style.removeProperty('display');
     const _lcFlex=document.getElementById('lc-flex-container');
     if(_lcFlex){_lcFlex.style.height='calc(100vh - 150px)';_lcFlex.style.marginLeft='';_lcFlex.style.borderRadius='14px';_lcFlex.style.border='1px solid var(--border)';_lcFlex.style.borderLeft='';}
   }
@@ -6706,6 +6706,9 @@ function showPane(id,ev){
       // Fix the louchat pane to cover entire viewport (sits above the header at z-index:150)
       const _lcPane=document.getElementById('pane-louchat');
       if(_lcPane){_lcPane.style.position='fixed';_lcPane.style.top='0';_lcPane.style.left='72px';_lcPane.style.right='0';_lcPane.style.bottom='0';_lcPane.style.zIndex='150';_lcPane.style.background='var(--navy)';}
+      // Force-hide the top nav bar (belt+suspenders: inline !important defeats any race with gateShowAdminView)
+      const _lcHdr=document.querySelector('.app-header');
+      if(_lcHdr) _lcHdr.style.setProperty('display','none','important');
       // Size the chat container to fill the fixed pane
       const _lcFlex=document.getElementById('lc-flex-container');
       if(_lcFlex){_lcFlex.style.height='100%';_lcFlex.style.marginLeft='';_lcFlex.style.borderRadius='0';_lcFlex.style.border='none';_lcFlex.style.borderLeft='1px solid var(--border)';}
