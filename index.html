@@ -17965,8 +17965,8 @@ function renderLouChat(){
       const accent=meta.color||'var(--blue-bright)';
       html+=`<div id="lc-ch-${ch.id}" class="lc-dm-item" onclick="lcOpenChannel('${ch.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;background:${isActive?'rgba(91,141,239,.1)':'transparent'};border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s;-webkit-tap-highlight-color:transparent" onmouseover="if('${ch.id}'!==lcActiveChannel)this.style.background='rgba(255,255,255,.04)'" onmouseout="if('${ch.id}'!==lcActiveChannel)this.style.background='${isActive?'rgba(91,141,239,.1)':'transparent'}'">
         <!-- Channel avatar circle -->
-        <div style="width:46px;height:46px;border-radius:50%;background:${isActive?'rgba(91,141,239,.25)':'rgba(255,255,255,.07)'};border:1.5px solid ${isActive?accent:'rgba(255,255,255,.12)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${isActive?accent:'var(--muted)'}">
-          <span style="font-size:18px">${meta.icon||'💬'}</span>
+        <div style="width:46px;height:46px;border-radius:50%;background:${isActive?'rgba(91,141,239,.25)':'rgba(255,255,255,.07)'};border:1.5px solid ${isActive?accent:'rgba(255,255,255,.12)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${isActive?accent:'var(--muted)'};overflow:hidden;position:relative">
+          ${ch.photo?`<img src="${ch.photo}" alt="" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">`:`<span style="font-size:18px">${meta.icon||'💬'}</span>`}
         </div>
         <!-- Name + preview -->
         <div style="flex:1;min-width:0">
@@ -18930,12 +18930,28 @@ function lcInitDragDrop(){
 // ── Create channel modal state ──────────────────────────────────────────────
 let _lcSelectedMembers=[];
 let _lcMemberSearchResults=[];
+let _lcGroupPhoto='';
+
+function lcHandleGroupPhoto(input){
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _lcGroupPhoto=e.target.result;
+    const img=document.getElementById('lc-group-photo-img');
+    const icon=document.getElementById('lc-group-photo-icon');
+    if(img){img.src=_lcGroupPhoto;img.style.display='block';}
+    if(icon) icon.style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
 
 function lcOpenCreateModal(){
   const s=gateGetSession();
   if(s?.type!=='admin'&&s?.role!=='admin') return;
   _lcSelectedMembers=[];
   _lcMemberSearchResults=[];
+  _lcGroupPhoto='';
   const modal=document.getElementById('lc-create-modal');
   if(!modal) return;
   document.getElementById('lc-new-channel-name').value='';
@@ -18943,6 +18959,13 @@ function lcOpenCreateModal(){
   document.getElementById('lc-member-search').value='';
   document.getElementById('lc-member-search-results').style.display='none';
   document.getElementById('lc-selected-members').innerHTML='';
+  // Reset photo preview
+  const img=document.getElementById('lc-group-photo-img');
+  const icon=document.getElementById('lc-group-photo-icon');
+  const photoInput=document.getElementById('lc-group-photo-input');
+  if(img){img.src='';img.style.display='none';}
+  if(icon) icon.style.display='';
+  if(photoInput) photoInput.value='';
   modal.style.display='flex';
   setTimeout(()=>document.getElementById('lc-new-channel-name').focus(),60);
 }
@@ -19011,7 +19034,7 @@ function lcCreateChannel(){
   const channels=getLcChannels();
   if(channels.find(c=>c.name===name)){alert('A channel with that name already exists.');return;}
   const members=_lcSelectedMembers.map(m=>m.email);
-  const newChannel={id:'lc_'+Date.now(),name,type,topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members};
+  const newChannel={id:'lc_'+Date.now(),name,type,topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members,photo:_lcGroupPhoto||''};
   channels.push(newChannel);
   saveLcChannels(channels);
   lcCloseCreateModal();
@@ -31272,6 +31295,18 @@ function initGoogleMaps(){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
       <div style="font-size:17px;font-weight:800;color:var(--white)">New Chat</div>
       <button onclick="lcCloseCreateModal()" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+    </div>
+
+    <!-- Group photo upload -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:24px">
+      <input type="file" id="lc-group-photo-input" accept="image/*" style="display:none" onchange="lcHandleGroupPhoto(this)">
+      <div onclick="document.getElementById('lc-group-photo-input').click()" id="lc-group-photo-preview"
+        style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.07);border:2px dashed rgba(255,255,255,.18);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:border-color .15s;position:relative"
+        onmouseover="this.style.borderColor='rgba(94,159,255,.6)'" onmouseout="this.style.borderColor='rgba(255,255,255,.18)'">
+        <svg id="lc-group-photo-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><path d="M3 21v-1a7 7 0 0 1 14 0v1"/><circle cx="19" cy="8" r="2"/><path d="M21 14a5 5 0 0 0-5.5-.5"/></svg>
+        <img id="lc-group-photo-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0">
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:7px">Add group photo</div>
     </div>
 
     <!-- Channel name -->
