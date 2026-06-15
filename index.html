@@ -1831,6 +1831,14 @@ button{font-family:var(--font);}
 </div>
 <!-- END SITE LOGIN GATE -->
 
+<!-- APP LOADING OVERLAY — shown between login and gateShowAdminView/TeamView -->
+<div id="dh-app-loading" style="display:none;position:fixed;inset:0;z-index:99998;background:#0D1117;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:var(--font)">
+  <div style="font-size:26px;font-weight:900;letter-spacing:-.5px;color:#fff">DRONE<span style="color:#3B82F6">HUB</span><span style="color:#3B82F6">.</span></div>
+  <div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.1);border-top-color:#3B82F6;border-radius:50%;animation:dhSpin .7s linear infinite"></div>
+  <div style="font-size:12px;color:rgba(255,255,255,.4);letter-spacing:.04em">Loading your workspace…</div>
+</div>
+<style>@keyframes dhSpin{to{transform:rotate(360deg)}}</style>
+
 <!-- ═══════════════════════════════════════════════════════
      CLIENT PORTAL — full-screen, shown when client logs in
      ═══════════════════════════════════════════════════════ -->
@@ -20462,90 +20470,83 @@ async function gateEnterApp(session){
   // the first time the Sales pane is opened (catches uploads by other team members)
   _salesSessionSynced = false;
   gateSaveSession(session);
+  // Hide login gate, show loading overlay immediately — never a blank screen
   document.getElementById('site-login-gate').style.display='none';
+  const _dhLoad=document.getElementById('dh-app-loading');
+  if(_dhLoad) _dhLoad.style.display='flex';
 
-  // Timeout wrapper — if a Firebase call hangs (fetch never settles), reject after ms
-  const _fbRace=(p,ms=7000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('fb-timeout')),ms))]);
+  // Timeout wrapper — 3s for single calls, 5s for full restore
+  const _fbRace=(p,ms=3000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('fb-timeout')),ms))]);
 
-  // ── Sync any locally-saved 2FA data to Firebase (handles offline-setup case) ──
+  // ── 2FA sync — fire in background, never blocks startup ──────────────────
   if(_fbToken()){
-    try{
-      const local2fa=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
-      if(Object.keys(local2fa).length){
-        let fb2fa={};
-        try{const r=await _fbRace(fbGet('orgs',ORG_ID+':2fa'));if(r?.data)fb2fa=JSON.parse(r.data);}catch(e){}
-        const merged={...fb2fa,...local2fa};
-        await _fbRace(fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(merged),updatedAt:Date.now()})).catch(()=>{});
-      }
-    }catch(e){console.warn('[2FA sync] could not sync 2FA to cloud:',e.message);}
+    (async()=>{
+      try{
+        const local2fa=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
+        if(Object.keys(local2fa).length){
+          let fb2fa={};
+          try{const r=await _fbRace(fbGet('orgs',ORG_ID+':2fa'));if(r?.data)fb2fa=JSON.parse(r.data);}catch(e){}
+          const merged={...fb2fa,...local2fa};
+          await _fbRace(fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(merged),updatedAt:Date.now()})).catch(()=>{});
+        }
+      }catch(e){console.warn('[2FA sync]',e.message);}
+    })();
   }
 
-  // ── Sync team roster from Firebase so every device has current data ──────
-  // This fixes: (1) team members getting "Link to team" on their own device,
-  // (2) lastSeen/status never updating because localStorage was always empty.
-  try{
-    if(_fbToken()){
-      const fbTeam=await _fbRace(fbGet('orgs',ORG_ID+':team'));
-      if(fbTeam?.data){
-        const fbMembers=JSON.parse(fbTeam.data);
-        const localMembers=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
-        // Union-merge: never let Firebase shrink the local roster.
-        // Local members not in Firebase (e.g. newly bootstrapped) are kept.
-        if(fbMembers.length >= localMembers.length){
-          // Firebase has more (or equal) — use as base, patch in local-only entries
-          const emailMap={};
-          fbMembers.forEach(m=>{ emailMap[(m.email||'').toLowerCase()]=m; });
-          localMembers.forEach(m=>{
-            const k=(m.email||'').toLowerCase();
-            if(!emailMap[k]) emailMap[k]=m; // keep local-only members
-            else {
-              // Prefer more-recent lastSeen
-              if(m.lastSeen&&(!emailMap[k].lastSeen||m.lastSeen>emailMap[k].lastSeen)) emailMap[k].lastSeen=m.lastSeen;
-            }
-          });
-          const merged=Object.values(emailMap);
-          try{localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));}catch(e){}
-        } else {
-          // Local has more — keep local as base, patch in Firebase fields
-          const emailMap={};
-          localMembers.forEach(m=>{ emailMap[(m.email||'').toLowerCase()]={...m}; });
-          fbMembers.forEach(m=>{
-            const k=(m.email||'').toLowerCase();
-            if(!emailMap[k]) emailMap[k]=m;
-            else if(m.lastSeen&&(!emailMap[k].lastSeen||m.lastSeen>emailMap[k].lastSeen)) emailMap[k].lastSeen=m.lastSeen;
-          });
-          const merged=Object.values(emailMap);
-          try{localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));}catch(e){}
-          // Write merged list back to Firebase so it stays in sync
-          fbSetStrict('orgs',ORG_ID+':team',{data:JSON.stringify(merged),updatedAt:Date.now()})
-            .catch(e=>console.warn('[gateEnterApp:teamSync] write-back failed:',e.message));
+  // ── Team roster sync — fire in background, never blocks startup ───────────
+  if(_fbToken()){
+    (async()=>{
+      try{
+        const fbTeam=await _fbRace(fbGet('orgs',ORG_ID+':team'));
+        if(fbTeam?.data){
+          const fbMembers=JSON.parse(fbTeam.data);
+          const localMembers=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
+          if(fbMembers.length >= localMembers.length){
+            const emailMap={};
+            fbMembers.forEach(m=>{ emailMap[(m.email||'').toLowerCase()]=m; });
+            localMembers.forEach(m=>{
+              const k=(m.email||'').toLowerCase();
+              if(!emailMap[k]) emailMap[k]=m;
+              else if(m.lastSeen&&(!emailMap[k].lastSeen||m.lastSeen>emailMap[k].lastSeen)) emailMap[k].lastSeen=m.lastSeen;
+            });
+            try{localStorage.setItem('dronehub_admin_team',JSON.stringify(Object.values(emailMap)));}catch(e){}
+          } else {
+            const emailMap={};
+            localMembers.forEach(m=>{ emailMap[(m.email||'').toLowerCase()]={...m}; });
+            fbMembers.forEach(m=>{
+              const k=(m.email||'').toLowerCase();
+              if(!emailMap[k]) emailMap[k]=m;
+              else if(m.lastSeen&&(!emailMap[k].lastSeen||m.lastSeen>emailMap[k].lastSeen)) emailMap[k].lastSeen=m.lastSeen;
+            });
+            const merged=Object.values(emailMap);
+            try{localStorage.setItem('dronehub_admin_team',JSON.stringify(merged));}catch(e){}
+            fbSetStrict('orgs',ORG_ID+':team',{data:JSON.stringify(merged),updatedAt:Date.now()}).catch(()=>{});
+          }
         }
-      }
-    }
-  }catch(e){console.warn('Team sync failed:',e);}
+      }catch(e){console.warn('[team sync]',e.message);}
+    })();
+  }
 
-  // ── Update lastSeen + status for this user in roster ─────────────────────
+  // ── Update lastSeen for this user (uses current localStorage data) ────────
   try{
-    const allMembers=getAdminTeamMembers(); // now has Firebase data from above
+    const allMembers=getAdminTeamMembers();
     const mIdx=allMembers.findIndex(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(mIdx>=0){
       allMembers[mIdx].lastSeen=new Date().toISOString().slice(0,19).replace('T',' ');
       allMembers[mIdx].status='active';
-      saveAdminTeamMembers(allMembers); // writes back to localStorage + Firebase
+      saveAdminTeamMembers(allMembers);
     }
   }catch(e){}
 
-  // ── Start lastSeen heartbeat — keeps Firebase fresh while user is on platform ─
   startLastSeenHeartbeat(session.email);
 
   const userDisplay=document.getElementById('app-user-display');
   if(userDisplay) userDisplay.textContent=session.name||session.email;
-  // Populate mobile More drawer user label
   const mobUser=document.getElementById('mob-more-user-label');
   if(mobUser) mobUser.textContent=(session.name||session.email||'').split(' ')[0]||'';
 
   if(session.type==='client'||session.role==='client'){
-    // Show client portal directly
+    if(_dhLoad) _dhLoad.style.display='none';
     document.querySelector('.app-header')?.style.setProperty('display','none');
     document.querySelector('.wrap')?.style.setProperty('display','none');
     if(session.clientId){
@@ -20562,10 +20563,7 @@ async function gateEnterApp(session){
   }
 
   if(session.type==='team'){
-    // Check if they're linked to the team roster.
-    // Always fetch from Firebase first — after a browser clear localStorage is
-    // empty and getAdminTeamMembers() returns [] which would falsely show the
-    // "Link to team" screen to every team member.
+    // Team members with empty localStorage still need roster to check isLinked
     if(_fbToken() && !getAdminTeamMembers().length){
       try{
         const fbTeam=await _fbRace(fbGet('orgs',ORG_ID+':team'));
@@ -20575,11 +20573,13 @@ async function gateEnterApp(session){
     const adminMembers=getAdminTeamMembers();
     const isLinked=adminMembers.find(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(!isLinked){
+      if(_dhLoad) _dhLoad.style.display='none';
       gateShowLinkTeam(session);
       return;
     }
     const _lsEmptyTeam = clients.length === 0 && savedJobs.length === 0;
-    if(_fbToken() && _lsEmptyTeam) await _fbRace(restoreFromFirebase(true),12000).catch(()=>{});
+    if(_fbToken() && _lsEmptyTeam) await _fbRace(restoreFromFirebase(true),5000).catch(()=>{});
+    if(_dhLoad) _dhLoad.style.display='none';
     gateShowTeamView(session);
     if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); gcalCheckOAuthReturn().catch(()=>{}); if(window.innerWidth<=768&&typeof mobShowProfile==='function'){const _pf=document.getElementById('mob-profile-pane');if(_pf&&_pf.style.display!=='none') mobShowProfile();} }).catch(()=>{});
     return;
@@ -20591,18 +20591,18 @@ async function gateEnterApp(session){
     const adminMembers2=getAdminTeamMembers();
     const isLinked2=adminMembers2.find(m=>m.email.toLowerCase()===session.email.toLowerCase());
     if(!isLinked2){
+      if(_dhLoad) _dhLoad.style.display='none';
       gateShowLinkTeam(session);
       return;
     }
   }
 
-  // If localStorage is empty (cache cleared), await Firebase restore BEFORE
-  // showing the UI so the user never sees a blank client/job list.
-  // If localStorage already has data, show immediately and refresh in background.
+  // Only block on Firebase restore if localStorage is completely empty (new device/cleared cache)
   const _lsEmpty = clients.length === 0 && savedJobs.length === 0;
   if(_fbToken() && _lsEmpty){
-    await _fbRace(restoreFromFirebase(true),12000).catch(()=>{});
+    await _fbRace(restoreFromFirebase(true),5000).catch(()=>{});
   }
+  if(_dhLoad) _dhLoad.style.display='none';
   gateShowAdminView(session);
   // Always pull fresh from Firebase in background (catches newer data)
   if(_fbToken()) restoreFromFirebase(true).then(()=>{
