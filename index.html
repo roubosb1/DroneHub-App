@@ -581,6 +581,9 @@ body.dh-lc-desktop #lc-flex-container{
 #team-profile-box{background:var(--navy-card);border:1px solid var(--border-bright);border-radius:18px;width:100%;max-width:860px;overflow:hidden;margin:auto}
 .tp-tab-btn{padding:10px 20px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em;}
 .tp-tab-btn.active{color:var(--white);border-bottom-color:var(--blue-bright);font-weight:800;}
+.dsk-pf-tab{display:flex;align-items:center;gap:6px;padding:14px 18px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.01em;white-space:nowrap;}
+.dsk-pf-tab.active{color:var(--white);border-bottom-color:var(--blue-bright);}
+.dsk-pf-tab:hover:not(.active){color:var(--offwhite);background:rgba(255,255,255,.04);}
 h1{font-size:18px;font-weight:800;margin-bottom:1.25rem;color:var(--white);letter-spacing:-.2px;}
 .section-label{font-size:11px;font-weight:800;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
 .card{background:var(--navy-card);border:1px solid var(--border);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:12px;transition:border-color .2s,box-shadow .2s;overflow:hidden}
@@ -2195,7 +2198,7 @@ button{font-family:var(--font);}
 <div id="dh-toast-stack"></div>
 
 <div id="app-global-nav">
-  <button id="app-gnav-profile-btn" onclick="openTeamMemberProfile('me')" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'" style="display:flex;align-items:center;gap:12px;padding:0 18px;width:100%;border:none;height:64px;border-bottom:1px solid rgba(255,255,255,.07);background:transparent;cursor:pointer;flex-shrink:0;transition:background .15s;overflow:hidden;text-align:left;">
+  <button id="app-gnav-profile-btn" onclick="dskShowMyProfile()" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'" style="display:flex;align-items:center;gap:12px;padding:0 18px;width:100%;border:none;height:64px;border-bottom:1px solid rgba(255,255,255,.07);background:transparent;cursor:pointer;flex-shrink:0;transition:background .15s;overflow:hidden;text-align:left;">
     <div id="app-gnav-avatar-wrap" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
     <div class="app-gnav-label" style="min-width:0">
       <div id="app-gnav-username" style="font-size:13px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
@@ -3625,6 +3628,90 @@ button{font-family:var(--font);}
     </div>
     <!-- Content -->
     <div id="tp-modal-content" style="padding:24px 28px;min-height:300px;max-height:70vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- ── DESKTOP MY PROFILE PANE ─────────────────────────────────────────── -->
+<div id="dsk-profile-pane" style="display:none;position:fixed;left:72px;top:0;right:0;bottom:0;z-index:150;background:var(--navy);flex-direction:column;overflow:hidden">
+  <!-- Header bar -->
+  <div style="height:64px;background:var(--navy-card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0">
+    <button onclick="dskHideMyProfile()" style="width:32px;height:32px;border:none;background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <span style="font-size:15px;font-weight:800;color:var(--white);letter-spacing:-.01em">My Profile</span>
+  </div>
+  <!-- Body: left profile card + right tabs -->
+  <div style="display:flex;flex:1;overflow:hidden">
+
+    <!-- ── Left: profile card ── -->
+    <div style="width:272px;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;background:var(--navy-card);display:flex;flex-direction:column">
+      <!-- Avatar + identity -->
+      <div style="padding:32px 24px 24px;text-align:center;border-bottom:1px solid var(--border)">
+        <div id="dsk-pf-avatar" style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;margin:0 auto 16px;border:3px solid var(--border-bright);overflow:hidden;flex-shrink:0"></div>
+        <div id="dsk-pf-name" style="font-size:18px;font-weight:800;color:var(--white);margin-bottom:6px;line-height:1.2"></div>
+        <div id="dsk-pf-role-badge" style="margin-bottom:12px"></div>
+        <div id="dsk-pf-email" style="font-size:11px;color:var(--muted);margin-bottom:2px"></div>
+        <div id="dsk-pf-phone" style="font-size:11px;color:var(--muted)"></div>
+      </div>
+      <!-- Stats grid -->
+      <div style="padding:20px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Stats</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="padding:12px 8px;background:var(--navy-mid);border-radius:10px;border:1px solid var(--border);text-align:center">
+            <div id="dsk-pf-stat-active" style="font-size:22px;font-weight:800;color:var(--blue-bright);line-height:1.1">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:3px">Active</div>
+          </div>
+          <div style="padding:12px 8px;background:var(--navy-mid);border-radius:10px;border:1px solid var(--border);text-align:center">
+            <div id="dsk-pf-stat-done" style="font-size:22px;font-weight:800;color:var(--green);line-height:1.1">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:3px">Done</div>
+          </div>
+          <div style="padding:12px 8px;background:var(--navy-mid);border-radius:10px;border:1px solid var(--border);text-align:center">
+            <div id="dsk-pf-stat-hrs" style="font-size:22px;font-weight:800;color:var(--amber);line-height:1.1">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:3px">Hrs</div>
+          </div>
+          <div style="padding:12px 8px;background:var(--navy-mid);border-radius:10px;border:1px solid var(--border);text-align:center">
+            <div id="dsk-pf-stat-portfolio" style="font-size:22px;font-weight:800;color:#A78BFA;line-height:1.1">0</div>
+            <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:3px">Videos</div>
+          </div>
+        </div>
+      </div>
+      <!-- Sign out -->
+      <div style="padding:20px 20px;margin-top:auto">
+        <button onclick="gateLogout()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s" onmouseover="this.style.background='rgba(240,82,82,.1)';this.style.color='var(--red)';this.style.borderColor='rgba(240,82,82,.4)'" onmouseout="this.style.background='var(--navy-lift)';this.style.color='var(--muted)';this.style.borderColor='var(--border-bright)'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Right: tabs + content ── -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <!-- Tab bar -->
+      <div style="display:flex;border-bottom:1px solid var(--border);background:var(--navy-mid);flex-shrink:0;overflow-x:auto">
+        <button class="dsk-pf-tab active" id="dsk-pf-tab-overview" onclick="dskPfSwitchTab('overview')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Overview
+        </button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-portfolio" onclick="dskPfSwitchTab('portfolio')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Portfolio
+        </button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-timeoff" onclick="dskPfSwitchTab('timeoff')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
+          Time Off
+        </button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-work" onclick="dskPfSwitchTab('work')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          My Work
+        </button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-calendar" onclick="dskPfSwitchTab('calendar')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Calendar
+        </button>
+      </div>
+      <!-- Shared content div — tpRender* functions write here in dsk mode -->
+      <div id="dsk-tp-content" style="flex:1;overflow-y:auto;padding:28px 32px"></div>
+    </div>
   </div>
 </div>
 
@@ -6710,6 +6797,8 @@ function mobDeleteTimeOff(evtId){
 // ─────────────────────────────────────────────────────────────────────────────
 
 function showPane(id,ev){
+  // Hide desktop profile pane whenever navigating to any regular pane
+  dskHideMyProfile&&dskHideMyProfile();
   // ── Desktop LouChat full-screen: always restore normal layout first ──────────
   if(window.innerWidth>768){
     document.body.classList.remove('dh-lc-desktop');
@@ -8207,6 +8296,7 @@ function renderVacationTracker(){
 // ── TEAM MEMBER PROFILE ──────────────────────────────────────────────────────
 let _tpMemberId = null;
 let _tpTab = 'overview';
+let _tpContentTarget = 'tp-modal-content';
 let _tpPfTab = 'youtube'; // sub-tab inside Portfolio: 'youtube' | 'reels' | 'photos'
 
 // ── Profile storage: each member has one dedicated Firebase document ──────────
@@ -8307,10 +8397,13 @@ function tpResolveMemberId(id){
 }
 
 function openTeamMemberProfile(memberId){
+  // "me" on desktop → full-page desktop profile pane
+  if((memberId==='me'||memberId===gateGetSession()?.email)&&window.innerWidth>768){ dskShowMyProfile(); return; }
   const resolvedId = tpResolveMemberId(memberId);
   if(!resolvedId){ showDhToast('Profile','Could not find your team profile.','⚠️','var(--amber)',3000); return; }
   _tpMemberId = resolvedId;
   _tpTab = 'overview';
+  _tpContentTarget = 'tp-modal-content';
   const modal = document.getElementById('team-profile-modal');
   if(modal) modal.classList.add('open');
   tpRender();
@@ -8323,8 +8416,74 @@ function openTeamMemberProfile(memberId){
 }
 function closeTeamMemberProfile(){
   document.getElementById('team-profile-modal')?.classList.remove('open');
+  _tpContentTarget='tp-modal-content';
   _tpMemberId = null;
 }
+
+function dskShowMyProfile(){
+  if(window.innerWidth<=768){ mobShowProfile(); return; }
+  const s=gateGetSession();
+  if(!s) return;
+  const resolvedId=tpResolveMemberId('me');
+  if(!resolvedId){ showDhToast('Profile','Team profile not found.','⚠️','var(--amber)',3000); return; }
+  _tpMemberId=resolvedId;
+  _tpTab='overview';
+  _tpContentTarget='dsk-tp-content';
+  const member=getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(!member) return;
+  // Avatar
+  const avatarEl=document.getElementById('dsk-pf-avatar');
+  if(avatarEl){
+    const photo=typeof getProfilePhoto==='function'?getProfilePhoto(s.email||member.email||''):null;
+    if(photo){ avatarEl.innerHTML=`<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; avatarEl.style.background='none'; }
+    else { const ini=(member.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); avatarEl.innerHTML=ini; avatarEl.style.background='linear-gradient(135deg,#5B8DEF,#A78BFA)'; }
+  }
+  // Name / role badge / contact
+  const role=TEAM_ROLES.find(r=>r.key===member.role)||TEAM_ROLES[4];
+  const nameEl=document.getElementById('dsk-pf-name'); if(nameEl) nameEl.textContent=member.name||'';
+  const badgeEl=document.getElementById('dsk-pf-role-badge'); if(badgeEl) badgeEl.innerHTML=`<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;font-size:11px;font-weight:700;color:${role.color}">${role.icon} ${role.label}</span>`;
+  const emailEl=document.getElementById('dsk-pf-email'); if(emailEl) emailEl.textContent=member.email||'';
+  const phoneEl=document.getElementById('dsk-pf-phone'); if(phoneEl) phoneEl.textContent=member.phone||'';
+  // Stats
+  const td=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
+  const nm=(member.name||'').toLowerCase();
+  const active=Object.values(td).filter(t=>(t.claimedBy||'').toLowerCase().includes(nm)&&t.editStatus!=='finals_sent'&&t.editStatus!=='footage_pending').length;
+  const done=Object.values(td).filter(t=>(t.claimedBy||'').toLowerCase().includes(nm)&&t.editStatus==='finals_sent').length;
+  const hrs=Object.values(td).filter(t=>(t.claimedBy||'').toLowerCase().includes(nm)).reduce((s,t)=>s+(parseFloat(t.approxEditHours)||0),0);
+  const pf=typeof tpPortfolioLoad==='function'?tpPortfolioLoad(member.id):[];
+  const sg=id=>document.getElementById(id);
+  if(sg('dsk-pf-stat-active')) sg('dsk-pf-stat-active').textContent=active;
+  if(sg('dsk-pf-stat-done')) sg('dsk-pf-stat-done').textContent=done;
+  if(sg('dsk-pf-stat-hrs')) sg('dsk-pf-stat-hrs').textContent=hrs.toFixed(1);
+  if(sg('dsk-pf-stat-portfolio')) sg('dsk-pf-stat-portfolio').textContent=pf.length;
+  // Show pane + reset tabs
+  const pane=document.getElementById('dsk-profile-pane'); if(pane) pane.style.display='flex';
+  document.querySelectorAll('.dsk-pf-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('dsk-pf-tab-overview')?.classList.add('active');
+  // Render content
+  tpRenderContent();
+  // Mark sidebar active
+  document.querySelectorAll('.app-gnav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('app-gnav-profile-btn')?.classList.add('active');
+  // Background Firebase refresh
+  if(typeof tpProfileLoad_fb==='function'&&_fbToken&&_fbToken()){
+    tpProfileLoad_fb(_tpMemberId).then(()=>tpRenderContent()).catch(()=>{});
+  }
+}
+function dskHideMyProfile(){
+  const pane=document.getElementById('dsk-profile-pane'); if(pane) pane.style.display='none';
+  _tpContentTarget='tp-modal-content';
+  document.getElementById('app-gnav-profile-btn')?.classList.remove('active');
+}
+function dskPfSwitchTab(tab){
+  _tpTab=tab;
+  document.querySelectorAll('.dsk-pf-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('dsk-pf-tab-'+tab)?.classList.add('active');
+  tpRenderContent();
+  if(tab==='portfolio'&&_tpMemberId&&_fbToken&&_fbToken()) tpProfileLoad_fb(_tpMemberId).then(()=>tpRenderPortfolio()).catch(()=>{});
+  if(tab==='calendar'&&_tpMemberId&&_fbToken&&_fbToken()) tpProfileLoad_fb(_tpMemberId).then(()=>tpRenderCalendarTab()).catch(()=>{});
+}
+
 function tpSwitchTab(tab){
   _tpTab = tab;
   document.querySelectorAll('.tp-tab-btn').forEach(b=>{
@@ -8414,7 +8573,7 @@ function tpRenderContent(){
 function tpRenderOverview(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-modal-content');
+  const content = document.getElementById(_tpContentTarget||'tp-modal-content');
   if(!content) return;
   // Completed projects count
   const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
@@ -8456,7 +8615,7 @@ function tpRenderOverview(){
 function tpRenderTimeOff(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-modal-content');
+  const content = document.getElementById(_tpContentTarget||'tp-modal-content');
   if(!content) return;
   const session = gateGetSession();
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
@@ -8557,7 +8716,7 @@ function tpDeleteTimeOff(evtId){
 function tpRenderPortfolio(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-modal-content');
+  const content = document.getElementById(_tpContentTarget||'tp-modal-content');
   if(!content) return;
   const session = gateGetSession();
   const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
@@ -8899,7 +9058,7 @@ function tpPlayVideo(url, title, isReel){
 function tpRenderMyWork(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  const content = document.getElementById('tp-modal-content');
+  const content = document.getElementById(_tpContentTarget||'tp-modal-content');
   if(!content) return;
   const trackerData = JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
   const standaloneArr = getStandaloneProjects();
@@ -8964,7 +9123,7 @@ function tpRenderCalendarTab(){
     );
     if(member) _tpMemberId = member.id; // sync the ID so future renders work
   }
-  const content = document.getElementById('tp-modal-content');
+  const content = document.getElementById(_tpContentTarget||'tp-modal-content');
   if(!content) return;
   if(!member){
     content.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted)">
