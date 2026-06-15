@@ -23045,7 +23045,8 @@ function renderTracker(){
         <select onchange="trackerSetEditStatus('${j.id}',this.value,'${_trackerMode}')" title="Change edit status" style="width:100%;padding:2px 2px;border-radius:6px;border:1px solid ${ss.color}55;background:${ss.bg};color:${ss.color};font-size:10px;font-weight:700;cursor:pointer;outline:none">${editStatusSelectOpts}</select>${draftCharge}
       </td>
       <td style="padding:4px 6px;overflow:hidden">
-        <div onclick="openTrackerNotesModal('${j.id}','${_trackerMode}',${JSON.stringify(notes)})"
+        <div onclick="openTrackerNotesModal('${j.id}','${_trackerMode}',this.dataset.notes)"
+          data-notes="${(notes||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"
           title="${notes?notes.replace(/"/g,'&quot;'):'Click to add notes'}"
           style="width:100%;font-size:11px;color:${notes?txtMuted:'rgba(255,255,255,.28)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px;padding:2px 4px;border-radius:4px;transition:background .15s"
           onmouseover="this.style.background='rgba(91,141,239,.12)'"
