@@ -20084,6 +20084,8 @@ async function gateLogin(){
   const _loginBtn=document.querySelector('#gate-login-form button[onclick="gateLogin()"]');
   if(_loginBtn){_loginBtn.disabled=true;_loginBtn.textContent='Signing in…';_loginBtn.style.opacity='.7';}
   const _restoreBtn=()=>{if(_loginBtn){_loginBtn.disabled=false;_loginBtn.textContent='Sign in →';_loginBtn.style.opacity='1';}};
+  // Timeout helper — prevents any single fetch/Firebase call from hanging forever
+  const _lgRace=(p,ms=5000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
   try{
   const email=(document.getElementById('gate-login-email')?.value||'').trim().toLowerCase();
   const pass=document.getElementById('gate-login-pass')?.value||'';
@@ -20121,10 +20123,10 @@ async function gateLogin(){
     let _earlyAuthOk=false;
     if(!_fbToken()){
       try{
-        const _earlyAuth=await fetch('/.netlify/functions/auth',{
+        const _earlyAuth=await _lgRace(fetch('/.netlify/functions/auth',{
           method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({email,password:pass,orgId:ORG_ID}),
-        });
+        }),6000);
         if(_earlyAuth.status===401){
           recordLoginFailure(email);
           errEl.textContent='Incorrect password.';errEl.style.display='block';return;
@@ -20133,16 +20135,16 @@ async function gateLogin(){
           const {token}=await _earlyAuth.json();
           if(token){_dhToken=token;try{sessionStorage.setItem('dh_token',token);}catch(e){}_earlyAuthOk=true;}
         }
-      }catch(e){/* offline — fall through to local fallbacks */}
+      }catch(e){/* offline or timeout — fall through to local fallbacks */}
     }
 
     if(_fbToken()){
       // First: check if this email belongs to a different org (multi-tenant)
       try{
-        const theirOrgId=await lookupUserOrg(email);
+        const theirOrgId=await _lgRace(lookupUserOrg(email),3000);
         if(theirOrgId && theirOrgId!==ORG_ID){
           ORG_ID=theirOrgId;
-          const fbOrgData=await fbGet('orgs',ORG_ID+':gate_users');
+          const fbOrgData=await _lgRace(fbGet('orgs',ORG_ID+':gate_users'),3000);
           if(fbOrgData?.data){
             const orgUsers=JSON.parse(fbOrgData.data);
             const orgUser=orgUsers.find(u=>u.email.toLowerCase()===email);
@@ -20153,7 +20155,7 @@ async function gateLogin(){
       // Fallback: check dronehub_main Firebase gate_users
       if(!user){
         try{
-          const fbData=await fbGet('orgs',ORG_ID+':gate_users');
+          const fbData=await _lgRace(fbGet('orgs',ORG_ID+':gate_users'),3000);
           if(fbData?.data){
             const fbUsers=JSON.parse(fbData.data);
             const fbUser=fbUsers.find(u=>u.email.toLowerCase()===email);
@@ -20170,7 +20172,7 @@ async function gateLogin(){
         try{
           let teamMembers=getAdminTeamMembers();
           if(!teamMembers.length){
-            const fbTeam=await fbGet('orgs',ORG_ID+':team');
+            const fbTeam=await _lgRace(fbGet('orgs',ORG_ID+':team'),3000);
             if(fbTeam?.data) try{teamMembers=JSON.parse(fbTeam.data);}catch(e){}
           }
           const teamEntry=teamMembers.find(m=>(m.email||'').toLowerCase()===email);
@@ -20229,11 +20231,11 @@ async function gateLogin(){
   // Fetch a Firebase proxy token from the server-side auth endpoint.
   // Awaited so the token is available before 2FA and data-sync checks run.
   try{
-    const _authR=await fetch('/.netlify/functions/auth',{
+    const _authR=await _lgRace(fetch('/.netlify/functions/auth',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({email,password:pass,orgId:ORG_ID})
-    });
+    }),8000);
     if(_authR.ok){
       const {token}=await _authR.json();
       if(token){
@@ -20290,7 +20292,7 @@ async function gateLogin(){
     let syncedFrom2fa=false;
     if(_fbToken()){
       try{
-        const fb2fa=await fbGet('orgs',ORG_ID+':2fa');
+        const fb2fa=await _lgRace(fbGet('orgs',ORG_ID+':2fa'),3000);
         if(fb2fa?.data){
           const all2fa=JSON.parse(fb2fa.data);
           const entry=all2fa[user.email.toLowerCase()];
