@@ -2746,10 +2746,18 @@ button{font-family:var(--font);}
             Photo
           </button>
         </div>
-        <button onclick="_trackerMode==='photo'?openPhotoTrackerImportModal():openTrackerImportModal()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV / Sheets</button>
-        <button onclick="_trackerMode==='photo'?clearAllPhotoStandaloneProjects():clearAllStandaloneProjects()" title="Delete all imported standalone projects" style="padding:6px 12px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Clear imported</button>
-        <button onclick="_trackerMode==='photo'?openPhotoTrackerAddModal():openTrackerAddModal()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add project</button>
-        <button id="tracker-light-btn" onclick="trackerToggleLightMode()" title="Toggle light mode" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+        <!-- Add project dropdown -->
+        <div style="position:relative" id="tracker-add-wrap">
+          <div style="display:flex;border:1px solid var(--blue);border-radius:8px;overflow:hidden">
+            <button onclick="_trackerMode==='photo'?openPhotoTrackerAddModal():openTrackerAddModal()" style="padding:6px 14px;border:none;background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s" onmouseover="this.style.background='rgba(91,141,239,.2)'" onmouseout="this.style.background='rgba(91,141,239,.1)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add project</button>
+            <div style="width:1px;background:rgba(91,141,239,.3);flex-shrink:0"></div>
+            <button onclick="trackerToggleAddMenu()" style="padding:6px 9px;border:none;background:rgba(91,141,239,.1);color:var(--blue-bright);cursor:pointer;display:inline-flex;align-items:center;transition:background .15s" onmouseover="this.style.background='rgba(91,141,239,.2)'" onmouseout="this.style.background='rgba(91,141,239,.1)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+          </div>
+          <div id="tracker-add-menu" style="display:none;position:absolute;right:0;top:calc(100% + 5px);background:var(--navy-mid);border:1px solid var(--border-bright);border-radius:10px;padding:5px;min-width:190px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+            <button onclick="_trackerMode==='photo'?openPhotoTrackerAddModal():openTrackerAddModal();trackerToggleAddMenu()" style="width:100%;padding:8px 12px;border:none;background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-radius:7px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add manually</button>
+            <button onclick="_trackerMode==='photo'?openPhotoTrackerImportModal():openTrackerImportModal();trackerToggleAddMenu()" style="width:100%;padding:8px 12px;border:none;background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;text-align:left;border-radius:7px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import CSV / Sheets</button>
+          </div>
+        </div>
         <button id="tracker-refresh-btn" onclick="renderTracker()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
       </div>
     </div>
@@ -19255,6 +19263,17 @@ let _trackerTab='upcoming'; // 'upcoming' | 'active' | 'completed'
 let _trackerMode = 'video'; // 'video' | 'photo'
 let _trackerClientFilter=''; // selected client name
 let _trackerMineOnly=false;  // show only rows assigned to the current user
+
+function trackerToggleAddMenu(){
+  const m=document.getElementById('tracker-add-menu');
+  if(!m) return;
+  const open=m.style.display==='none'||!m.style.display;
+  m.style.display=open?'block':'none';
+  if(open){
+    const close=e=>{if(!document.getElementById('tracker-add-wrap')?.contains(e.target)){m.style.display='none';document.removeEventListener('click',close);}};
+    setTimeout(()=>document.addEventListener('click',close),0);
+  }
+}
 
 function trackerSetTab(tab){
   _trackerTab=tab;
