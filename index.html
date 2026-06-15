@@ -6624,8 +6624,18 @@ function mobDeleteTimeOff(evtId){
 // ─────────────────────────────────────────────────────────────────────────────
 
 function showPane(id,ev){
-  // Exit desktop LouChat full-screen when navigating away
-  if(window.innerWidth>768) document.body.classList.remove('dh-lc-desktop');
+  // ── Desktop LouChat full-screen: always restore normal layout first ──────────
+  if(window.innerWidth>768){
+    document.body.classList.remove('dh-lc-desktop');
+    const _lcNav=document.getElementById('dh-lc-app-nav');
+    if(_lcNav) _lcNav.style.display='none';
+    const _lcHdr=document.querySelector('.app-header');
+    if(_lcHdr) _lcHdr.style.removeProperty('display');
+    const _lcFlex=document.getElementById('lc-flex-container');
+    if(_lcFlex){_lcFlex.style.height='calc(100vh - 150px)';_lcFlex.style.marginLeft='';_lcFlex.style.borderRadius='14px';_lcFlex.style.border='1px solid var(--border)';_lcFlex.style.borderLeft='';}
+    const _lcWrap=document.querySelector('.wrap');
+    if(_lcWrap) _lcWrap.style.padding='';
+  }
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('pane-'+id).classList.add('active');
@@ -6683,8 +6693,18 @@ function showPane(id,ev){
   if(id==='social'){ renderSocial(); }
   if(id==='platform'){ renderPlatformDashboard(); }
   if(id==='louchat'){
-    // Enter desktop full-screen Instagram-style layout
-    if(window.innerWidth>768) document.body.classList.add('dh-lc-desktop');
+    // ── Enter desktop full-screen (direct DOM — more reliable than CSS class alone) ──
+    if(window.innerWidth>768){
+      document.body.classList.add('dh-lc-desktop');
+      const _lcNav=document.getElementById('dh-lc-app-nav');
+      if(_lcNav) _lcNav.style.display='flex';
+      const _lcHdr=document.querySelector('.app-header');
+      if(_lcHdr) _lcHdr.style.setProperty('display','none','important');
+      const _lcFlex=document.getElementById('lc-flex-container');
+      if(_lcFlex){_lcFlex.style.height='100vh';_lcFlex.style.marginLeft='72px';_lcFlex.style.borderRadius='0';_lcFlex.style.border='none';_lcFlex.style.borderLeft='1px solid var(--border)';}
+      const _lcWrap=document.querySelector('.wrap');
+      if(_lcWrap) _lcWrap.style.padding='0';
+    }
     lcCleanCorruptMessages();
     lcRequestNotifications();
     lcEnsureDefaults();
