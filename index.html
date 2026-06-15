@@ -19580,10 +19580,11 @@ function trackerSetTab(tab){
   const btns={upcoming:upcomingBtn,active:activeBtn,completed:completedBtn};
   const styles={
     upcoming:{
-      active:'linear-gradient(135deg,rgba(245,166,35,.72),rgba(217,119,6,.72))', activeColor:'rgba(255,255,255,.92)',
-      inactiveBg:_trackerLightMode?'rgba(245,166,35,.12)':'rgba(245,166,35,.1)',
-      inactiveColor:_trackerLightMode?'#b45309':'var(--amber)',
-      inactiveBorder:_trackerLightMode?'rgba(245,166,35,.5)':'rgba(245,166,35,.3)',
+      active:_trackerLightMode?'rgba(245,166,35,.15)':'rgba(245,166,35,.13)', activeColor:_trackerLightMode?'#b45309':'#F5A623',
+      activeBorder:_trackerLightMode?'rgba(245,166,35,.55)':'rgba(245,166,35,.5)',
+      inactiveBg:_trackerLightMode?'rgba(245,166,35,.07)':'rgba(245,166,35,.06)',
+      inactiveColor:_trackerLightMode?'#92400e':'rgba(245,166,35,.55)',
+      inactiveBorder:_trackerLightMode?'rgba(245,166,35,.3)':'rgba(245,166,35,.2)',
     },
     active:{
       active:'linear-gradient(135deg,var(--blue),#3B6FD4)', activeColor:'#fff',
@@ -19603,7 +19604,7 @@ function trackerSetTab(tab){
     if(key===tab){
       btn.style.background=styles[key].active;
       btn.style.color=styles[key].activeColor;
-      btn.style.borderColor='transparent';
+      btn.style.borderColor=styles[key].activeBorder||'transparent';
       btn.style.borderLeft='';
     } else {
       btn.style.background=styles[key].inactiveBg;
