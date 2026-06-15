@@ -570,6 +570,7 @@ body.dh-lc-desktop #lc-flex-container{
   #app-global-nav{display:flex;}
   #dh-lc-app-nav{display:none!important;}
   .tab{display:none!important;}
+  .tabs{display:none!important;}
   .app-header{margin-left:72px;}
   .wrap{margin-left:72px!important;}
   body.dh-lc-desktop .app-header{margin-left:0;}
@@ -2200,9 +2201,13 @@ button{font-family:var(--font);}
 <div id="dh-toast-stack"></div>
 
 <div id="app-global-nav">
-  <div id="app-global-logo">
-    <img id="app-global-logo-img" src="" alt="DroneHub">
-  </div>
+  <button id="app-gnav-profile-btn" onclick="openTeamMemberProfile('me')" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'" style="display:flex;align-items:center;gap:12px;padding:0 18px;width:100%;border:none;height:64px;border-bottom:1px solid rgba(255,255,255,.07);background:transparent;cursor:pointer;flex-shrink:0;transition:background .15s;overflow:hidden;text-align:left;">
+    <div id="app-gnav-avatar-wrap" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
+    <div class="app-gnav-label" style="min-width:0">
+      <div id="app-gnav-username" style="font-size:13px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <div id="app-gnav-usertitle" style="font-size:10px;color:var(--blue-bright);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+    </div>
+  </button>
   <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0">
     <button class="app-gnav-item" id="app-gnav-tracker" onclick="showPane('tracker')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -6775,10 +6780,6 @@ function showPane(id,ev){
     if(window.innerWidth>768){
       document.body.classList.add('dh-lc-desktop');
       document.body.style.overflow='hidden';
-      // Sync logo into global sidebar if not already set
-      const _mainLogo=document.querySelector('.app-header img');
-      const _gnLogo=document.getElementById('app-global-logo-img');
-      if(_mainLogo&&_gnLogo&&!_gnLogo.src) _gnLogo.src=_mainLogo.src;
       // Fix the louchat pane to cover entire viewport (sits above the header at z-index:150)
       const _lcPane=document.getElementById('pane-louchat');
       if(_lcPane){_lcPane.style.position='fixed';_lcPane.style.top='0';_lcPane.style.left='72px';_lcPane.style.right='0';_lcPane.style.bottom='0';_lcPane.style.zIndex='150';_lcPane.style.background='var(--navy)';}
@@ -20578,10 +20579,13 @@ async function gateShowAdminView(session){
   document.querySelector('.app-header')?.style.setProperty('display','flex');
   document.querySelector('.wrap')?.style.setProperty('display','block');
   document.querySelectorAll('.tabs .tab').forEach(t=>t.style.display='');
-  // Sync DroneHub logo into global sidebar
-  const _gnLogo=document.getElementById('app-global-logo-img');
-  const _hdrLogo=document.querySelector('.app-header img');
-  if(_gnLogo&&_hdrLogo&&!_gnLogo.src) _gnLogo.src=_hdrLogo.src;
+  // Populate global sidebar profile section
+  const _gnAvatarWrap=document.getElementById('app-gnav-avatar-wrap');
+  const _gnUsername=document.getElementById('app-gnav-username');
+  const _gnUserTitle=document.getElementById('app-gnav-usertitle');
+  if(_gnAvatarWrap) _gnAvatarWrap.innerHTML=getAvatarHtml(session.name||session.email,session.email,36,14);
+  if(_gnUsername) _gnUsername.textContent=session.name||session.email;
+  if(_gnUserTitle) _gnUserTitle.textContent=session.jobTitle||session.role||'';
   // Show platform header button only for platform owner
   const platformBtn=document.getElementById('header-platform-btn');
   if(platformBtn) platformBtn.style.display=isPlatformOwner(session.email)?'inline-flex':'none';
