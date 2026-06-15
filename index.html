@@ -3355,7 +3355,7 @@ button{font-family:var(--font);}
         </div>
 
         <!-- Input row -->
-        <div style="display:flex;gap:4px;align-items:flex-end;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:12px;padding:6px 8px">
+        <div style="display:flex;gap:4px;align-items:flex-end;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:28px;padding:6px 10px">
 
           <!-- + (attachments) -->
           <button onclick="lcToggleAttachMenu()" title="Add attachment" style="width:32px;height:32px;border:none;background:none;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:20px;font-weight:300;line-height:1;flex-shrink:0;padding-bottom:2px;transition:color .12s" onmouseover="this.style.color='var(--offwhite)'" onmouseout="this.style.color='var(--muted)'">+</button>
@@ -3373,11 +3373,13 @@ button{font-family:var(--font);}
           <!-- Text input -->
           <textarea id="lc-msg-input" placeholder="Message…" rows="1"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();const _dd=document.getElementById('lc-mention-dropdown');if(_dd&&_dd.style.display!=='none'&&_dd.querySelector('[data-selected]')){_dd.querySelector('[data-selected]').click();}else{lcSendMessage();}}if(event.key==='Escape'){const _dd2=document.getElementById('lc-mention-dropdown');if(_dd2)_dd2.style.display='none';lcCloseAttachMenu();}"
-            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';lcHandleMentionInput(this);"
-            style="flex:1;background:transparent;border:none;color:var(--white);font-size:14px;font-family:var(--font);resize:none;outline:none;line-height:1.5;max-height:120px;padding:5px 6px"></textarea>
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';lcHandleMentionInput(this);const _sb=document.getElementById('lc-send-btn');if(_sb)_sb.style.display=this.value.trim()?'flex':'none';"
+            style="flex:1;background:transparent;border:none;color:var(--white);font-size:14px;font-family:var(--font);resize:none;outline:none;line-height:1.5;max-height:120px;padding:6px 6px"></textarea>
 
-          <!-- Send -->
-          <button onclick="lcSendMessage()" style="padding:7px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;align-self:flex-end;margin-bottom:1px">Send</button>
+          <!-- Send icon (only visible when input has text) -->
+          <button id="lc-send-btn" onclick="lcSendMessage()" title="Send" style="display:none;width:34px;height:34px;border-radius:50%;border:none;background:var(--blue);color:#fff;cursor:pointer;flex-shrink:0;align-self:flex-end;align-items:center;justify-content:center;transition:opacity .15s;margin-bottom:1px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/></svg>
+          </button>
         </div>
       </div>
 
@@ -18903,6 +18905,8 @@ async function lcSendMessage(){
   }
 
   if(input){input.value='';input.style.height='auto';}
+  const _sb=document.getElementById('lc-send-btn');
+  if(_sb) _sb.style.display='none';
   lcPendingAttachments=[];
   lcRenderAttachPreview();
   const picker=document.getElementById('lc-emoji-picker');
