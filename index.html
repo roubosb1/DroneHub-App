@@ -22679,10 +22679,9 @@ function savePhotoTrackerModal(jobId){
   const jobIdx = savedJobs.findIndex(j=>String(j.id)===String(jobId));
   if(jobIdx !== -1){
     if(newClient)  savedJobs[jobIdx].clientName = newClient;
-    if(newAddress) savedJobs[jobIdx].address    = newAddress;
-    if(newDate)    savedJobs[jobIdx].date        = newDate;
-    if(newAddress) savedJobs[jobIdx].name        = newAddress;
-    try{ localStorage.setItem('dronehub_saved_jobs', JSON.stringify(savedJobs)); }catch(e){}
+    if(newAddress){ savedJobs[jobIdx].address = newAddress; savedJobs[jobIdx].name = newAddress; }
+    if(newDate)    savedJobs[jobIdx].date = newDate;
+    saveJobsToStorage();
   } else {
     // Standalone photo project — update the standalone store
     const standalones = getPhotoStandaloneProjects();
