@@ -452,7 +452,7 @@ svg{stroke-width:2.2;}
 /* Give tracker full bleed — remove all .wrap padding for it */
 .wrap:has(#pane-tracker.active){padding:0;}
 /* ── Tracker table scroll container: both axes so sticky thead works ── */
-#tracker-scroll-container{overflow:auto;width:100%;max-height:calc(100vh - 230px);padding:0;box-sizing:border-box;}
+#tracker-scroll-container{overflow:auto;width:100%;max-height:calc(100vh - 230px);padding:0 8px 0 0;box-sizing:border-box;}
 #tracker-scroll-container::-webkit-scrollbar{width:7px;height:7px}
 #tracker-scroll-container::-webkit-scrollbar-track{background:transparent}
 #tracker-scroll-container::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px}
@@ -2974,7 +2974,7 @@ button{font-family:var(--font);}
           <th style="width:9%;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Editor</th>
           <th id="tracker-col-status-header" style="width:11%;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Edit Status</th>
           <th style="width:5%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Notes / Assets</th>
-          <th style="width:15%;padding:4px 6px;text-align:left;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Links</th>
+          <th style="width:15%;padding:4px 8px 4px 6px;text-align:right;font-size:10px;font-weight:700;color:#F5A623;text-transform:uppercase;letter-spacing:.07em;border-bottom:2px solid #F5A623;overflow:hidden">Links</th>
         </tr>
       </thead>
       <tbody id="tracker-tbody"></tbody>
@@ -22825,6 +22825,20 @@ function renderTracker(){
     return (b.date||'').localeCompare(a.date||'');
   });
 
+  // Apply saved manual order for upcoming tab
+  if(_trackerTab==='upcoming'){
+    const _manualOrder=getTrackerOrder(_trackerMode);
+    if(_manualOrder.length){
+      const _posMap={};
+      _manualOrder.forEach((id,i)=>{ _posMap[String(id)]=i; });
+      jobs.sort((a,b)=>{
+        const pa=_posMap[String(a.id)]??_manualOrder.length;
+        const pb=_posMap[String(b.id)]??_manualOrder.length;
+        return pa-pb;
+      });
+    }
+  }
+
   if(countEl) countEl.textContent=jobs.length+' project'+(jobs.length===1?'':'s');
 
   const _lm=_trackerLightMode; // local alias for light-mode flag
@@ -22974,8 +22988,9 @@ function renderTracker(){
 
     // Queue number for Upcoming tab
     const queueCell=_trackerTab==='upcoming'
-      ?`<td style="padding:4px 6px;overflow:hidden;background:${rowBg}">
+      ?`<td style="padding:4px 6px;overflow:hidden;background:${rowBg};cursor:grab;user-select:none" title="Drag to reorder queue">
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+            <span style="font-size:12px;color:#D97706;opacity:.5;line-height:1;letter-spacing:.05em">⠿</span>
             <span style="font-size:9px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.06em">Up Next</span>
             <span style="font-size:16px;font-weight:900;color:${isRush?'#ef4444':'#D97706'};line-height:1">${idx+1}</span>
           </div>
@@ -22989,7 +23004,10 @@ function renderTracker(){
     const dueDateColor=isOverdue?'#dc2626':dueDate?(_lm?'#b45309':'var(--amber)'):txtMuted;
     const dueDateWeight=dueDate?'700':'400';
 
-    return `<tr data-job-id="${j.id}" style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
+    const _dragAttrs=_trackerTab==='upcoming'
+      ?` draggable="true" ondragstart="trkDragStart(event,'${j.id}')" ondragend="trkDragEnd(event,'${rowBg}')" ondragover="trkDragOver(event,'${j.id}')" ondrop="trkDrop(event,'${j.id}')"`
+      :'';
+    return `<tr data-job-id="${j.id}"${_dragAttrs} style="background:${rowBg};border-bottom:1px solid ${borderColor};transition:background .1s;${leftAccent}" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${rowBg}'">
       ${queueCell}
       <td style="padding:4px 6px;overflow:hidden">
         <div style="color:${txtPrimary};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clientName}${rushBadge}${overdueBadge}</div>
@@ -23048,6 +23066,54 @@ function renderTracker(){
     </tr>`;
   }).join('');
   if(window.innerWidth<=768) setTimeout(mobTrkRefresh, 50);
+}
+
+// ── Tracker queue manual order ────────────────────────────────────────────────
+function getTrackerOrder(mode){
+  return JSON.parse(localStorage.getItem('dronehub_tracker_order_'+mode)||'[]');
+}
+function saveTrackerOrder(mode,ids){
+  try{localStorage.setItem('dronehub_tracker_order_'+mode,JSON.stringify(ids));}catch(e){}
+  if(_fbToken()) fbSubSet('tracker_meta','order_'+mode,{ids}).catch(()=>{});
+}
+
+// ── Tracker queue drag-to-reorder ─────────────────────────────────────────────
+let _trkDragJobId=null;
+function trkDragStart(e,jobId){
+  _trkDragJobId=String(jobId);
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',String(jobId));
+  setTimeout(()=>{
+    const tr=document.querySelector('#tracker-tbody tr[data-job-id="'+jobId+'"]');
+    if(tr){tr.style.opacity='0.35';tr.style.outline='2px dashed #5B8DEF';}
+  },0);
+}
+function trkDragEnd(e,origBg){
+  _trkDragJobId=null;
+  document.querySelectorAll('#tracker-tbody tr').forEach(tr=>{
+    tr.style.opacity='';tr.style.outline='';tr.style.borderTop='';
+  });
+}
+function trkDragOver(e,jobId){
+  if(!_trkDragJobId||_trkDragJobId===String(jobId)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('#tracker-tbody tr').forEach(tr=>tr.style.borderTop='');
+  const t=document.querySelector('#tracker-tbody tr[data-job-id="'+jobId+'"]');
+  if(t) t.style.borderTop='2px solid #5B8DEF';
+}
+function trkDrop(e,jobId){
+  e.stopPropagation();e.preventDefault();
+  if(!_trkDragJobId||_trkDragJobId===String(jobId)) return;
+  const rows=[...document.querySelectorAll('#tracker-tbody tr')];
+  const ids=rows.map(r=>r.dataset.jobId);
+  const from=ids.indexOf(_trkDragJobId);
+  const to=ids.indexOf(String(jobId));
+  if(from===-1||to===-1) return;
+  ids.splice(from,1);
+  ids.splice(to,0,_trkDragJobId);
+  saveTrackerOrder(_trackerMode,ids);
+  renderTracker();
 }
 
 // ── Tracker notes modal ───────────────────────────────────────────────────────
