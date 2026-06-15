@@ -20305,15 +20305,18 @@ async function gateEnterApp(session){
   gateSaveSession(session);
   document.getElementById('site-login-gate').style.display='none';
 
+  // Timeout wrapper — if a Firebase call hangs (fetch never settles), reject after ms
+  const _fbRace=(p,ms=7000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('fb-timeout')),ms))]);
+
   // ── Sync any locally-saved 2FA data to Firebase (handles offline-setup case) ──
   if(_fbToken()){
     try{
       const local2fa=JSON.parse(localStorage.getItem('dronehub_2fa')||'{}');
       if(Object.keys(local2fa).length){
         let fb2fa={};
-        try{const r=await fbGet('orgs',ORG_ID+':2fa');if(r?.data)fb2fa=JSON.parse(r.data);}catch(e){}
+        try{const r=await _fbRace(fbGet('orgs',ORG_ID+':2fa'));if(r?.data)fb2fa=JSON.parse(r.data);}catch(e){}
         const merged={...fb2fa,...local2fa};
-        await fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(merged),updatedAt:Date.now()});
+        await _fbRace(fbSetStrict('orgs',ORG_ID+':2fa',{data:JSON.stringify(merged),updatedAt:Date.now()})).catch(()=>{});
       }
     }catch(e){console.warn('[2FA sync] could not sync 2FA to cloud:',e.message);}
   }
@@ -20323,7 +20326,7 @@ async function gateEnterApp(session){
   // (2) lastSeen/status never updating because localStorage was always empty.
   try{
     if(_fbToken()){
-      const fbTeam=await fbGet('orgs',ORG_ID+':team');
+      const fbTeam=await _fbRace(fbGet('orgs',ORG_ID+':team'));
       if(fbTeam?.data){
         const fbMembers=JSON.parse(fbTeam.data);
         const localMembers=JSON.parse(localStorage.getItem('dronehub_admin_team')||'[]');
@@ -20406,7 +20409,7 @@ async function gateEnterApp(session){
     // "Link to team" screen to every team member.
     if(_fbToken() && !getAdminTeamMembers().length){
       try{
-        const fbTeam=await fbGet('orgs',ORG_ID+':team');
+        const fbTeam=await _fbRace(fbGet('orgs',ORG_ID+':team'));
         if(fbTeam?.data) try{localStorage.setItem('dronehub_admin_team',fbTeam.data);}catch(e){}
       }catch(e){}
     }
@@ -20417,7 +20420,7 @@ async function gateEnterApp(session){
       return;
     }
     const _lsEmptyTeam = clients.length === 0 && savedJobs.length === 0;
-    if(_fbToken() && _lsEmptyTeam) await restoreFromFirebase(true).catch(()=>{});
+    if(_fbToken() && _lsEmptyTeam) await _fbRace(restoreFromFirebase(true),12000).catch(()=>{});
     gateShowTeamView(session);
     if(_fbToken()) restoreFromFirebase(true).then(()=>{ renderJobs(); renderClients(); renderAppHeader(); gcalCheckOAuthReturn().catch(()=>{}); if(window.innerWidth<=768&&typeof mobShowProfile==='function'){const _pf=document.getElementById('mob-profile-pane');if(_pf&&_pf.style.display!=='none') mobShowProfile();} }).catch(()=>{});
     return;
@@ -20439,7 +20442,7 @@ async function gateEnterApp(session){
   // If localStorage already has data, show immediately and refresh in background.
   const _lsEmpty = clients.length === 0 && savedJobs.length === 0;
   if(_fbToken() && _lsEmpty){
-    await restoreFromFirebase(true).catch(()=>{});
+    await _fbRace(restoreFromFirebase(true),12000).catch(()=>{});
   }
   gateShowAdminView(session);
   // Always pull fresh from Firebase in background (catches newer data)
