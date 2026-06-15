@@ -3210,21 +3210,9 @@ button{font-family:var(--font);}
 
       <!-- Add channel — admin only, hidden until renderLouChat() checks role -->
       <div id="lc-add-section" style="display:none;padding:10px 12px;border-top:1px solid var(--border)">
-        <div id="lc-add-form" style="display:none;margin-bottom:8px">
-          <input type="text" id="lc-new-channel-name" placeholder="channel-name" onkeydown="if(event.key==='Enter')lcCreateChannel()" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:7px;font-size:12px;background:var(--navy-lift);color:var(--white);margin-bottom:6px">
-          <div style="display:flex;gap:5px;align-items:center">
-            <select id="lc-new-channel-type" style="flex:1;padding:5px 6px;border:1px solid var(--border-bright);border-radius:7px;font-size:11px;background:var(--navy-lift);color:var(--white)">
-              <option value="general">💬 General</option>
-              <option value="project">📋 Project</option>
-              <option value="client">👤 Client</option>
-              <option value="social">📱 Social media</option>
-              <option value="admin">🔒 Admin</option>
-            </select>
-            <button onclick="lcCreateChannel()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;cursor:pointer;font-weight:700">Add</button>
-          </div>
-        </div>
-        <button onclick="lcToggleAddForm()" id="lc-add-btn" style="width:100%;padding:7px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-weight:600;text-align:left;display:flex;align-items:center;gap:6px">
-          <span style="font-size:16px">+</span> New channel
+        <button onclick="lcOpenCreateModal()" id="lc-add-btn" style="width:100%;padding:9px 12px;border-radius:10px;border:none;background:transparent;color:var(--offwhite);font-size:13px;cursor:pointer;font-weight:700;text-align:left;display:flex;align-items:center;gap:8px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'">
+          <span style="width:22px;height:22px;border-radius:6px;background:rgba(94,159,255,.18);color:var(--blue-bright);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:300;flex-shrink:0">+</span>
+          Create
         </button>
       </div>
     </div>
@@ -18939,20 +18927,94 @@ function lcInitDragDrop(){
   });
 }
 
+// ── Create channel modal state ──────────────────────────────────────────────
+let _lcSelectedMembers=[];
+let _lcMemberSearchResults=[];
+
+function lcOpenCreateModal(){
+  const s=gateGetSession();
+  if(s?.type!=='admin'&&s?.role!=='admin') return;
+  _lcSelectedMembers=[];
+  _lcMemberSearchResults=[];
+  const modal=document.getElementById('lc-create-modal');
+  if(!modal) return;
+  document.getElementById('lc-new-channel-name').value='';
+  document.getElementById('lc-new-channel-type').value='general';
+  document.getElementById('lc-member-search').value='';
+  document.getElementById('lc-member-search-results').style.display='none';
+  document.getElementById('lc-selected-members').innerHTML='';
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('lc-new-channel-name').focus(),60);
+}
+
+function lcCloseCreateModal(){
+  const modal=document.getElementById('lc-create-modal');
+  if(modal) modal.style.display='none';
+}
+
+function lcSearchMembers(query){
+  const resultsEl=document.getElementById('lc-member-search-results');
+  if(!query.trim()){resultsEl.style.display='none';return;}
+  const q=query.toLowerCase();
+  const all=getAdminTeamMembers();
+  _lcMemberSearchResults=all.filter(m=>
+    !_lcSelectedMembers.find(s=>s.email===m.email)&&
+    ((m.name||'').toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q))
+  ).slice(0,7);
+  if(!_lcMemberSearchResults.length){resultsEl.style.display='none';return;}
+  resultsEl.innerHTML=_lcMemberSearchResults.map((m,i)=>`
+    <button onclick="lcSelectMember(${i})" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:none;background:transparent;cursor:pointer;text-align:left" onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'">
+      ${getAvatarHtml(m.name||m.email,m.email,30,11)}
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--white)">${m.name||m.email}</div>
+        <div style="font-size:10px;color:var(--muted)">${m.email||m.role||''}</div>
+      </div>
+    </button>
+  `).join('');
+  resultsEl.style.display='block';
+}
+
+function lcSelectMember(idx){
+  const m=_lcMemberSearchResults[idx];
+  if(!m||_lcSelectedMembers.find(s=>s.email===m.email)) return;
+  _lcSelectedMembers.push(m);
+  document.getElementById('lc-member-search').value='';
+  document.getElementById('lc-member-search-results').style.display='none';
+  _lcMemberSearchResults=[];
+  lcRenderSelectedMembers();
+}
+
+function lcRemoveSelectedMember(email){
+  _lcSelectedMembers=_lcSelectedMembers.filter(m=>m.email!==email);
+  lcRenderSelectedMembers();
+}
+
+function lcRenderSelectedMembers(){
+  const el=document.getElementById('lc-selected-members');
+  if(!el) return;
+  if(!_lcSelectedMembers.length){el.innerHTML='';return;}
+  el.innerHTML=_lcSelectedMembers.map(m=>`
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px 4px 5px;background:rgba(94,159,255,.14);border:1px solid rgba(94,159,255,.28);border-radius:20px">
+      ${getAvatarHtml(m.name||m.email,m.email,20,8)}
+      <span style="font-size:11px;font-weight:700;color:var(--offwhite);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(m.name||m.email).split(' ')[0]}</span>
+      <button onclick="lcRemoveSelectedMember('${m.email}')" style="width:14px;height:14px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:var(--muted);font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;line-height:1">✕</button>
+    </div>
+  `).join('');
+}
+
 function lcCreateChannel(){
   const s=gateGetSession();
   if(s?.type!=='admin'&&s?.role!=='admin'){alert('Only admins can create channels.');return;}
   const name=document.getElementById('lc-new-channel-name')?.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-');
   const type=document.getElementById('lc-new-channel-type')?.value||'general';
-  if(!name){alert('Please enter a channel name.');return;}
+  if(!name){document.getElementById('lc-new-channel-name')?.focus();return;}
   const channels=getLcChannels();
   if(channels.find(c=>c.name===name)){alert('A channel with that name already exists.');return;}
-  const newChannel={id:'lc_'+Date.now(),name,type,topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]};
+  const members=_lcSelectedMembers.map(m=>m.email);
+  const newChannel={id:'lc_'+Date.now(),name,type,topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members};
   channels.push(newChannel);
   saveLcChannels(channels);
-  document.getElementById('lc-new-channel-name').value='';
-  document.getElementById('lc-add-form').style.display='none';
-  document.getElementById('lc-add-btn').textContent='+ New channel';
+  lcCloseCreateModal();
   renderLouChat();
   lcOpenChannel(newChannel.id);
 }
@@ -31199,6 +31261,49 @@ function initGoogleMaps(){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span class="dh-lc-nav-label">Settings</span>
     </button>
+  </div>
+</div>
+
+<!-- ── LouChat Create Channel Modal ───────────────────────────────────── -->
+<div id="lc-create-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2000;align-items:center;justify-content:center" onclick="if(event.target===this)lcCloseCreateModal()">
+  <div style="background:var(--navy-mid);border:1px solid var(--border-bright);border-radius:20px;padding:28px 28px 24px;width:min(460px,94vw);max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.8)">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div style="font-size:17px;font-weight:800;color:var(--white)">New Chat</div>
+      <button onclick="lcCloseCreateModal()" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+    </div>
+
+    <!-- Channel name -->
+    <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Channel Name</div>
+    <input type="text" id="lc-new-channel-name" placeholder="e.g. project-updates"
+      onkeydown="if(event.key==='Enter')lcCreateChannel()"
+      style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);outline:none;margin-bottom:16px">
+
+    <!-- Type -->
+    <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Type</div>
+    <select id="lc-new-channel-type" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);margin-bottom:20px">
+      <option value="general">💬 General</option>
+      <option value="project">📋 Project</option>
+      <option value="client">👤 Client</option>
+      <option value="social">📱 Social Media</option>
+      <option value="admin">🔒 Admin</option>
+    </select>
+
+    <!-- Member search -->
+    <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Add Members</div>
+    <div style="position:relative">
+      <input type="text" id="lc-member-search" placeholder="Search by name or email…"
+        oninput="lcSearchMembers(this.value)"
+        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);outline:none">
+      <div id="lc-member-search-results" style="display:none;position:absolute;left:0;right:0;top:calc(100%+4px);background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:12px;overflow:hidden;z-index:10;box-shadow:0 8px 32px rgba(0,0,0,.5)"></div>
+    </div>
+
+    <!-- Selected member chips -->
+    <div id="lc-selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;min-height:0"></div>
+
+    <!-- Create button -->
+    <button onclick="lcCreateChannel()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-bright));color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-top:24px;letter-spacing:.01em">Create Channel</button>
   </div>
 </div>
 </body>
