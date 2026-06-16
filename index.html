@@ -25591,6 +25591,13 @@ let _salesPage       = 0;          // current pagination page (0-based)
 const _SALES_PAGE_SIZE = 500;      // contacts rendered per page — safe DOM limit
 let _salesSessionSynced = false;   // true after first forced full-sync on Sales pane open
 let _pricingConfig   = null;
+// salesLoad() (called synchronously by renderSalesTable() during the gateInit()
+// chain below) needs all three of these — moved up from their original spot
+// further down the file to avoid "Cannot access before initialization" when
+// the restored pane on page load is Sales/Contacts.
+const SALES_LISTS = ['realestate','golf','resorts','other','warm','clients'];
+let _salesByList = { realestate:null, golf:null, resorts:null, other:null, warm:null, clients:null };
+let _salesUpdatedAt = {}; // { listId: timestamp }
 
 const jobDateInput=document.getElementById('job-date-input');
 if(jobDateInput) jobDateInput.value=new Date().toISOString().slice(0,10);
@@ -25854,13 +25861,8 @@ function applySalesSortHeaders(){
 // Firebase keys: dronehub_main:sales_realestate, :sales_golf, :sales_resorts,
 //                :sales_other, :sales_warm, :sales_clients
 // This avoids Firestore's 1MB per-document limit and keeps lists independent.
-
-const SALES_LISTS = ['realestate','golf','resorts','other','warm','clients'];
-
-// Per-list in-memory cache: { realestate: [...], golf: [...], ... }
-// null means "not yet loaded from Firebase"
-let _salesByList = { realestate:null, golf:null, resorts:null, other:null, warm:null, clients:null };
-let _salesUpdatedAt = {}; // { listId: timestamp }
+// SALES_LISTS / _salesByList / _salesUpdatedAt now declared in the early block
+// near the top of this script (search "moved up from their original spot").
 
 function _salesFbKey(listId){ return ORG_ID + ':sales_' + listId; }
 function _salesLsKey(listId){ return 'dh_sales_cache_' + listId; }
