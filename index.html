@@ -2292,17 +2292,6 @@ button{font-family:var(--font);}
 <!-- QUOTE BUILDER -->
 <div id="pane-quote" class="pane active">
 
-  <!-- AI quote assistant — describe the job in plain English, it fills the form below for review -->
-  <div class="card" style="border-color:rgba(91,141,239,.35)">
-    <div class="section-label" style="display:flex;align-items:center;gap:6px">✨ AI Quote Assistant</div>
-    <div class="note" style="margin-bottom:8px">Describe the job — address, sqft, who's filming/editing, services needed, client info, shoot date. The AI fills in the form below; nothing is saved until you review and click "Save job" yourself.</div>
-    <textarea id="ai-quote-input" rows="3" placeholder="e.g. 1500 Main St, Toronto, ON. 2400 sqft. Need drone video and twilight photos. John Smith filming, Sarah editing. Client is Jane Doe, jane@email.com, shoot next Tuesday at 10am." style="width:100%;box-sizing:border-box;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;resize:vertical;margin-bottom:8px"></textarea>
-    <div style="display:flex;align-items:center;gap:10px">
-      <button onclick="aiQuoteGenerate()" id="ai-quote-btn" style="padding:7px 18px;border-radius:16px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">✨ Fill quote form</button>
-      <span id="ai-quote-status" style="font-size:12px;color:var(--muted)"></span>
-    </div>
-  </div>
-
   <!-- Top: contractors, client, address, property -->
   <div class="card">
     <div class="section-label">Assign contractors</div>
@@ -2690,7 +2679,19 @@ button{font-family:var(--font);}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button onclick="saveJob()" style="padding:8px 20px;border-radius:20px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:13px;font-weight:500;cursor:pointer">Save job ✓</button>
       <span id="save-job-status" style="font-size:12px;color:#22D97A"></span>
-    </div></div>
+    </div>
+
+    <!-- AI quote assistant — describe the job in plain English, it fills the form above for review -->
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="section-label" style="display:flex;align-items:center;gap:6px">✨ AI Quote Assistant</div>
+      <div class="note" style="margin-bottom:8px">Describe the job — address, sqft, who's filming/editing, services needed, client info, shoot date. The AI fills in the form above; nothing is saved until you review and click "Save job" yourself.</div>
+      <textarea id="ai-quote-input" rows="3" placeholder="e.g. 1500 Main St, Toronto, ON. 2400 sqft. Need drone video and twilight photos. John Smith filming, Sarah editing. Client is Jane Doe, jane@email.com, shoot next Tuesday at 10am." style="width:100%;box-sizing:border-box;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;resize:vertical;margin-bottom:8px"></textarea>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="aiQuoteGenerate()" id="ai-quote-btn" style="padding:7px 18px;border-radius:16px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">✨ Fill quote form</button>
+        <span id="ai-quote-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+  </div>
 
   </div><!-- end services+job details row -->
 
