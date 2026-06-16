@@ -4289,7 +4289,7 @@ button{font-family:var(--font);}
 <div id="pane-sales" class="pane">
 
   <!-- Top-level view switcher: Jobs / Clients / Contacts / Pipeline -->
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
     <div class="no-scrollbar" style="display:flex;gap:0;overflow-x:auto">
       <button id="sales-view-jobs-btn" onclick="setSalesView('jobs')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> Jobs</button>
       <button id="sales-view-clients-btn" onclick="setSalesView('clients')" style="padding:9px 18px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Clients</button>
@@ -4297,7 +4297,7 @@ button{font-family:var(--font);}
       <button id="sales-view-pipeline-btn" onclick="setSalesView('pipeline')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Pipeline</button>
     </div>
     <!-- Stats bar — only populated/shown while on the Contacts view -->
-    <div id="sales-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:8px"></div>
+    <div id="sales-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
   </div>
 
   <!-- ── JOBS VIEW ── -->
