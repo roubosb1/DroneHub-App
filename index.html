@@ -12284,89 +12284,12 @@ function renderClients(){
     return;
   }
 
-  // ── Default "All" mode: Recently Active + letter selector ───────────────────
-
-  // Build A-Z bar (letter selector)
-  const allForLetters=countryFiltered;
-  const letterCounts={};
-  allForLetters.forEach(r=>{
-    const l=r.c.name.charAt(0).toUpperCase();
-    if(/[A-Z]/.test(l)) letterCounts[l]=(letterCounts[l]||0)+1;
-  });
-  const hasLetters=Object.keys(letterCounts).length>0;
-
-  if(azBar&&hasLetters){
-    azBar.style.display='flex';
-    azBar.style.flexWrap='wrap';
-    azBar.style.gap='3px';
-    azBar.style.marginBottom='14px';
-    azBar.innerHTML='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l=>{
-      const cnt=letterCounts[l]||0;
-      const isActive=l===_clientActiveLetter;
-      return `<button onclick="_clientActiveLetter='${l}';renderClients()"
-        style="min-width:28px;height:28px;padding:0 4px;border-radius:6px;font-size:11px;font-weight:700;cursor:${cnt?'pointer':'default'};
-               border:1px solid ${isActive?'var(--blue)':cnt?'rgba(91,141,239,.25)':'transparent'};
-               background:${isActive?'rgba(91,141,239,.25)':cnt?'rgba(91,141,239,.06)':'transparent'};
-               color:${isActive?'var(--white)':cnt?'var(--blue-bright)':'var(--muted)'};
-               line-height:28px;transition:all .1s"
-        title="${cnt?cnt+' clients':''}"
-        ${!cnt?'disabled':''}>${l}</button>`;
-    }).join('');
-  } else if(azBar){
-    azBar.style.display='none';
-  }
-
-  // Recently Active: clients with real job activity or unread messages
-  const recentlyActive=countryFiltered
-    .filter(r=>r.isRecentlyActive)
-    .sort((a,b)=>{
-      if(a.newMsgs>0!==b.newMsgs>0) return a.newMsgs>0?-1:1; // unread first
-      return a.c.name.localeCompare(b.c.name);
-    });
-
-  // Selected letter clients (exclude those already in recently active)
-  const recentIds=new Set(recentlyActive.map(r=>r.c.id));
-  const letterClients=countryFiltered
-    .filter(r=>r.c.name.charAt(0).toUpperCase()===_clientActiveLetter && !recentIds.has(r.c.id))
-    .sort((a,b)=>a.c.name.localeCompare(b.c.name));
-
-  const totalVisible=recentlyActive.length+letterClients.length;
-  empty.style.display=totalVisible?'none':'block';
-  list.style.display=totalVisible?'block':'none';
-
-  let html='';
-
-  // Recently Active section
-  if(recentlyActive.length){
-    html+=`<div style="margin-bottom:24px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid rgba(34,217,122,.25)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span style="font-size:13px;font-weight:800;color:var(--green)">Recently Active</span>
-        <span style="font-size:11px;color:var(--muted);background:rgba(34,217,122,.08);border:1px solid rgba(34,217,122,.2);border-radius:10px;padding:1px 8px">${recentlyActive.length}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
-        ${recentlyActive.map(r=>_clientCardHtml(r,portalAccts)).join('')}
-      </div>
-    </div>`;
-  }
-
-  // Selected letter section
-  if(letterClients.length){
-    html+=`<div style="margin-bottom:24px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid rgba(91,141,239,.25)">
-        <span style="font-size:20px;font-weight:900;color:var(--blue-bright);line-height:1">${_clientActiveLetter}</span>
-        <span style="font-size:13px;font-weight:800;color:var(--white)">Clients</span>
-        <span style="font-size:11px;color:var(--muted);background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.2);border-radius:10px;padding:1px 8px">${letterClients.length}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
-        ${letterClients.map(r=>_clientCardHtml(r,portalAccts)).join('')}
-      </div>
-    </div>`;
-  } else if(!recentlyActive.length){
-    html+=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No clients starting with <strong style="color:var(--blue-bright)">${_clientActiveLetter}</strong></div>`;
-  }
-
-  list.innerHTML=html;
+  // ── Default "All" mode: flat alphabetical list ──────────────────────────────
+  if(azBar) azBar.style.display='none';
+  const allSorted=countryFiltered.sort((a,b)=>a.c.name.localeCompare(b.c.name));
+  empty.style.display=allSorted.length?'none':'block';
+  list.style.display=allSorted.length?'block':'none';
+  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${allSorted.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
 }
 
 function _clientTierHtml(group, label, bg, color, portalAccts){
