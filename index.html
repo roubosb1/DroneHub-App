@@ -4373,10 +4373,19 @@ button{font-family:var(--font);}
 
   <!-- ── CLIENTS VIEW ── -->
   <div id="sales-view-clients">
-    <!-- Sub-tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:3px;width:fit-content">
-      <button id="clients-subtab-list" onclick="switchClientsSubtab('list')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:rgba(255,255,255,.08);color:var(--white)">All Clients</button>
-      <button id="clients-subtab-leaderboard" onclick="switchClientsSubtab('leaderboard')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted);display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg> Leaderboard</button>
+    <!-- Sub-tabs + toolbar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:4px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:3px;width:fit-content">
+        <button id="clients-subtab-list" onclick="switchClientsSubtab('list')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:rgba(255,255,255,.08);color:var(--white)">All Clients</button>
+        <button id="clients-subtab-leaderboard" onclick="switchClientsSubtab('leaderboard')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted);display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg> Leaderboard</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div class="search-input-wrap" style="margin-bottom:0">
+          <input type="text" id="clients-search" placeholder="Search by name, email, company…" oninput="renderClients()" style="min-width:220px">
+        </div>
+        <button onclick="toggleAddClientPanel()" id="btn-add-client-panel" style="padding:6px 14px;border:1px solid var(--blue);border-radius:8px;font-size:12px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;white-space:nowrap;font-weight:600">+ Add client</button>
+        <button onclick="clearAllClients()" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--red-bg);color:var(--red);cursor:pointer;white-space:nowrap;font-weight:600">Clear all</button>
+      </div>
     </div>
     <!-- Leaderboard panel -->
     <div id="clients-leaderboard-panel" style="display:none">
@@ -4384,16 +4393,6 @@ button{font-family:var(--font);}
     </div>
     <!-- All clients panel -->
     <div id="clients-list-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:15px;font-weight:600;color:var(--white)">Clients</div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <div class="search-input-wrap" style="margin-bottom:0">
-            <input type="text" id="clients-search" placeholder="Search by name, email, company…" oninput="renderClients()" style="min-width:220px">
-          </div>
-          <button onclick="toggleAddClientPanel()" id="btn-add-client-panel" style="padding:6px 14px;border:1px solid var(--blue);border-radius:8px;font-size:12px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;white-space:nowrap;font-weight:600">+ Add client</button>
-          <button onclick="clearAllClients()" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--red-bg);color:var(--red);cursor:pointer;white-space:nowrap;font-weight:600">Clear all</button>
-        </div>
-      </div>
       <!-- Add client panel -->
       <div id="add-client-panel" style="display:none;margin-bottom:14px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
@@ -4463,19 +4462,7 @@ button{font-family:var(--font);}
           </div>
         </div>
       </div>
-      <!-- Client filter pills -->
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
-        <button id="cfil-all"      onclick="setClientFilter('all')"      style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">All</button>
-        <button id="cfil-messages" onclick="setClientFilter('messages')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages</button>
-        <button id="cfil-active"   onclick="setClientFilter('active')"   style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Active</button>
-        <button id="cfil-inactive" onclick="setClientFilter('inactive')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">Inactive</button>
-        <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-        <button id="cctr-all"    onclick="setClientCountry('all')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>All</button>
-        <button id="cctr-canada" onclick="setClientCountry('canada')" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 100 100" fill="currentColor"><path d="M50 8c0 0-7 22-10 24-3 2-22-4-22-4s10 12 12 14c2 2-8 18-8 18s18-6 20-4c2 2-4 24-4 24l12-6 12 6c0 0-6-22-4-24 2-2 20 4 20 4s-10-16-8-18c2-2 12-14 12-14s-19 6-22 4C57 30 50 8 50 8z"/></svg>Canada</button>
-        <button id="cctr-usa"    onclick="setClientCountry('usa')"    style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="14" height="10" viewBox="0 0 14 10" fill="none"><rect x="0.5" y="0.5" width="13" height="9" rx="1" stroke="currentColor" stroke-width="0.8"/><line x1="0" y1="2.2" x2="14" y2="2.2" stroke="currentColor" stroke-width="0.7"/><line x1="0" y1="4.4" x2="14" y2="4.4" stroke="currentColor" stroke-width="0.7"/><line x1="0" y1="6.6" x2="14" y2="6.6" stroke="currentColor" stroke-width="0.7"/><line x1="0" y1="8.8" x2="14" y2="8.8" stroke="currentColor" stroke-width="0.7"/><rect x="0.5" y="0.5" width="5.5" height="4.6" fill="currentColor" opacity="0.35" rx="0.5"/></svg>USA</button>
-      </div>
-      <!-- A–Z letter jump bar -->
-      <div id="clients-az-bar" style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px"></div>
+      
       <div id="clients-empty" style="text-align:center;padding:40px;color:var(--muted);font-size:13px;display:none">No clients yet. Hit <strong style="color:var(--blue-bright)">+ Add client</strong> above to get started.</div>
       <div id="clients-list"></div>
     </div><!-- end clients-list-panel -->
