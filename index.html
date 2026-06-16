@@ -2603,17 +2603,27 @@ button{font-family:var(--font);}
       <label style="min-width:120px">Job name</label>
       <input type="text" id="job-name-input" placeholder="e.g. 4612 Lakeshore Rd, Oakville" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
     </div>
-    <!-- Market selector (drives currency + services panel) -->
+    <!-- Market selector (drives currency + services panel) — custom dropdown so
+         flags render as flat SVGs instead of the OS's wavy flag emoji. The real
+         <select> stays in the DOM (hidden) since dozens of functions elsewhere
+         read job-market-input's .value directly. -->
     <div style="margin-bottom:8px">
       <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Market</label>
-      <select id="job-market-input" onchange="onMarketChange(this.value)" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
-        <option value="canada">🇨🇦 Canada</option>
-        <option value="new_york">🇺🇸 New York</option>
-        <option value="texas">🇺🇸 Texas</option>
-        <option value="arizona">🇺🇸 Arizona</option>
-        <option value="colorado">🇺🇸 Colorado / Vail–Aspen</option>
-        <option value="other_us">🇺🇸 Other US</option>
+      <select id="job-market-input" onchange="onMarketChange(this.value)" style="display:none">
+        <option value="canada">Canada</option>
+        <option value="new_york">New York</option>
+        <option value="texas">Texas</option>
+        <option value="arizona">Arizona</option>
+        <option value="colorado">Colorado / Vail–Aspen</option>
+        <option value="other_us">Other US</option>
       </select>
+      <div style="position:relative">
+        <button type="button" onclick="toggleMarketDropdown(event)" id="market-dropdown-btn" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+          <span id="market-dropdown-label" style="display:flex;align-items:center;gap:7px"></span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="market-dropdown-panel" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;background:#242D42;border:1px solid #3a4360;border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:4px"></div>
+      </div>
     </div>
     <div class="job-form-date-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
@@ -2683,11 +2693,11 @@ button{font-family:var(--font);}
 
     <!-- AI quote assistant — describe the job in plain English, it fills the form above for review -->
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <div class="section-label" style="display:flex;align-items:center;gap:6px">✨ Claude</div>
+      <div class="section-label" style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#D97757"><path d="M12 2l1.8 7.2L21 11l-7.2 1.8L12 20l-1.8-7.2L3 11l7.2-1.8z"/></svg> Claude</div>
       <div class="note" style="margin-bottom:8px">Describe the job — address, sqft, who's filming/editing, services needed, client info, shoot date. The AI fills in the form above; nothing is saved until you review and click "Save job" yourself.</div>
       <textarea id="ai-quote-input" rows="3" placeholder="e.g. 1500 Main St, Toronto, ON. 2400 sqft. Need drone video and twilight photos. John Smith filming, Sarah editing. Client is Jane Doe, jane@email.com, shoot next Tuesday at 10am." style="width:100%;box-sizing:border-box;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;resize:vertical;margin-bottom:8px"></textarea>
       <div style="display:flex;align-items:center;gap:10px">
-        <button onclick="aiQuoteGenerate()" id="ai-quote-btn" style="padding:7px 18px;border-radius:16px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">✨ Fill quote form</button>
+        <button onclick="aiQuoteGenerate()" id="ai-quote-btn" style="padding:7px 18px;border-radius:16px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="#D97757"><path d="M12 2l1.8 7.2L21 11l-7.2 1.8L12 20l-1.8-7.2L3 11l7.2-1.8z"/></svg> Fill quote form</button>
         <span id="ai-quote-status" style="font-size:12px;color:var(--muted)"></span>
       </div>
     </div>
@@ -14952,7 +14962,76 @@ function aiQuoteApplyToForm(d){
 // US MARKET PRICING FUNCTIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Custom Market dropdown (flat SVG flags — Apple's flag emoji renders as a
+// wavy ribbon and can't be flattened with CSS). The real <select id="job-
+// market-input"> stays hidden in the DOM since many functions read its
+// .value directly; this just drives a nicer-looking UI in front of it.
+const _CA_FLAG_SVG = '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#fff"/><rect width="5" height="14" fill="#FF0000"/><rect x="15" width="5" height="14" fill="#FF0000"/><path d="M10 3.3l.9 2h1.9l-1.5 1.3.5 1.9-1.8-1.1-1.8 1.1.5-1.9-1.5-1.3h1.9z" fill="#FF0000"/></svg>';
+const _US_FLAG_SVG = '<svg width="18" height="13" viewBox="0 0 20 14"><rect width="20" height="14" fill="#fff"/><g fill="#B22234"><rect y="0" width="20" height="1.1"/><rect y="2.2" width="20" height="1.1"/><rect y="4.4" width="20" height="1.1"/><rect y="6.6" width="20" height="1.1"/><rect y="8.8" width="20" height="1.1"/><rect y="11" width="20" height="1.1"/><rect y="13" width="20" height="1.1"/></g><rect width="8" height="7.5" fill="#3C3B6E"/></svg>';
+const MARKET_OPTS = [
+  {id:'canada', label:'Canada', flag:_CA_FLAG_SVG},
+  {id:'new_york', label:'New York', flag:_US_FLAG_SVG},
+  {id:'texas', label:'Texas', flag:_US_FLAG_SVG},
+  {id:'arizona', label:'Arizona', flag:_US_FLAG_SVG},
+  {id:'colorado', label:'Colorado / Vail–Aspen', flag:_US_FLAG_SVG},
+  {id:'other_us', label:'Other US', flag:_US_FLAG_SVG},
+];
+
+function syncMarketDropdownDisplay(){
+  const sel = document.getElementById('job-market-input');
+  const opt = MARKET_OPTS.find(o=>o.id===(sel?.value||'canada')) || MARKET_OPTS[0];
+  const labelEl = document.getElementById('market-dropdown-label');
+  if(labelEl) labelEl.innerHTML = opt.flag+'<span>'+opt.label+'</span>';
+}
+
+function selectMarket(marketId){
+  const sel = document.getElementById('job-market-input');
+  if(sel) sel.value = marketId;
+  onMarketChange(marketId);
+  const panel = document.getElementById('market-dropdown-panel');
+  if(panel) panel.style.display = 'none';
+}
+
+let _marketDropdownOutsideHandler = null;
+function toggleMarketDropdown(evt){
+  evt?.stopPropagation();
+  const panel = document.getElementById('market-dropdown-panel');
+  const btn = document.getElementById('market-dropdown-btn');
+  if(!panel || !btn) return;
+  const opening = panel.style.display === 'none';
+  if(opening){
+    panel.innerHTML = MARKET_OPTS.map(o=>`
+      <button type="button" onclick="selectMarket('${o.id}')" style="display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:8px 10px;border:none;background:transparent;color:#E8ECF8;font-size:13px;cursor:pointer;border-radius:6px;text-align:left" onmouseover="this.style.background='#2f3a55'" onmouseout="this.style.background='transparent'">${o.flag}<span>${o.label}</span></button>`).join('');
+    // Re-parent to <body> with position:fixed so the .card's overflow:hidden
+    // doesn't clip the panel — same pattern as the other floating menus.
+    if(panel.parentElement !== document.body) document.body.appendChild(panel);
+    const rect = btn.getBoundingClientRect();
+    panel.style.position = 'fixed';
+    panel.style.top = (rect.bottom+4)+'px';
+    panel.style.left = rect.left+'px';
+    panel.style.width = rect.width+'px';
+    panel.style.right = 'auto';
+  }
+  panel.style.display = opening ? 'block' : 'none';
+  if(_marketDropdownOutsideHandler){
+    document.removeEventListener('click', _marketDropdownOutsideHandler);
+    _marketDropdownOutsideHandler = null;
+  }
+  if(opening){
+    _marketDropdownOutsideHandler = (e) => {
+      const btn = document.getElementById('market-dropdown-btn');
+      if(!panel.contains(e.target) && e.target!==btn && !btn?.contains(e.target)){
+        panel.style.display = 'none';
+        document.removeEventListener('click', _marketDropdownOutsideHandler);
+        _marketDropdownOutsideHandler = null;
+      }
+    };
+    setTimeout(()=>document.addEventListener('click', _marketDropdownOutsideHandler), 0);
+  }
+}
+
 function onMarketChange(market){
+  if(typeof syncMarketDropdownDisplay==='function') syncMarketDropdownDisplay();
   const isUS = market !== 'canada';
 
   // Auto-set currency
@@ -25745,6 +25824,7 @@ if(jobDateInput) jobDateInput.value=new Date().toISOString().slice(0,10);
 const expDateInput=document.getElementById('exp-date');
 if(expDateInput) expDateInput.value=new Date().toISOString().slice(0,10);
 populateContractorDropdowns();
+syncMarketDropdownDisplay();
 ensureDefaultOrg();
 lcEnsureDefaults();
 refreshLcNavBadge();
