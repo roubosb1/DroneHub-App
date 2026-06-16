@@ -49,8 +49,11 @@ async function _fbCall(body, _attempt=0){
   try{
     const r=await fetch(_PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
     if(r.status===401){
-      // Token expired/invalid — clear stale token and signal caller
+      // Token expired/invalid — clear stale token and surface the prompt here
+      // (not just signal the caller) so a 401 can never go unnoticed just
+      // because a particular call site forgot to check _fbAuthExpired().
       _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+      _fbShowSessionExpired();
       return {__authExpired:true};
     }
     if(r.status===429){
@@ -92,7 +95,7 @@ function _fbShowSessionExpired(){
     <div style="font-size:28px;margin-bottom:12px">🔒</div>
     <div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:8px">Session Expired</div>
     <div style="font-size:13px;color:#8a9bbf;margin-bottom:24px;line-height:1.6">Your session has expired or become invalid. Please sign in again to continue.</div>
-    <button onclick="location.reload()" style="padding:12px 32px;border-radius:12px;border:none;background:linear-gradient(135deg,#5B8DEF,#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Sign In Again</button>
+    <button onclick="gateClearSession();location.reload()" style="padding:12px 32px;border-radius:12px;border:none;background:linear-gradient(135deg,#5B8DEF,#3B6FD4);color:#fff;font-size:14px;font-weight:700;cursor:pointer">Sign In Again</button>
   </div>`;
   document.body.appendChild(ov);
 }
@@ -19949,8 +19952,17 @@ function gateInit(){
   if(session&&session.email){
     // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
     const _storedTok=sessionStorage.getItem('dh_token');
-    if(_storedTok){_dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);setTimeout(()=>syncGcalLinks().catch(()=>{}),4000);setTimeout(()=>gcalCheckOAuthReturn().catch(()=>{}),1000);}
+    if(_storedTok){
+      _dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);setTimeout(()=>syncGcalLinks().catch(()=>{}),4000);setTimeout(()=>gcalCheckOAuthReturn().catch(()=>{}),1000);
+      gateEnterApp(session);
+      return;
+    }
+    // Logged in per the app session, but no Firebase token in this tab (e.g. opened
+    // a new tab — sessionStorage doesn't carry over). Enter the app so the UI isn't
+    // blank, but surface the sign-in prompt immediately rather than letting every
+    // save fail silently later with no explanation.
     gateEnterApp(session);
+    _fbShowSessionExpired();
     return;
   }
   // Clear any stale session — fix name and inject missing jobTitle
