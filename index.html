@@ -4289,11 +4289,15 @@ button{font-family:var(--font);}
 <div id="pane-sales" class="pane">
 
   <!-- Top-level view switcher: Jobs / Clients / Contacts / Pipeline -->
-  <div class="no-scrollbar" style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto">
-    <button id="sales-view-jobs-btn" onclick="setSalesView('jobs')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> Jobs</button>
-    <button id="sales-view-clients-btn" onclick="setSalesView('clients')" style="padding:9px 18px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Clients</button>
-    <button id="sales-view-contacts-btn" onclick="setSalesView('contacts')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts</button>
-    <button id="sales-view-pipeline-btn" onclick="setSalesView('pipeline')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Pipeline</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+    <div class="no-scrollbar" style="display:flex;gap:0;overflow-x:auto">
+      <button id="sales-view-jobs-btn" onclick="setSalesView('jobs')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> Jobs</button>
+      <button id="sales-view-clients-btn" onclick="setSalesView('clients')" style="padding:9px 18px;border:none;border-bottom:2px solid var(--blue-bright);background:transparent;color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Clients</button>
+      <button id="sales-view-contacts-btn" onclick="setSalesView('contacts')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts</button>
+      <button id="sales-view-pipeline-btn" onclick="setSalesView('pipeline')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Pipeline</button>
+    </div>
+    <!-- Stats bar — only populated/shown while on the Contacts view -->
+    <div id="sales-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:8px"></div>
   </div>
 
   <!-- ── JOBS VIEW ── -->
@@ -4464,8 +4468,38 @@ button{font-family:var(--font);}
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="sales-search" type="text" placeholder="Search contacts…" oninput="_salesPage=0;renderSalesTable()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
+        <button onclick="openSalesAddModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create</button>
+        <!-- Lists dropdown — wraps the existing list-tab buttons as its menu content -->
+        <div style="position:relative;display:inline-block">
+          <button onclick="salesToggleListsDropdown(event)" id="sales-lists-dropdown-btn" style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> Lists <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+          <div class="sales-list-tabs" id="sales-lists-dropdown-panel" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:60;flex-direction:column;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:8px;min-width:190px;gap:4px">
+            <button class="sales-list-tab active" id="sltab-realestate" onclick="setSalesList('realestate');salesToggleListsDropdown()" style="display:flex;align-items:center;gap:5px;width:100%;box-sizing:border-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              Real Estate
+            </button>
+            <button class="sales-list-tab" id="sltab-resorts" onclick="setSalesList('resorts');salesToggleListsDropdown()" style="display:flex;align-items:center;gap:5px;width:100%;box-sizing:border-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+              Resorts
+            </button>
+            <button class="sales-list-tab" id="sltab-golf" onclick="setSalesList('golf');salesToggleListsDropdown()" style="display:flex;align-items:center;gap:5px;width:100%;box-sizing:border-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M12 7l6 4-6 4V7z"/><path d="M5 21c0-3 7-3 7-6"/></svg>
+              Golf Courses
+            </button>
+            <button class="sales-list-tab" id="sltab-other" onclick="setSalesList('other');salesToggleListsDropdown()" style="display:flex;align-items:center;gap:5px;width:100%;box-sizing:border-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+              Other
+            </button>
+            <button class="sales-list-tab" id="sltab-warm" onclick="setSalesList('warm');salesToggleListsDropdown()" style="border-color:var(--amber);color:var(--amber);display:flex;align-items:center;gap:5px;width:100%;box-sizing:border-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Warm Leads
+            </button>
+            <button class="sales-list-tab" id="sltab-clients" onclick="setSalesList('clients');salesToggleListsDropdown()" style="border-color:var(--green);color:var(--green);display:flex;align-items:center;gap:5px;width:100%;box-sizing:border-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Existing Clients
+            </button>
+          </div>
+        </div>
         <span id="sales-save-status" style="font-size:11px;font-weight:600;letter-spacing:.02em;transition:color .2s"></span>
-        <button onclick="openSalesAddModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Contact</button>
         <button onclick="openImportModal()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg> Import Excel</button>
         <button onclick="salesFixUnsplitNames()" title="Scan all contacts and split any full names that landed in the First Name field" style="padding:7px 16px;border-radius:20px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Fix Names</button>
         <button onclick="openSalesBulkEmail()" style="padding:7px 16px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Bulk Email</button>
@@ -4488,37 +4522,6 @@ button{font-family:var(--font);}
       <button onclick="salesUnsubSelected()" class="sales-action-btn" style="border-color:var(--amber);color:var(--amber)">Unsubscribe</button>
       <button onclick="salesDeleteSelected()" class="sales-action-btn" style="border-color:#FF7070;color:#FF7070;font-weight:700">🗑 Delete</button>
     </div>
-
-    <!-- List tab switcher -->
-    <div class="sales-list-tabs">
-      <button class="sales-list-tab active" id="sltab-realestate" onclick="setSalesList('realestate')" style="display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Real Estate
-      </button>
-      <button class="sales-list-tab" id="sltab-resorts" onclick="setSalesList('resorts')" style="display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-        Resorts
-      </button>
-      <button class="sales-list-tab" id="sltab-golf" onclick="setSalesList('golf')" style="display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M12 7l6 4-6 4V7z"/><path d="M5 21c0-3 7-3 7-6"/></svg>
-        Golf Courses
-      </button>
-      <button class="sales-list-tab" id="sltab-other" onclick="setSalesList('other')" style="display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-        Other
-      </button>
-      <button class="sales-list-tab" id="sltab-warm" onclick="setSalesList('warm')" style="border-color:var(--amber);color:var(--amber);display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        Warm Leads
-      </button>
-      <button class="sales-list-tab" id="sltab-clients" onclick="setSalesList('clients')" style="border-color:var(--green);color:var(--green);display:flex;align-items:center;gap:5px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Existing Clients
-      </button>
-    </div>
-
-    <!-- Stats bar -->
-    <div id="sales-stats-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
 
     <!-- Client sub-filter (active / past) — only visible on Existing Clients tab -->
     <div id="clients-sub-filter" style="display:none;margin-bottom:10px"></div>
@@ -26538,6 +26541,33 @@ async function _salesQuickMoveTo(id, listId){
   if(c){ c.list = listId; salesSave(all); if(listId==='clients'){syncSalesCRMToClient(c);if(typeof renderClients==='function')renderClients();} renderSalesTable(); }
 }
 
+// Toggles the "Lists" dropdown (Real Estate/Resorts/Golf/Other/Warm/Clients)
+// that replaced the always-visible pill row. Closes on outside click or once
+// a list is picked (each list button's onclick also calls this to close).
+let _salesListsDropdownOutsideHandler = null;
+function salesToggleListsDropdown(evt){
+  evt?.stopPropagation();
+  const panel = document.getElementById('sales-lists-dropdown-panel');
+  if(!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'flex' : 'none';
+  if(_salesListsDropdownOutsideHandler){
+    document.removeEventListener('click', _salesListsDropdownOutsideHandler);
+    _salesListsDropdownOutsideHandler = null;
+  }
+  if(opening){
+    _salesListsDropdownOutsideHandler = (e) => {
+      const btn = document.getElementById('sales-lists-dropdown-btn');
+      if(!panel.contains(e.target) && e.target!==btn && !btn?.contains(e.target)){
+        panel.style.display = 'none';
+        document.removeEventListener('click', _salesListsDropdownOutsideHandler);
+        _salesListsDropdownOutsideHandler = null;
+      }
+    };
+    setTimeout(()=>document.addEventListener('click', _salesListsDropdownOutsideHandler), 0);
+  }
+}
+
 // Single "⋯" menu replaces the old row of 5-6 separate icon buttons (New Deal,
 // Edit, Unsubscribe, Do Not Email, Move, Client-type toggle). Delete stays as
 // its own visible button since it's destructive and gets a confirm() anyway.
@@ -27172,6 +27202,10 @@ function setSalesView(v, skipGateCheck){
     if(el) el.style.display = id===v ? '' : 'none';
     if(btn){ btn.style.borderBottomColor = id===v?'var(--blue-bright)':'transparent'; btn.style.color = id===v?'var(--blue-bright)':'var(--muted)'; }
   });
+  // Stats bar now lives in the top tab row (next to Jobs/Clients/Contacts/Pipeline)
+  // since it's only meaningful while viewing Contacts.
+  const statsBarEl = document.getElementById('sales-stats-bar');
+  if(statsBarEl) statsBarEl.style.display = v==='contacts' ? 'flex' : 'none';
   // Show/hide contacts & pipeline based on sales access (re-evaluated every call)
   const emailToCheck = _activeSessionEmail || gateGetSession()?.email || '';
   const hasSalesAccess = canAccessSales(emailToCheck);
