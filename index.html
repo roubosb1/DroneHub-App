@@ -26495,17 +26495,43 @@ async function salesToggleClientType(id){
   renderSalesTable();
 }
 
-async function salesQuickMove(id){
-  const dest = prompt('Move to list:\n1=Real Estate, 2=Resorts, 3=Golf, 4=Other, 5=Warm Leads, 6=Existing Clients\nType the list name:');
-  if(!dest) return;
-  const map = {'real estate':'realestate','realestate':'realestate','1':'realestate',
-    'resorts':'resorts','resort':'resorts','2':'resorts',
-    'golf':'golf','golf courses':'golf','3':'golf',
-    'other':'other','4':'other',
-    'warm':'warm','warm leads':'warm','5':'warm',
-    'clients':'clients','existing clients':'clients','6':'clients'};
-  const listId = map[dest.trim().toLowerCase()];
-  if(!listId){ alert('Unknown list — please try again.'); return; }
+const _SALES_LIST_PICKER_OPTS = [
+  {id:'realestate', label:'Real Estate', color:'var(--blue-bright)', icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'},
+  {id:'resorts', label:'Resorts', color:'var(--blue-bright)', icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>'},
+  {id:'golf', label:'Golf Courses', color:'var(--blue-bright)', icon:'<line x1="12" y1="2" x2="12" y2="22"/><path d="M12 7l6 4-6 4V7z"/><path d="M5 21c0-3 7-3 7-6"/>'},
+  {id:'other', label:'Other', color:'var(--blue-bright)', icon:'<rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/>'},
+  {id:'warm', label:'Warm Leads', color:'var(--amber)', icon:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'},
+  {id:'clients', label:'Existing Clients', color:'var(--green)', icon:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'},
+];
+
+function salesQuickMove(id){
+  const existing = document.getElementById('sales-move-modal');
+  if(existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'sales-move-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9700;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+  modal.innerHTML = `<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:340px;border:1px solid var(--border-bright);overflow:hidden" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:700;color:var(--white)">Move to List</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Choose where this contact should live</div>
+    </div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:6px">
+      ${_SALES_LIST_PICKER_OPTS.map(o=>`
+      <button onclick="_salesQuickMoveTo('${escSalesAttr(id)}','${o.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:${o.color};font-size:13px;font-weight:600;cursor:pointer;text-align:left;width:100%;box-sizing:border-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${o.icon}</svg>
+        ${o.label}
+      </button>`).join('')}
+    </div>
+    <div style="padding:10px 16px 16px;display:flex;justify-content:flex-end">
+      <button onclick="document.getElementById('sales-move-modal').remove()" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function _salesQuickMoveTo(id, listId){
+  document.getElementById('sales-move-modal')?.remove();
   await salesEnsureLoaded();
   const all = salesLoad();
   const c = all.find(x=>x.id===id);
