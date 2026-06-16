@@ -26538,6 +26538,64 @@ async function _salesQuickMoveTo(id, listId){
   if(c){ c.list = listId; salesSave(all); if(listId==='clients'){syncSalesCRMToClient(c);if(typeof renderClients==='function')renderClients();} renderSalesTable(); }
 }
 
+// Single "⋯" menu replaces the old row of 5-6 separate icon buttons (New Deal,
+// Edit, Unsubscribe, Do Not Email, Move, Client-type toggle). Delete stays as
+// its own visible button since it's destructive and gets a confirm() anyway.
+// Body-appended + position:fixed so it isn't clipped by the table card's
+// overflow:hidden.
+function salesShowActionsMenu(evt, id){
+  evt.stopPropagation();
+  const existing = document.getElementById('sales-actions-menu');
+  const reopening = existing && existing.dataset.forId === id;
+  existing?.remove();
+  if(reopening) return; // clicking the same row's "⋯" again just closes it
+
+  const all = salesLoad();
+  const c = all.find(x=>x.id===id);
+  if(!c) return;
+  const isClientsTab = salesActiveList === 'clients';
+  const ctType = c.clientType || 'active';
+
+  const items = [
+    {label:'New Deal', icon:'circle-target', onclick:`openDealModal(null,'${escSalesAttr(id)}')`, color:'#F5C842'},
+    {label:'Edit', icon:'edit', onclick:`salesEditContact('${escSalesAttr(id)}')`, color:'var(--offwhite)'},
+    isClientsTab ? {label: ctType==='active'?'Mark as Past Client':'Mark as Active Client', icon:'swap', onclick:`salesToggleClientType('${escSalesAttr(id)}')`, color:ctType==='active'?'var(--blue-bright)':'var(--green)'} : null,
+    {label: c.unsubscribed?'Re-subscribe':'Unsubscribe', icon:'unsub', onclick:`salesToggleUnsub('${escSalesAttr(id)}')`, color:'var(--amber)'},
+    {label: c.doNotEmail?'Remove Do Not Email':'Mark Do Not Email', icon:'block', onclick:`salesToggleDNE('${escSalesAttr(id)}')`, color: c.doNotEmail?'var(--red)':'var(--offwhite)'},
+    {label:'Move to List', icon:'move', onclick:`salesQuickMove('${escSalesAttr(id)}')`, color:'var(--blue-bright)'},
+  ].filter(Boolean);
+
+  const icons = {
+    'circle-target':'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    'edit':'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
+    'swap':'<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+    'unsub':'<path d="M4 4l16 16"/><path d="M22 12a10 10 0 1 1-9-10"/>',
+    'block':'<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>',
+    'move':'<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>',
+  };
+
+  const btn = evt.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.id = 'sales-actions-menu';
+  menu.dataset.forId = id;
+  menu.style.cssText = `position:fixed;z-index:9650;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.5);min-width:190px;padding:6px;display:flex;flex-direction:column;gap:2px`;
+  menu.innerHTML = items.map(it=>`
+    <button onclick="document.getElementById('sales-actions-menu')?.remove();${it.onclick}" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;border:none;background:transparent;color:${it.color};font-size:12px;font-weight:600;cursor:pointer;text-align:left;width:100%" onmouseover="this.style.background='var(--navy-lift)'" onmouseout="this.style.background='transparent'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${icons[it.icon]}</svg>
+      ${it.label}
+    </button>`).join('');
+  document.body.appendChild(menu);
+
+  const closeOnOutsideClick = (e) => {
+    if(!menu.contains(e.target)){
+      menu.remove();
+      document.removeEventListener('click', closeOnOutsideClick);
+    }
+  };
+  setTimeout(()=>document.addEventListener('click', closeOnOutsideClick), 0);
+}
+
 async function salesDeleteContact(id){
   if(!confirm('Delete this contact?')) return;
   await salesEnsureLoaded();
@@ -27307,9 +27365,6 @@ function renderSalesTable(){
     const deals = dealsLoad();
     const contactDeals = deals.filter(d=>d.contactId===c.id&&d.stage!=='lost');
     const dealBadge = contactDeals.length ? `<span style="background:rgba(245,166,35,.15);color:#F5C842;border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;margin-left:4px" title="Active deal: ${contactDeals.map(d=>d.id).join(', ')}">${contactDeals[0].id}</span>` : '';
-    const ctToggleBtn = isClientsTab
-      ? `<button class="sales-action-btn" onclick="salesToggleClientType('${escSalesAttr(c.id)}')" title="${ctType==='active'?'Mark as Past Client':'Mark as Active Client'}" style="${ctType==='active'?'color:var(--green);border-color:rgba(34,217,122,.4)':'color:var(--blue-bright);border-color:rgba(91,141,239,.4)'}">${ctType==='active'?'●◌':'◌●'}</button>`
-      : '';
     return `<tr>
       <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
       <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}${dealBadge}</td>
@@ -27320,12 +27375,7 @@ function renderSalesTable(){
       <td style="white-space:nowrap"><span class="sales-status-badge ${statusClass}">${statusLabel}</span>${ctBadge?`<div style="margin-top:3px">${ctBadge.replace('margin-left:5px;','')}</div>`:''}</td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(c.notes||'')}">${escSalesHtml((c.notes||'').slice(0,40))||'—'}</td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="sales-action-btn" onclick="openDealModal(null,'${escSalesAttr(c.id)}')" title="New deal from contact" style="border-color:#F5C842;color:#F5C842"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></button>
-        <button class="sales-action-btn" onclick="salesEditContact('${escSalesAttr(c.id)}')" title="Edit">✏</button>
-        ${ctToggleBtn}
-        <button class="sales-action-btn" onclick="salesToggleUnsub('${escSalesAttr(c.id)}')" title="${c.unsubscribed?'Re-subscribe':'Unsubscribe'}">${c.unsubscribed?'↩':'🚫'}</button>
-        <button class="sales-action-btn" onclick="salesToggleDNE('${escSalesAttr(c.id)}')" title="${c.doNotEmail?'Remove Do Not Email':'Mark Do Not Email'}" style="${c.doNotEmail?'color:var(--red);border-color:rgba(240,82,82,.4)':''}">⊘</button>
-        <button class="sales-action-btn" onclick="salesQuickMove('${escSalesAttr(c.id)}')" title="Move to list">↗</button>
+        <button class="sales-action-btn" onclick="salesShowActionsMenu(event,'${escSalesAttr(c.id)}')" title="More actions">⋯</button>
         <button class="sales-action-btn" style="color:#FF7070;border-color:#FF7070" onclick="salesDeleteContact('${escSalesAttr(c.id)}')" title="Delete">✕</button>
       </td>
     </tr>`;
