@@ -4318,8 +4318,9 @@ button{font-family:var(--font);}
       <button id="sales-view-contacts-btn" onclick="setSalesView('contacts')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts</button>
       <button id="sales-view-pipeline-btn" onclick="setSalesView('pipeline')" style="padding:9px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Pipeline</button>
     </div>
-    <!-- Stats bar — only populated/shown while on the Contacts view -->
+    <!-- Stats bars — contacts stats shown on Contacts view, client stats on Clients view -->
     <div id="sales-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
+    <div id="sales-clients-stats-bar" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
   </div>
 
   <!-- ── JOBS VIEW ── -->
@@ -12164,6 +12165,29 @@ function toggleClientStatus(clientId){
   }
   renderClients();
 }
+// Top-right stat boxes on the Clients view: total client count + how many have
+// worked with us in the last 6 months (by most recent job date). Styled to
+// match the Contacts view stat boxes.
+function renderClientsStatBar(){
+  const bar = document.getElementById('sales-clients-stats-bar');
+  if(!bar) return;
+  const totalClients = clients.length;
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const recentCount = clients.filter(c=>
+    (savedJobs||[]).some(j=>{
+      if(String(j.clientId)!==String(c.id)) return false;
+      const d = new Date(j.completedAt||j.createdAt||j.date||0);
+      return d >= sixMonthsAgo;
+    })
+  ).length;
+  const box = (num, label, color) =>
+    `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted)"><span style="font-size:13px;font-weight:700;color:${color};display:block">${num}</span>${label}</div>`;
+  bar.innerHTML =
+    box(totalClients, 'Total Clients', 'var(--white)') +
+    box(recentCount, 'Last 6 Months', 'var(--green)');
+}
+
 function renderClients(){
   // Bootstrap: if Clients tab has no data but CRM Existing Clients does, auto-populate once
   if(!clients.length){
@@ -12189,6 +12213,9 @@ function renderClients(){
   const empty=document.getElementById('clients-empty');
   const azBar=document.getElementById('clients-az-bar');
   if(!list) return;
+
+  // ── Top-right stat bar (Total Clients / Last 6 months) ──────────────────────
+  renderClientsStatBar();
 
   const _lcUnread=getLcUnread();
   const portalAccts=getPortalAccounts();
@@ -27493,10 +27520,12 @@ function setSalesView(v, skipGateCheck){
     if(el) el.style.display = id===v ? '' : 'none';
     if(btn){ btn.style.borderBottomColor = id===v?'var(--blue-bright)':'transparent'; btn.style.color = id===v?'var(--blue-bright)':'var(--muted)'; }
   });
-  // Stats bar now lives in the top tab row (next to Jobs/Clients/Contacts/Pipeline)
-  // since it's only meaningful while viewing Contacts.
+  // Stats bars live in the top tab row (next to Jobs/Clients/Contacts/Pipeline).
+  // Contacts view shows contact stats; Clients view shows client stats.
   const statsBarEl = document.getElementById('sales-stats-bar');
   if(statsBarEl) statsBarEl.style.display = v==='contacts' ? 'flex' : 'none';
+  const clientStatsBarEl = document.getElementById('sales-clients-stats-bar');
+  if(clientStatsBarEl) clientStatsBarEl.style.display = v==='clients' ? 'flex' : 'none';
   // Show/hide contacts & pipeline based on sales access (re-evaluated every call)
   const emailToCheck = _activeSessionEmail || gateGetSession()?.email || '';
   const hasSalesAccess = canAccessSales(emailToCheck);
