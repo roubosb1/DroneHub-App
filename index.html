@@ -6950,7 +6950,7 @@ function showPane(id,ev){
       if(sl && SALES_LISTS.includes(sl)) salesActiveList = sl;
     }catch(e){}
     renderSales();
-    setSalesView(salesView); // syncs button styles, panel visibility, and triggers the right render
+    setSalesView(salesView, true); // skipGateCheck: trust the restored value, don't re-run access check on boot
     // Sync list-tab button active state without triggering a second re-render
     document.querySelectorAll('.sales-list-tab').forEach(b=>{
       b.classList.toggle('active', b.id === 'sltab-'+salesActiveList);
@@ -27161,7 +27161,7 @@ function salesClearAllFilters(){
 
 // ── Sales view switcher ──
 // salesView declared early above (TDZ fix)
-function setSalesView(v){
+function setSalesView(v, skipGateCheck){
   salesView = v;
   try{localStorage.setItem('dronehub_sales_view', v);}catch(e){}
 
@@ -27179,8 +27179,13 @@ function setSalesView(v){
     const btn = document.getElementById('sales-view-'+id+'-btn');
     if(btn) btn.style.display = hasSalesAccess ? 'flex' : 'none';
   });
-  // If user tried to navigate to a gated view without access, fall back to clients
-  if(!hasSalesAccess && (v==='contacts'||v==='pipeline')){
+  // If user tried to navigate to a gated view without access, fall back to clients.
+  // Skipped when restoring the last-visited tab on page load (skipGateCheck=true) —
+  // the value being restored was only ever saved because the user had access to set
+  // it, and _activeSessionEmail/team-roster data can be momentarily stale right at
+  // boot, which was incorrectly bouncing people from Contacts back to Clients on
+  // every refresh.
+  if(!skipGateCheck && !hasSalesAccess && (v==='contacts'||v==='pipeline')){
     setSalesView('clients'); return;
   }
   if(v==='pipeline') renderDealsTable();
