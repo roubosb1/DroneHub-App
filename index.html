@@ -12286,7 +12286,11 @@ function renderClients(){
 
   // ── Default "All" mode: flat alphabetical list ──────────────────────────────
   if(azBar) azBar.style.display='none';
-  const allSorted=countryFiltered.sort((a,b)=>a.c.name.localeCompare(b.c.name));
+  const allSorted=countryFiltered.sort((a,b)=>{
+    const aNum=/^\d/.test(a.c.name), bNum=/^\d/.test(b.c.name);
+    if(aNum!==bNum) return aNum?1:-1;
+    return a.c.name.localeCompare(b.c.name);
+  });
   empty.style.display=allSorted.length?'none':'block';
   list.style.display=allSorted.length?'block':'none';
   list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${allSorted.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
