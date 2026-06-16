@@ -23721,15 +23721,58 @@ function openTrackerModal(jobId){
       </div>
       <button onclick="this.closest('#tracker-modal-overlay').remove()" style="border:none;background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;font-size:16px;width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
     </div>
-    <div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+    <div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
 
-      <!-- LEFT COLUMN -->
-      <div style="display:flex;flex-direction:column;gap:12px">
+      <!-- LEFT: Project Identity -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- Address prominent at top -->
+        <div>
+          <label style="font-size:10px;color:var(--blue-bright);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em">Property Address</label>
+          <input type="text" id="tm-address" value="${(job.address||'').toString().replace(/"/g,'&quot;')}" placeholder="123 Main St, City…" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+        </div>
+
+        <!-- Client + date on same row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('client-name','Client name',client?.name||job.clientName||'','text','')}
+          ${inp('shoot-date','Shoot date',job.date||'','date','')}
+        </div>
+
+        <!-- Company + Videographer -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('company','Company / team',client?.company||job.company||'','text','')}
+          <div>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Videographer</label>
+            <select id="tm-videographer" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${buildVideographerOptions(videographer)}</select>
+          </div>
+        </div>
+
+        <!-- Project ID + Completion date (reference/admin fields, lowest priority) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('project-id','Project ID',pid,'text','DH-2025-001')}
+          ${inp('completion-date','Completion date',ts.completionDate||'','date','')}
+        </div>
+
+        <!-- Divider -->
+        <div style="border-top:1px solid var(--border)"></div>
+
+        <!-- Notes here on the left so it's read with the project context -->
+        <div>
+          ${_lbl('Notes')}
+          <textarea id="tm-notes" rows="4" placeholder="Shoot instructions, gate codes, special requests, client preferences…" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;line-height:1.6">${ts.notes||''}</textarea>
+          ${ts.updatedAt?`<div style="font-size:10px;color:var(--muted);margin-top:4px">Last updated: ${ts.updatedAt}${ts.claimedBy?' by '+ts.claimedBy:''}</div>`:''}
+        </div>
+      </div>
+
+      <!-- RIGHT: Status & Operations -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- Kanban + Edit status + Editor — the core workflow status -->
         <div>
           ${_lbl('Status & Assignment')}
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
             <div>
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Kanban stage</label>
+              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Stage</label>
               <select id="tm-stage" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${stageOpts}</select>
             </div>
             <div>
@@ -23737,34 +23780,18 @@ function openTrackerModal(jobId){
               <select id="tm-edit-status" onchange="tmUpdateDraftCharge()" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${editStatusOpts}</select>
             </div>
             <div>
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Assigned editor</label>
+              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Editor</label>
               <select id="tm-assigned" style="width:100%;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${contractorOpts}</select>
             </div>
           </div>
         </div>
+
+        <!-- Files & Hours together -->
         <div>
-          ${_lbl('Project Information')}
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            ${inp('client-name','Client name',client?.name||job.clientName||'','text','')}
-            ${inp('shoot-date','Shoot date',job.date||'','date','')}
-            ${inp('company','Company / team',client?.company||job.company||'','text','')}
-            <div>
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Videographer</label>
-              <select id="tm-videographer" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">${buildVideographerOptions(videographer)}</select>
-            </div>
-            <div style="grid-column:1/-1">
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Property address</label>
-              <input type="text" id="tm-address" value="${(job.address||'').toString().replace(/"/g,'&quot;')}" placeholder="" style="width:100%;padding:6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
-            </div>
-            ${inp('project-id','Project ID',pid,'text','e.g. DH-2025-001')}
-            ${inp('completion-date','Completion date',ts.completionDate||'','date','')}
-          </div>
-        </div>
-        <div>
-          ${_lbl('Files & Hours')}
+          ${_lbl('Hours & Files')}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            ${inp('film-hours','Film hours',filmHours,'number','hrs')}
-            ${inp('edit-hours','Edit hours',ts.approxEditHours||'','number','hrs')}
+            ${inp('film-hours','Film hrs',filmHours,'number','e.g. 2')}
+            ${inp('edit-hours','Edit hrs',ts.approxEditHours||'','number','e.g. 4')}
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div style="padding:8px 10px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:6px">
@@ -23773,7 +23800,7 @@ function openTrackerModal(jobId){
                 <span>Files received</span>
               </label>
               <span id="tm-files-status" style="font-size:10px;font-weight:700;color:${ts.filesReceived?'var(--green)':'var(--red)'};white-space:nowrap">
-                ${ts.filesReceived?'✓ Yes':'⏳ Pending'}
+                ${ts.filesReceived?'✓ Yes':'⏳ No'}
               </span>
             </div>
             <div style="padding:8px 10px;background:${ts.rush?'rgba(240,82,82,.15)':'var(--navy-lift)'};border-radius:8px;border:1px solid ${ts.rush?'var(--red)':'var(--border)'};display:flex;align-items:center;justify-content:space-between;gap:6px">
@@ -23782,15 +23809,13 @@ function openTrackerModal(jobId){
                 <span>Rush order</span>
               </label>
               <span style="font-size:10px;font-weight:700;color:${ts.rush?'var(--red)':'var(--muted)'}">
-                ${ts.rush?'PRIORITY':'Normal'}
+                ${ts.rush?'🚨 RUSH':'Normal'}
               </span>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- RIGHT COLUMN -->
-      <div style="display:flex;flex-direction:column;gap:12px">
+        <!-- Draft tracking -->
         <div>
           ${_lbl('Draft Tracking')}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -23800,16 +23825,23 @@ function openTrackerModal(jobId){
             </div>
             <div style="display:flex;flex-direction:column;justify-content:flex-end">
               <div id="tm-draft-charge-display" style="padding:7px 10px;background:${extraCharge>0?'var(--amber-bg)':'var(--navy-lift)'};border-radius:8px;border:1px solid ${extraCharge>0?'var(--amber)':'var(--border)'};font-size:11px;font-weight:700;color:${extraCharge>0?'var(--amber)':'var(--muted)'}">
-                ${extraCharge>0?`+$${extraCharge} surcharge (${draftCount-2} extra × $30)`:'No surcharge (≤2 drafts)'}
+                ${extraCharge>0?`+$${extraCharge} (${draftCount-2} extra × $30)`:'No surcharge (≤2 drafts)'}
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Divider -->
+        <div style="border-top:1px solid var(--border)"></div>
+
+        <!-- Links -->
         <div>
-          ${_lbl('Links & Downloads')}
-          <div style="display:flex;flex-direction:column;gap:7px">
+          ${_lbl('Links')}
+          <div style="display:flex;flex-direction:column;gap:8px">
+
+            <!-- Filemail dynamic list -->
             <div>
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Filemail Links <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0">— raw footage downloads</span></label>
+              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Filemail <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">raw footage for editor</span></label>
               <div id="tm-filemail-links-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:5px">
                 ${(ts.filemailLinks&&ts.filemailLinks.length?ts.filemailLinks:ts.filemailLink?[ts.filemailLink]:[]).map((url,i)=>`
                 <div id="tm-fl-row-${i}" style="display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center">
@@ -23821,24 +23853,28 @@ function openTrackerModal(jobId){
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Filemail Link
               </button>
             </div>
+
+            <!-- Drive + Dropbox side by side -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
               <div>
-                <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Google Drive (finals)</label>
+                <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Google Drive <span style="font-size:9px;font-weight:400;text-transform:none;opacity:.7">finals</span></label>
                 <div style="display:flex;gap:5px">
                   <input type="url" id="tm-download" value="${ts.downloadLink||''}" placeholder="https://drive.google.com/…" style="flex:1;min-width:0;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-                  ${ts.downloadLink?`<a href="${ts.downloadLink}" target="_blank" style="padding:6px 8px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">↓</a>`:''}
+                  ${ts.downloadLink?`<a href="${ts.downloadLink}" target="_blank" style="padding:6px 8px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center">↗</a>`:''}
                 </div>
               </div>
               <div>
-                <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Dropbox (finals)</label>
+                <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Dropbox <span style="font-size:9px;font-weight:400;text-transform:none;opacity:.7">finals</span></label>
                 <div style="display:flex;gap:5px">
                   <input type="url" id="tm-dropbox" value="${ts.dropboxLink||''}" placeholder="https://dropbox.com/…" style="flex:1;min-width:0;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-                  ${ts.dropboxLink?`<a href="${ts.dropboxLink}" target="_blank" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(0,97,255,.5);background:rgba(0,97,255,.1);color:#0061FF;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">↓</a>`:''}
+                  ${ts.dropboxLink?`<a href="${ts.dropboxLink}" target="_blank" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(0,97,255,.5);background:rgba(0,97,255,.1);color:#0061FF;font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center">↗</a>`:''}
                 </div>
               </div>
             </div>
+
+            <!-- Review links dynamic list -->
             <div>
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Review Links <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0">— YouTube, Vimeo, Drive…</span></label>
+              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Review Links <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">YouTube, Vimeo, Drive…</span></label>
               <div id="tm-review-links-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:5px">
                 ${(ts.reviewLinks&&ts.reviewLinks.length?ts.reviewLinks:[]).map((rl,i)=>`
                 <div id="tm-rl-row-${i}" style="display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center">
@@ -23854,12 +23890,8 @@ function openTrackerModal(jobId){
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Review Link
               </button>
             </div>
+
           </div>
-        </div>
-        <div>
-          ${_lbl('Project Notes')}
-          <textarea id="tm-notes" rows="4" placeholder="Instructions, shoot notes, client preferences…" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;line-height:1.6">${ts.notes||''}</textarea>
-          ${ts.updatedAt?`<div style="font-size:10px;color:var(--muted);margin-top:4px">Last updated: ${ts.updatedAt}${ts.claimedBy?' by '+ts.claimedBy:''}</div>`:''}
         </div>
       </div>
     </div>
