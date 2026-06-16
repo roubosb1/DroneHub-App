@@ -12284,16 +12284,40 @@ function renderClients(){
     return;
   }
 
-  // ── Default "All" mode: flat alphabetical list ──────────────────────────────
-  if(azBar) azBar.style.display='none';
-  const allSorted=countryFiltered.sort((a,b)=>{
-    const aNum=/^\d/.test(a.c.name), bNum=/^\d/.test(b.c.name);
-    if(aNum!==bNum) return aNum?1:-1;
-    return a.c.name.localeCompare(b.c.name);
+  // ── Default "All" mode: one letter at a time + bottom A-Z nav ───────────────
+  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const letterCounts={};
+  countryFiltered.forEach(r=>{
+    const ch=r.c.name.charAt(0).toUpperCase();
+    const key=/[A-Z]/.test(ch)?ch:'#';
+    letterCounts[key]=(letterCounts[key]||0)+1;
   });
-  empty.style.display=allSorted.length?'none':'block';
-  list.style.display=allSorted.length?'block':'none';
-  list.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${allSorted.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>`;
+  if(!letterCounts[_clientActiveLetter]&&Object.keys(letterCounts).length){
+    _clientActiveLetter=letters.find(l=>letterCounts[l])||'#';
+  }
+  const cur=_clientActiveLetter;
+  const visible=countryFiltered
+    .filter(r=>{const ch=r.c.name.charAt(0).toUpperCase(); return cur==='#'?!/[A-Z]/.test(ch):ch===cur;})
+    .sort((a,b)=>a.c.name.localeCompare(b.c.name));
+  empty.style.display=visible.length?'none':'block';
+  list.style.display=visible.length?'block':'none';
+  const azHtml=letters.concat(['#']).map(l=>{
+    const cnt=letterCounts[l]||0;
+    const on=l===cur;
+    return `<button onclick="_clientActiveLetter='${l}';renderClients()"
+      style="min-width:30px;height:30px;padding:0 4px;border-radius:8px;font-size:12px;font-weight:700;
+             cursor:${cnt?'pointer':'default'};border:1px solid ${on?'var(--blue)':cnt?'rgba(91,141,239,.25)':'transparent'};
+             background:${on?'rgba(91,141,239,.25)':cnt?'rgba(91,141,239,.06)':'transparent'};
+             color:${on?'var(--white)':cnt?'var(--blue-bright)':'var(--muted)'};line-height:30px;transition:all .1s"
+      title="${cnt?cnt+' clients':''}" ${!cnt?'disabled':''}>${l}</button>`;
+  }).join('');
+  list.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:18px;font-weight:900;color:var(--blue-bright)">${cur}</span>
+      <span style="font-size:12px;color:var(--muted)">${visible.length} client${visible.length!==1?'s':''}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${visible.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">${azHtml}</div>`;
 }
 
 function _clientTierHtml(group, label, bg, color, portalAccts){
