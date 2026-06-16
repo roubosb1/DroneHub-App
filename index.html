@@ -8161,6 +8161,7 @@ function calQuickAdd(dateStr, hour, evt){
   const startTime=pad2(startH)+':00';
   const endTime=pad2(endH)+':00';
   const allNames=[session?.name||session?.email||'Me',...members.map(m=>m.name)];
+  const clientNames=[...new Set(clients.filter(c=>c.name).map(c=>c.name))].sort();
 
   const bubble=document.createElement('div');
   bubble.id='cal-quick-add';
@@ -8207,12 +8208,21 @@ function calQuickAdd(dateStr, hour, evt){
       <div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span style="font-size:11px;font-weight:600;color:var(--muted)">Invite People</span>
+          <span style="font-size:11px;font-weight:600;color:var(--muted)">Invite Team</span>
         </div>
         <div id="qca-invites" style="display:flex;flex-wrap:wrap;gap:5px">
-          ${allNames.map((n,i)=>`<button onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--blue)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(91,141,239,.15)':'transparent';this.style.color=this.dataset.on==='1'?'var(--blue-bright)':'var(--muted)'" data-name="${n}" data-on="${i===0?'1':'0'}" style="padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${i===0?'var(--blue)':'var(--border)'};background:${i===0?'rgba(91,141,239,.15)':'transparent'};color:${i===0?'var(--blue-bright)':'var(--muted)'};transition:all .12s">${n}</button>`).join('')}
+          ${allNames.map((n,i)=>`<button onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--blue)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(91,141,239,.15)':'transparent';this.style.color=this.dataset.on==='1'?'var(--blue-bright)':'var(--muted)'" data-name="${n}" data-group="team" data-on="${i===0?'1':'0'}" style="padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${i===0?'var(--blue)':'var(--border)'};background:${i===0?'rgba(91,141,239,.15)':'transparent'};color:${i===0?'var(--blue-bright)':'var(--muted)'};transition:all .12s">${n}</button>`).join('')}
         </div>
       </div>
+      ${clientNames.length?`<div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span style="font-size:11px;font-weight:600;color:var(--muted)">Invite Clients</span>
+        </div>
+        <div id="qca-client-invites" style="display:flex;flex-wrap:wrap;gap:5px;max-height:80px;overflow-y:auto">
+          ${clientNames.map(n=>`<button onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--green)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(34,217,122,.12)':'transparent';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--muted)'" data-name="${n}" data-group="client" data-on="0" style="padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .12s">${n}</button>`).join('')}
+        </div>
+      </div>`:''}
       <!-- Notes -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
@@ -8233,15 +8243,17 @@ function calQuickAddSave(){
   const dateStr=document.getElementById('qca-date')?.value||new Date().toISOString().slice(0,10);
   const endDate=document.getElementById('qca-end-date')?.value||dateStr;
   const notes=(document.getElementById('qca-notes')?.value||'').trim();
-  const invited=Array.from(document.querySelectorAll('#qca-invites button[data-on="1"]')).map(b=>b.dataset.name);
-  const memberName=invited[0]||'';
+  const invitedTeam=Array.from(document.querySelectorAll('#qca-invites button[data-on="1"]')).map(b=>b.dataset.name);
+  const invitedClients=Array.from(document.querySelectorAll('#qca-client-invites button[data-on="1"]')||[]).map(b=>b.dataset.name);
+  const memberName=invitedTeam[0]||'';
   const evts=calEventsLoad();
-  evts.push({id:Date.now(),title,type,date:dateStr,endDate,memberName,invitees:invited,notes});
+  evts.push({id:Date.now(),title,type,date:dateStr,endDate,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes});
   calEventsSave(evts);
   document.getElementById('cal-quick-add')?.remove();
   calViewRefresh();
   if(type==='vacation') renderVacationTracker();
-  showDhToast('Event created',title+(invited.length>1?' — '+invited.length+' people invited':' added to calendar'),'','var(--green)',3000);
+  const totalInv=invitedTeam.length+invitedClients.length;
+  showDhToast('Event created',title+(totalInv>1?' — '+totalInv+' people invited':' added to calendar'),'','var(--green)',3000);
 }
 
 // Open add-event modal
@@ -8279,11 +8291,17 @@ function openCalEventModal(prefillDate){
         </div>
       </div>
       <div>
-        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Team member</label>
-        <select id="cae-member" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
-          ${[{name:session?.name||session?.email||'Me'},...members].map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
-        </select>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Invite Team</label>
+        <div id="cae-team-invites" style="display:flex;flex-wrap:wrap;gap:5px">
+          ${[{name:session?.name||session?.email||'Me'},...members].map((m,i)=>`<button type="button" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--blue)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(91,141,239,.15)':'transparent';this.style.color=this.dataset.on==='1'?'var(--blue-bright)':'var(--muted)';calEventCheckOverlap()" data-name="${m.name}" data-on="${i===0?'1':'0'}" style="padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${i===0?'var(--blue)':'var(--border)'};background:${i===0?'rgba(91,141,239,.15)':'transparent'};color:${i===0?'var(--blue-bright)':'var(--muted)'};transition:all .12s">${m.name}</button>`).join('')}
+        </div>
       </div>
+      ${(()=>{const cn=[...new Set(clients.filter(c=>c.name).map(c=>c.name))].sort();return cn.length?`<div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Invite Clients</label>
+        <div id="cae-client-invites" style="display:flex;flex-wrap:wrap;gap:5px;max-height:100px;overflow-y:auto">
+          ${cn.map(n=>`<button type="button" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--green)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(34,217,122,.12)':'transparent';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--muted)'" data-name="${n}" data-on="0" style="padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .12s">${n}</button>`).join('')}
+        </div>
+      </div>`:'';})()}
       <div id="cae-overlap-warn" style="display:none;padding:8px 12px;border-radius:8px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.4);font-size:11px;color:#F97316"></div>
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Notes (optional)</label>
@@ -8298,7 +8316,7 @@ function openCalEventModal(prefillDate){
   document.body.appendChild(modal);
   setTimeout(()=>document.getElementById('cae-title')?.focus(),100);
   // Live overlap check on date/member change
-  ['cae-start','cae-end','cae-member'].forEach(id=>{
+  ['cae-start','cae-end'].forEach(id=>{
     document.getElementById(id)?.addEventListener('change',calEventCheckOverlap);
   });
 }
@@ -8316,12 +8334,14 @@ function calEventCheckOverlap(){
   if(type!=='vacation'){document.getElementById('cae-overlap-warn').style.display='none';return;}
   const start=document.getElementById('cae-start')?.value;
   const end=document.getElementById('cae-end')?.value||start;
-  const member=document.getElementById('cae-member')?.value||'';
-  const overlaps=vacationOverlapCheck(start,end,member);
+  const invitedTeam=Array.from(document.querySelectorAll('#cae-team-invites button[data-on="1"]')).map(b=>b.dataset.name);
   const warn=document.getElementById('cae-overlap-warn');
-  if(overlaps.length){
+  const allOverlaps=new Set();
+  invitedTeam.forEach(m=>{vacationOverlapCheck(start,end,m).forEach(o=>allOverlaps.add(o));});
+  if(allOverlaps.size){
     warn.style.display='block';
-    warn.innerHTML=`⚠️ <strong>Vacation overlap:</strong> ${overlaps.join(', ')} ${overlaps.length===1?'is':'are'} also off during this period.`;
+    const names=[...allOverlaps];
+    warn.innerHTML=`⚠️ <strong>Vacation overlap:</strong> ${names.join(', ')} ${names.length===1?'is':'are'} also off during this period.`;
   } else {
     warn.style.display='none';
   }
@@ -8332,16 +8352,19 @@ function saveCalEvent(){
   const type=document.getElementById('cae-type')?.value;
   const start=document.getElementById('cae-start')?.value;
   const end=document.getElementById('cae-end')?.value||start;
-  const member=document.getElementById('cae-member')?.value||'';
+  const invitedTeam=Array.from(document.querySelectorAll('#cae-team-invites button[data-on="1"]')).map(b=>b.dataset.name);
+  const invitedClients=Array.from(document.querySelectorAll('#cae-client-invites button[data-on="1"]')||[]).map(b=>b.dataset.name);
+  const member=invitedTeam[0]||'';
   const notes=document.getElementById('cae-notes')?.value.trim()||'';
   if(!title){alert('Please enter a title.');return;}
   if(!start){alert('Please select a start date.');return;}
   if(end<start){alert('End date cannot be before start date.');return;}
-  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,memberName:member,notes,createdAt:new Date().toISOString()};
+  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,memberName:member,invitees:invitedTeam,clientInvitees:invitedClients,notes,createdAt:new Date().toISOString()};
   const arr=calEventsLoad();arr.push(evt);calEventsSave(arr);
   document.getElementById('cal-event-modal').remove();
   calViewRefresh();renderVacationTracker();
-  showDhToast('Event added','','✅','var(--green)',3000);
+  const totalInv=invitedTeam.length+invitedClients.length;
+  showDhToast('Event added',totalInv>1?totalInv+' people invited':'','','var(--green)',3000);
 }
 
 function deleteCalEvent(id){
