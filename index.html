@@ -8155,19 +8155,18 @@ function calQuickAdd(dateStr, hour, evt){
   if(old) old.remove();
   const members=getAdminTeamMembers();
   const session=gateGetSession();
-  const d=new Date(dateStr+'T12:00:00');
-  const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const dateLbl=DAYS[d.getDay()]+', '+MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
   const startH=hour!=null?hour:9;
   const endH=Math.min(startH+1,23);
-  const fmtTime=h=>h===0?'12:00 AM':h<12?h+':00 AM':h===12?'12:00 PM':(h-12)+':00 PM';
+  const pad2=n=>String(n).padStart(2,'0');
+  const startTime=pad2(startH)+':00';
+  const endTime=pad2(endH)+':00';
+  const allNames=[session?.name||session?.email||'Me',...members.map(m=>m.name)];
 
   const bubble=document.createElement('div');
   bubble.id='cal-quick-add';
   bubble.style.cssText='position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center';
   bubble.onclick=e=>{if(e.target===bubble)bubble.remove();};
-  bubble.innerHTML=`<div onclick="event.stopPropagation()" style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);width:320px;overflow:hidden">
+  bubble.innerHTML=`<div onclick="event.stopPropagation()" style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);width:360px;overflow:hidden">
     <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div style="display:flex;gap:6px">
@@ -8178,49 +8177,71 @@ function calQuickAdd(dateStr, hour, evt){
       </div>
       <input id="qca-title" type="text" placeholder="New Event" style="width:100%;box-sizing:border-box;padding:8px 0;border:none;border-bottom:1px solid var(--border);background:transparent;color:var(--white);font-size:15px;font-weight:600;outline:none" autofocus>
     </div>
-    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+      <!-- Date -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span style="font-size:12px;color:var(--offwhite);font-weight:500">${dateLbl}</span>
-        <span style="font-size:12px;color:var(--muted)">${fmtTime(startH)} – ${fmtTime(endH)}</span>
+        <input id="qca-date" type="date" value="${dateStr}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
       </div>
+      <!-- Times -->
       <div style="display:flex;align-items:center;gap:8px">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <select id="qca-member" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-          ${[{name:session?.name||session?.email||'Me'},...members].map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
-        </select>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <input id="qca-start-time" type="time" value="${startTime}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+        <span style="font-size:11px;color:var(--muted)">to</span>
+        <input id="qca-end-time" type="time" value="${endTime}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
       </div>
+      <!-- End date (for multi-day) -->
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <label style="font-size:11px;color:var(--muted);white-space:nowrap">End date</label>
+        <input id="qca-end-date" type="date" value="${dateStr}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+      </div>
+      <!-- Event type -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-        <select id="qca-type" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+        <select id="qca-type" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
           ${CAL_EVENT_TYPES.map(t=>`<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
         </select>
       </div>
+      <!-- Invite team members -->
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span style="font-size:11px;font-weight:600;color:var(--muted)">Invite People</span>
+        </div>
+        <div id="qca-invites" style="display:flex;flex-wrap:wrap;gap:5px">
+          ${allNames.map((n,i)=>`<button onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--blue)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(91,141,239,.15)':'transparent';this.style.color=this.dataset.on==='1'?'var(--blue-bright)':'var(--muted)'" data-name="${n}" data-on="${i===0?'1':'0'}" style="padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${i===0?'var(--blue)':'var(--border)'};background:${i===0?'rgba(91,141,239,.15)':'transparent'};color:${i===0?'var(--blue-bright)':'var(--muted)'};transition:all .12s">${n}</button>`).join('')}
+        </div>
+      </div>
+      <!-- Notes -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
-        <input id="qca-notes" type="text" placeholder="Add notes…" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+        <input id="qca-notes" type="text" placeholder="Add notes…" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
       </div>
     </div>
-    <div style="padding:0 16px 14px;display:flex;gap:8px">
-      <button onclick="calQuickAddSave('${dateStr}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Save Event</button>
+    <div style="padding:8px 16px 14px;display:flex;gap:8px">
+      <button onclick="calQuickAddSave()" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Save Event</button>
       <button onclick="document.getElementById('cal-quick-add').remove();openCalEventModal('${dateStr}')" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer">More options</button>
     </div>
   </div>`;
   document.body.appendChild(bubble);
   setTimeout(()=>document.getElementById('qca-title')?.focus(),80);
 }
-function calQuickAddSave(dateStr){
+function calQuickAddSave(){
   const title=(document.getElementById('qca-title')?.value||'').trim()||'New Event';
   const type=document.getElementById('qca-type')?.value||'other';
-  const member=document.getElementById('qca-member')?.value||'';
+  const dateStr=document.getElementById('qca-date')?.value||new Date().toISOString().slice(0,10);
+  const endDate=document.getElementById('qca-end-date')?.value||dateStr;
   const notes=(document.getElementById('qca-notes')?.value||'').trim();
+  const invited=Array.from(document.querySelectorAll('#qca-invites button[data-on="1"]')).map(b=>b.dataset.name);
+  const memberName=invited[0]||'';
   const evts=calEventsLoad();
-  evts.push({id:Date.now(),title,type,date:dateStr,endDate:dateStr,memberName:member,notes});
+  evts.push({id:Date.now(),title,type,date:dateStr,endDate,memberName,invitees:invited,notes});
   calEventsSave(evts);
   document.getElementById('cal-quick-add')?.remove();
   calViewRefresh();
   if(type==='vacation') renderVacationTracker();
-  showDhToast('Event created',title+' added to calendar','','var(--green)',3000);
+  showDhToast('Event created',title+(invited.length>1?' — '+invited.length+' people invited':' added to calendar'),'','var(--green)',3000);
 }
 
 // Open add-event modal
