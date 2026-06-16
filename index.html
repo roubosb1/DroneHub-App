@@ -4351,7 +4351,7 @@ button{font-family:var(--font);}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px" id="jobs-pipeline">
       <div>
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--amber);margin-bottom:8px;padding:4px 8px;background:rgba(245,166,35,.1);border-radius:6px;display:flex;align-items:center;gap:6px">📬 Requested <span id="col-requested-count" style="display:none;background:var(--amber);color:#000;border-radius:8px;padding:0 6px;font-size:10px"></span></div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--amber);margin-bottom:8px;padding:4px 8px;background:rgba(245,166,35,.1);border-radius:6px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> Requested <span id="col-requested-count" style="display:none;background:var(--amber);color:#000;border-radius:8px;padding:0 6px;font-size:10px"></span></div>
         <div id="col-requested"></div>
       </div>
       <div>
@@ -10977,7 +10977,7 @@ function mcShowEventDetail(type,idOrEvtId,dateStr){
       ${svcsStr?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Services: ${svcsStr}</div>`:''}
       ${j.notes?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px">${j.notes}</div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-        ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id});mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.14);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">📄 Invoice</button>`:''}
+        ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id});mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.14);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Invoice</button>`:''}
         <button onclick="mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer">Close</button>
       </div>
     </div>`;
@@ -12717,7 +12717,7 @@ async function renderClientPortal(id, activeTab){
           </div>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;width:100%">
             <button onclick="openInvoiceJob('${j.id}');closeClientDetail();" style="padding:3px 10px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:10px;cursor:pointer;font-weight:600">✏ View & edit</button>
-            ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id})" style="padding:3px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;cursor:pointer;font-weight:600">📄 Invoice</button>`:''}
+            ${(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id})" style="padding:3px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Invoice</button>`:''}
             ${j.status!=='completed'&&j.markedPaid!==true?`<button onclick="openReminder(${j.id})" style="padding:3px 10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:10px;cursor:pointer;font-weight:600">📧 Remind</button>`:''}
           </div>
         </div>`).join('')
@@ -12810,7 +12810,7 @@ async function renderClientPortal(id, activeTab){
         <div id="drive-no-results-${c.id}" style="display:none;text-align:center;padding:16px;color:var(--muted);font-size:12px">No properties match your search</div>
         `:`<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;line-height:1.7">
           No Drive folders linked yet.<br>
-          Open a job → <b style="color:var(--offwhite)">✏ Edit</b> → paste the <b style="color:var(--offwhite)">Google Drive folder link</b> for that property.
+          Open a job → <b style="color:var(--offwhite)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</b> → paste the <b style="color:var(--offwhite)">Google Drive folder link</b> for that property.
         </div>`}
       </div>
 
@@ -13668,10 +13668,10 @@ function renderJobs(){
       return `<div class="job-card" onclick="openJobDetail('${j.id}')" style="cursor:pointer;border-color:rgba(245,166,35,.4)"
         onmouseover="this.style.borderColor='var(--amber)';this.style.boxShadow='0 0 0 1px var(--amber)'"
         onmouseout="this.style.borderColor='rgba(245,166,35,.4)';this.style.boxShadow=''">
-        <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📬 New request</div>
+        <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> New request</div>
         <div class="job-card-title">${j.name}</div>
         <div class="job-card-meta">${j.date||'No date'}${j.preferredTime?' at '+j.preferredTime:''}</div>
-        ${clientName?`<div style="font-size:11px;color:var(--green);margin-bottom:3px">👤 ${clientName}</div>`:''}
+        ${clientName?`<div style="font-size:11px;color:var(--green);margin-bottom:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</div>`:''}
         ${j.shootType?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:4px">${j.shootType}</div>`:''}
         ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,60)}${j.notes.length>60?'…':''}</div>`:''}
         <div class="job-card-actions">
@@ -13695,9 +13695,9 @@ function renderJobs(){
       if(st==='confirmed') actionBtns.push(`<button class="job-action-btn job-action-complete" onclick="event.stopPropagation();updateJobStatus('${j.id}','completed')">Complete</button>`);
       if(st==='confirmed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','quoted')">← Quoted</button>`);
       if(st==='completed') actionBtns.push(`<button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">← Confirmed</button>`);
-      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openInvoice('${j.id}')">📄 Invoice</button>`);
-      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();this.disabled=true;this.textContent='Opening…';openAndSendInvoice('${j.id}');setTimeout(()=>{this.disabled=false;this.textContent='📧 Send invoice';},5000)">📧 Send invoice</button>`);
-      actionBtns.push(`<button class="job-action-btn" style="border-color:#C87D1E;background:rgba(245,166,35,.1);color:#F5A623" onclick="event.stopPropagation();openEditJob('${j.id}')">✏ Edit</button>`);
+      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openInvoice('${j.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Invoice</button>`);
+      if(isAdmin&&(st==='confirmed'||st==='completed')) actionBtns.push(`<button class="job-action-btn" style="border-color:#1D9E75;background:rgba(34,217,122,.1);color:#22D97A" onclick="event.stopPropagation();this.disabled=true;this.textContent='Opening…';openAndSendInvoice('${j.id}');setTimeout(()=>{this.disabled=false;this.textContent='Send invoice';},5000)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Send invoice</button>`);
+      actionBtns.push(`<button class="job-action-btn" style="border-color:#C87D1E;background:rgba(245,166,35,.1);color:#F5A623" onclick="event.stopPropagation();openEditJob('${j.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>`);
       actionBtns.push(`<button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob('${j.id}')">Delete</button>`);
       const ts=getTrackerStage(j.id);
       const assigned=[ts.videographer,ts.claimedBy].filter((n,i,a)=>n&&a.indexOf(n)===i).join(' · ');
@@ -13706,8 +13706,8 @@ function renderJobs(){
         onmouseout="this.style.borderColor='';this.style.boxShadow=''">
         <div class="job-card-title">${j.name}</div>
         <div class="job-card-meta">${j.date}${j.shootTime?' · '+j.shootTime:''}</div>
-        ${j.clientName?`<div style="font-size:11px;color:#22D97A;margin-bottom:3px">👤 ${j.clientName}</div>`:''}
-        ${assigned?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:3px">👤 ${assigned}</div>`:''}
+        ${j.clientName?`<div style="font-size:11px;color:#22D97A;margin-bottom:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${j.clientName}</div>`:''}
+        ${assigned?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${assigned}</div>`:''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <span class="job-card-amount">${isAdmin?fmt(j.grand):''}</span>
           <span style="font-size:10px;color:#7A8AAA">${j.sqft?j.sqft.toLocaleString()+' sqft':''}</span>
@@ -13748,7 +13748,7 @@ function openJobDetail(jobId){
   const payoutRows=calcPay(j);
   const grand=j.grand||0;
   const isUsdJob=(j.currency||'cad').toLowerCase()==='usd';
-  const SVC_LABELS={video:'🎬 Video',photo:'📷 Photo',tvideo:'🌅 Twilight video',tphoto:'🌅 Twilight photo',reel:'📱 Reel',extphoto:'🏡 Ext. photo',extvideo:'🏡 Ext. video',floorplan:'📐 Floor plan'};
+  const SVC_LABELS={video:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Video',photo:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Photo',tvideo:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Twilight video',tphoto:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Twilight photo',reel:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Reel',extphoto:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Ext. photo',extvideo:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Ext. video',floorplan:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Floor plan'};
   const activeServices=Object.entries(j.services||{}).filter(([k,v])=>v&&SVC_LABELS[k]).map(([k])=>SVC_LABELS[k]);
 
   // Contractor options for dropdowns
@@ -13770,7 +13770,7 @@ function openJobDetail(jobId){
       <div>
         <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:3px">${j.name}</div>
         <div style="font-size:11px;color:var(--muted)">${j.date}${j.shootTime?' at '+j.shootTime:''} · ${j.address||''}</div>
-        ${j.clientName?`<div style="font-size:11px;color:var(--green);margin-top:2px">👤 ${j.clientName}</div>`:''}
+        ${j.clientName?`<div style="font-size:11px;color:var(--green);margin-top:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${j.clientName}</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="status-badge status-${j.status||'quoted'}">${j.status||'quoted'}</span>
@@ -13810,7 +13810,7 @@ function openJobDetail(jobId){
 
       <!-- Reassign contractors -->
       <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:4px">👤 Assign / reassign roles</div>
+        <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Assign / reassign roles</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Saving updates the project tracker and payroll automatically.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
           <div>
@@ -13821,7 +13821,7 @@ function openJobDetail(jobId){
             </select>
           </div>
           ${hasVideo?`<div>
-            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">🎬 Video Editor</label>
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg> Video Editor</label>
             <select id="jd-reassign-editor" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-card);color:var(--white)">
               <option value="">— Unassigned —</option>
               ${editorOpts}
@@ -13829,7 +13829,7 @@ function openJobDetail(jobId){
           </div>`:'<div></div>'}
         </div>
         ${hasPhoto?`<div style="margin-bottom:10px">
-          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">📷 Photo Editor</label>
+          <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Photo Editor</label>
           <select id="jd-reassign-photo-editor" style="width:100%;padding:7px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-card);color:var(--white)">
             <option value="">— Unassigned —</option>
             ${photoEditorOpts}
@@ -13844,10 +13844,10 @@ function openJobDetail(jobId){
       ${j.notes?`<div style="padding:10px 12px;background:var(--navy-lift);border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--offwhite);margin-bottom:16px"><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Notes</span>${j.notes}</div>`:''}
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px">
-        ${j.status==='quoted'?`<button onclick="updateJobStatus(${j.id},'confirmed');document.getElementById('job-detail-modal').remove()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">✓ Mark confirmed</button>`:''}
-        ${j.status==='confirmed'?`<button onclick="updateJobStatus(${j.id},'completed');document.getElementById('job-detail-modal').remove()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">✓ Mark completed</button>`:''}
-        ${isAdmin&&(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id});document.getElementById('job-detail-modal').remove()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">📄 Invoice</button>`:''}
-        <button onclick="openEditJob(${j.id});document.getElementById('job-detail-modal').remove()" style="padding:7px 14px;border-radius:10px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:12px;font-weight:600;cursor:pointer">✏ Edit</button>
+        ${j.status==='quoted'?`<button onclick="updateJobStatus(${j.id},'confirmed');document.getElementById('job-detail-modal').remove()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mark confirmed</button>`:''}
+        ${j.status==='confirmed'?`<button onclick="updateJobStatus(${j.id},'completed');document.getElementById('job-detail-modal').remove()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Mark completed</button>`:''}
+        ${isAdmin&&(j.status==='confirmed'||j.status==='completed')?`<button onclick="openInvoice(${j.id});document.getElementById('job-detail-modal').remove()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Invoice</button>`:''}
+        <button onclick="openEditJob(${j.id});document.getElementById('job-detail-modal').remove()" style="padding:7px 14px;border-radius:10px;border:1px solid var(--amber);background:rgba(245,166,35,.1);color:var(--amber);font-size:12px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
         <button onclick="document.getElementById('job-detail-modal').remove()" style="padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Close</button>
       </div>
     </div>
@@ -17572,7 +17572,7 @@ function renderInvoiceTracker(){
       ?`<button onclick="markInvoicePaid(${j.id})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;cursor:pointer;font-weight:600">✓ Mark paid</button>`:'';
     const reminderBtn=st!=='paid'
       ?`<button onclick="openReminder(${j.id})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;cursor:pointer;font-weight:600">📧 Remind</button>`:'';
-    const invoiceBtn=`<button onclick="openInvoice(${j.id})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600">📄 Invoice</button>`;
+    const invoiceBtn=`<button onclick="openInvoice(${j.id})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Invoice</button>`;
     const editBtn=`<button onclick="openInvoiceJob('${j.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:11px;cursor:pointer;font-weight:600">✏ View &amp; edit</button>`;
 
     return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -31886,7 +31886,7 @@ function mobTrkBuildDetail(jobId){
     <!-- Project info -->
     <div style="padding:14px;background:var(--navy-mid);border-radius:12px;margin-bottom:16px;border:1px solid var(--border)">
       <div style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:4px">${job.name||job.address||'—'}</div>
-      ${clientName?`<div style="font-size:12px;color:var(--muted);margin-bottom:2px">👤 ${clientName}</div>`:''}
+      ${clientName?`<div style="font-size:12px;color:var(--muted);margin-bottom:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</div>`:''}
       ${job.date?`<div style="font-size:12px;color:var(--muted)">📅 ${job.date}</div>`:''}
     </div>
 
