@@ -19601,24 +19601,25 @@ function trackerSetTab(tab){
   const btns={upcoming:upcomingBtn,active:activeBtn,completed:completedBtn};
   const styles={
     upcoming:{
-      active:_trackerLightMode?'rgba(245,166,35,.28)':'rgba(245,166,35,.26)', activeColor:_trackerLightMode?'#b45309':'#F5A623',
-      activeBorder:_trackerLightMode?'rgba(245,166,35,.65)':'rgba(245,166,35,.6)',
-      inactiveBg:_trackerLightMode?'rgba(245,166,35,.14)':'rgba(245,166,35,.12)',
-      inactiveColor:_trackerLightMode?'#92400e':'rgba(245,166,35,.65)',
-      inactiveBorder:_trackerLightMode?'rgba(245,166,35,.3)':'rgba(245,166,35,.2)',
+      active:_trackerLightMode?'rgba(245,166,35,.35)':'rgba(245,166,35,.32)', activeColor:_trackerLightMode?'#b45309':'#F5A623',
+      activeBorder:_trackerLightMode?'rgba(245,166,35,.75)':'rgba(245,166,35,.7)',
+      inactiveBg:_trackerLightMode?'rgba(245,166,35,.18)':'rgba(245,166,35,.16)',
+      inactiveColor:_trackerLightMode?'#92400e':'#F5A623',
+      inactiveBorder:_trackerLightMode?'rgba(245,166,35,.45)':'rgba(245,166,35,.4)',
     },
     active:{
-      active:_trackerLightMode?'rgba(91,141,239,.25)':'rgba(91,141,239,.22)', activeColor:_trackerLightMode?'#1d4ed8':'var(--blue-bright)',
-      activeBorder:_trackerLightMode?'rgba(91,141,239,.65)':'rgba(91,141,239,.6)',
-      inactiveBg:_trackerLightMode?'rgba(91,141,239,.10)':'rgba(91,141,239,.08)',
-      inactiveColor:_trackerLightMode?'#2563eb':'rgba(91,141,239,.65)',
-      inactiveBorder:_trackerLightMode?'rgba(91,141,239,.3)':'rgba(91,141,239,.2)',
+      active:_trackerLightMode?'rgba(91,141,239,.30)':'rgba(91,141,239,.28)', activeColor:_trackerLightMode?'#1d4ed8':'var(--blue-bright)',
+      activeBorder:_trackerLightMode?'rgba(91,141,239,.70)':'rgba(91,141,239,.65)',
+      inactiveBg:_trackerLightMode?'rgba(91,141,239,.14)':'rgba(91,141,239,.13)',
+      inactiveColor:_trackerLightMode?'#2563eb':'var(--blue-bright)',
+      inactiveBorder:_trackerLightMode?'rgba(91,141,239,.4)':'rgba(91,141,239,.35)',
     },
     completed:{
       active:'linear-gradient(135deg,var(--green),#16A34A)', activeColor:'#fff',
-      inactiveBg:_trackerLightMode?'rgba(34,217,122,.15)':'rgba(34,217,122,.12)',
+      activeBorder:'rgba(34,217,122,.7)',
+      inactiveBg:_trackerLightMode?'rgba(34,217,122,.18)':'rgba(34,217,122,.15)',
       inactiveColor:_trackerLightMode?'#047857':'var(--green)',
-      inactiveBorder:_trackerLightMode?'rgba(34,217,122,.5)':'rgba(34,217,122,.3)',
+      inactiveBorder:_trackerLightMode?'rgba(34,217,122,.55)':'rgba(34,217,122,.45)',
     },
   };
   Object.entries(btns).forEach(([key,btn])=>{
