@@ -8148,6 +8148,44 @@ function calToggleTypeFilter(typeId){
 }
 function calSetAllFilters(){_calTypeFilters=null;calViewRefresh();}
 
+// ── Invite picker helpers (team dropdown + client search) ────────────────────
+function _calInviteAddTeam(prefix){
+  const sel=document.getElementById(prefix+'-team-sel');
+  const cont=document.getElementById(prefix+'-team-chips');
+  if(!sel||!sel.value) return;
+  const name=sel.value;
+  if(cont.querySelector('[data-name="'+name+'"]')) return;
+  const chip=document.createElement('span');
+  chip.dataset.name=name;
+  chip.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;background:rgba(91,141,239,.15);border:1px solid var(--blue);color:var(--blue-bright)';
+  chip.innerHTML=name+'<span onclick="this.parentElement.remove()" style="cursor:pointer;margin-left:2px;font-size:13px;line-height:1">&times;</span>';
+  cont.appendChild(chip);
+  sel.value='';
+}
+function _calInviteClientSearch(prefix,e){
+  const q=(e.target.value||'').toLowerCase();
+  const dd=document.getElementById(prefix+'-client-dd');
+  if(!q||q.length<1){dd.style.display='none';return;}
+  const existing=new Set(Array.from(document.querySelectorAll('#'+prefix+'-client-chips [data-name]')).map(c=>c.dataset.name));
+  const matches=clients.filter(c=>c.name&&c.name.toLowerCase().includes(q)&&!existing.has(c.name)).slice(0,6);
+  if(!matches.length){dd.style.display='none';return;}
+  dd.style.display='block';
+  dd.innerHTML=matches.map(c=>'<div onclick="_calInviteAddClient(\''+prefix+'\',\''+c.name.replace(/'/g,"\\'")+'\');document.getElementById(\''+prefix+'-client-search\').value=\'\';" style="padding:6px 10px;font-size:12px;color:var(--offwhite);cursor:pointer;transition:background .1s" onmouseenter="this.style.background=\'rgba(34,217,122,.1)\'" onmouseleave="this.style.background=\'\'">'+c.name+'</div>').join('');
+}
+function _calInviteAddClient(prefix,name){
+  const cont=document.getElementById(prefix+'-client-chips');
+  const dd=document.getElementById(prefix+'-client-dd');
+  dd.style.display='none';
+  if(cont.querySelector('[data-name="'+name+'"]')) return;
+  const chip=document.createElement('span');
+  chip.dataset.name=name;
+  chip.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;background:rgba(34,217,122,.12);border:1px solid var(--green);color:var(--green)';
+  chip.innerHTML=name+'<span onclick="this.parentElement.remove()" style="cursor:pointer;margin-left:2px;font-size:13px;line-height:1">&times;</span>';
+  cont.appendChild(chip);
+}
+function _calGetInvitedTeam(prefix){return Array.from(document.querySelectorAll('#'+prefix+'-team-chips [data-name]')).map(c=>c.dataset.name);}
+function _calGetInvitedClients(prefix){return Array.from(document.querySelectorAll('#'+prefix+'-client-chips [data-name]')).map(c=>c.dataset.name);}
+
 // ── Quick-add bubble (double-click on empty calendar space) ──────────────────
 function calQuickAdd(dateStr, hour, evt){
   if(evt) evt.stopPropagation();
@@ -8204,25 +8242,33 @@ function calQuickAdd(dateStr, hour, evt){
           ${CAL_EVENT_TYPES.map(t=>`<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
         </select>
       </div>
-      <!-- Invite team members -->
+      <!-- Invite team -->
       <div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span style="font-size:11px;font-weight:600;color:var(--muted)">Invite Team</span>
         </div>
-        <div id="qca-invites" style="display:flex;flex-wrap:wrap;gap:5px">
-          ${allNames.map((n,i)=>`<button onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--blue)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(91,141,239,.15)':'transparent';this.style.color=this.dataset.on==='1'?'var(--blue-bright)':'var(--muted)'" data-name="${n}" data-group="team" data-on="${i===0?'1':'0'}" style="padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${i===0?'var(--blue)':'var(--border)'};background:${i===0?'rgba(91,141,239,.15)':'transparent'};color:${i===0?'var(--blue-bright)':'var(--muted)'};transition:all .12s">${n}</button>`).join('')}
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <select id="qca-team-sel" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+            <option value="">Select team member</option>
+            ${allNames.map(n=>`<option value="${n}">${n}</option>`).join('')}
+          </select>
+          <button onclick="_calInviteAddTeam('qca')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
         </div>
+        <div id="qca-team-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
       </div>
-      ${clientNames.length?`<div>
+      <!-- Invite clients -->
+      <div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <span style="font-size:11px;font-weight:600;color:var(--muted)">Invite Clients</span>
         </div>
-        <div id="qca-client-invites" style="display:flex;flex-wrap:wrap;gap:5px;max-height:80px;overflow-y:auto">
-          ${clientNames.map(n=>`<button onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--green)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(34,217,122,.12)':'transparent';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--muted)'" data-name="${n}" data-group="client" data-on="0" style="padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .12s">${n}</button>`).join('')}
+        <div style="position:relative">
+          <input id="qca-client-search" type="text" placeholder="Search clients…" oninput="_calInviteClientSearch('qca',event)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+          <div id="qca-client-dd" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:var(--navy-card);border:1px solid var(--border-bright);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:10;max-height:140px;overflow-y:auto"></div>
         </div>
-      </div>`:''}
+        <div id="qca-client-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>
+      </div>
       <!-- Notes -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
@@ -8243,8 +8289,8 @@ function calQuickAddSave(){
   const dateStr=document.getElementById('qca-date')?.value||new Date().toISOString().slice(0,10);
   const endDate=document.getElementById('qca-end-date')?.value||dateStr;
   const notes=(document.getElementById('qca-notes')?.value||'').trim();
-  const invitedTeam=Array.from(document.querySelectorAll('#qca-invites button[data-on="1"]')).map(b=>b.dataset.name);
-  const invitedClients=Array.from(document.querySelectorAll('#qca-client-invites button[data-on="1"]')||[]).map(b=>b.dataset.name);
+  const invitedTeam=_calGetInvitedTeam('qca');
+  const invitedClients=_calGetInvitedClients('qca');
   const memberName=invitedTeam[0]||'';
   const evts=calEventsLoad();
   evts.push({id:Date.now(),title,type,date:dateStr,endDate,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes});
@@ -8292,16 +8338,23 @@ function openCalEventModal(prefillDate){
       </div>
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Invite Team</label>
-        <div id="cae-team-invites" style="display:flex;flex-wrap:wrap;gap:5px">
-          ${[{name:session?.name||session?.email||'Me'},...members].map((m,i)=>`<button type="button" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--blue)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(91,141,239,.15)':'transparent';this.style.color=this.dataset.on==='1'?'var(--blue-bright)':'var(--muted)';calEventCheckOverlap()" data-name="${m.name}" data-on="${i===0?'1':'0'}" style="padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${i===0?'var(--blue)':'var(--border)'};background:${i===0?'rgba(91,141,239,.15)':'transparent'};color:${i===0?'var(--blue-bright)':'var(--muted)'};transition:all .12s">${m.name}</button>`).join('')}
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <select id="cae-team-sel" style="flex:1;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+            <option value="">Select team member</option>
+            ${[{name:session?.name||session?.email||'Me'},...members].map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+          </select>
+          <button type="button" onclick="_calInviteAddTeam('cae')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
         </div>
+        <div id="cae-team-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
       </div>
-      ${(()=>{const cn=[...new Set(clients.filter(c=>c.name).map(c=>c.name))].sort();return cn.length?`<div>
+      <div>
         <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Invite Clients</label>
-        <div id="cae-client-invites" style="display:flex;flex-wrap:wrap;gap:5px;max-height:100px;overflow-y:auto">
-          ${cn.map(n=>`<button type="button" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.borderColor=this.dataset.on==='1'?'var(--green)':'var(--border)';this.style.background=this.dataset.on==='1'?'rgba(34,217,122,.12)':'transparent';this.style.color=this.dataset.on==='1'?'var(--green)':'var(--muted)'" data-name="${n}" data-on="0" style="padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .12s">${n}</button>`).join('')}
+        <div style="position:relative">
+          <input id="cae-client-search" type="text" placeholder="Search clients…" oninput="_calInviteClientSearch('cae',event)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          <div id="cae-client-dd" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:var(--navy-card);border:1px solid var(--border-bright);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:10;max-height:160px;overflow-y:auto"></div>
         </div>
-      </div>`:'';})()}
+        <div id="cae-client-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>
+      </div>
       <div id="cae-overlap-warn" style="display:none;padding:8px 12px;border-radius:8px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.4);font-size:11px;color:#F97316"></div>
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Notes (optional)</label>
@@ -8334,7 +8387,7 @@ function calEventCheckOverlap(){
   if(type!=='vacation'){document.getElementById('cae-overlap-warn').style.display='none';return;}
   const start=document.getElementById('cae-start')?.value;
   const end=document.getElementById('cae-end')?.value||start;
-  const invitedTeam=Array.from(document.querySelectorAll('#cae-team-invites button[data-on="1"]')).map(b=>b.dataset.name);
+  const invitedTeam=_calGetInvitedTeam('cae');
   const warn=document.getElementById('cae-overlap-warn');
   const allOverlaps=new Set();
   invitedTeam.forEach(m=>{vacationOverlapCheck(start,end,m).forEach(o=>allOverlaps.add(o));});
@@ -8352,8 +8405,8 @@ function saveCalEvent(){
   const type=document.getElementById('cae-type')?.value;
   const start=document.getElementById('cae-start')?.value;
   const end=document.getElementById('cae-end')?.value||start;
-  const invitedTeam=Array.from(document.querySelectorAll('#cae-team-invites button[data-on="1"]')).map(b=>b.dataset.name);
-  const invitedClients=Array.from(document.querySelectorAll('#cae-client-invites button[data-on="1"]')||[]).map(b=>b.dataset.name);
+  const invitedTeam=_calGetInvitedTeam('cae');
+  const invitedClients=_calGetInvitedClients('cae');
   const member=invitedTeam[0]||'';
   const notes=document.getElementById('cae-notes')?.value.trim()||'';
   if(!title){alert('Please enter a title.');return;}
