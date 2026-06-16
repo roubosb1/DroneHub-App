@@ -12178,23 +12178,40 @@ function _clientRecent6mo(c){
 }
 
 // Top-right stat boxes on the Clients view — clickable filters:
-//   Total Clients  -> shows all clients (clears the recency/active filter)
-//   Last 6 Months  -> filters to clients who worked with us in the last 6 mo
+//   Total Clients  -> shows every client (clears recency + country filters)
+//   Last 6 Months  -> clients who worked with us in the last 6 months
+//   Canada Clients -> clients in Canada    USA Clients -> clients in the US
+// Recency lives in _clientFilter; country lives in the separate _clientCountry
+// dimension, so they combine (e.g. Canada + Last 6 Months).
 function renderClientsStatBar(){
   const bar = document.getElementById('sales-clients-stats-bar');
   if(!bar) return;
   const totalClients = clients.length;
-  const recentCount = clients.filter(_clientRecent6mo).length;
-  const box = (num, label, color, filterKey, accentBg, accentBorder) => {
-    const on = _clientFilter === filterKey;
+  const recentCount  = clients.filter(_clientRecent6mo).length;
+  const caCount  = clients.filter(c=>_getClientCountryKey(c)==='canada').length;
+  const usCount  = clients.filter(c=>_getClientCountryKey(c)==='usa').length;
+  const box = (num, label, color, on, onclick, accentBg, accentBorder) => {
     const style = on
       ? `background:${accentBg};border:2px solid ${accentBorder};border-radius:9px;padding:4px 11px;font-size:11px;color:${color};cursor:pointer;user-select:none`
       : `background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none`;
-    return `<div onclick="setClientFilter('${filterKey}')" title="Click to filter" style="${style}"><span style="font-size:13px;font-weight:700;color:${color};display:block">${num}</span>${label}</div>`;
+    return `<div onclick="${onclick}" title="Click to filter" style="${style}"><span style="font-size:13px;font-weight:700;color:${color};display:block">${num}</span>${label}</div>`;
   };
+  const allOn = _clientFilter==='all' && _clientCountry==='all';
   bar.innerHTML =
-    box(totalClients, 'Total Clients', 'var(--white)', 'all', 'rgba(255,255,255,.08)', 'var(--white)') +
-    box(recentCount, 'Last 6 Months', 'var(--green)', 'recent6mo', 'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)');
+    box(totalClients, 'Total Clients',  'var(--white)',       allOn,                       'clientsShowAll()',             'rgba(255,255,255,.08)', 'var(--white)') +
+    box(recentCount,  'Last 6 Months',  'var(--green)',       _clientFilter==='recent6mo', "setClientFilter('recent6mo')", 'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)') +
+    box(caCount,      'Canada Clients', 'var(--blue-bright)', _clientCountry==='canada',   "setClientCountry('canada')",   'rgba(91,141,239,.15)', 'var(--blue)') +
+    box(usCount,      'USA Clients',    'var(--blue-bright)', _clientCountry==='usa',       "setClientCountry('usa')",      'rgba(91,141,239,.15)', 'var(--blue)');
+}
+
+// Resets the Clients view to show every client (clears recency + country filters).
+function clientsShowAll(){
+  _clientCountry = 'all';
+  ['all','canada','usa'].forEach(k=>{
+    const el=document.getElementById('cctr-'+k);
+    if(el){ const on=k==='all'; el.style.background=on?'rgba(91,141,239,.18)':'var(--navy-lift)'; el.style.color=on?'var(--blue-bright)':'var(--muted)'; el.style.borderColor=on?'var(--blue)':'var(--border)'; }
+  });
+  setClientFilter('all'); // re-renders
 }
 
 function renderClients(){
