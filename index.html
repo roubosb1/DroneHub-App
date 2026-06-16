@@ -4380,7 +4380,8 @@ button{font-family:var(--font);}
         <button id="clients-subtab-list" onclick="switchClientsSubtab('list')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:rgba(255,255,255,.08);color:var(--white)">All Clients</button>
         <button id="clients-subtab-leaderboard" onclick="switchClientsSubtab('leaderboard')" style="padding:5px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted);display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg> Leaderboard</button>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span id="clients-letter-label" style="font-size:13px;font-weight:700;margin-left:8px"></span>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto">
         <div class="search-input-wrap" style="margin-bottom:0">
           <input type="text" id="clients-search" placeholder="Search by name, email, company…" oninput="renderClients()" style="min-width:220px">
         </div>
@@ -12258,9 +12259,12 @@ function renderClients(){
     return true;
   });
 
+  const _llbl=document.getElementById('clients-letter-label');
+
   // ── Search mode: flat results, no sections ──────────────────────────────────
   if(q){
     if(azBar) azBar.style.display='none';
+    if(_llbl) _llbl.innerHTML='';
     const results=applyPill(enriched).filter(({c})=>
       c.name.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))||(c.company&&c.company.toLowerCase().includes(q))
     ).sort((a,b)=>a.c.name.localeCompare(b.c.name));
@@ -12270,8 +12274,9 @@ function renderClients(){
     return;
   }
 
-  // ── Filter-pill modes (Messages / Active / Inactive): flat + A-Z bar ────────
-  if(_clientFilter!=='all'){
+  // ── Filter-pill modes (Last 6 Months / country): flat list ─────────────────
+  if(_clientFilter!=='all'||_clientCountry!=='all'){
+    if(_llbl) _llbl.innerHTML='';
     const results=applyPill(countryFiltered).sort((a,b)=>{
       if(_clientFilter==='messages'){if(b.newMsgs!==a.newMsgs)return b.newMsgs-a.newMsgs;return b.lastMsgTs.localeCompare(a.lastMsgTs);}
       return a.c.name.localeCompare(b.c.name);
@@ -12300,6 +12305,7 @@ function renderClients(){
     .sort((a,b)=>a.c.name.localeCompare(b.c.name));
   empty.style.display=visible.length?'none':'block';
   list.style.display=visible.length?'block':'none';
+  if(_llbl) _llbl.innerHTML=`<span style="font-weight:800;color:var(--blue-bright)">${cur}</span> <span style="color:var(--muted)">Clients — ${visible.length}</span>`;
   const azHtml=letters.concat(['#']).map(l=>{
     const cnt=letterCounts[l]||0;
     const on=l===cur;
@@ -12311,10 +12317,6 @@ function renderClients(){
       title="${cnt?cnt+' clients':''}" ${!cnt?'disabled':''}>${l}</button>`;
   }).join('');
   list.innerHTML=`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <span style="font-size:18px;font-weight:900;color:var(--blue-bright)">${cur}</span>
-      <span style="font-size:12px;color:var(--muted)">${visible.length} client${visible.length!==1?'s':''}</span>
-    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${visible.map(r=>_clientCardHtml(r,portalAccts)).join('')}</div>
     <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">${azHtml}</div>`;
 }
