@@ -2292,6 +2292,17 @@ button{font-family:var(--font);}
 <!-- QUOTE BUILDER -->
 <div id="pane-quote" class="pane active">
 
+  <!-- AI quote assistant — describe the job in plain English, it fills the form below for review -->
+  <div class="card" style="border-color:rgba(91,141,239,.35)">
+    <div class="section-label" style="display:flex;align-items:center;gap:6px">✨ AI Quote Assistant</div>
+    <div class="note" style="margin-bottom:8px">Describe the job — address, sqft, who's filming/editing, services needed, client info, shoot date. The AI fills in the form below; nothing is saved until you review and click "Save job" yourself.</div>
+    <textarea id="ai-quote-input" rows="3" placeholder="e.g. 1500 Main St, Toronto, ON. 2400 sqft. Need drone video and twilight photos. John Smith filming, Sarah editing. Client is Jane Doe, jane@email.com, shoot next Tuesday at 10am." style="width:100%;box-sizing:border-box;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;resize:vertical;margin-bottom:8px"></textarea>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="aiQuoteGenerate()" id="ai-quote-btn" style="padding:7px 18px;border-radius:16px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">✨ Fill quote form</button>
+      <span id="ai-quote-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+  </div>
+
   <!-- Top: contractors, client, address, property -->
   <div class="card">
     <div class="section-label">Assign contractors</div>
@@ -14811,6 +14822,129 @@ function calc(){
   renderBreakdown(lines,grand,driveCost,'lineBreakdown','shooterNote','resultsGrid');
   renderCostModel(grand,driveCost,lines);
   renderTierTable();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI QUOTE ASSISTANT — parses a freeform description into the Quote Builder
+// form fields via /.netlify/functions/ai-quote-parse. Never auto-saves —
+// only fills the form so the user can review the calculated price and click
+// Save themselves.
+// ─────────────────────────────────────────────────────────────────────────────
+function _aiQuoteSetStatus(msg, isError){
+  const el = document.getElementById('ai-quote-status');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+async function aiQuoteGenerate(){
+  const input = document.getElementById('ai-quote-input');
+  const description = (input?.value || '').trim();
+  if(!description){ _aiQuoteSetStatus('Type a description first.', true); return; }
+  if(!_fbToken()){ _aiQuoteSetStatus('Not signed in — please refresh and sign in again.', true); return; }
+
+  const btn = document.getElementById('ai-quote-btn');
+  if(btn){ btn.disabled = true; btn.style.opacity = '.6'; }
+  _aiQuoteSetStatus('Thinking…');
+
+  try{
+    const contractorList = Object.values(CONTRACTORS||{}).map(c=>({name:c.name, role:c.role||''}));
+    const clientList = (clients||[]).map(c=>({name:c.name, email:c.email||''}));
+
+    const res = await fetch('/.netlify/functions/ai-quote-parse', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_fbToken()},
+      body: JSON.stringify({ description, contractors: contractorList, clients: clientList }),
+    });
+    const json = await res.json().catch(()=>({}));
+    if(!res.ok){ _aiQuoteSetStatus(json.error || 'AI request failed (HTTP '+res.status+')', true); return; }
+
+    aiQuoteApplyToForm(json.data || {});
+    _aiQuoteSetStatus('✓ Form filled — review the price below, then click Save job.');
+  }catch(e){
+    _aiQuoteSetStatus('Network error: '+e.message, true);
+  }finally{
+    if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+function aiQuoteApplyToForm(d){
+  // Address — also triggers geocoding/drive-cost lookup
+  if(d.address){
+    const addrEl = document.getElementById('qAddrInput');
+    if(addrEl){ addrEl.value = d.address; if(typeof searchQAddr==='function') searchQAddr(); }
+    const nameEl = document.getElementById('job-name-input');
+    if(nameEl && !nameEl.value) nameEl.value = d.address;
+  }
+
+  // Square footage
+  if(d.sqft){
+    const sqftEl = document.getElementById('sqft');
+    if(sqftEl){ sqftEl.value = Math.max(800, Math.min(8000, Math.round(d.sqft/50)*50)); }
+  }
+
+  // Market — triggers service-panel/currency switch
+  if(d.market){
+    const marketEl = document.getElementById('job-market-input');
+    if(marketEl && marketEl.querySelector(`option[value="${d.market}"]`)){
+      marketEl.value = d.market;
+      if(typeof onMarketChange==='function') onMarketChange(d.market);
+    }
+  }
+
+  // Contractors — match AI-suggested names against the real roster (CONTRACTORS keys)
+  const findContractorKey = (name) => {
+    if(!name) return '';
+    const target = name.trim().toLowerCase();
+    const entry = Object.entries(CONTRACTORS||{}).find(([,c])=>(c.name||'').trim().toLowerCase()===target);
+    return entry ? entry[0] : '';
+  };
+  const vidKey = findContractorKey(d.videographerName);
+  if(vidKey){ const el=document.getElementById('sel-videographer'); if(el){ el.value=vidKey; } }
+  const phoKey = findContractorKey(d.photographerName);
+  if(phoKey){ const el=document.getElementById('sel-photographer'); if(el){ el.value=phoKey; } }
+  const fpKey = findContractorKey(d.floorplanName);
+  if(fpKey){ const el=document.getElementById('sel-floorplan'); if(el){ el.value=fpKey; } }
+  if((vidKey||phoKey||fpKey) && typeof onContractorChange==='function') onContractorChange();
+
+  // Services — only flip toggles that differ from the AI's desired state
+  if(d.services && typeof svc==='object'){
+    Object.entries(d.services).forEach(([key,want])=>{
+      if(typeof want!=='boolean') return;
+      if(!(key in svc)) return;
+      if(svc[key]!==want){
+        const tbtn = document.getElementById('tog-'+key);
+        if(tbtn) toggleSvc(key, tbtn);
+      }
+    });
+  }
+
+  // Client — match against existing clients by name or email, else prefill "new client" form
+  if(d.clientName || d.clientEmail){
+    const target = (d.clientEmail||d.clientName||'').trim().toLowerCase();
+    const match = (clients||[]).find(c =>
+      (d.clientEmail && c.email && c.email.toLowerCase()===d.clientEmail.trim().toLowerCase()) ||
+      (c.name && c.name.toLowerCase()===target)
+    );
+    if(match){
+      selectClient(match.id);
+    } else if(d.clientName){
+      const searchEl = document.getElementById('client-search-input');
+      if(searchEl){ searchEl.value = d.clientName; }
+      if(typeof showNewClientForm==='function') showNewClientForm();
+      if(d.clientEmail){ const e=document.getElementById('new-client-email'); if(e) e.value=d.clientEmail; }
+      if(d.clientPhone){ const p=document.getElementById('new-client-phone'); if(p) p.value=d.clientPhone; }
+    }
+  }
+
+  // Date / time / duration / notes
+  if(d.jobDate){ const el=document.getElementById('job-date-input'); if(el) el.value=d.jobDate; }
+  if(d.jobTime){ const el=document.getElementById('job-time-input'); if(el) el.value=d.jobTime; }
+  if(d.duration){ const el=document.getElementById('job-duration-input'); if(el) el.value=d.duration; }
+  if(d.notes){ const el=document.getElementById('job-notes-input'); if(el) el.value=d.notes; }
+
+  // Recalculate price with everything now in place
+  if(typeof calc==='function') calc();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
