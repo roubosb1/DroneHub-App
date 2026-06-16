@@ -152,7 +152,9 @@ exports.handler = async (event) => {
     if (!r.ok) {
       const errBody = await r.text();
       console.error('[ai-quote-parse] Anthropic API error:', r.status, errBody);
-      return { statusCode: 502, headers, body: JSON.stringify({ error: 'AI service error (HTTP ' + r.status + ')' }) };
+      // TEMP: surfacing errBody in the response itself for debugging since
+      // there's no log access in this environment — revert once diagnosed.
+      return { statusCode: 502, headers, body: JSON.stringify({ error: 'AI service error (HTTP ' + r.status + ')', detail: errBody }) };
     }
 
     const result = await r.json();
