@@ -13616,7 +13616,8 @@ function renderJobs(){
   if(jStatsBar){
     const allJ = savedJobs;
     const confirmedJobs = allJ.filter(j=>j.status==='confirmed');
-    const completedJobs = allJ.filter(j=>j.status==='completed');
+    const _7dAgo = new Date(); _7dAgo.setDate(_7dAgo.getDate()-7);
+    const completedJobs = allJ.filter(j=>j.status==='completed'&&new Date(j.completedAt||j.date||0)>=_7dAgo);
     const unpaidJobs = completedJobs.filter(j=>!j.markedPaid);
     const paidJobs = completedJobs.filter(j=>j.markedPaid);
     const unpaidVal = unpaidJobs.reduce((s,j)=>s+(j.grand||0),0);
@@ -13630,7 +13631,7 @@ function renderJobs(){
     };
     jStatsBar.innerHTML =
       jbox(confirmedJobs.length, 'Confirmed',           'var(--amber)',       sf==='confirmed', "jobsFilterStat('confirmed')", 'rgba(245,166,35,.12)', 'rgba(245,166,35,.5)') +
-      jbox(completedJobs.length, 'Completed',           'var(--green)',       sf==='completed', "jobsFilterStat('completed')", 'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)') +
+      jbox(completedJobs.length, 'Completed (7d)',       'var(--green)',       sf==='completed', "jobsFilterStat('completed')", 'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)') +
       jbox('$'+unpaidVal.toLocaleString(), 'Unpaid',    '#F05252',            sf==='unpaid',    "jobsFilterStat('unpaid')",    'rgba(240,82,82,.12)',  'rgba(240,82,82,.5)') +
       jbox('$'+paidVal.toLocaleString(),   'Paid',      '#22D97A',            sf==='paid',      "jobsFilterStat('paid')",      'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)');
   }
@@ -13645,7 +13646,7 @@ function renderJobs(){
 
   let filtered=filterPeriod?savedJobs.filter(j=>j.period===filterPeriod):savedJobs;
   if(_jobsStatFilter==='confirmed') filtered=filtered.filter(j=>j.status==='confirmed');
-  else if(_jobsStatFilter==='completed') filtered=filtered.filter(j=>j.status==='completed');
+  else if(_jobsStatFilter==='completed'){ const _7d=new Date();_7d.setDate(_7d.getDate()-7); filtered=filtered.filter(j=>j.status==='completed'&&new Date(j.completedAt||j.date||0)>=_7d); }
   else if(_jobsStatFilter==='unpaid') filtered=filtered.filter(j=>j.status==='completed'&&!j.markedPaid);
   else if(_jobsStatFilter==='paid') filtered=filtered.filter(j=>j.status==='completed'&&j.markedPaid);
   pipeline.style.display=filtered.length?'grid':'none';
