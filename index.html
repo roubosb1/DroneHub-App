@@ -23073,7 +23073,9 @@ function renderTracker(){
       :_notesFilled.length===1?_notesFilled[0][1]
       :_notesFilled.map(([k])=>_draftShort[k]||k).join(' · ');
     const _hasNotes=_notesFilled.length>0;
-    const filemaLink=ts.filemailLink||'';
+    const _fmLinks=(ts.filemailLinks&&ts.filemailLinks.length?ts.filemailLinks:ts.filemailLink?[ts.filemailLink]:[]);
+    const filemaLink=_fmLinks[0]||'';
+    const filemaCount=_fmLinks.length;
     const dlLink=ts.downloadLink||'';
     const dbxLink=ts.dropboxLink||'';
     const clientName=client?.name||j.clientName||'';
@@ -23161,7 +23163,7 @@ function renderTracker(){
             <button onclick="deleteTrackerEntry('${j.id}',${j.isStandalone?'true':'false'})" title="Delete this project entry" style="padding:2px 5px;border-radius:6px;border:1px solid rgba(240,82,82,${_lm?.5:.35});background:rgba(240,82,82,${_lm?.12:.07});color:${_lm?'#dc2626':'#FF7070'};font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:2px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Delete</button>
           </div>
           ${_isPhoto?'':reviewBtnHtml}
-          ${filemaLink?`<a href="${filemaLink}" target="_blank" title="${filemaLink}" style="padding:2px 6px;border-radius:6px;border:1px solid rgba(34,217,122,${_lm?.5:.35});background:rgba(34,217,122,${_lm?.12:.07});color:${_lm?'#047857':'#22D97A'};font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:3px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Filemail</a>`:''}
+          ${filemaLink?`<a href="${filemaLink}" target="_blank" title="${filemaLink}" style="padding:2px 6px;border-radius:6px;border:1px solid rgba(34,217,122,${_lm?.5:.35});background:rgba(34,217,122,${_lm?.12:.07});color:${_lm?'#047857':'#22D97A'};font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:3px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Filemail${filemaCount>1?` <span style="background:rgba(34,217,122,.25);border-radius:4px;padding:0 4px;font-size:9px">${filemaCount}</span>`:''}</a>`:''}
           ${dlLink?`<a href="${dlLink}" target="_blank" style="color:${_lm?'#1d4ed8':'#5B8DEF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;text-align:right" title="${dlLink}">☁ Drive ↗</a>`:''}
           ${dbxLink?`<a href="${dbxLink}" target="_blank" style="color:${_lm?'#0044cc':'#0061FF'};font-size:10px;text-decoration:none;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;text-align:right" title="${dbxLink}">📦 Dropbox ↗</a>`:''}
         </div>
@@ -23640,11 +23642,17 @@ function openTrackerModal(jobId){
         <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Links</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
           <div>
-            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Filemail — raw footage download</label>
-            <div style="display:flex;gap:6px">
-              <input type="url" id="tm-filemail" value="${ts.filemailLink||''}" placeholder="https://filemail.com/…" style="flex:1;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-              ${ts.filemailLink?`<a href="${ts.filemailLink}" target="_blank" style="padding:6px 12px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">↓ Open</a>`:''}
+            <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Filemail Links <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0">— raw footage downloads</span></label>
+            <div id="tm-filemail-links-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:5px">
+              ${(ts.filemailLinks&&ts.filemailLinks.length?ts.filemailLinks:ts.filemailLink?[ts.filemailLink]:[]).map((url,i)=>`
+              <div id="tm-fl-row-${i}" style="display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center">
+                <input type="url" class="tm-fl-url" data-idx="${i}" value="${(url||'').replace(/"/g,'&quot;')}" placeholder="https://filemail.com/…" style="padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;min-width:0">
+                <button onclick="tmRemoveFilemailLink(${i})" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>
+              </div>`).join('')}
             </div>
+            <button onclick="tmAddFilemailLink()" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:11px;font-weight:700;cursor:pointer">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Filemail Link
+            </button>
           </div>
           <div>
             <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Frame.io — client review</label>
@@ -23801,11 +23809,17 @@ function openTrackerModal(jobId){
           ${_lbl('Links & Downloads')}
           <div style="display:flex;flex-direction:column;gap:7px">
             <div>
-              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Filemail (raw footage for editor)</label>
-              <div style="display:flex;gap:6px">
-                <input type="url" id="tm-filemail" value="${ts.filemailLink||''}" placeholder="https://filemail.com/…" style="flex:1;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-                ${ts.filemailLink?`<a href="${ts.filemailLink}" target="_blank" style="padding:6px 10px;border-radius:8px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center">↓</a>`:''}
+              <label style="font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Filemail Links <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0">— raw footage downloads</span></label>
+              <div id="tm-filemail-links-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:5px">
+                ${(ts.filemailLinks&&ts.filemailLinks.length?ts.filemailLinks:ts.filemailLink?[ts.filemailLink]:[]).map((url,i)=>`
+                <div id="tm-fl-row-${i}" style="display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center">
+                  <input type="url" class="tm-fl-url" data-idx="${i}" value="${(url||'').replace(/"/g,'&quot;')}" placeholder="https://filemail.com/…" style="padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;min-width:0">
+                  <button onclick="tmRemoveFilemailLink(${i})" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>
+                </div>`).join('')}
               </div>
+              <button onclick="tmAddFilemailLink()" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:11px;font-weight:700;cursor:pointer">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Filemail Link
+              </button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
               <div>
@@ -23898,6 +23912,32 @@ function tmCollectReviewLinks(){
   return links;
 }
 
+function tmAddFilemailLink(){
+  const list = document.getElementById('tm-filemail-links-list');
+  if(!list) return;
+  const idx = list.querySelectorAll('[id^="tm-fl-row-"]').length;
+  const row = document.createElement('div');
+  row.id = 'tm-fl-row-'+idx;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center';
+  row.innerHTML = `
+    <input type="url" class="tm-fl-url" data-idx="${idx}" value="" placeholder="https://filemail.com/…" style="padding:6px 8px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;min-width:0">
+    <button onclick="tmRemoveFilemailLink(${idx})" style="padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">✕</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function tmRemoveFilemailLink(idx){
+  const row = document.getElementById('tm-fl-row-'+idx);
+  if(row) row.remove();
+}
+
+function tmCollectFilemailLinks(){
+  const inputs = document.querySelectorAll('.tm-fl-url');
+  const links = [];
+  inputs.forEach(inp => { const u=inp.value.trim(); if(u) links.push(u); });
+  return links;
+}
+
 function tmUpdateDraftCharge(){
   const count=parseInt(document.getElementById('tm-draft-count')?.value||0);
   const extra=Math.max(0,count-2)*30;
@@ -23918,7 +23958,8 @@ function saveTrackerModal(jobId, modal){
   const editStatus=v('tm-edit-status')||'ready';
   const filesReceived=document.getElementById('tm-files-received')?.checked||false;
   const rush=document.getElementById('tm-rush')?.checked||false;
-  const filemailLink=v('tm-filemail');
+  const filemailLinks=tmCollectFilemailLinks();
+  const filemailLink=filemailLinks[0]||'';
   const downloadLink=v('tm-download');
   const dropboxLink=v('tm-dropbox');
   const videographer=v('tm-videographer');
@@ -23937,7 +23978,7 @@ function saveTrackerModal(jobId, modal){
     // preserve all admin-only values from the existing tracker record.
     stageUpdate={
       stage,claimedBy,notes,editStatus,filesReceived,rush,
-      filemailLink,frameioLink,reviewLinks,downloadLink,dropboxLink,videographer,
+      filemailLink,filemailLinks,frameioLink,reviewLinks,downloadLink,dropboxLink,videographer,
       claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
       // Preserve admin-only fields
       draftCount:existing.draftCount||0,
@@ -23956,7 +23997,7 @@ function saveTrackerModal(jobId, modal){
     const extraDraftCharge=Math.max(0,draftCount-2)*30;
     stageUpdate={
       stage,claimedBy,notes,editStatus,filesReceived,rush,draftCount,
-      projectId,filemailLink,frameioLink,reviewLinks,downloadLink,dropboxLink,
+      projectId,filemailLink,filemailLinks,frameioLink,reviewLinks,downloadLink,dropboxLink,
       approxEditHours,approxFilmHours,completionDate,videographer,
       claimedAt:claimedBy?new Date().toISOString().slice(0,10):'',
       extraDraftCharge,
