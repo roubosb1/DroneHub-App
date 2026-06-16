@@ -4322,6 +4322,7 @@ button{font-family:var(--font);}
     <div id="sales-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
     <div id="sales-clients-stats-bar" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
     <div id="sales-pipeline-stats-bar" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
+    <div id="sales-jobs-stats-bar" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
   </div>
 
   <!-- ── JOBS VIEW ── -->
@@ -13597,12 +13598,42 @@ function updateJobStatus(id,newStatus){
   renderPayroll();
 }
 
+let _jobsStatFilter = '';
+function jobsFilterStat(f){
+  _jobsStatFilter = _jobsStatFilter===f ? '' : f;
+  renderJobs();
+}
+
 function renderJobs(){
   const isAdmin=!gateGetSession()||gateGetSession()?.type==='admin';
   const filterPeriod=document.getElementById('jobs-filter-period')?.value||'';
   const pipeline=document.getElementById('jobs-pipeline');
   const emptyEl=document.getElementById('jobs-empty');
   if(!pipeline) return;
+
+  // Jobs stats (top-right bar)
+  const jStatsBar = document.getElementById('sales-jobs-stats-bar');
+  if(jStatsBar){
+    const allJ = savedJobs;
+    const confirmedJobs = allJ.filter(j=>j.status==='confirmed');
+    const completedJobs = allJ.filter(j=>j.status==='completed');
+    const unpaidJobs = completedJobs.filter(j=>!j.markedPaid);
+    const paidJobs = completedJobs.filter(j=>j.markedPaid);
+    const unpaidVal = unpaidJobs.reduce((s,j)=>s+(j.grand||0),0);
+    const paidVal = paidJobs.reduce((s,j)=>s+(j.grand||0),0);
+    const sf = _jobsStatFilter;
+    const jbox = (num, label, color, on, onclick, accentBg, accentBorder) => {
+      const st = on
+        ? 'background:'+accentBg+';border:2px solid '+accentBorder+';border-radius:9px;padding:4px 11px;font-size:11px;color:'+color+';cursor:pointer;user-select:none'
+        : 'background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none';
+      return '<div onclick="'+onclick+'" title="Click to filter" style="'+st+'"><span style="font-size:13px;font-weight:700;color:'+color+';display:block">'+num+'</span>'+label+'</div>';
+    };
+    jStatsBar.innerHTML =
+      jbox(confirmedJobs.length, 'Confirmed',           'var(--amber)',       sf==='confirmed', "jobsFilterStat('confirmed')", 'rgba(245,166,35,.12)', 'rgba(245,166,35,.5)') +
+      jbox(completedJobs.length, 'Completed',           'var(--green)',       sf==='completed', "jobsFilterStat('completed')", 'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)') +
+      jbox('$'+unpaidVal.toLocaleString(), 'Unpaid',    '#F05252',            sf==='unpaid',    "jobsFilterStat('unpaid')",    'rgba(240,82,82,.12)',  'rgba(240,82,82,.5)') +
+      jbox('$'+paidVal.toLocaleString(),   'Paid',      '#22D97A',            sf==='paid',      "jobsFilterStat('paid')",      'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)');
+  }
 
   // Refresh period filter options
   const periodSel=document.getElementById('jobs-filter-period');
@@ -13612,7 +13643,11 @@ function renderJobs(){
     periodSel.innerHTML='<option value="">All periods</option>'+periods.map(p=>`<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
   }
 
-  const filtered=filterPeriod?savedJobs.filter(j=>j.period===filterPeriod):savedJobs;
+  let filtered=filterPeriod?savedJobs.filter(j=>j.period===filterPeriod):savedJobs;
+  if(_jobsStatFilter==='confirmed') filtered=filtered.filter(j=>j.status==='confirmed');
+  else if(_jobsStatFilter==='completed') filtered=filtered.filter(j=>j.status==='completed');
+  else if(_jobsStatFilter==='unpaid') filtered=filtered.filter(j=>j.status==='completed'&&!j.markedPaid);
+  else if(_jobsStatFilter==='paid') filtered=filtered.filter(j=>j.status==='completed'&&j.markedPaid);
   pipeline.style.display=filtered.length?'grid':'none';
   if(emptyEl) emptyEl.style.display=filtered.length?'none':'block';
 
@@ -27495,6 +27530,8 @@ function setSalesView(v, skipGateCheck){
   if(clientStatsBarEl) clientStatsBarEl.style.display = v==='clients' ? 'flex' : 'none';
   const pipeStatsBarEl = document.getElementById('sales-pipeline-stats-bar');
   if(pipeStatsBarEl) pipeStatsBarEl.style.display = v==='pipeline' ? 'flex' : 'none';
+  const jobsStatsBarEl = document.getElementById('sales-jobs-stats-bar');
+  if(jobsStatsBarEl) jobsStatsBarEl.style.display = v==='jobs' ? 'flex' : 'none';
   // Show/hide contacts & pipeline based on sales access (re-evaluated every call)
   const emailToCheck = _activeSessionEmail || gateGetSession()?.email || '';
   const hasSalesAccess = canAccessSales(emailToCheck);
