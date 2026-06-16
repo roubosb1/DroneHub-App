@@ -27064,6 +27064,17 @@ function salesSetQuickFilter(f){
   renderSalesTable();
 }
 
+// "Total Contacts" stat acts as a clear-all-filters shortcut — resets quick
+// filter, the active/past client sub-filter, and the search box.
+function salesClearAllFilters(){
+  _salesQuickFilter = null;
+  _salesClientSub = 'all';
+  _salesPage = 0;
+  const searchEl = document.getElementById('sales-search');
+  if(searchEl) searchEl.value = '';
+  renderSalesTable();
+}
+
 // ── Sales view switcher ──
 // salesView declared early above (TDZ fix)
 function setSalesView(v){
@@ -27172,8 +27183,9 @@ function renderSalesTable(){
       active
         ? `background:${activeBg};border:2px solid ${accentColor};border-radius:10px;padding:7px 13px;font-size:12px;color:${accentColor};cursor:pointer;user-select:none`
         : `background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none`;
+    const filtersActive = qf || (isClientsView && _salesClientSub!=='all') || (document.getElementById('sales-search')?.value||'').trim();
     statsBar.innerHTML = [
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>Total Contacts</div>`,
+      `<div onclick="salesClearAllFilters()" title="${filtersActive?'Click to clear filters and show all':'All contacts in this list'}" style="${chipStyle(!!filtersActive,'var(--white)','rgba(255,255,255,.08)')}"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>${filtersActive?'✕ ':''}Total Contacts</div>`,
       isClientsView
         ? `<div style="background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--green);display:block">${activeClients}</span>Active Clients</div>`
         : `<div onclick="salesSetQuickFilter('warm')" title="Click to filter by Warm status" style="${chipStyle(qf==='warm','#F5C842','rgba(245,200,66,.1)')}"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>${qf==='warm'?'✕ ':''}Warm Leads</div>`,
