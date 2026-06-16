@@ -4330,6 +4330,7 @@ button{font-family:var(--font);}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div style="font-size:15px;font-weight:600;color:var(--white)">Job pipeline</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="jobs-search" placeholder="Search jobs…" oninput="renderJobs()" style="padding:6px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:13px;width:180px">
         <select id="jobs-filter-period" onchange="renderJobs()" style="padding:5px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
           <option value="">All periods</option>
         </select>
@@ -13645,6 +13646,8 @@ function renderJobs(){
   else if(_jobsStatFilter==='completed'){ const _7d=new Date();_7d.setDate(_7d.getDate()-7); filtered=filtered.filter(j=>j.status==='completed'&&new Date(j.completedAt||j.date||0)>=_7d); }
   else if(_jobsStatFilter==='unpaid') filtered=filtered.filter(j=>j.status==='completed'&&!j.markedPaid);
   else if(_jobsStatFilter==='paid') filtered=filtered.filter(j=>j.status==='completed'&&j.markedPaid);
+  const jobsQ=(document.getElementById('jobs-search')?.value||'').trim().toLowerCase();
+  if(jobsQ) filtered=filtered.filter(j=>[j.name,j.clientName,j.address,j.videographerName,j.photographerName,j.date,j.id].join(' ').toLowerCase().includes(jobsQ));
   pipeline.style.display=filtered.length?'grid':'none';
   if(emptyEl) emptyEl.style.display=filtered.length?'none':'block';
 
