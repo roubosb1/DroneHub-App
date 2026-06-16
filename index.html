@@ -6925,7 +6925,7 @@ function showPane(id,ev){
   }
   if(id==='calendar'){populateCalNameDropdown();renderVacationTracker();syncGcalLinks().catch(()=>{});if(window.innerWidth>768){setCalView(_calView||'week');}else{renderCalendar();}calEventsSyncFirebase().then(()=>{if(window.innerWidth>768)setCalView(_calView||'week');else renderCalendar();});}
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();renderSettingsProfile();}
-  if(id==='tracker'){renderTracker();}
+  if(id==='tracker'){trackerSetTab(_trackerTab);}
   if(id==='finance'){
     renderFinance();
     // Re-render whichever sub-tab is currently visible
