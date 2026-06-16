@@ -4321,6 +4321,7 @@ button{font-family:var(--font);}
     <!-- Stats bars — contacts stats shown on Contacts view, client stats on Clients view -->
     <div id="sales-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
     <div id="sales-clients-stats-bar" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
+    <div id="sales-pipeline-stats-bar" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
   </div>
 
   <!-- ── JOBS VIEW ── -->
@@ -4609,8 +4610,6 @@ button{font-family:var(--font);}
       </div>
     </div>
 
-    <!-- Pipeline stats -->
-    <div id="pipeline-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
 
     <!-- Stage column view -->
     <div id="pipeline-kanban" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px;overflow-x:auto;min-width:0"></div>
@@ -27492,6 +27491,8 @@ function setSalesView(v, skipGateCheck){
   if(statsBarEl) statsBarEl.style.display = v==='contacts' ? 'flex' : 'none';
   const clientStatsBarEl = document.getElementById('sales-clients-stats-bar');
   if(clientStatsBarEl) clientStatsBarEl.style.display = v==='clients' ? 'flex' : 'none';
+  const pipeStatsBarEl = document.getElementById('sales-pipeline-stats-bar');
+  if(pipeStatsBarEl) pipeStatsBarEl.style.display = v==='pipeline' ? 'flex' : 'none';
   // Show/hide contacts & pipeline based on sales access (re-evaluated every call)
   const emailToCheck = _activeSessionEmail || gateGetSession()?.email || '';
   const hasSalesAccess = canAccessSales(emailToCheck);
@@ -27906,29 +27907,48 @@ function moveDealStage(id, stage){
   renderDealsTable();
 }
 
+let _pipelineStatFilter = '';
+function pipelineFilterStat(f){
+  _pipelineStatFilter = _pipelineStatFilter===f ? '' : f;
+  const dd = document.getElementById('deals-stage-filter');
+  if(dd) dd.value = '';
+  renderDealsTable();
+}
+
 function renderDealsTable(){
   dealsSyncFirebase().catch(()=>{});
   const all    = dealsLoad();
   const q      = (document.getElementById('deals-search')?.value||'').toLowerCase().trim();
   const sFilter= document.getElementById('deals-stage-filter')?.value||'';
+  if(sFilter) _pipelineStatFilter = '';
 
   let list = all.filter(d=>!d._deleted);
   if(sFilter) list = list.filter(d=>d.stage===sFilter);
+  else if(_pipelineStatFilter==='open') list = list.filter(d=>!['won','lost'].includes(d.stage));
+  else if(_pipelineStatFilter==='won') list = list.filter(d=>d.stage==='won');
+  else if(_pipelineStatFilter==='pipe') list = list.filter(d=>!['won','lost'].includes(d.stage));
   if(q) list = list.filter(d=>[d.id,d.contactName,d.contactEmail,d.company,d.city,d.notes].join(' ').toLowerCase().includes(q));
 
-  // Pipeline stats
-  const statsBar = document.getElementById('pipeline-stats-bar');
+  // Pipeline stats (top-right bar, clickable filters)
+  const statsBar = document.getElementById('sales-pipeline-stats-bar');
   if(statsBar){
+    const totalDeals = all.filter(d=>!d._deleted).length;
     const open   = all.filter(d=>!['won','lost'].includes(d.stage)&&!d._deleted);
     const won    = all.filter(d=>d.stage==='won'&&!d._deleted);
     const wonVal = won.reduce((s,d)=>s+(d.value||0),0);
     const pipe   = open.reduce((s,d)=>s+(d.value||0),0);
-    statsBar.innerHTML = [
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${all.filter(d=>!d._deleted).length}</span>Total Deals</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#7AABFF;display:block">${open.length}</span>Open</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#22D97A;display:block">$${wonVal.toLocaleString()}</span>Won Revenue</div>`,
-      `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">$${pipe.toLocaleString()}</span>Pipeline Value</div>`,
-    ].join('');
+    const sf = _pipelineStatFilter;
+    const pbox = (num, label, color, on, onclick, accentBg, accentBorder) => {
+      const st = on
+        ? `background:${accentBg};border:2px solid ${accentBorder};border-radius:9px;padding:4px 11px;font-size:11px;color:${color};cursor:pointer;user-select:none`
+        : `background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none`;
+      return `<div onclick="${onclick}" title="Click to filter" style="${st}"><span style="font-size:13px;font-weight:700;color:${color};display:block">${num}</span>${label}</div>`;
+    };
+    statsBar.innerHTML =
+      pbox(totalDeals, 'Total Deals',    'var(--white)',  !sf,         "pipelineFilterStat('')",          'rgba(255,255,255,.08)', 'var(--white)') +
+      pbox(open.length,'Open',           '#7AABFF',       sf==='open', "pipelineFilterStat('open')",      'rgba(122,171,255,.12)', 'rgba(122,171,255,.5)') +
+      pbox('$'+wonVal.toLocaleString(), 'Won Revenue',   '#22D97A',   sf==='won',  "pipelineFilterStat('won')",  'rgba(34,217,122,.12)',  'rgba(34,217,122,.5)') +
+      pbox('$'+pipe.toLocaleString(),   'Pipeline Value', '#F5C842',  sf==='pipe', "pipelineFilterStat('pipe')", 'rgba(245,200,66,.12)',  'rgba(245,200,66,.5)');
   }
 
   // Kanban summary
