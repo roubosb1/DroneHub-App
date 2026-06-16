@@ -14716,10 +14716,13 @@ function saveEditJob(){
     };
     const sqft=job.sqft||0;
     if(s.video&&s.photo){
-      total+=Math.ceil(Math.ceil(baseVideoRate(sqft)/(1-MARGIN))*(1+ADMIN_RATE))+(Math.ceil(photoBase(sqft,true)*(1+ADMIN_RATE)));
+      const vb=baseVideoRate(sqft);
+      const vt=Math.ceil(vb/(1-MARGIN));
+      const pt=photoBase(sqft,true);
+      total+=vt+pt;
     } else {
-      if(s.video) total+=Math.ceil(Math.ceil(baseVideoRate(sqft)/(1-MARGIN))*(1+ADMIN_RATE));
-      if(s.photo) total+=Math.ceil(photoBase(sqft,false)*(1+ADMIN_RATE));
+      if(s.video){ const vb=baseVideoRate(sqft); total+=Math.ceil(vb/(1-MARGIN)); }
+      if(s.photo) total+=photoBase(sqft,false);
     }
     if(s.tvideo&&s.tphoto) total+=TWILIGHT_BOTH;
     else if(s.tvideo) total+=TWILIGHT_VIDEO;
