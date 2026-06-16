@@ -4540,13 +4540,13 @@ button{font-family:var(--font);}
             <tr>
               <th style="width:36px"><input type="checkbox" id="sales-select-all" aria-label="Select all contacts" onchange="salesToggleAll(this.checked)" style="cursor:pointer"></th>
               <th class="sortable" id="sth-name"    onclick="setSalesSort('name')"    >Name<span class="sort-arrow">↕</span></th>
-              <th class="sortable" id="sth-company" onclick="setSalesSort('company')" >Company<span class="sort-arrow">↕</span></th>
+              <th class="sortable" id="sth-company" onclick="setSalesSort('company')" style="min-width:170px">Company<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-field" onclick="setSalesSort('field')" style="display:none">Type<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-city"    onclick="setSalesSort('city')"    >City / Region<span class="sort-arrow">↕</span></th>
               <th>Phone</th>
               <th class="sortable" id="sth-email"   onclick="setSalesSort('email')"   >Email<span class="sort-arrow">↕</span></th>
               <th class="sortable" id="sth-status"  onclick="setSalesSort('status')"  >Status<span class="sort-arrow">↕</span></th>
-              <th>Notes</th>
+              <th style="max-width:90px">Notes</th>
               <th style="text-align:right">Actions</th>
             </tr>
           </thead>
@@ -26506,6 +26506,48 @@ async function salesToggleClientType(id){
   renderSalesTable();
 }
 
+// Notes cell in the Contacts table is truncated to keep the column narrow —
+// click it to read/edit/add the full note in a modal instead.
+function salesShowNotesModal(id){
+  const existing = document.getElementById('sales-notes-modal');
+  if(existing) existing.remove();
+  const all = salesLoad();
+  const c = all.find(x=>x.id===id);
+  if(!c) return;
+  const name = [c.firstName,c.lastName].filter(Boolean).join(' ')||'Contact';
+  const modal = document.createElement('div');
+  modal.id = 'sales-notes-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9700;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+  modal.innerHTML = `<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:420px;border:1px solid var(--border-bright);overflow:hidden" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:700;color:var(--white)">Notes</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${escSalesHtml(name)}</div>
+    </div>
+    <div style="padding:16px 20px">
+      <textarea id="sales-notes-modal-textarea" rows="6" placeholder="Add a note about this contact…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);resize:vertical;line-height:1.5">${c.notes||''}</textarea>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="document.getElementById('sales-notes-modal').remove()" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Cancel</button>
+      <button onclick="salesSaveNotesModal('${escSalesAttr(id)}')" style="padding:8px 20px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Save ✓</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>document.getElementById('sales-notes-modal-textarea')?.focus(),50);
+}
+
+function salesSaveNotesModal(id){
+  const ta = document.getElementById('sales-notes-modal-textarea');
+  const all = salesLoad();
+  const idx = all.findIndex(x=>x.id===id);
+  if(idx>=0){
+    all[idx] = {...all[idx], notes: (ta?.value||'').trim()};
+    salesSave(all);
+    renderSalesTable();
+  }
+  document.getElementById('sales-notes-modal')?.remove();
+}
+
 const _SALES_LIST_PICKER_OPTS = [
   {id:'realestate', label:'Real Estate', color:'var(--blue-bright)', icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'},
   {id:'resorts', label:'Resorts', color:'var(--blue-bright)', icon:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>'},
@@ -27441,12 +27483,12 @@ function renderSalesTable(){
     return `<tr>
       <td><input type="checkbox" class="sales-row-check" data-id="${escSalesAttr(c.id)}" onchange="salesCheckChanged()" style="cursor:pointer"></td>
       <td style="font-weight:600;color:var(--white)">${escSalesHtml(name)}${dneBadge}${dealBadge}</td>
-      <td>${escSalesHtml(c.company||'—')}</td>
+      <td style="min-width:170px">${escSalesHtml(c.company||'—')}</td>
       <td style="color:var(--muted);font-size:12px">${escSalesHtml(c.city||'—')}</td>
       <td style="white-space:nowrap">${escSalesHtml(c.phone||'—')}</td>
       <td>${emailCell}</td>
       <td style="white-space:nowrap"><span class="sales-status-badge ${statusClass}">${statusLabel}</span>${ctBadge?`<div style="margin-top:3px">${ctBadge.replace('margin-left:5px;','')}</div>`:''}</td>
-      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px" title="${escSalesAttr(c.notes||'')}">${escSalesHtml((c.notes||'').slice(0,40))||'—'}</td>
+      <td onclick="salesShowNotesModal('${escSalesAttr(c.id)}')" style="max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px;cursor:pointer" title="${c.notes?'Click to view/edit notes':'Click to add notes'}">${escSalesHtml((c.notes||'').slice(0,18))||'<span style="color:var(--border-bright)">+ note</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="sales-action-btn" onclick="salesShowActionsMenu(event,'${escSalesAttr(c.id)}')" title="More actions">⋯</button>
         <button class="sales-action-btn" style="color:#FF7070;border-color:#FF7070" onclick="salesDeleteContact('${escSalesAttr(c.id)}')" title="Delete">✕</button>
