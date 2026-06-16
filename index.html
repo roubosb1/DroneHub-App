@@ -12165,27 +12165,36 @@ function toggleClientStatus(clientId){
   }
   renderClients();
 }
-// Top-right stat boxes on the Clients view: total client count + how many have
-// worked with us in the last 6 months (by most recent job date). Styled to
-// match the Contacts view stat boxes.
+// True if a client has at least one job whose most recent date
+// (completedAt||createdAt||date) falls within the past 6 months.
+function _clientRecent6mo(c){
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  return (savedJobs||[]).some(j=>{
+    if(String(j.clientId)!==String(c.id)) return false;
+    const d = new Date(j.completedAt||j.createdAt||j.date||0);
+    return d >= sixMonthsAgo;
+  });
+}
+
+// Top-right stat boxes on the Clients view — clickable filters:
+//   Total Clients  -> shows all clients (clears the recency/active filter)
+//   Last 6 Months  -> filters to clients who worked with us in the last 6 mo
 function renderClientsStatBar(){
   const bar = document.getElementById('sales-clients-stats-bar');
   if(!bar) return;
   const totalClients = clients.length;
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  const recentCount = clients.filter(c=>
-    (savedJobs||[]).some(j=>{
-      if(String(j.clientId)!==String(c.id)) return false;
-      const d = new Date(j.completedAt||j.createdAt||j.date||0);
-      return d >= sixMonthsAgo;
-    })
-  ).length;
-  const box = (num, label, color) =>
-    `<div style="background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted)"><span style="font-size:13px;font-weight:700;color:${color};display:block">${num}</span>${label}</div>`;
+  const recentCount = clients.filter(_clientRecent6mo).length;
+  const box = (num, label, color, filterKey, accentBg, accentBorder) => {
+    const on = _clientFilter === filterKey;
+    const style = on
+      ? `background:${accentBg};border:2px solid ${accentBorder};border-radius:9px;padding:4px 11px;font-size:11px;color:${color};cursor:pointer;user-select:none`
+      : `background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none`;
+    return `<div onclick="setClientFilter('${filterKey}')" title="Click to filter" style="${style}"><span style="font-size:13px;font-weight:700;color:${color};display:block">${num}</span>${label}</div>`;
+  };
   bar.innerHTML =
-    box(totalClients, 'Total Clients', 'var(--white)') +
-    box(recentCount, 'Last 6 Months', 'var(--green)');
+    box(totalClients, 'Total Clients', 'var(--white)', 'all', 'rgba(255,255,255,.08)', 'var(--white)') +
+    box(recentCount, 'Last 6 Months', 'var(--green)', 'recent6mo', 'rgba(34,217,122,.12)', 'rgba(34,217,122,.5)');
 }
 
 function renderClients(){
@@ -12230,17 +12239,19 @@ function renderClients(){
     let lastMsgTs='';
     if(newMsgs>0){const msgs=getLcMessages('lc_client_'+c.id);if(msgs.length)lastMsgTs=msgs[msgs.length-1].ts||'';}
     const countryKey=_getClientCountryKey(c);
-    return {c, cJobs, hasActiveJob, isRecentlyActive, newMsgs, lastMsgTs, countryKey};
+    const isRecent6mo=_clientRecent6mo(c);
+    return {c, cJobs, hasActiveJob, isRecentlyActive, isRecent6mo, newMsgs, lastMsgTs, countryKey};
   });
 
   // Country filter base
   const countryFiltered=enriched.filter(r=>_clientCountry==='all'||r.countryKey===_clientCountry);
 
   // Apply filter pill
-  const applyPill=(arr)=>arr.filter(({hasActiveJob,newMsgs})=>{
-    if(_clientFilter==='messages') return newMsgs>0;
-    if(_clientFilter==='active')   return hasActiveJob;
-    if(_clientFilter==='inactive') return !hasActiveJob;
+  const applyPill=(arr)=>arr.filter(({hasActiveJob,newMsgs,isRecent6mo})=>{
+    if(_clientFilter==='messages')  return newMsgs>0;
+    if(_clientFilter==='active')    return hasActiveJob;
+    if(_clientFilter==='inactive')  return !hasActiveJob;
+    if(_clientFilter==='recent6mo') return isRecent6mo;
     return true;
   });
 
