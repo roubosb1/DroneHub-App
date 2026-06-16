@@ -26239,17 +26239,28 @@ async function salesSyncFirebase(listId, force=false){
 // Runs every 15 s regardless of which pane is open.
 // Only fetches & re-renders when the Sales pane is active AND Firebase has a
 // newer timestamp than what's already in memory — zero flicker otherwise.
-async function _salesLiveSyncTick(){
+// Background lists (not currently being viewed) are checked far less often
+// than the active list to avoid burning the Firestore daily read quota —
+// each tick is 1 read per list checked, and this used to check ALL lists
+// every 15s regardless of which one (if any) the user was looking at.
+let _salesSyncTickCount = 0;
+const _SALES_BG_SYNC_EVERY_N_TICKS = 5; // background lists refresh every 5th tick
+async function _salesLiveSyncTick(forceListId){
   if(!_fbToken()) return;
   const salesPane = document.getElementById('pane-sales');
-  if(!salesPane?.classList.contains('active')) return; // not on Sales page, skip
+  if(!salesPane?.classList.contains('active') && !forceListId) return; // not on Sales page, skip
 
-  const prevTs = Object.assign({}, _salesUpdatedAt);
+  _salesSyncTickCount++;
+  const checkBackground = forceListId ? false : (_salesSyncTickCount % _SALES_BG_SYNC_EVERY_N_TICKS === 0);
+
   let changed = false;
+  // Active (visible) list every tick; background lists only every Nth tick —
+  // or immediately for forceListId when the user just switched to a list.
+  const toCheck = forceListId ? [forceListId]
+    : checkBackground ? SALES_LISTS
+    : [salesActiveList];
 
-  // Check current list first for fast visible update, then background-sync others
-  const ordered = [salesActiveList, ...SALES_LISTS.filter(l => l !== salesActiveList)];
-  for(const l of ordered){
+  for(const l of toCheck){
     try{
       const fbKey = _salesFbKey(l);
       const doc = await fbGet('orgs', fbKey);
@@ -26272,11 +26283,15 @@ async function _salesLiveSyncTick(){
 
 // Start once after login — never stopped; pane-visibility check inside the tick
 function salesInitLiveSync(){
-  setInterval(_salesLiveSyncTick, 15000); // every 15 s
+  setInterval(_salesLiveSyncTick, 60000); // every 60 s (was 15s — see _salesLiveSyncTick comment)
 }
 
 function setSalesList(listId){
   salesActiveList = listId;
+  // Background lists only refresh every 5th tick now (see _salesLiveSyncTick),
+  // so force an immediate check of the list the user just switched to —
+  // otherwise it could show stale data for a few minutes after switching.
+  _salesLiveSyncTick(listId).catch(()=>{});
   _salesPage = 0; // reset to first page when switching lists
   try{localStorage.setItem('dronehub_sales_list', listId);}catch(e){}
   if(listId !== 'clients') _salesClientSub = 'all';
