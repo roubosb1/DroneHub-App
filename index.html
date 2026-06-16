@@ -7878,7 +7878,7 @@ function renderCalDayView(dateStr){
     const isNowHour=isToday&&h===nowHour;
     const border=h>0?'border-top:1px solid var(--border);':'';
     rowsHtml+=`<div style="padding:0 6px;text-align:right;font-size:10px;color:var(--muted);line-height:1;padding-top:8px;min-height:52px;${border}background:var(--navy-mid)">${lbl}</div>`;
-    rowsHtml+=`<div style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative">`;
+    rowsHtml+=`<div ondblclick="calQuickAdd('${dateStr}',${h},event)" style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative;cursor:default">`;
     if(isNowHour){
       const pct=(nowMin/60)*100;
       rowsHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"><span style="position:absolute;left:-6px;top:-4px;width:10px;height:10px;background:var(--blue-bright);border-radius:50%;display:block"></span></div>`;
@@ -8032,7 +8032,7 @@ function renderCalWeekView(dateStr){
       const isToday=ds===todayStr;
       const hEvts=dayEvts[i].filter(e=>e._time&&parseInt(e._time.split(':')[0],10)===h);
       const isNowHour=isToday&&h===nowHour;
-      hoursHtml+=`<div style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative">`;
+      hoursHtml+=`<div ondblclick="calQuickAdd('${ds}',${h},event)" style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
       if(isNowHour){const pct=(nowMin/60)*100;hoursHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
       hEvts.forEach(e=>{hoursHtml+=calWeekEventChip(e);});
       hoursHtml+='</div>';
@@ -8147,6 +8147,81 @@ function calToggleTypeFilter(typeId){
   calViewRefresh();
 }
 function calSetAllFilters(){_calTypeFilters=null;calViewRefresh();}
+
+// ── Quick-add bubble (double-click on empty calendar space) ──────────────────
+function calQuickAdd(dateStr, hour, evt){
+  if(evt) evt.stopPropagation();
+  const old=document.getElementById('cal-quick-add');
+  if(old) old.remove();
+  const members=getAdminTeamMembers();
+  const session=gateGetSession();
+  const d=new Date(dateStr+'T12:00:00');
+  const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateLbl=DAYS[d.getDay()]+', '+MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  const startH=hour!=null?hour:9;
+  const endH=Math.min(startH+1,23);
+  const fmtTime=h=>h===0?'12:00 AM':h<12?h+':00 AM':h===12?'12:00 PM':(h-12)+':00 PM';
+
+  const bubble=document.createElement('div');
+  bubble.id='cal-quick-add';
+  bubble.style.cssText='position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center';
+  bubble.onclick=e=>{if(e.target===bubble)bubble.remove();};
+  bubble.innerHTML=`<div onclick="event.stopPropagation()" style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);width:320px;overflow:hidden">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;gap:6px">
+          <button id="qca-tab-event" onclick="document.getElementById('qca-tab-event').style.background='rgba(91,141,239,.2)';document.getElementById('qca-tab-event').style.color='var(--blue-bright)';document.getElementById('qca-tab-event').style.borderColor='var(--blue)';document.getElementById('qca-tab-remind').style.background='transparent';document.getElementById('qca-tab-remind').style.color='var(--muted)';document.getElementById('qca-tab-remind').style.borderColor='var(--border)'" style="padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--blue);background:rgba(91,141,239,.2);color:var(--blue-bright)">Event</button>
+          <button id="qca-tab-remind" onclick="document.getElementById('qca-tab-remind').style.background='rgba(91,141,239,.2)';document.getElementById('qca-tab-remind').style.color='var(--blue-bright)';document.getElementById('qca-tab-remind').style.borderColor='var(--blue)';document.getElementById('qca-tab-event').style.background='transparent';document.getElementById('qca-tab-event').style.color='var(--muted)';document.getElementById('qca-tab-event').style.borderColor='var(--border)'" style="padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted)">Reminder</button>
+        </div>
+        <button onclick="document.getElementById('cal-quick-add').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;line-height:1">✕</button>
+      </div>
+      <input id="qca-title" type="text" placeholder="New Event" style="width:100%;box-sizing:border-box;padding:8px 0;border:none;border-bottom:1px solid var(--border);background:transparent;color:var(--white);font-size:15px;font-weight:600;outline:none" autofocus>
+    </div>
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span style="font-size:12px;color:var(--offwhite);font-weight:500">${dateLbl}</span>
+        <span style="font-size:12px;color:var(--muted)">${fmtTime(startH)} – ${fmtTime(endH)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <select id="qca-member" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+          ${[{name:session?.name||session?.email||'Me'},...members].map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <select id="qca-type" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+          ${CAL_EVENT_TYPES.map(t=>`<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+        <input id="qca-notes" type="text" placeholder="Add notes…" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+      </div>
+    </div>
+    <div style="padding:0 16px 14px;display:flex;gap:8px">
+      <button onclick="calQuickAddSave('${dateStr}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Save Event</button>
+      <button onclick="document.getElementById('cal-quick-add').remove();openCalEventModal('${dateStr}')" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;cursor:pointer">More options</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bubble);
+  setTimeout(()=>document.getElementById('qca-title')?.focus(),80);
+}
+function calQuickAddSave(dateStr){
+  const title=(document.getElementById('qca-title')?.value||'').trim()||'New Event';
+  const type=document.getElementById('qca-type')?.value||'other';
+  const member=document.getElementById('qca-member')?.value||'';
+  const notes=(document.getElementById('qca-notes')?.value||'').trim();
+  const evts=calEventsLoad();
+  evts.push({id:Date.now(),title,type,date:dateStr,endDate:dateStr,memberName:member,notes});
+  calEventsSave(evts);
+  document.getElementById('cal-quick-add')?.remove();
+  calViewRefresh();
+  if(type==='vacation') renderVacationTracker();
+  showDhToast('Event created',title+' added to calendar','','var(--green)',3000);
+}
 
 // Open add-event modal
 function openCalEventModal(prefillDate){
@@ -10635,7 +10710,7 @@ function renderCalendar(){
       const col=getCreatorColor(j._creator);
       return `<span class="mob-cal-dot" style="background:${col.border}"></span>`;
     }).join('');
-    html+=`<div class="cal-cell${isToday?' today':''}" onclick="showCalDay('${dateStr}',event)">
+    html+=`<div class="cal-cell${isToday?' today':''}" onclick="showCalDay('${dateStr}',event)" ondblclick="event.stopPropagation();calQuickAdd('${dateStr}',null,event)">
       <div style="font-size:${isToday?'17':'14'}px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};margin-bottom:8px;line-height:1">${d}${isToday?'<span style="font-size:9px;font-weight:700;color:var(--blue-bright);padding:1px 5px;border-radius:5px;background:rgba(91,141,239,.15);margin-left:4px">TODAY</span>':''}</div>
       <div class="cal-cell-badges">${badges}${more}</div>
       <div class="mob-cal-dots">${dots}</div>
