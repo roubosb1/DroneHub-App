@@ -27380,18 +27380,18 @@ function renderSalesTable(){
     // Helper: chip style — highlighted when active, normal otherwise
     const chipStyle = (active, accentColor, activeBg) =>
       active
-        ? `background:${activeBg};border:2px solid ${accentColor};border-radius:10px;padding:7px 13px;font-size:12px;color:${accentColor};cursor:pointer;user-select:none`
-        : `background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none`;
+        ? `background:${activeBg};border:2px solid ${accentColor};border-radius:9px;padding:4px 11px;font-size:11px;color:${accentColor};cursor:pointer;user-select:none`
+        : `background:var(--navy-card);border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none`;
     const filtersActive = qf || (isClientsView && _salesClientSub!=='all') || (document.getElementById('sales-search')?.value||'').trim();
     statsBar.innerHTML = [
-      `<div onclick="salesClearAllFilters()" title="${filtersActive?'Click to clear filters and show all':'All contacts in this list'}" style="${chipStyle(!!filtersActive,'var(--white)','rgba(255,255,255,.08)')}"><span style="font-size:16px;font-weight:700;color:var(--white);display:block">${total}</span>${filtersActive?'✕ ':''}Total Contacts</div>`,
+      `<div onclick="salesClearAllFilters()" title="${filtersActive?'Click to clear filters and show all':'All contacts in this list'}" style="${chipStyle(!!filtersActive,'var(--white)','rgba(255,255,255,.08)')}"><span style="font-size:13px;font-weight:700;color:var(--white);display:block">${total}</span>${filtersActive?'✕ ':''}Total Contacts</div>`,
       isClientsView
-        ? `<div style="background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--green);display:block">${activeClients}</span>Active Clients</div>`
-        : `<div onclick="salesSetQuickFilter('warm')" title="Click to filter by Warm status" style="${chipStyle(qf==='warm','#F5C842','rgba(245,200,66,.1)')}"><span style="font-size:16px;font-weight:700;color:#F5C842;display:block">${warm}</span>${qf==='warm'?'✕ ':''}Warm Leads</div>`,
+        ? `<div style="background:rgba(34,217,122,.06);border:1px solid rgba(34,217,122,.25);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted)"><span style="font-size:13px;font-weight:700;color:var(--green);display:block">${activeClients}</span>Active Clients</div>`
+        : `<div onclick="salesSetQuickFilter('warm')" title="Click to filter by Warm status" style="${chipStyle(qf==='warm','#F5C842','rgba(245,200,66,.1)')}"><span style="font-size:13px;font-weight:700;color:#F5C842;display:block">${warm}</span>${qf==='warm'?'✕ ':''}Warm Leads</div>`,
       isClientsView
-        ? `<div style="background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.25);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)"><span style="font-size:16px;font-weight:700;color:var(--blue-bright);display:block">${pastClients}</span>Past Clients</div>`
-        : `<div onclick="salesSetQuickFilter('unsubscribed')" title="Click to filter by Unsubscribed" style="${chipStyle(qf==='unsubscribed','#FF7070','rgba(255,112,112,.1)')}"><span style="font-size:16px;font-weight:700;color:#FF7070;display:block">${unsub}</span>${qf==='unsubscribed'?'✕ ':''}Unsubscribed</div>`,
-      !isClientsView && dne>0 ? `<div onclick="salesSetQuickFilter('dne')" title="Click to filter by Do Not Email" style="${chipStyle(qf==='dne','var(--red)','rgba(240,82,82,.1)')}"><span style="font-size:16px;font-weight:700;color:var(--red);display:block">${dne}</span>${qf==='dne'?'✕ ':''}Do Not Email</div>` : '',
+        ? `<div style="background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.25);border-radius:9px;padding:5px 12px;font-size:11px;color:var(--muted)"><span style="font-size:13px;font-weight:700;color:var(--blue-bright);display:block">${pastClients}</span>Past Clients</div>`
+        : `<div onclick="salesSetQuickFilter('unsubscribed')" title="Click to filter by Unsubscribed" style="${chipStyle(qf==='unsubscribed','#FF7070','rgba(255,112,112,.1)')}"><span style="font-size:13px;font-weight:700;color:#FF7070;display:block">${unsub}</span>${qf==='unsubscribed'?'✕ ':''}Unsubscribed</div>`,
+      !isClientsView && dne>0 ? `<div onclick="salesSetQuickFilter('dne')" title="Click to filter by Do Not Email" style="${chipStyle(qf==='dne','var(--red)','rgba(240,82,82,.1)')}"><span style="font-size:13px;font-weight:700;color:var(--red);display:block">${dne}</span>${qf==='dne'?'✕ ':''}Do Not Email</div>` : '',
     ].join('');
   }
 
