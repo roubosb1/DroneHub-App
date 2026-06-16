@@ -26557,12 +26557,12 @@ function salesShowActionsMenu(evt, id){
   const ctType = c.clientType || 'active';
 
   const items = [
-    {label:'New Deal', icon:'circle-target', onclick:`openDealModal(null,'${escSalesAttr(id)}')`, color:'#F5C842'},
+    {label:'New Deal', icon:'circle-target', onclick:`openDealModal(null,'${escSalesAttr(id)}')`, color:'var(--offwhite)'},
     {label:'Edit', icon:'edit', onclick:`salesEditContact('${escSalesAttr(id)}')`, color:'var(--offwhite)'},
-    isClientsTab ? {label: ctType==='active'?'Mark as Past Client':'Mark as Active Client', icon:'swap', onclick:`salesToggleClientType('${escSalesAttr(id)}')`, color:ctType==='active'?'var(--blue-bright)':'var(--green)'} : null,
-    {label: c.unsubscribed?'Re-subscribe':'Unsubscribe', icon:'unsub', onclick:`salesToggleUnsub('${escSalesAttr(id)}')`, color:'var(--amber)'},
-    {label: c.doNotEmail?'Remove Do Not Email':'Mark Do Not Email', icon:'block', onclick:`salesToggleDNE('${escSalesAttr(id)}')`, color: c.doNotEmail?'var(--red)':'var(--offwhite)'},
-    {label:'Move to List', icon:'move', onclick:`salesQuickMove('${escSalesAttr(id)}')`, color:'var(--blue-bright)'},
+    isClientsTab ? {label: ctType==='active'?'Mark as Past Client':'Mark as Active Client', icon:'swap', onclick:`salesToggleClientType('${escSalesAttr(id)}')`, color:'var(--offwhite)'} : null,
+    {label: c.unsubscribed?'Re-subscribe':'Unsubscribe', icon:'unsub', onclick:`salesToggleUnsub('${escSalesAttr(id)}')`, color:'var(--offwhite)'},
+    {label: c.doNotEmail?'Remove Do Not Email':'Mark Do Not Email', icon:'block', onclick:`salesToggleDNE('${escSalesAttr(id)}')`, color:'var(--offwhite)'},
+    {label:'Move to List', icon:'move', onclick:`salesQuickMove('${escSalesAttr(id)}')`, color:'var(--offwhite)'},
   ].filter(Boolean);
 
   const icons = {
