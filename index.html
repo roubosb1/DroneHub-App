@@ -8062,6 +8062,7 @@ function calWeekEventChip(e){
 
 // ── CUSTOM EVENT TYPES ────────────────────────────────────────────────────────
 const CAL_EVENT_TYPES=[
+  {id:'shoots',     label:'Shoots',         icon:'📸', color:'#22D97A', bg:'rgba(34,217,122,.14)', svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'},
   {id:'vacation',   label:'Vacation',       icon:'✈️', color:'#8B5CF6', bg:'rgba(139,92,246,.18)', svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>'},
   {id:'sick',       label:'Sick Day',        icon:'🤒', color:'#EF4444', bg:'rgba(239,68,68,.14)',   svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>'},
   {id:'holiday',    label:'Stat Holiday',    icon:'🎉', color:'#F59E0B', bg:'rgba(245,158,11,.14)', svg:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'},
@@ -8147,6 +8148,47 @@ function calToggleTypeFilter(typeId){
   calViewRefresh();
 }
 function calSetAllFilters(){_calTypeFilters=null;calViewRefresh();}
+
+// ── Custom event-type dropdown (renders SVG icons) ──────────────────────────
+function _calTypeDropdownHtml(id,size){
+  const sz=size||'sm';
+  const pad=sz==='lg'?'8px 10px':'5px 8px';
+  const fs=sz==='lg'?'13px':'12px';
+  const rad=sz==='lg'?'8px':'6px';
+  const bdr=sz==='lg'?'var(--border-bright)':'var(--border)';
+  const first=CAL_EVENT_TYPES[0];
+  return `<div id="${id}-wrap" style="position:relative;flex:1">
+    <input type="hidden" id="${id}" value="${first.id}">
+    <button type="button" onclick="var dd=document.getElementById('${id}-dd');dd.style.display=dd.style.display==='block'?'none':'block'" style="width:100%;padding:${pad};border:1px solid ${bdr};border-radius:${rad};font-size:${fs};background:var(--navy-lift);color:var(--white);cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left">
+      <span id="${id}-icon" style="display:inline-flex;color:${first.color}">${first.svg}</span>
+      <span id="${id}-label">${first.label}</span>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" style="margin-left:auto"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div id="${id}-dd" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:var(--navy-card);border:1px solid var(--border-bright);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.45);z-index:20;overflow:hidden">
+      ${CAL_EVENT_TYPES.map(t=>`<div onclick="_calTypeSelect('${id}','${t.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:${fs};color:var(--offwhite);transition:background .1s" onmouseenter="this.style.background='rgba(91,141,239,.1)'" onmouseleave="this.style.background=''">
+        <span style="display:inline-flex;color:${t.color}">${t.svg}</span> ${t.label}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+function _calTypeSelect(id,typeId){
+  const t=CAL_EVENT_TYPES.find(x=>x.id===typeId);
+  if(!t) return;
+  document.getElementById(id).value=typeId;
+  document.getElementById(id+'-icon').innerHTML=t.svg;
+  document.getElementById(id+'-icon').style.color=t.color;
+  document.getElementById(id+'-label').textContent=t.label;
+  document.getElementById(id+'-dd').style.display='none';
+  if(typeof calEventTypeChanged==='function'&&id==='cae-type') calEventTypeChanged();
+}
+document.addEventListener('click',function(e){
+  CAL_EVENT_TYPES.forEach(()=>{});
+  ['qca-type','cae-type'].forEach(id=>{
+    const wrap=document.getElementById(id+'-wrap');
+    const dd=document.getElementById(id+'-dd');
+    if(wrap&&dd&&!wrap.contains(e.target)) dd.style.display='none';
+  });
+});
 
 // ── Invite picker helpers (team dropdown + client search) ────────────────────
 function _calInviteAddTeam(prefix){
@@ -8238,9 +8280,7 @@ function calQuickAdd(dateStr, hour, evt){
       <!-- Event type -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-        <select id="qca-type" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
-          ${CAL_EVENT_TYPES.map(t=>`<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
-        </select>
+        ${_calTypeDropdownHtml('qca-type','sm')}
       </div>
       <!-- Invite team -->
       <div>
@@ -8322,9 +8362,7 @@ function openCalEventModal(prefillDate){
       </div>
       <div>
         <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Event type</label>
-        <select id="cae-type" onchange="calEventTypeChanged()" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
-          ${CAL_EVENT_TYPES.map(t=>`<option value="${t.id}">${t.icon} ${t.label}</option>`).join('')}
-        </select>
+        ${_calTypeDropdownHtml('cae-type','lg')}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
