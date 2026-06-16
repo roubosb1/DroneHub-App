@@ -2201,7 +2201,7 @@ button{font-family:var(--font);}
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--navy-mid)"></span>
       </button>
-      <div id="notif-panel" style="display:none;position:absolute;top:42px;right:0;width:320px;background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:1000;overflow:hidden"></div>
+      <div id="notif-panel" style="display:none;position:absolute;top:46px;right:0;width:360px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04);z-index:1000;overflow:hidden;backdrop-filter:blur(16px)"></div>
     </div>
     <span id="app-user-display" style="display:none"></span>
     <!-- Mobile-only hamburger ≡ — opens top dropdown instead of bottom drawer -->
@@ -29206,41 +29206,76 @@ function renderNotificationPanel(){
   notifs.forEach(n=>n.read=true);
   notificationsSave(notifs);
   refreshNotificationBadge();
-  const fmtDt=iso=>iso?new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-  const typeIcon={approval:'✓',revision:'✏',message:'💬',date_change:'📅'};
+  const fmtDt=iso=>{
+    if(!iso) return '';
+    const d=new Date(iso),now=new Date(),diff=now-d;
+    if(diff<60000) return 'Just now';
+    if(diff<3600000) return Math.floor(diff/60000)+'m ago';
+    if(diff<86400000) return Math.floor(diff/3600000)+'h ago';
+    if(diff<604800000) return Math.floor(diff/86400000)+'d ago';
+    return d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  };
+  const typeConfig={
+    approval:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',bg:'rgba(34,217,122,.08)',accent:'rgba(34,217,122,.25)',label:'Approved'},
+    revision:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',bg:'rgba(251,146,60,.08)',accent:'rgba(251,146,60,.25)',label:'Revision'},
+    message:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',bg:'rgba(91,141,239,.08)',accent:'rgba(91,141,239,.25)',label:'Message'},
+    date_change:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',bg:'rgba(167,139,250,.08)',accent:'rgba(167,139,250,.25)',label:'Date changed'}
+  };
+  const defaultType={icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',bg:'rgba(255,255,255,.04)',accent:'var(--border)',label:'Update'};
   const requestedJobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested');
   const bookingRows=requestedJobs.map(j=>{
     const clientRec=(typeof clients!=='undefined'?clients:[]).find(c=>c.id===j.clientId);
     const clientName=clientRec?.name||j.clientName||'Client portal';
-    return `<div onclick="document.getElementById('notif-panel').style.display='none';showPane('sales');setTimeout(()=>{switchSalesView('jobs');},200)" style="padding:10px 16px;border-bottom:1px solid rgba(245,166,35,.25);cursor:pointer;background:rgba(245,166,35,.06)" onmouseenter="this.style.background='rgba(245,166,35,.12)'" onmouseleave="this.style.background='rgba(245,166,35,.06)'">
-      <div style="display:flex;gap:8px;align-items:flex-start">
-        <span style="font-size:14px;flex-shrink:0">📬</span>
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:2px">New booking request</div>
-          <div style="font-size:12px;color:var(--white);line-height:1.4">${j.name}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px">${clientName} · ${j.date||'No date'}</div>
+    return `<div onclick="document.getElementById('notif-panel').style.display='none';showPane('sales');setTimeout(()=>{switchSalesView('jobs');},200)" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(245,166,35,.1)'" onmouseleave="this.style.background='transparent'">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:10px;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.04em">New booking</span>
+            <span style="font-size:10px;color:var(--muted)">${fmtDt(j.createdAt||j.date)}</span>
+          </div>
+          <div style="font-size:13px;color:var(--white);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${j.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${clientName} · ${j.date||'No date'}</div>
         </div>
       </div>
     </div>`;
   }).join('');
-  panel.innerHTML=`
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:13px;font-weight:700;color:var(--white)">Notifications</span>
-      <button onclick="notificationsClear()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer">Clear all</button>
-    </div>
-    <div style="overflow-y:auto;max-height:320px">
-      ${bookingRows}
-      ${notifs.length?notifs.map(n=>`
-        <div onclick="document.getElementById('notif-panel').style.display='none';showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)" style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--navy-card)" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='var(--navy-card)'">
-          <div style="display:flex;gap:8px;align-items:flex-start">
-            <span style="font-size:14px;flex-shrink:0">${typeIcon[n.type]||'•'}</span>
-            <div>
-              <div style="font-size:12px;color:var(--white);line-height:1.4">${n.text}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">${fmtDt(n.at)}</div>
-            </div>
+  const notifRows=notifs.map(n=>{
+    const cfg=typeConfig[n.type]||defaultType;
+    return `<div onclick="document.getElementById('notif-panel').style.display='none';showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:10px;background:${cfg.bg};border:1px solid ${cfg.accent};display:flex;align-items:center;justify-content:center;flex-shrink:0">${cfg.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span style="font-size:11px;font-weight:700;color:var(--offwhite);text-transform:uppercase;letter-spacing:.04em">${cfg.label}</span>
+            <span style="font-size:10px;color:var(--muted)">${fmtDt(n.at)}</span>
           </div>
-        </div>`).join('')
-      :(!bookingRows?'<div style="padding:32px;text-align:center;color:var(--muted);font-size:12px">No notifications</div>':'')}
+          <div style="font-size:13px;color:var(--white);line-height:1.45">${n.text}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  const totalCount=requestedJobs.length+notifs.length;
+  panel.innerHTML=`
+    <div style="padding:14px 18px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span style="font-size:14px;font-weight:800;color:var(--white)">Notifications</span>
+        ${totalCount?`<span style="min-width:18px;height:18px;border-radius:9px;background:var(--blue);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 5px">${totalCount}</span>`:''}
+      </div>
+      <button onclick="notificationsClear()" style="font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.background='rgba(240,82,82,.1)';this.style.color='var(--red)';this.style.borderColor='rgba(240,82,82,.3)'" onmouseleave="this.style.background='rgba(255,255,255,.04)';this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Clear all</button>
+    </div>
+    <div style="overflow-y:auto;max-height:380px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent">
+      ${bookingRows}
+      ${bookingRows&&notifRows?'<div style="height:1px;background:var(--border);margin:0 16px"></div>':''}
+      ${notifRows}
+      ${!totalCount?`<div style="padding:48px 20px;text-align:center">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4;margin-bottom:12px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div style="font-size:13px;color:var(--muted);font-weight:600">All caught up</div>
+        <div style="font-size:11px;color:var(--muted);opacity:.6;margin-top:4px">No new notifications</div>
+      </div>`:''}
     </div>`;
 }
 function notificationsClear(){
