@@ -6456,10 +6456,9 @@ function renderEmployeePayroll(){
       ?`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--green);margin-left:8px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>${member?.email||data.stubs[0]?.linkedEmail||'linked'}</span>`
       :'';
     const stubCards=data.stubs.map(s=>{
-      const sid=String(s.id);
       const mo=s.date?new Date(s.date+'T12:00:00').toLocaleString('en',{month:'short'}):' ';
       const day=s.date?s.date.slice(8,10):'';
-      return `<div onclick="viewEmployeePayStub('${sid}')" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .1s;min-width:0" onmouseover="this.style.borderColor='var(--blue)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
+      return `<div class="emp-stub-tile" data-stubid="${String(s.id)}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .1s;min-width:0" onmouseover="this.style.borderColor='var(--blue)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${mo} ${day}</div>
         <div style="font-size:14px;font-weight:700;color:var(--blue-bright);margin-bottom:2px">$${(s.net||0).toFixed(2)}</div>
         <div style="font-size:9px;color:var(--green)">Gross $${(s.gross||0).toFixed(2)}</div>
@@ -6476,6 +6475,10 @@ function renderEmployeePayroll(){
       </div>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.emp-stub-tile').forEach(tile=>{
+    tile.addEventListener('click',function(){ viewEmployeePayStub(this.dataset.stubid); });
+  });
 }
 
 function _findLinkedTeamMember(name){
