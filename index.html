@@ -3247,7 +3247,10 @@ button{font-family:var(--font);}
           <div style="font-size:16px;font-weight:700;color:var(--white)">Employee Payroll</div>
           <div style="font-size:11px;color:var(--muted)">Upload pay stubs with full tax deduction breakdowns</div>
         </div>
-        <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
+        <div style="display:flex;gap:8px">
+          <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
+          <button onclick="clearAllEmployeePayroll()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(240,82,82,.08);color:var(--red);font-size:11px;cursor:pointer">Clear All</button>
+        </div>
       </div>
 
       <!-- Filter -->
@@ -6393,6 +6396,15 @@ function submitEmployeePayStub(){
   closeModal();
   renderEmployeePayroll();
   showDhToast&&showDhToast('Pay stub saved','Added for '+employee,'💰','var(--green)',3000);
+}
+
+function clearAllEmployeePayroll(){
+  if(!confirm('Delete ALL employee pay stubs? This cannot be undone.'))return;
+  employeePayroll=[];
+  saveEmployeePayroll();
+  renderEmployeePayroll();
+  renderRemittanceSummary();
+  showDhToast&&showDhToast('Cleared','All employee pay stubs deleted','🗑','var(--red)',3000);
 }
 
 function deleteEmployeePayStub(id){
