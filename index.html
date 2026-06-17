@@ -7630,8 +7630,9 @@ function openCRAT4Form(empName,year){
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="_submitCRAT4('${_id}','${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.15);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;min-width:140px">Download CRA XML</button>
-      <button onclick="_printCRAT4('${_id}','${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;min-width:100px">Print T4</button>
+      <button onclick="_downloadCRAT4PDF('${_id}','${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.15);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;min-width:140px">Download CRA T4 PDF</button>
+      <button onclick="_submitCRAT4('${_id}','${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:600;cursor:pointer;min-width:100px">Download XML</button>
+      <button onclick="_printCRAT4('${_id}','${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border-bright);background:rgba(91,141,239,.05);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;min-width:80px">Print</button>
       <button onclick="closeModal()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Close</button>
     </div>
   </div>`;
@@ -7834,6 +7835,69 @@ function _printCRAT4(containerId,empName,year){
 '</body></html>');
   w.document.close();
   w.print();
+}
+
+async function _downloadCRAT4PDF(containerId,empName,year){
+  const d=_readT4Form(containerId);
+  if(!d)return;
+  if(!d.erBN){alert('Please enter your Business Number (BN).');return;}
+  if(!d.eeSIN||d.eeSIN.length!==9){alert('Please enter a valid 9-digit SIN for the employee.');return;}
+  const lastName=empName.includes(' ')?empName.split(' ').slice(-1)[0]:empName;
+  const firstName=empName.includes(' ')?empName.split(' ').slice(0,-1).join(' '):empName;
+  const sinFmt=d.eeSIN.slice(0,3)+' '+d.eeSIN.slice(3,6)+' '+d.eeSIN.slice(6);
+  const btn=event.target;
+  const origText=btn.textContent;
+  btn.textContent='Generating...';
+  btn.disabled=true;
+  try{
+    const tok=_fbToken();
+    const r=await fetch('/.netlify/functions/t4-fill',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({
+        employerName:d.erName,
+        employerBN:d.erBN.replace(/\s/g,''),
+        year:year,
+        sin:sinFmt,
+        lastName:lastName,
+        firstName:firstName,
+        initial:'',
+        employeeAddress:d.eeAddr||'',
+        province:d.eeProv||'ON',
+        box14:d.box14||'',
+        box16:d.box16||'',
+        box17:d.box17||'',
+        box18:d.box18||'',
+        box20:d.box20||'',
+        box22:d.box22||'',
+        box24:d.box24||'',
+        box26:d.box26||'',
+        box40:d.box40||'',
+        box44:d.box44||''
+      })
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'Server error '+r.status);}
+    const result=await r.json();
+    const byteStr=atob(result.pdf);
+    const bytes=new Uint8Array(byteStr.length);
+    for(let i=0;i<byteStr.length;i++) bytes[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='T4_'+empName.replace(/\s+/g,'_')+'_'+year+'.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showDhToast('T4 Downloaded','CRA T4 PDF for '+empName+' ('+year+') has been saved.','📄','var(--green)',4000);
+  }catch(e){
+    console.error('[_downloadCRAT4PDF]',e);
+    alert('Failed to generate CRA T4 PDF: '+e.message);
+  }finally{
+    btn.textContent=origText;
+    btn.disabled=false;
+  }
 }
 
 function setFinanceMarket(m){
