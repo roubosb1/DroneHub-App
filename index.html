@@ -4175,7 +4175,7 @@ button{font-family:var(--font);}
 
   <!-- ══ Event type filter pills (hidden) + contractor legend ══ -->
   <div id="cal-type-filter-bar" style="display:none"></div>
-  <div id="cal-legend" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px"></div>
+  <div id="cal-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px"></div>
 
   <!-- ══ MONTH VIEW ══ -->
   <div id="cal-month-view" style="display:none">
@@ -8037,7 +8037,7 @@ function renderCalLegend(){
   calEventsLoad().forEach(e=>{if(e.memberName)allNames.add(e.memberName);});
   const used=filterCreator?new Set([filterCreator]):allNames;
   if(used.size){
-    legend.style.display='grid';
+    legend.style.display='flex';
     legend.innerHTML=Array.from(used).sort().map(name=>{
       const col=getCreatorColor(name);
       const isActive=filterCreator===name;
