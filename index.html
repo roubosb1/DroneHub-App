@@ -6123,7 +6123,7 @@ function setFinanceSubTab(sub){
       btn.style.color = active ? 'var(--blue-bright)' : 'var(--muted)';
     }
   });
-  try{localStorage.setItem('dronehub_finance_sub',sub);}catch(e){}
+  try{localStorage.setItem('dronehub_finance_sub',sub);localStorage.setItem('dronehub_active_pane',sub==='overview'?'finance':sub==='payroll'?'payroll':'finance');}catch(e){}
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
   if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
@@ -23712,8 +23712,9 @@ async function gateShowAdminView(session){
   if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span></div></div>`;
   // Restore last visited tab — 'jobs' and 'clients' now live inside Sales
   const _raw=localStorage.getItem('dronehub_active_pane')||'quote';
-  const savedPane=(_raw==='jobs'||_raw==='clients')?'sales':_raw;
+  const savedPane=(_raw==='jobs'||_raw==='clients')?'sales':(_raw==='payroll'?'finance':_raw);
   showPane(savedPane||'quote');
+  if(_raw==='payroll'){setFinanceSubTab('payroll');}
   // On mobile: always open profile pane on login
   if(window.innerWidth<=768 && typeof mobShowProfile==='function') setTimeout(mobShowProfile,120);
   // Auto-mark invoice paid if returning from Stripe success
