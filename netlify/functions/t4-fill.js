@@ -94,10 +94,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const sinPlaintext = decryptSIN(d.sin);
-    if (!sinPlaintext) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Could not decrypt SIN. Encryption key may be missing.' }) };
-    }
+    const sinPlaintext = decryptSIN(d.sin) || d.sin || '';
 
     const templateBytes = getTemplate();
     const pdf = await PDFDocument.load(templateBytes);
