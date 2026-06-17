@@ -3289,6 +3289,54 @@ button{font-family:var(--font);}
     </div>
   </div>
 
+  <!-- Income entry -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-bottom:14px">
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px;color:var(--green)">Add income</div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Date</label>
+        <input type="date" id="inc-date" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Description</label>
+        <input type="text" id="inc-desc" placeholder="e.g. Client payment, Job revenue…" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Category</label>
+        <select id="inc-cat" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+          <option value="Job Revenue">Job revenue</option>
+          <option value="Retainer">Retainer / recurring</option>
+          <option value="Consulting">Consulting</option>
+          <option value="Referral">Referral / commission</option>
+          <option value="Rental">Equipment rental</option>
+          <option value="Other Income">Other income</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Country</label>
+        <select id="inc-market" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+          <option value="canada">🇨🇦 Canada (CAD)</option>
+          <option value="usa">🇺🇸 United States (USD)</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <label style="min-width:90px;font-size:12px">Amount ($)</label>
+        <input type="number" id="inc-amount" min="0" step="0.01" placeholder="0.00" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+      </div>
+      <button onclick="addIncome()" style="padding:7px 20px;border-radius:16px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:12px;font-weight:500;cursor:pointer">Add income ✓</button>
+    </div>
+    <!-- Income list -->
+    <div class="card" style="max-height:340px;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div class="section-label" style="margin-bottom:0;color:var(--green)">Income</div>
+        <select id="inc-filter-year" onchange="renderIncomeList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
+          <option value="">All years</option>
+        </select>
+      </div>
+      <div id="income-list"></div>
+    </div>
+  </div>
+
   <!-- Expense tracker -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
 
@@ -5939,7 +5987,7 @@ function setFinanceSubTab(sub){
   });
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
-  if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderExpenseCatChart && renderExpenseCatChart(); }
+  if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   if(sub === 'contractors'){ renderContractorBreakdown(); }
 }
 
@@ -7009,7 +7057,7 @@ function showPane(id,ev){
     const invoicesVis = document.getElementById('finance-sub-invoices')?.style.display;
     if(invoicesVis && invoicesVis!=='none'){ renderInvoiceTracker && renderInvoiceTracker(); }
     const expensesVis = document.getElementById('finance-sub-expenses')?.style.display;
-    if(expensesVis && expensesVis!=='none'){ renderExpenseList && renderExpenseList(); renderExpenseCatChart && renderExpenseCatChart(); }
+    if(expensesVis && expensesVis!=='none'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   }
   if(id==='sales'){
     // Restore last sales sub-view and contact list tab from localStorage
@@ -10059,6 +10107,7 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':gate_users',     ls:'dronehub_gate_users',        apply:d=>{localStorage.setItem('dronehub_gate_users',d);}},
     {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
     {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
+    {fb:ORG_ID+':income',         ls:'dronehub_income',            apply:d=>{try{incomeEntries=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_income',d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
     {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{
       localStorage.setItem('dronehub_orgs',d);
@@ -18147,6 +18196,66 @@ function copyReminderText(){
 }
 
 
+let incomeEntries=JSON.parse(localStorage.getItem('dronehub_income')||'[]');
+function saveIncome(){
+  try{localStorage.setItem('dronehub_income',JSON.stringify(incomeEntries));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':income',{data:JSON.stringify(incomeEntries),updatedAt:Date.now()}).catch(e=>{
+      console.error('[saveIncome] Firebase write failed:',e.message);
+    });
+  }
+}
+function addIncome(){
+  const date=document.getElementById('inc-date').value;
+  const desc=document.getElementById('inc-desc').value.trim();
+  const cat=document.getElementById('inc-cat').value;
+  const amount=parseFloat(document.getElementById('inc-amount').value);
+  const market=document.getElementById('inc-market')?.value||'canada';
+  if(!date||!desc||!amount||amount<=0){alert('Please fill in all income fields.');return;}
+  incomeEntries.push({id:Date.now(),date,desc,cat,amount,market});
+  incomeEntries.sort((a,b)=>b.date.localeCompare(a.date));
+  saveIncome();
+  document.getElementById('inc-desc').value='';
+  document.getElementById('inc-amount').value='';
+  showDhToast('Income added','$'+amount.toFixed(2)+' — '+desc,'✓','var(--green)');
+  renderIncomeList();
+  renderFinance();
+}
+function deleteIncome(id){
+  incomeEntries=incomeEntries.filter(e=>e.id!==id);
+  saveIncome();renderIncomeList();renderFinance();
+}
+function renderIncomeList(){
+  const list=document.getElementById('income-list');
+  if(!list) return;
+  const filterYear=document.getElementById('inc-filter-year')?.value||'';
+  const yearSel=document.getElementById('inc-filter-year');
+  if(yearSel){
+    const years=[...new Set(incomeEntries.filter(e=>e.date).map(e=>e.date.slice(0,4)))].sort().reverse();
+    const prev=yearSel.value;
+    yearSel.innerHTML='<option value="">All years</option>'+years.map(y=>`<option value="${y}"${y===prev?' selected':''}>${y}</option>`).join('');
+    if(prev) yearSel.value=prev;
+  }
+  const filtered=incomeEntries.filter(e=>{
+    if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
+    return true;
+  });
+  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No income entries yet.</div>';return;}
+  const total=filtered.reduce((s,e)=>s+Number(e.amount||0),0);
+  list.innerHTML=filtered.map(e=>{
+    const flag=e.market==='usa'?'🇺🇸':'🇨🇦';
+    return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+      <span style="font-size:11px;flex-shrink:0">${flag}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.desc}</div>
+        <div style="font-size:10px;color:var(--muted)">${e.date} · <span style="color:var(--green)">${e.cat}</span></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:var(--green);white-space:nowrap">$${Number(e.amount).toFixed(2)}</div>
+      <button onclick="deleteIncome(${e.id})" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px;line-height:1" title="Delete">×</button>
+    </div>`;
+  }).join('')+`<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;font-weight:700"><span style="color:var(--muted)">Total (${filtered.length} entries)</span><span style="color:var(--green)">$${total.toFixed(2)}</span></div>`;
+}
+
 let expenses=JSON.parse(localStorage.getItem('dronehub_expenses')||'[]');
 // Migrate old receiptImg fields → save to Firebase, strip from expense object
 (function _migrateReceiptImgs(){
@@ -18418,7 +18527,8 @@ function renderFinance(){
   const yearSel=document.getElementById('finance-year-sel');
   const jobYears=[...new Set(marketJobs.filter(j=>j.status==='completed'&&j.date).map(j=>j.date.slice(0,4)))];
   const expYears=[...new Set(marketExpenses.filter(e=>e.date).map(e=>e.date.slice(0,4)))];
-  const allYears=[...new Set([...jobYears,...expYears])].sort().reverse();
+  const incYears=[...new Set(marketIncome.filter(e=>e.date).map(e=>e.date.slice(0,4)))];
+  const allYears=[...new Set([...jobYears,...expYears,...incYears])].sort().reverse();
   const curYear=yearSel.value||allYears[0]||String(new Date().getFullYear());
   const prevVal=yearSel.value;
   yearSel.innerHTML=allYears.length
@@ -18429,11 +18539,18 @@ function renderFinance(){
 
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  // Revenue per month (completed jobs only, excl HST)
+  // Revenue per month (completed jobs + manual income entries)
   const revByMonth=Array(12).fill(0);
   marketJobs.filter(j=>j.status==='completed'&&j.date&&j.date.startsWith(year)).forEach(j=>{
     const m=parseInt(j.date.slice(5,7))-1;
     revByMonth[m]+=j.grand||0;
+  });
+  const marketIncome=incomeEntries.filter(e=>
+    isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada')
+  );
+  marketIncome.filter(e=>e.date&&e.date.startsWith(year)).forEach(e=>{
+    const m=parseInt(e.date.slice(5,7))-1;
+    revByMonth[m]+=e.amount||0;
   });
 
   // Expenses per month
