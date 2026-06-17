@@ -6728,6 +6728,40 @@ function _importPivotedPayroll(rows){
     }
   }
   flushBlock();
+
+  // Post-process: detect and remove year-end summary/total rows
+  // A summary row has gross ≈ sum of all other stubs for that employee in the same year
+  if(count>2){
+    const toRemove=new Set();
+    const byEmpYear={};
+    employeePayroll.forEach((s,i)=>{
+      if(!s.notes||!s.notes.includes('Imported from payroll'))return;
+      const yr=s.date?.slice(0,4);
+      const key=s.employee+'_'+yr;
+      if(!byEmpYear[key])byEmpYear[key]=[];
+      byEmpYear[key].push({idx:i,stub:s});
+    });
+    Object.values(byEmpYear).forEach(stubs=>{
+      if(stubs.length<3)return;
+      // Find stub with the highest gross — likely the total row
+      let maxIdx=-1,maxGross=0;
+      stubs.forEach((s,i)=>{if((s.stub.gross||0)>maxGross){maxGross=s.stub.gross;maxIdx=i;}});
+      if(maxIdx<0)return;
+      // Sum all other stubs' gross
+      let otherSum=0;
+      stubs.forEach((s,i)=>{if(i!==maxIdx)otherSum+=s.stub.gross||0;});
+      // If the max is within 5% of the sum of others, it's a summary row
+      if(maxGross>0&&Math.abs(maxGross-otherSum)/otherSum<0.05){
+        toRemove.add(stubs[maxIdx].stub.id);
+        count--;
+        console.log('[Payroll Import] Removed year-end total row for',stubs[maxIdx].stub.employee,stubs[maxIdx].stub.date,'gross:',maxGross);
+      }
+    });
+    if(toRemove.size>0){
+      employeePayroll=employeePayroll.filter(s=>!toRemove.has(s.id));
+    }
+  }
+
   return count;
 }
 
