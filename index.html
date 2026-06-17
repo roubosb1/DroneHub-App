@@ -6451,12 +6451,31 @@ function renderEmployeePayroll(){
 function viewEmployeePayStub(id){
   const s=employeePayroll.find(p=>p.id===id);
   if(!s)return;
+
+  // Earnings section
+  const workPay=s.vacationPay?(s.gross-s.vacationPay):0;
+  const earningsRows=[];
+  if(s.vacationPay&&workPay>0){
+    earningsRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">Working Pay</td><td style="padding:4px 10px;font-size:12px;color:var(--green);text-align:right">$${workPay.toFixed(2)}</td></tr>`);
+    earningsRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">Vacation Pay (4%)</td><td style="padding:4px 10px;font-size:12px;color:var(--green);text-align:right">$${s.vacationPay.toFixed(2)}</td></tr>`);
+  }
+
+  // Employee deductions
   const dedRows=[];
   if(s.deductions){
     EMP_DEDUCTION_FIELDS.forEach(f=>{
-      if(s.deductions[f.key])dedRows.push(`<tr><td style="padding:5px 10px;font-size:12px;color:var(--offwhite)">${f.label}</td><td style="padding:5px 10px;font-size:12px;color:var(--red);text-align:right">-$${s.deductions[f.key].toFixed(2)}</td></tr>`);
+      if(s.deductions[f.key]){
+        const label=f.key==='cpp'?'CPP (Employee 50%)':f.key==='ei'?'EI (Employee)':f.label;
+        dedRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">${label}</td><td style="padding:4px 10px;font-size:12px;color:var(--red);text-align:right">-$${s.deductions[f.key].toFixed(2)}</td></tr>`);
+      }
     });
   }
+
+  // Employer contributions (DH)
+  const empContribRows=[];
+  if(s.dhCpp) empContribRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">CPP (Employer 50%)</td><td style="padding:4px 10px;font-size:12px;color:var(--muted);text-align:right">$${s.dhCpp.toFixed(2)}</td></tr>`);
+  if(s.dhEi) empContribRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">EI (Employer — DH)</td><td style="padding:4px 10px;font-size:12px;color:var(--muted);text-align:right">$${s.dhEi.toFixed(2)}</td></tr>`);
+
   const html=`<div style="padding:20px;max-width:450px;margin:auto">
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Pay Stub</div>
@@ -6464,22 +6483,35 @@ function viewEmployeePayStub(id){
       <div style="font-size:12px;color:var(--muted)">${s.date}${s.period?' · '+s.period:''}</div>
     </div>
     ${s.hours?`<div style="text-align:center;margin-bottom:12px;font-size:12px;color:var(--muted)">${s.hours} hours @ $${s.rate?.toFixed(2)||'0.00'}/hr</div>`:''}
-    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+
+    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Earnings</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:${earningsRows.length?'6':'0'}px">
         <span style="font-size:14px;font-weight:700;color:var(--offwhite)">Gross Pay</span>
         <span style="font-size:14px;font-weight:700;color:var(--green)">$${(s.gross||0).toFixed(2)}</span>
       </div>
-      ${dedRows.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tbody>${dedRows.join('')}</tbody></table>`:''}
+      ${earningsRows.length?`<table style="width:100%;border-collapse:collapse"><tbody>${earningsRows.join('')}</tbody></table>`:''}
+    </div>
+
+    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Employee Deductions</div>
+      ${dedRows.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tbody>${dedRows.join('')}</tbody></table>`:'<div style="font-size:12px;color:var(--muted)">None</div>'}
       <div style="border-top:2px solid var(--border);padding-top:8px;display:flex;justify-content:space-between">
         <span style="font-size:12px;font-weight:600;color:var(--muted)">Total Deductions</span>
         <span style="font-size:12px;font-weight:600;color:var(--red)">-$${(s.totalDeductions||0).toFixed(2)}</span>
       </div>
     </div>
+
+    ${empContribRows.length?`<div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Employer Contributions (DroneHub)</div>
+      <table style="width:100%;border-collapse:collapse"><tbody>${empContribRows.join('')}</tbody></table>
+      ${s.dhRemittance?`<div style="border-top:2px solid var(--border);padding-top:8px;margin-top:8px;display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--muted)">Total CRA Remittance</span><span style="font-size:12px;font-weight:600;color:var(--orange)">$${s.dhRemittance.toFixed(2)}</span></div>`:''}
+    </div>`:''}
+
     <div style="background:linear-gradient(135deg,rgba(91,141,239,.15),rgba(91,141,239,.05));border:1px solid var(--blue);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Net Pay</div>
       <div style="font-size:24px;font-weight:800;color:var(--blue-bright)">$${(s.net||0).toFixed(2)}</div>
     </div>
-    ${s.notes?`<div style="font-size:12px;color:var(--muted);font-style:italic;text-align:center;margin-bottom:12px">${s.notes}</div>`:''}
     <button onclick="closeModal()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Close</button>
   </div>`;
   openModal(html);
@@ -6509,14 +6541,15 @@ function _detectPivotedPayroll(rows){
 // Import pivoted payroll register format (DroneHub's Numbers payroll sheets)
 function _importPivotedPayroll(rows){
   // Find the header row with employee names (scan first 5 rows)
+  // Layout: each employee has 2 columns — their column + "DH Remittance" column
   let nameRowIdx=-1,employees=[];
   for(let r=0;r<Math.min(rows.length,5);r++){
     const row=rows[r];
     const names=[];
     for(let c=2;c<row.length;c++){
       const val=(row[c]||'').toString().trim();
-      if(val&&!/remittance|dh |payroll|total|date/i.test(val)&&val.includes(' ')){
-        names.push({name:val,col:c});
+      if(val&&!/remittance|payroll|total|date|name/i.test(val)&&val.length>2&&/[a-z]/i.test(val)){
+        names.push({name:val,col:c,dhCol:c+1}); // dhCol = DH Remittance column (next column)
       }
     }
     if(names.length>=1){nameRowIdx=r;employees=names;break;}
@@ -6524,12 +6557,30 @@ function _importPivotedPayroll(rows){
   if(!employees.length){
     alert('Could not find employee names in the header rows.');return 0;
   }
-  console.log('[Payroll Import] Found employees:',employees.map(e=>e.name+' @col'+e.col));
+  console.log('[Payroll Import] Found employees:',employees.map(e=>e.name+' @col'+e.col+' dh@col'+e.dhCol));
 
-  // Parse pay period blocks: scan for date rows in column A
-  let count=0;
-  let currentDate=null;
-  const block={}; // {employeeName: {gross,cpp,ei,federalTax,provincialTax,net,vacation,taxDeductions,totalRemittance}}
+  // Helper: parse Excel serial date number → YYYY-MM-DD
+  function excelDateToISO(v){
+    if(typeof v==='number'&&v>40000&&v<60000){
+      const d=new Date(Math.round((v-25569)*86400000));
+      if(!isNaN(d))return d.toISOString().slice(0,10);
+    }
+    const s=(v||'').toString().trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+    if(s){const d=new Date(s);if(!isNaN(d)&&d.getFullYear()>2000)return d.toISOString().slice(0,10);}
+    return null;
+  }
+
+  // Payroll structure per pay period per employee:
+  // Row: "Total Cash Income" / "CPP Remittance"  → empCol=Gross,  dhCol=Total CPP (split 50/50)
+  // Row: "Federal Deductions" / "EI Contribution EM" → empCol=Federal Tax, dhCol=Employee EI
+  // Row: "Province Deductions" / "EI Remittance DH"  → empCol=Provincial Tax, dhCol=Employer EI
+  // Row: "Net Amount" / "Tax Deductions"              → empCol=Net Pay, dhCol=Total Tax Ded
+  // Row: "Vacation" / "Total Remittance"              → empCol=Vacation Pay, dhCol=Total Remittance
+
+  let count=0,currentDate=null;
+  const block={};
+  for(const emp of employees) block[emp.name]={};
 
   function flushBlock(){
     if(!currentDate)return;
@@ -6537,54 +6588,51 @@ function _importPivotedPayroll(rows){
       const d=block[emp.name];
       if(!d||(!d.gross&&!d.net))continue;
       const gross=d.gross||0;
+      const cppEmployee=d.totalCpp?+(d.totalCpp/2).toFixed(2):0; // 50/50 split
+      const cppEmployer=d.totalCpp?+(d.totalCpp/2).toFixed(2):0;
+      const eiEmployee=d.eiEmployee||0;
+      const eiEmployer=d.eiEmployer||0;
+      const federalTax=d.federalTax||0;
+      const provincialTax=d.provincialTax||0;
+      const vacation=d.vacation||0;
+      const net=d.net||0;
+      const totalRemittance=d.totalRemittance||0;
+
       const deductions={};
       let totalDed=0;
-      if(d.cpp){deductions.cpp=d.cpp;totalDed+=d.cpp;}
-      if(d.ei){deductions.ei=d.ei;totalDed+=d.ei;}
-      if(d.federalTax){deductions.federalTax=d.federalTax;totalDed+=d.federalTax;}
-      if(d.provincialTax){deductions.provincialTax=d.provincialTax;totalDed+=d.provincialTax;}
-      if(d.vacation){deductions.vacationPay=d.vacation;} // vacation pay is an earning, not deduction
-      const net=d.net||+(gross-totalDed).toFixed(2);
+      if(cppEmployee){deductions.cpp=cppEmployee;totalDed+=cppEmployee;}
+      if(eiEmployee){deductions.ei=eiEmployee;totalDed+=eiEmployee;}
+      if(federalTax){deductions.federalTax=federalTax;totalDed+=federalTax;}
+      if(provincialTax){deductions.provincialTax=provincialTax;totalDed+=provincialTax;}
 
-      // Store DH remittance info in notes
       let notes='Imported from payroll spreadsheet';
-      if(d.totalRemittance) notes+=` · DH Remittance: $${d.totalRemittance.toFixed(2)}`;
+      const extras=[];
+      if(cppEmployer) extras.push('DH CPP: $'+cppEmployer.toFixed(2));
+      if(eiEmployer) extras.push('DH EI: $'+eiEmployer.toFixed(2));
+      if(totalRemittance) extras.push('Total CRA Remittance: $'+totalRemittance.toFixed(2));
+      if(extras.length) notes+=' · '+extras.join(' · ');
 
       employeePayroll.push({
         id:Date.now()+Math.random(),employee:emp.name,date:currentDate,period:'',
-        hours:0,rate:0,gross,deductions,totalDeductions:totalDed,net,
-        notes,vacationPay:d.vacation||0,dhRemittance:d.totalRemittance||0
+        hours:0,rate:0,gross,deductions,totalDeductions:+totalDed.toFixed(2),
+        net:net||+(gross-totalDed).toFixed(2),
+        notes,vacationPay:vacation,
+        dhCpp:cppEmployer,dhEi:eiEmployer,dhRemittance:totalRemittance
       });
       count++;
     }
-    // Reset block
     for(const emp of employees) block[emp.name]={};
   }
 
-  // Init block
-  for(const emp of employees) block[emp.name]={};
-
   for(let i=nameRowIdx+1;i<rows.length;i++){
     const row=rows[i]||[];
-    const cellA=((row[0])||'').toString().trim();
-    const cellB=((row[1])||'').toString().trim();
+    const cellA=row[0],cellB=row[1];
+    const strA=(cellA||'').toString().trim();
+    const strB=(cellB||'').toString().trim();
 
-    // Check if column A has a date (YYYY-MM-DD or other date format)
-    let dateVal=null;
-    if(/^\d{4}-\d{2}-\d{2}$/.test(cellA)){
-      dateVal=cellA;
-    }else if(cellA&&!cellB){
-      // Try parsing as date (e.g. "Jan 5, 2024" or "1/5/2024")
-      const d=new Date(cellA);
-      if(!isNaN(d)&&d.getFullYear()>2000) dateVal=d.toISOString().slice(0,10);
-    }
-    // Also check for Excel serial dates
-    if(!dateVal&&typeof row[0]==='number'&&row[0]>40000&&row[0]<60000){
-      const d=new Date((row[0]-25569)*86400000);
-      if(!isNaN(d)) dateVal=d.toISOString().slice(0,10);
-    }
-
-    if(dateVal){
+    // Detect date row (column A has a date, column B is empty or also a date)
+    const dateVal=excelDateToISO(cellA);
+    if(dateVal&&(!strB||excelDateToISO(cellB))){
       flushBlock();
       currentDate=dateVal;
       for(const emp of employees) block[emp.name]={};
@@ -6593,36 +6641,41 @@ function _importPivotedPayroll(rows){
 
     if(!currentDate)continue;
 
-    // Determine line item type from columns A+B
-    const label=(cellA+' '+cellB).toLowerCase();
-    let field=null;
-    if(/total cash income|gross pay|regular pay|salary/i.test(label)) field='gross';
-    else if(/cpp remit|cpp contribution|canada pension/i.test(label)) field='cpp';
-    else if(/ei contrib|ei remit|employment insurance/i.test(label)){
-      if(/employer|dh|remit.*dh/i.test(label)) field='eiEmployer';
-      else field='ei';
-    }
-    else if(/federal ded|federal tax|fed.*tax/i.test(label)) field='federalTax';
-    else if(/province|provincial|prov.*ded/i.test(label)) field='provincialTax';
-    else if(/net amount|net pay|take.home/i.test(label)) field='net';
-    else if(/vacation/i.test(label)) field='vacation';
-    else if(/tax ded|total ded/i.test(label)) field='taxDeductions';
-    else if(/total remit/i.test(label)) field='totalRemittance';
+    // Match row type by column A label
+    const a=strA.toLowerCase(),b=strB.toLowerCase();
 
-    if(!field)continue;
-
-    // Read each employee's value from their column
     for(const emp of employees){
-      const val=parseFloat(row[emp.col])||0;
-      if(val) block[emp.name][field]=val;
-      // Also grab DH Remittance column (usually emp.col+1)
-      if(field==='totalRemittance'){
-        const remVal=parseFloat(row[emp.col+1])||0;
-        if(remVal) block[emp.name].totalRemittance=remVal;
+      const empVal=parseFloat(row[emp.col])||0;
+      const dhVal=parseFloat(row[emp.dhCol])||0;
+
+      if(/total cash|gross/i.test(a)){
+        // "Total Cash Income" / "CPP Remittance"
+        if(empVal) block[emp.name].gross=empVal;      // Gross pay
+        if(dhVal) block[emp.name].totalCpp=dhVal;      // Total CPP (to split 50/50)
+      }
+      else if(/federal/i.test(a)){
+        // "Federal Deductions" / "EI Contribution EM"
+        if(empVal) block[emp.name].federalTax=empVal;  // Federal income tax
+        if(dhVal) block[emp.name].eiEmployee=dhVal;    // Employee EI contribution
+      }
+      else if(/province|provincial/i.test(a)){
+        // "Province Deductions" / "EI Remittance DH"
+        if(empVal) block[emp.name].provincialTax=empVal; // Provincial income tax
+        if(dhVal) block[emp.name].eiEmployer=dhVal;      // Employer EI (DH pays)
+      }
+      else if(/net amount|net pay/i.test(a)){
+        // "Net Amount" / "Tax Deductions"
+        if(empVal) block[emp.name].net=empVal;           // Take-home pay
+        // dhVal = total tax deductions (Federal+Provincial combined, for verification)
+      }
+      else if(/vacation/i.test(a)){
+        // "Vacation" / "Total Remittance"
+        if(empVal) block[emp.name].vacation=empVal;      // 4% vacation pay (included in gross)
+        if(dhVal) block[emp.name].totalRemittance=dhVal;  // Total CRA remittance
       }
     }
   }
-  flushBlock(); // flush last block
+  flushBlock();
   return count;
 }
 
