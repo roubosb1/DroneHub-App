@@ -3276,16 +3276,15 @@ button{font-family:var(--font);}
       <div style="font-size:13px;color:var(--offwhite);font-weight:600">Scanning receipt...</div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px">AI is reading vendor, amount, date &amp; category</div>
     </div>
-    <div id="receipt-preview" style="display:none">
-      <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-start">
-        <img id="receipt-preview-img" style="width:100px;height:auto;border-radius:8px;border:1px solid var(--border);object-fit:cover;flex-shrink:0">
-        <div style="flex:1;min-width:0">
-          <div id="receipt-result-fields"></div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button onclick="receiptAccept()" style="padding:6px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;flex:1">Add Expense</button>
-            <button onclick="receiptDismiss()" style="padding:6px 16px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Discard</button>
-          </div>
-        </div>
+    <div id="receipt-preview" style="display:none;margin-top:12px">
+      <div style="text-align:center;margin-bottom:14px;position:relative">
+        <img id="receipt-preview-img" style="max-width:100%;max-height:240px;border-radius:12px;border:1px solid var(--border);object-fit:contain">
+        <div id="receipt-confidence-badge" style="position:absolute;top:8px;right:8px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em"></div>
+      </div>
+      <div id="receipt-result-fields"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="receiptAccept()" style="padding:10px 20px;border-radius:12px;border:1px solid var(--green);background:rgba(34,217,122,.12);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;flex:1">Add Expense</button>
+        <button onclick="receiptDismiss()" style="padding:10px 20px;border-radius:12px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">Discard</button>
       </div>
     </div>
   </div>
@@ -18223,29 +18222,48 @@ function showReceiptPreview(d){
   document.getElementById('receipt-scanning').style.display='none';
   document.getElementById('receipt-preview').style.display='block';
   document.getElementById('receipt-preview-img').src=_receiptImageB64;
-  const flag=d.country==='canada'?'🇨🇦 Canada (CAD)':'🇺🇸 United States (USD)';
+  const confBadge=document.getElementById('receipt-confidence-badge');
+  if(d.confidence){
+    const cc=d.confidence==='high'?'var(--green)':d.confidence==='medium'?'var(--amber)':'var(--red)';
+    confBadge.style.display='';
+    confBadge.style.background=cc+'22';confBadge.style.color=cc;confBadge.style.border='1px solid '+cc+'44';
+    confBadge.textContent=d.confidence+' confidence';
+  }else{confBadge.style.display='none';}
   const cats=['Equipment','Software','Fuel','Travel','Meals','Marketing','Insurance','Office','Subcontractor','Phone','Education','Other'];
   const catOpts=cats.map(c=>`<option value="${c}" ${c===d.category?'selected':''}>${c}</option>`).join('');
+  const inputStyle='width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--navy-mid);color:var(--white);font-size:13px;font-family:var(--font);box-sizing:border-box';
+  const labelStyle='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px';
   document.getElementById('receipt-result-fields').innerHTML=`
-    <div style="display:grid;grid-template-columns:90px 1fr;gap:6px 8px;font-size:12px;align-items:center">
-      <span style="color:var(--muted);font-weight:600">Vendor</span>
-      <input id="rcpt-vendor" value="${d.vendor||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
-      <span style="color:var(--muted);font-weight:600">Date</span>
-      <input id="rcpt-date" type="date" value="${d.date||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
-      <span style="color:var(--muted);font-weight:600">Description</span>
-      <input id="rcpt-desc" value="${d.description||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
-      <span style="color:var(--muted);font-weight:600">Category</span>
-      <select id="rcpt-cat" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">${catOpts}</select>
-      <span style="color:var(--muted);font-weight:600">Country</span>
-      <select id="rcpt-country" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
-        <option value="canada" ${d.country==='canada'?'selected':''}>🇨🇦 Canada (CAD)</option>
-        <option value="usa" ${d.country==='usa'?'selected':''}>🇺🇸 United States (USD)</option>
-      </select>
-      <span style="color:var(--muted);font-weight:600">Total</span>
-      <input id="rcpt-total" type="number" step="0.01" value="${d.total||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px;font-weight:700">
-      ${d.tax?`<span style="color:var(--muted);font-weight:600">Tax</span><span style="color:var(--muted)">$${Number(d.tax).toFixed(2)}</span>`:''}
-      ${d.confidence?`<span style="color:var(--muted);font-weight:600">Confidence</span><span style="color:${d.confidence==='high'?'var(--green)':d.confidence==='medium'?'var(--amber)':'var(--red)'};font-weight:600">${d.confidence}</span>`:''}
-    </div>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="grid-column:1/-1">
+        <div style="${labelStyle}">Vendor</div>
+        <input id="rcpt-vendor" value="${d.vendor||''}" style="${inputStyle}">
+      </div>
+      <div>
+        <div style="${labelStyle}">Date</div>
+        <input id="rcpt-date" type="date" value="${d.date||''}" style="${inputStyle}">
+      </div>
+      <div>
+        <div style="${labelStyle}">Total</div>
+        <input id="rcpt-total" type="number" step="0.01" value="${d.total||''}" style="${inputStyle};font-weight:700;font-size:15px">
+      </div>
+      <div style="grid-column:1/-1">
+        <div style="${labelStyle}">Description</div>
+        <input id="rcpt-desc" value="${d.description||''}" style="${inputStyle}">
+      </div>
+      <div>
+        <div style="${labelStyle}">Category</div>
+        <select id="rcpt-cat" style="${inputStyle}">${catOpts}</select>
+      </div>
+      <div>
+        <div style="${labelStyle}">Country</div>
+        <select id="rcpt-country" style="${inputStyle}">
+          <option value="canada" ${d.country==='canada'?'selected':''}>🇨🇦 Canada (CAD)</option>
+          <option value="usa" ${d.country==='usa'?'selected':''}>🇺🇸 United States (USD)</option>
+        </select>
+      </div>
+    </div>
+    ${d.tax?`<div style="display:flex;justify-content:space-between;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--navy-mid);font-size:12px"><span style="color:var(--muted)">Tax included</span><span style="color:var(--offwhite);font-weight:600">$${Number(d.tax).toFixed(2)}</span></div>`:''}`;
 }
 
 function receiptAccept(){
