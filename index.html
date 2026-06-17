@@ -7600,9 +7600,9 @@ function openCRAT4Form(empName,year){
       <div style="display:grid;grid-template-columns:60px 1fr 110px;gap:4px 8px;align-items:center">
         ${[
           {box:'14',label:'Employment income',val:t.box14,color:'var(--green)'},
-          {box:'16',label:'Employee\\'s CPP contributions',val:t.box16,color:'var(--red)'},
-          {box:'17',label:'Employee\\'s CPP2 contributions',val:t.box17,color:'var(--red)'},
-          {box:'18',label:'Employee\\'s EI premiums',val:t.box18,color:'var(--red)'},
+          {box:'16',label:'Employee CPP contributions',val:t.box16,color:'var(--red)'},
+          {box:'17',label:'Employee CPP2 contributions',val:t.box17,color:'var(--red)'},
+          {box:'18',label:'Employee EI premiums',val:t.box18,color:'var(--red)'},
           {box:'20',label:'RPP contributions',val:t.box20,color:'var(--red)'},
           {box:'22',label:'Income tax deducted',val:t.box22,color:'var(--red)'},
           {box:'24',label:'EI insurable earnings',val:t.box24,color:'var(--offwhite)'},
@@ -7794,7 +7794,7 @@ body{font-family:'Courier New',monospace;padding:30px;font-size:11px;color:#000;
     <div class="cell"><div class="cell-box">Box 26</div><div class="cell-label">CPP/QPP Pensionable Earnings</div><div class="cell-value cell-amt">${d.box26||'—'}</div></div>
   </div>
   ${d.box17||d.box20||d.box44?`<div class="row">
-    ${d.box17?'<div class="cell"><div class="cell-box">Box 17</div><div class="cell-label">Employee\'s CPP2 Contributions</div><div class="cell-value cell-amt">'+d.box17+'</div></div>':''}
+    ${d.box17?'<div class="cell"><div class="cell-box">Box 17</div><div class="cell-label">Employee CPP2 Contributions</div><div class="cell-value cell-amt">'+d.box17+'</div></div>':''}
     ${d.box20?'<div class="cell"><div class="cell-box">Box 20</div><div class="cell-label">RPP Contributions</div><div class="cell-value cell-amt">'+d.box20+'</div></div>':''}
     ${d.box44?'<div class="cell"><div class="cell-box">Box 44</div><div class="cell-label">Union Dues</div><div class="cell-value cell-amt">'+d.box44+'</div></div>':''}
   </div>`:''}
@@ -20293,6 +20293,9 @@ function renderFinance(){
     isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada')
   );
   const currencyLabel = isUSFinance ? 'USD' : 'CAD';
+  const marketIncome=incomeEntries.filter(e=>
+    isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada')
+  );
 
   // Update summary metrics label currency
   const badge=document.getElementById('fin-market-badge');
@@ -20320,9 +20323,6 @@ function renderFinance(){
     const m=parseInt(j.date.slice(5,7))-1;
     revByMonth[m]+=j.grand||0;
   });
-  const marketIncome=incomeEntries.filter(e=>
-    isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada')
-  );
   marketIncome.filter(e=>e.date&&e.date.startsWith(year)).forEach(e=>{
     const m=parseInt(e.date.slice(5,7))-1;
     revByMonth[m]+=e.amount||0;
