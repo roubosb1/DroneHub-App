@@ -18180,10 +18180,9 @@ function handleReceiptFile(input){
 
 async function scanReceipt(b64,mimeType){
   try{
-    const token=localStorage.getItem('dronehub_token');
     const r=await fetch('/.netlify/functions/ai-receipt-scan',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_fbToken()},
       body:JSON.stringify({image:b64,mimeType})
     });
     const json=await r.json();
