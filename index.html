@@ -6127,16 +6127,31 @@ function handleCpImportFile(files){
       }
       const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
       if(lines.length<2){alert('File must have a header row and at least one data row.');return;}
-      const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,''));
-      const nameIdx=headers.findIndex(h=>/name|contractor/i.test(h));
-      const dateIdx=headers.findIndex(h=>/date/i.test(h));
-      const descIdx=headers.findIndex(h=>/desc|note|memo/i.test(h));
-      const amtIdx=headers.findIndex(h=>/amount|total|paid|pay/i.test(h));
-      const mktIdx=headers.findIndex(h=>/country|market|currency/i.test(h));
-      if(nameIdx<0||amtIdx<0){alert('CSV must have at least a Name/Contractor and Amount column.');return;}
+      // Detect delimiter: tab, comma, or semicolon
+      const hdrLine=lines[0];
+      const delim=hdrLine.includes('\t')?'\t':hdrLine.includes(';')?';':',';
+      function splitRow(line){
+        const cols=[];let cur='',inQ=false;
+        for(let i=0;i<line.length;i++){
+          const ch=line[i];
+          if(ch==='"'){inQ=!inQ;continue;}
+          if(ch===delim&&!inQ){cols.push(cur.trim());cur='';continue;}
+          cur+=ch;
+        }
+        cols.push(cur.trim());
+        return cols;
+      }
+      const headers=splitRow(hdrLine).map(h=>h.toLowerCase().replace(/['"]/g,''));
+      console.log('[CSV Import] Detected headers:',headers,'delimiter:',JSON.stringify(delim));
+      const nameIdx=headers.findIndex(h=>/name|contractor|employee|vendor|payee|recipient|worker/i.test(h));
+      const dateIdx=headers.findIndex(h=>/date|period|when/i.test(h));
+      const descIdx=headers.findIndex(h=>/desc|note|memo|detail|reference/i.test(h));
+      const amtIdx=headers.findIndex(h=>/amount|total|paid|pay|sum|cost|fee|earning|net|gross/i.test(h));
+      const mktIdx=headers.findIndex(h=>/country|market|currency|region/i.test(h));
+      if(nameIdx<0||amtIdx<0){alert('CSV must have at least a Name/Contractor and Amount column.\n\nDetected columns: '+headers.join(', ')+'\n\nExpected a column matching "name/contractor" and "amount/total/paid".');return;}
       let added=0;
       for(let i=1;i<lines.length;i++){
-        const cols=lines[i].split(',').map(c=>c.trim().replace(/^["']|["']$/g,''));
+        const cols=splitRow(lines[i]);
         const name=cols[nameIdx];
         const amount=parseFloat((cols[amtIdx]||'0').replace(/[^0-9.\-]/g,''));
         if(!name||!amount||amount<=0) continue;
