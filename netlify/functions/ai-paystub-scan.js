@@ -173,12 +173,17 @@ exports.handler = async (event) => {
         if (remitImgs[i]) pair.push(remitImgs[i]);
         if (pair.length) pairs.push(pair);
       }
-      const results = await Promise.all(pairs.map(pair => scanPair(pair).catch(e => { console.error('[ai-paystub-scan] pair error:', e.message); return null; })));
       const allRecords = [];
-      for (const r of results) {
-        if (!r) continue;
-        if (Array.isArray(r)) allRecords.push(...r);
-        else allRecords.push(r);
+      for (let pi = 0; pi < pairs.length; pi++) {
+        try {
+          const r = await scanPair(pairs[pi]);
+          if (r) {
+            if (Array.isArray(r)) allRecords.push(...r);
+            else allRecords.push(r);
+          }
+        } catch (e) {
+          console.error('[ai-paystub-scan] pair ' + (pi + 1) + ' error:', e.message);
+        }
       }
       if (!allRecords.length) {
         return { statusCode: 502, headers, body: JSON.stringify({ error: 'AI could not extract data from any screenshot' }) };
