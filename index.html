@@ -4123,7 +4123,7 @@ button{font-family:var(--font);}
   </div>
 
   <!-- Team member cards -->
-  <div id="team-members-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px"></div>
+  <div id="team-members-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
 
   <!-- Empty state -->
   <div id="team-empty-state" style="display:none;text-align:center;padding:60px 20px;color:var(--muted)">
@@ -22284,27 +22284,25 @@ function _renderTeamUI(){
     }
     const TAB_LABELS={...ACCESS_LABELS,...Object.fromEntries(ALL_TABS_CONFIG.map(t=>[t.id,t.label]))};
     const accessBadges=Object.entries(effectiveAccess).map(([k,v])=>`<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:${v?'rgba(34,217,122,.12)':'rgba(255,255,255,.04)'};color:${v?'var(--green)':'var(--muted)'}">${v?'✓':'✕'} ${TAB_LABELS[k]||k}</span>`).join('');
-    return `<div class="card" style="padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
-        <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
-          ${getAvatarHtml(m.name,m.email,44,14)}
-          <div style="min-width:0">
-            <div style="font-size:14px;font-weight:700;color:var(--white)">${m.name}</div>
-            <div style="font-size:11px;color:var(--muted)">${m.email}</div>
-            ${m.phone?`<div style="font-size:10px;color:var(--muted)">${m.phone}</div>`:''}
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
-          <span style="font-size:11px;color:${statusColor};font-weight:600;white-space:nowrap">${statusLabel}</span>
-          ${m.activatedAt?`<span style="font-size:9px;color:var(--muted);white-space:nowrap">Joined ${m.activatedAt}</span>`:''}
+    return `<div class="card" style="padding:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        ${getAvatarHtml(m.name,m.email,36,12)}
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
+          <div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.email}</div>
         </div>
       </div>
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;margin-bottom:8px">
-        <span>${role.icon}</span><span style="font-size:11px;font-weight:700;color:${role.color}">${role.label}</span>
-        <span style="font-size:10px;color:${role.color}88">· ${m.type||'contractor'}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:10px;color:${statusColor};font-weight:600;display:flex;align-items:center">${statusLabel}</span>
+        ${m.activatedAt?`<span style="font-size:9px;color:var(--muted);white-space:nowrap">Joined ${m.activatedAt}</span>`:''}
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px">${accessBadges}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px">
+      ${m.phone?`<div style="font-size:10px;color:var(--muted);margin-bottom:6px">${m.phone}</div>`:''}
+      <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;background:${role.color}18;border:1px solid ${role.color}44;margin-bottom:6px">
+        <span style="font-size:12px">${role.icon}</span><span style="font-size:10px;font-weight:700;color:${role.color}">${role.label}</span>
+        <span style="font-size:9px;color:${role.color}88">· ${m.type||'contractor'}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:8px">${accessBadges}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:8px">
         <button onclick="openTeamMemberProfile('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">👤 Profile</button>
         ${m.status==='invited'?`<button onclick="resendTeamInvite('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Resend invite</button>`:''}
         <button onclick="openEditTeamMemberModal('${m.id}')" style="padding:4px 12px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
