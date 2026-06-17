@@ -6988,7 +6988,7 @@ async function _submitStagedPaystubs(){
   var spinText=document.getElementById('paystub-scan-spinner-text');
   var spinSub=document.getElementById('paystub-scan-spinner-sub');
   if(spinText)spinText.textContent='Scanning '+totalImgs+' screenshots...';
-  if(spinSub)spinSub.textContent='AI is extracting and matching payroll data';
+  if(spinSub)spinSub.textContent='Processing each screenshot individually for accuracy';
   var allImages=[];
   window._stagedPaystubs[1].forEach(function(img){img.label='salary_calculation';allImages.push(img);});
   window._stagedPaystubs[2].forEach(function(img){img.label='employer_remittance';allImages.push(img);});

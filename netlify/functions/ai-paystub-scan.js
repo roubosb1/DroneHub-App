@@ -129,19 +129,14 @@ exports.handler = async (event) => {
 
   const isBatch = batch && images.length > 2;
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  const content = [];
-  for (const img of images) {
-    const mt = validTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
-    content.push({ type: 'image', source: { type: 'base64', media_type: mt, data: img.data } });
-    if (img.label) {
-      content.push({ type: 'text', text: '(Above image is: ' + img.label.replace(/_/g, ' ') + ')' });
-    }
-  }
-  content.push({ type: 'text', text: isBatch
-    ? 'Extract all payroll data from these CRA PDOC calculator screenshots. There are multiple employees and/or pay dates. Match salary calculations with their employer remittance by employee name and date. Return a JSON array.'
-    : 'Extract all payroll data from these CRA PDOC calculator screenshots.' });
 
-  try {
+  async function scanOneImage(img) {
+    const mt = validTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
+    const label = img.label ? img.label.replace(/_/g, ' ') : 'screenshot';
+    const content = [
+      { type: 'image', source: { type: 'base64', media_type: mt, data: img.data } },
+      { type: 'text', text: 'Extract all payroll data from this CRA PDOC calculator screenshot. This is a ' + label + '.' }
+    ];
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -151,8 +146,64 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: isBatch ? 4096 : 1024,
-        system: buildSystemPrompt(isBatch),
+        max_tokens: 1024,
+        system: buildSystemPrompt(false),
+        messages: [{ role: 'user', content }],
+      }),
+    });
+    if (!r.ok) { const err = await r.text(); throw new Error('AI HTTP ' + r.status); }
+    const result = await r.json();
+    const text = (result.content || []).map(b => b.text || '').join('').trim();
+    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    return JSON.parse(cleaned);
+  }
+
+  function mergeRecords(records) {
+    const map = {};
+    for (const r of records) {
+      const key = ((r.employeeName || 'Unknown') + '|' + (r.payDate || '')).toLowerCase();
+      if (!map[key]) { map[key] = Object.assign({}, r); }
+      else {
+        const existing = map[key];
+        for (const [k, v] of Object.entries(r)) {
+          if (v !== null && v !== undefined && v !== 0 && v !== '' && (existing[k] === null || existing[k] === undefined || existing[k] === 0 || existing[k] === '')) {
+            existing[k] = v;
+          }
+        }
+      }
+    }
+    return Object.values(map);
+  }
+
+  try {
+    if (isBatch) {
+      const results = await Promise.all(images.map(img => scanOneImage(img).catch(e => { console.error('[ai-paystub-scan] single image error:', e.message); return null; })));
+      const valid = results.filter(r => r !== null);
+      if (!valid.length) {
+        return { statusCode: 502, headers, body: JSON.stringify({ error: 'AI could not extract data from any screenshot' }) };
+      }
+      const merged = mergeRecords(valid);
+      return { statusCode: 200, headers, body: JSON.stringify({ data: merged }) };
+    }
+
+    const content = [];
+    for (const img of images) {
+      const mt = validTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
+      content.push({ type: 'image', source: { type: 'base64', media_type: mt, data: img.data } });
+    }
+    content.push({ type: 'text', text: 'Extract all payroll data from these CRA PDOC calculator screenshots.' });
+
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: buildSystemPrompt(false),
         messages: [{ role: 'user', content }],
       }),
     });
