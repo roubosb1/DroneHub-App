@@ -3246,7 +3246,7 @@ button{font-family:var(--font);}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:14px;font-weight:600;color:var(--offwhite)">Contractor payouts — all time</div>
       <div style="display:flex;gap:8px;align-items:center">
-        <select id="contractor-filter-market" onchange="renderContractorBreakdown()" style="padding:5px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
+        <select id="contractor-filter-market" onchange="renderContractorBreakdown()" style="padding:5px 10px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
           <option value="all">All markets</option>
           <option value="canada">🇨🇦 Canada</option>
           <option value="usa">🇺🇸 United States</option>
@@ -3254,6 +3254,50 @@ button{font-family:var(--font);}
       </div>
     </div>
     <div id="contractor-breakdown-content"></div>
+
+    <!-- Add historical contractor payment -->
+    <div class="card" style="margin-top:14px">
+      <div class="section-label" style="margin-bottom:10px">Add past contractor payment</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block">Contractor</label>
+          <select id="cp-contractor" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block">Date</label>
+          <input type="date" id="cp-date" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block">Description</label>
+          <input type="text" id="cp-desc" placeholder="e.g. Video shoot — 123 Main St" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block">Amount ($)</label>
+          <input type="number" id="cp-amount" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block">Country</label>
+          <select id="cp-market" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+            <option value="canada">🇨🇦 Canada (CAD)</option>
+            <option value="usa">🇺🇸 United States (USD)</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button onclick="addContractorPayment()" style="padding:7px 20px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;width:100%">Add payment ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk import historical payments -->
+    <div class="card" style="margin-top:14px">
+      <div class="section-label" style="margin-bottom:4px">Bulk import past payments</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Upload a CSV with columns: <strong>Contractor Name, Date, Description, Amount, Country</strong> (canada/usa). Country column is optional — defaults to Canada.</div>
+      <div id="cp-import-dropzone" onclick="document.getElementById('cp-import-file').click()" style="border:1.5px dashed var(--border-bright);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border-bright)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-bright)';handleCpImportDrop(event.dataTransfer.files)">
+        <div style="font-size:12px;font-weight:600;color:var(--offwhite)">Drop CSV here or click to browse</div>
+      </div>
+      <input type="file" id="cp-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleCpImportFile(this.files)">
+      <div id="cp-import-status" style="font-size:12px;margin-top:8px;color:var(--green)"></div>
+    </div>
   </div><!-- end finance-sub-contractors -->
 
   <!-- ── EXPENSES SUB-VIEW ── -->
@@ -5988,7 +6032,97 @@ function setFinanceSubTab(sub){
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
   if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
-  if(sub === 'contractors'){ renderContractorBreakdown(); }
+  if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
+}
+
+// ── Historical contractor payments ───────────────────────────────────────────
+let contractorPayHistory=JSON.parse(localStorage.getItem('dronehub_contractor_pay_history')||'[]');
+function saveContractorPayHistory(){
+  try{localStorage.setItem('dronehub_contractor_pay_history',JSON.stringify(contractorPayHistory));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':contractor_pay_history',{data:JSON.stringify(contractorPayHistory),updatedAt:Date.now()}).catch(()=>{});
+  }
+}
+function populateCpContractorSelect(){
+  const sel=document.getElementById('cp-contractor');
+  if(!sel) return;
+  const names=new Set();
+  getAdminTeamMembers().forEach(m=>{if(m.name) names.add(m.name);});
+  Object.values(CONTRACTORS||{}).forEach(c=>{if(c.name) names.add(c.name);});
+  contractorPayHistory.forEach(p=>{if(p.name) names.add(p.name);});
+  sel.innerHTML='<option value="">— Select —</option>'+
+    [...names].sort().map(n=>`<option value="${n}">${n}</option>`).join('')+
+    '<option value="__other__">Other (type name)</option>';
+}
+function addContractorPayment(){
+  let name=document.getElementById('cp-contractor').value;
+  if(name==='__other__'){
+    name=prompt('Enter contractor name:');
+    if(!name||!name.trim()) return;
+    name=name.trim();
+  }
+  const date=document.getElementById('cp-date').value;
+  const desc=document.getElementById('cp-desc').value.trim();
+  const amount=parseFloat(document.getElementById('cp-amount').value);
+  const market=document.getElementById('cp-market')?.value||'canada';
+  if(!name||!date||!amount||amount<=0){alert('Please fill in contractor, date, and amount.');return;}
+  contractorPayHistory.push({id:Date.now(),name,date,desc:desc||'Payment',amount,market});
+  contractorPayHistory.sort((a,b)=>b.date.localeCompare(a.date));
+  saveContractorPayHistory();
+  document.getElementById('cp-desc').value='';
+  document.getElementById('cp-amount').value='';
+  showDhToast('Payment added','$'+amount.toFixed(2)+' to '+name,'✓','var(--green)');
+  renderContractorBreakdown();
+}
+function deleteContractorPayment(id){
+  contractorPayHistory=contractorPayHistory.filter(p=>p.id!==id);
+  saveContractorPayHistory();renderContractorBreakdown();
+}
+function handleCpImportDrop(files){handleCpImportFile(files);}
+function handleCpImportFile(files){
+  const file=files&&files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let text=e.target.result;
+      if(/\.xlsx?$/i.test(file.name)){
+        if(typeof XLSX==='undefined'){alert('Excel library not loaded yet.');return;}
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        text=XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      }
+      const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+      if(lines.length<2){alert('File must have a header row and at least one data row.');return;}
+      const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,''));
+      const nameIdx=headers.findIndex(h=>/name|contractor/i.test(h));
+      const dateIdx=headers.findIndex(h=>/date/i.test(h));
+      const descIdx=headers.findIndex(h=>/desc|note|memo/i.test(h));
+      const amtIdx=headers.findIndex(h=>/amount|total|paid|pay/i.test(h));
+      const mktIdx=headers.findIndex(h=>/country|market|currency/i.test(h));
+      if(nameIdx<0||amtIdx<0){alert('CSV must have at least a Name/Contractor and Amount column.');return;}
+      let added=0;
+      for(let i=1;i<lines.length;i++){
+        const cols=lines[i].split(',').map(c=>c.trim().replace(/^["']|["']$/g,''));
+        const name=cols[nameIdx];
+        const amount=parseFloat((cols[amtIdx]||'0').replace(/[^0-9.\-]/g,''));
+        if(!name||!amount||amount<=0) continue;
+        const date=dateIdx>=0?cols[dateIdx]:'';
+        const desc=descIdx>=0?cols[descIdx]:'Imported payment';
+        const mkt=mktIdx>=0&&/us|usd/i.test(cols[mktIdx])?'usa':'canada';
+        contractorPayHistory.push({id:Date.now()+Math.random(),name,date,desc,amount,market:mkt});
+        added++;
+      }
+      if(added){
+        contractorPayHistory.sort((a,b)=>b.date.localeCompare(a.date));
+        saveContractorPayHistory();
+        renderContractorBreakdown();
+        document.getElementById('cp-import-status').textContent='✓ '+added+' payment'+(added!==1?'s':'')+' imported';
+        setTimeout(()=>{document.getElementById('cp-import-status').textContent='';},3000);
+      }else{alert('No valid rows found.');}
+    }catch(err){alert('Import error: '+err.message);}
+  };
+  if(/\.xlsx?$/i.test(file.name)) reader.readAsArrayBuffer(file);
+  else reader.readAsText(file);
 }
 
 function renderContractorBreakdown(){
@@ -6016,10 +6150,20 @@ function renderContractorBreakdown(){
     });
   });
 
+  // Add historical payments
+  (contractorPayHistory||[]).forEach(p=>{
+    const m=p.market==='usa'?'usa':'canada';
+    if(marketFilter!=='all'&&m!==marketFilter) return;
+    if(!p.name||!p.amount||p.amount<=0) return;
+    if(!map[p.name]) map[p.name]={total:0,jobs:[]};
+    map[p.name].total+=p.amount;
+    map[p.name].jobs.push({id:'hist_'+p.id,client:p.desc||'Historical payment',date:p.date||'',amount:p.amount,market:m,isHistorical:true,histId:p.id});
+  });
+
   const sorted = Object.entries(map).sort((a,b)=>b[1].total - a[1].total);
 
   if(!sorted.length){
-    el.innerHTML = '<div class="card" style="color:var(--muted);font-size:13px;text-align:center;padding:32px">No contractor payout data found for completed jobs.</div>';
+    el.innerHTML = '<div class="card" style="color:var(--muted);font-size:13px;text-align:center;padding:32px">No contractor payout data found.</div>';
     return;
   }
 
@@ -6030,6 +6174,7 @@ function renderContractorBreakdown(){
         <td style="padding:5px 10px;font-size:11px;color:var(--offwhite)">${jb.client}</td>
         <td style="padding:5px 10px;font-size:11px;color:var(--muted);text-align:center">${jb.market==='usa'?'🇺🇸':'🇨🇦'}</td>
         <td style="padding:5px 10px;font-size:11px;color:var(--green);text-align:right;font-weight:600">$${jb.amount.toFixed(2)}</td>
+        <td style="padding:5px 10px;font-size:11px;text-align:center">${jb.isHistorical?`<button onclick="event.stopPropagation();deleteContractorPayment(${jb.histId});return false" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1" title="Delete">×</button>`:''}</td>
       </tr>`).join('');
     return `
     <div class="card" style="margin-bottom:12px">
@@ -10108,6 +10253,7 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':inv_num',        ls:'dronehub_inv_num',           apply:d=>{invoiceNumberBase=parseInt(d)||999;localStorage.setItem('dronehub_inv_num',d);}},
     {fb:ORG_ID+':expenses',       ls:'dronehub_expenses',          apply:d=>{try{expenses=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_expenses',d);}},
     {fb:ORG_ID+':income',         ls:'dronehub_income',            apply:d=>{try{incomeEntries=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_income',d);}},
+    {fb:ORG_ID+':contractor_pay_history', ls:'dronehub_contractor_pay_history', apply:d=>{try{contractorPayHistory=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_contractor_pay_history',d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
     {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{
       localStorage.setItem('dronehub_orgs',d);
