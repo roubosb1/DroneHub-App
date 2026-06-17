@@ -6522,7 +6522,7 @@ function linkPayStubToAccount(key){
   openModal(html);
 }
 
-window._empStubMap={};
+if(!window._empStubMap) window._empStubMap={};
 function viewEmployeePayStub(key){
   const s=window._empStubMap[key];
   if(!s){alert('Stub not found — key: '+key);return;}
