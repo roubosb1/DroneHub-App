@@ -3265,7 +3265,7 @@ button{font-family:var(--font);}
       <!-- Bulk import -->
       <div class="card" style="margin-top:14px">
         <div class="section-label" style="margin-bottom:4px">Bulk import employee pay stubs</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">CSV columns: <strong>Employee Name, Pay Date, Gross Pay, CPP, EI, Federal Tax, Provincial Tax, Other Deductions, Net Pay</strong>. Optional: <strong>Hours, Pay Rate, Description</strong>.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Supports <strong>Numbers/Excel payroll sheets</strong> (employee names across top, pay periods down) or flat CSV with columns: <strong>Employee Name, Pay Date, Gross Pay, CPP, EI, Federal Tax, Provincial Tax, Net Pay</strong>.</div>
         <div id="emp-import-dropzone" onclick="document.getElementById('emp-import-file').click()" style="border:1.5px dashed var(--border-bright);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border-bright)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-bright)';handleEmpPayImport(event.dataTransfer.files)">
           <div style="font-size:12px;font-weight:600;color:var(--offwhite)">Drop CSV here or click to browse</div>
         </div>
@@ -6485,6 +6485,201 @@ function viewEmployeePayStub(id){
   openModal(html);
 }
 
+// Detect if spreadsheet is a pivoted payroll register (names across top, dates down left)
+function _detectPivotedPayroll(rows){
+  // Look for "DH Remittance" or "Remittance" in the first few rows as column headers
+  // and payroll line-item labels like "Total Cash Income", "Net Amount", "Federal Deductions"
+  const topRows=rows.slice(0,5);
+  let hasRemittanceCols=false,hasPayrollLabels=false;
+  for(const row of topRows){
+    for(const cell of row){
+      const s=(cell||'').toString().toLowerCase();
+      if(s.includes('remittance')) hasRemittanceCols=true;
+    }
+  }
+  for(let i=2;i<Math.min(rows.length,15);i++){
+    const labelA=((rows[i]||[])[0]||'').toString().toLowerCase();
+    const labelB=((rows[i]||[])[1]||'').toString().toLowerCase();
+    const combined=labelA+' '+labelB;
+    if(/total cash|net amount|federal ded|province ded|vacation|gross pay/i.test(combined)) hasPayrollLabels=true;
+  }
+  return hasRemittanceCols&&hasPayrollLabels;
+}
+
+// Import pivoted payroll register format (DroneHub's Numbers payroll sheets)
+function _importPivotedPayroll(rows){
+  // Find the header row with employee names (scan first 5 rows)
+  let nameRowIdx=-1,employees=[];
+  for(let r=0;r<Math.min(rows.length,5);r++){
+    const row=rows[r];
+    const names=[];
+    for(let c=2;c<row.length;c++){
+      const val=(row[c]||'').toString().trim();
+      if(val&&!/remittance|dh |payroll|total|date/i.test(val)&&val.includes(' ')){
+        names.push({name:val,col:c});
+      }
+    }
+    if(names.length>=1){nameRowIdx=r;employees=names;break;}
+  }
+  if(!employees.length){
+    alert('Could not find employee names in the header rows.');return 0;
+  }
+  console.log('[Payroll Import] Found employees:',employees.map(e=>e.name+' @col'+e.col));
+
+  // Parse pay period blocks: scan for date rows in column A
+  let count=0;
+  let currentDate=null;
+  const block={}; // {employeeName: {gross,cpp,ei,federalTax,provincialTax,net,vacation,taxDeductions,totalRemittance}}
+
+  function flushBlock(){
+    if(!currentDate)return;
+    for(const emp of employees){
+      const d=block[emp.name];
+      if(!d||(!d.gross&&!d.net))continue;
+      const gross=d.gross||0;
+      const deductions={};
+      let totalDed=0;
+      if(d.cpp){deductions.cpp=d.cpp;totalDed+=d.cpp;}
+      if(d.ei){deductions.ei=d.ei;totalDed+=d.ei;}
+      if(d.federalTax){deductions.federalTax=d.federalTax;totalDed+=d.federalTax;}
+      if(d.provincialTax){deductions.provincialTax=d.provincialTax;totalDed+=d.provincialTax;}
+      if(d.vacation){deductions.vacationPay=d.vacation;} // vacation pay is an earning, not deduction
+      const net=d.net||+(gross-totalDed).toFixed(2);
+
+      // Store DH remittance info in notes
+      let notes='Imported from payroll spreadsheet';
+      if(d.totalRemittance) notes+=` · DH Remittance: $${d.totalRemittance.toFixed(2)}`;
+
+      employeePayroll.push({
+        id:Date.now()+Math.random(),employee:emp.name,date:currentDate,period:'',
+        hours:0,rate:0,gross,deductions,totalDeductions:totalDed,net,
+        notes,vacationPay:d.vacation||0,dhRemittance:d.totalRemittance||0
+      });
+      count++;
+    }
+    // Reset block
+    for(const emp of employees) block[emp.name]={};
+  }
+
+  // Init block
+  for(const emp of employees) block[emp.name]={};
+
+  for(let i=nameRowIdx+1;i<rows.length;i++){
+    const row=rows[i]||[];
+    const cellA=((row[0])||'').toString().trim();
+    const cellB=((row[1])||'').toString().trim();
+
+    // Check if column A has a date (YYYY-MM-DD or other date format)
+    let dateVal=null;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(cellA)){
+      dateVal=cellA;
+    }else if(cellA&&!cellB){
+      // Try parsing as date (e.g. "Jan 5, 2024" or "1/5/2024")
+      const d=new Date(cellA);
+      if(!isNaN(d)&&d.getFullYear()>2000) dateVal=d.toISOString().slice(0,10);
+    }
+    // Also check for Excel serial dates
+    if(!dateVal&&typeof row[0]==='number'&&row[0]>40000&&row[0]<60000){
+      const d=new Date((row[0]-25569)*86400000);
+      if(!isNaN(d)) dateVal=d.toISOString().slice(0,10);
+    }
+
+    if(dateVal){
+      flushBlock();
+      currentDate=dateVal;
+      for(const emp of employees) block[emp.name]={};
+      continue;
+    }
+
+    if(!currentDate)continue;
+
+    // Determine line item type from columns A+B
+    const label=(cellA+' '+cellB).toLowerCase();
+    let field=null;
+    if(/total cash income|gross pay|regular pay|salary/i.test(label)) field='gross';
+    else if(/cpp remit|cpp contribution|canada pension/i.test(label)) field='cpp';
+    else if(/ei contrib|ei remit|employment insurance/i.test(label)){
+      if(/employer|dh|remit.*dh/i.test(label)) field='eiEmployer';
+      else field='ei';
+    }
+    else if(/federal ded|federal tax|fed.*tax/i.test(label)) field='federalTax';
+    else if(/province|provincial|prov.*ded/i.test(label)) field='provincialTax';
+    else if(/net amount|net pay|take.home/i.test(label)) field='net';
+    else if(/vacation/i.test(label)) field='vacation';
+    else if(/tax ded|total ded/i.test(label)) field='taxDeductions';
+    else if(/total remit/i.test(label)) field='totalRemittance';
+
+    if(!field)continue;
+
+    // Read each employee's value from their column
+    for(const emp of employees){
+      const val=parseFloat(row[emp.col])||0;
+      if(val) block[emp.name][field]=val;
+      // Also grab DH Remittance column (usually emp.col+1)
+      if(field==='totalRemittance'){
+        const remVal=parseFloat(row[emp.col+1])||0;
+        if(remVal) block[emp.name].totalRemittance=remVal;
+      }
+    }
+  }
+  flushBlock(); // flush last block
+  return count;
+}
+
+// Import flat CSV format (Employee Name, Pay Date, Gross Pay, CPP, EI, etc.)
+function _importFlatPayroll(rows){
+  const hdr=rows[0].map(h=>(h||'').toString().toLowerCase().trim());
+  const ci=(s)=>hdr.findIndex(h=>h.includes(s));
+  const iName=Math.max(ci('employee'),ci('name'));
+  const iDate=ci('date');
+  const iGross=ci('gross');
+  const iCpp=ci('cpp');
+  const iEi=hdr.findIndex(h=>h==='ei'||h.includes('employment insurance'));
+  const iFedTax=ci('federal');
+  const iProvTax=ci('provincial');
+  const iOtherDed=ci('other ded');
+  const iNet=ci('net');
+  const iHours=ci('hours');
+  const iRate=ci('rate');
+  const iDesc=Math.max(ci('description'),ci('period'));
+
+  if(iName<0||iGross<0){
+    alert('Flat CSV must have columns: Employee Name, Gross Pay\n\nDetected columns: '+hdr.join(', '));
+    return 0;
+  }
+
+  let count=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const name=(r[iName]||'').toString().trim();
+    let date=(r[iDate>=0?iDate:-1]||'').toString().trim();
+    const gross=parseFloat(r[iGross])||0;
+    if(!name||!gross)continue;
+    if(date&&!/^\d{4}-/.test(date)){const d=new Date(date);if(!isNaN(d))date=d.toISOString().slice(0,10);}
+
+    const deductions={};let totalDed=0;
+    const addDed=(idx,key)=>{if(idx>=0){const v=parseFloat(r[idx])||0;if(v>0){deductions[key]=v;totalDed+=v;}}};
+    addDed(iCpp,'cpp');addDed(iEi,'ei');addDed(iFedTax,'federalTax');addDed(iProvTax,'provincialTax');addDed(iOtherDed,'otherDeduction');
+    EMP_DEDUCTION_FIELDS.forEach(f=>{
+      if(!deductions[f.key]){
+        const idx=hdr.findIndex(h=>h===f.key.toLowerCase()||h.includes(f.label.toLowerCase()));
+        if(idx>=0){const v=parseFloat(r[idx])||0;if(v>0){deductions[f.key]=v;totalDed+=v;}}
+      }
+    });
+    const netVal=iNet>=0?parseFloat(r[iNet])||+(gross-totalDed).toFixed(2):+(gross-totalDed).toFixed(2);
+    const hours=iHours>=0?parseFloat(r[iHours])||0:0;
+    const rate=iRate>=0?parseFloat(r[iRate])||0:0;
+    const period=iDesc>=0?(r[iDesc]||'').toString().trim():'';
+
+    employeePayroll.push({
+      id:Date.now()+Math.random(),employee:name,date,period,hours,rate,
+      gross,deductions,totalDeductions:totalDed,net:netVal,notes:'Imported from CSV'
+    });
+    count++;
+  }
+  return count;
+}
+
 function handleEmpPayImport(files){
   if(!files||!files.length)return;
   const file=files[0];
@@ -6494,68 +6689,26 @@ function handleEmpPayImport(files){
     try{
       let rows;
       if(/\.xlsx?$/i.test(file.name)){
+        if(typeof XLSX==='undefined'){alert('Excel library not loaded yet.');return;}
         const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-        rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+        // Try all sheets — pick the one with "payroll" in the name, or first
+        let sheet=wb.Sheets[wb.SheetNames[0]];
+        for(const sn of wb.SheetNames){if(/payroll/i.test(sn)){sheet=wb.Sheets[sn];break;}}
+        rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
       }else{
         rows=e.target.result.split('\n').filter(r=>r.trim()).map(r=>r.split(',').map(c=>c.trim().replace(/^"|"$/g,'')));
       }
-      if(rows.length<2){alert('No data rows found.');return;}
-      const hdr=rows[0].map(h=>(h||'').toString().toLowerCase().trim());
-      const ci=(s)=>hdr.findIndex(h=>h.includes(s));
-      const iName=ci('employee')||ci('name');
-      const iDate=ci('date');
-      const iGross=ci('gross');
-      const iCpp=ci('cpp');
-      const iEi=hdr.findIndex(h=>h==='ei'||h.includes('employment insurance'));
-      const iFedTax=ci('federal');
-      const iProvTax=ci('provincial');
-      const iOtherDed=ci('other ded');
-      const iNet=ci('net');
-      const iHours=ci('hours');
-      const iRate=ci('rate');
-      const iDesc=ci('description')||ci('period');
+      if(rows.length<3){alert('Not enough data rows.');return;}
 
-      if(iName<0||iDate<0||iGross<0){alert('CSV must have columns: Employee Name, Pay Date, Gross Pay');return;}
-
+      // Detect format: pivoted payroll register vs flat CSV
+      // Pivoted format has employee names in a header row with "DH Remittance" columns
+      // and dates in column A with line items like "Total Cash Income", "Net Amount", etc.
+      const isPivoted=_detectPivotedPayroll(rows);
       let count=0;
-      for(let i=1;i<rows.length;i++){
-        const r=rows[i];
-        const name=(r[iName]||'').toString().trim();
-        let date=(r[iDate]||'').toString().trim();
-        const gross=parseFloat(r[iGross])||0;
-        if(!name||!gross)continue;
-        if(date&&!/^\d{4}-/.test(date)){
-          const d=new Date(date);
-          if(!isNaN(d))date=d.toISOString().slice(0,10);
-        }
-
-        const deductions={};
-        let totalDed=0;
-        const addDed=(idx,key)=>{if(idx>=0){const v=parseFloat(r[idx])||0;if(v>0){deductions[key]=v;totalDed+=v;}}};
-        addDed(iCpp,'cpp');
-        addDed(iEi,'ei');
-        addDed(iFedTax,'federalTax');
-        addDed(iProvTax,'provincialTax');
-        addDed(iOtherDed,'otherDeduction');
-
-        // Try to pick up any extra deduction columns by header name
-        EMP_DEDUCTION_FIELDS.forEach(f=>{
-          if(!deductions[f.key]){
-            const idx=hdr.findIndex(h=>h===f.key.toLowerCase()||h.includes(f.label.toLowerCase()));
-            if(idx>=0){const v=parseFloat(r[idx])||0;if(v>0){deductions[f.key]=v;totalDed+=v;}}
-          }
-        });
-
-        const netVal=iNet>=0?parseFloat(r[iNet])||+(gross-totalDed).toFixed(2):+(gross-totalDed).toFixed(2);
-        const hours=iHours>=0?parseFloat(r[iHours])||0:0;
-        const rate=iRate>=0?parseFloat(r[iRate])||0:0;
-        const period=iDesc>=0?(r[iDesc]||'').toString().trim():'';
-
-        employeePayroll.push({
-          id:Date.now()+Math.random(),employee:name,date,period,hours,rate,
-          gross,deductions,totalDeductions:totalDed,net:netVal,notes:'Imported from CSV'
-        });
-        count++;
+      if(isPivoted){
+        count=_importPivotedPayroll(rows);
+      }else{
+        count=_importFlatPayroll(rows);
       }
       if(count>0){
         employeePayroll.sort((a,b)=>b.date.localeCompare(a.date));
@@ -6563,7 +6716,7 @@ function handleEmpPayImport(files){
         renderEmployeePayroll();
         if(status)status.textContent='Imported '+count+' pay stub'+(count!==1?'s':'');
         showDhToast&&showDhToast('Import complete',count+' pay stubs imported','📊','var(--green)',3000);
-      }else{alert('No valid rows found.');}
+      }else{alert('No valid rows found. Check that the spreadsheet format matches expectations.');}
     }catch(err){alert('Import error: '+err.message);}
   };
   if(/\.xlsx?$/i.test(file.name)) reader.readAsArrayBuffer(file);
