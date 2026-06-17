@@ -7296,8 +7296,11 @@ function _calcT4(empName,year){
   t4.box17=stubs.reduce((a,s)=>a+(s.deductions?.cpp2||0),0); // Employee CPP2
   t4.box18=stubs.reduce((a,s)=>a+(s.deductions?.ei||0),0); // Employee EI
   t4.box22=stubs.reduce((a,s)=>a+(s.deductions?.federalTax||0)+(s.deductions?.provincialTax||0),0); // Income tax deducted
-  t4.box24=t4.box14; // EI insurable earnings (same as employment income for most)
-  t4.box26=t4.box14; // CPP pensionable earnings
+  // CRA annual maximums by year
+  const eiMax={2024:63200,2025:65700,2026:68400};
+  const cppMax={2024:68500,2025:71300,2026:73200};
+  t4.box24=Math.min(t4.box14,eiMax[year]||eiMax[2025]); // EI insurable earnings (capped)
+  t4.box26=Math.min(t4.box14,cppMax[year]||cppMax[2025]); // CPP pensionable earnings (capped)
   t4.box40=stubs.reduce((a,s)=>a+(s.vacationPay||0),0); // Taxable allowances (vacation pay)
   t4.box44=stubs.reduce((a,s)=>a+(s.deductions?.unionDues||0),0); // Union dues
   t4.box20=stubs.reduce((a,s)=>a+(s.deductions?.pension||0),0); // RPP contributions
