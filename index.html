@@ -3335,24 +3335,29 @@ button{font-family:var(--font);}
     </div>
 
     <!-- Expense list -->
-    <div class="card" style="max-height:340px;overflow-y:auto">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="card" style="max-height:440px;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
         <div class="section-label" style="margin-bottom:0">Expenses</div>
-        <select id="exp-filter-cat" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:11px;background:#242D42;color:#E8ECF8">
-          <option value="">All categories</option>
-          <option value="Equipment">Equipment</option>
-          <option value="Software">Software</option>
-          <option value="Fuel">Fuel</option>
-          <option value="Travel">Travel</option>
-          <option value="Meals">Meals &amp; entertainment</option>
-          <option value="Marketing">Marketing</option>
-          <option value="Insurance">Insurance</option>
-          <option value="Office">Office</option>
-          <option value="Subcontractor">Subcontractor</option>
-          <option value="Phone">Phone / internet</option>
-          <option value="Education">Education</option>
-          <option value="Other">Other</option>
-        </select>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="exp-filter-year" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
+            <option value="">All years</option>
+          </select>
+          <select id="exp-filter-cat" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
+            <option value="">All categories</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Software">Software</option>
+            <option value="Fuel">Fuel</option>
+            <option value="Travel">Travel</option>
+            <option value="Meals">Meals &amp; entertainment</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Office">Office</option>
+            <option value="Subcontractor">Subcontractor</option>
+            <option value="Phone">Phone / internet</option>
+            <option value="Education">Education</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
       </div>
       <div id="expense-list"></div>
     </div>
@@ -18273,9 +18278,13 @@ function receiptAccept(){
   const total=parseFloat(document.getElementById('rcpt-total')?.value);
   const market=document.getElementById('rcpt-country')?.value||'canada';
   if(!date||!total||total<=0){showDhToast('Missing fields','Date and total are required.','⚠️','var(--orange)');return;}
-  expenses.push({id:Date.now(),date,desc,cat,amount:total,market,receiptImg:_receiptImageB64});
+  const expId=Date.now();
+  expenses.push({id:expId,date,desc,cat,amount:total,market,hasReceipt:!!_receiptImageB64});
   expenses.sort((a,b)=>b.date.localeCompare(a.date));
   saveExpenses();
+  if(_receiptImageB64&&_fbToken()){
+    try{fbSetStrict('orgs',ORG_ID+':receipt_'+expId,{img:_receiptImageB64,ts:Date.now()}).catch(()=>{});}catch(e){}
+  }
   showDhToast('Expense added','$'+total.toFixed(2)+' — '+desc,'✓','var(--green)');
   receiptDismiss();
   renderFinance();
@@ -18324,19 +18333,51 @@ function deleteExpense(id){
 
 function renderExpenseList(){
   const filterCat=document.getElementById('exp-filter-cat')?.value||'';
+  const filterYear=document.getElementById('exp-filter-year')?.value||'';
   const list=document.getElementById('expense-list');
   if(!list) return;
-  const filtered=expenses.filter(e=>!filterCat||e.cat===filterCat);
-  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:#7A8AAA;padding:8px 0">No expenses yet.</div>';return;}
-  list.innerHTML=filtered.map(e=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid #f0ede6;gap:8px">
+  const yearSel=document.getElementById('exp-filter-year');
+  if(yearSel){
+    const years=[...new Set(expenses.filter(e=>e.date).map(e=>e.date.slice(0,4)))].sort().reverse();
+    const prev=yearSel.value;
+    yearSel.innerHTML='<option value="">All years</option>'+years.map(y=>`<option value="${y}"${y===prev?' selected':''}>${y}</option>`).join('');
+    if(prev) yearSel.value=prev;
+  }
+  const filtered=expenses.filter(e=>{
+    if(filterCat&&e.cat!==filterCat) return false;
+    if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
+    return true;
+  });
+  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found.</div>';return;}
+  const total=filtered.reduce((s,e)=>s+Number(e.amount||0),0);
+  list.innerHTML=filtered.map(e=>{
+    const flag=e.market==='usa'?'🇺🇸':'🇨🇦';
+    const receiptIcon=e.hasReceipt?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;cursor:pointer" title="Has receipt" onclick="viewReceipt('+e.id+')"><rect x="2" y="3" width="20" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>':'';
+    return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+      <span style="font-size:11px;flex-shrink:0">${flag}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.desc}</div>
-        <div style="font-size:10px;color:#7A8AAA">${e.date} · <span style="color:#5B7FDB">${e.cat}</span></div>
+        <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.desc}</div>
+        <div style="font-size:10px;color:var(--muted)">${e.date} · <span style="color:var(--blue)">${e.cat}</span></div>
       </div>
-      <div style="font-size:13px;font-weight:500;color:#E85D3A;white-space:nowrap">$${Number(e.amount).toFixed(2)}</div>
-      <button onclick="deleteExpense(${e.id})" style="border:none;background:none;color:#ccc;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">×</button>
-    </div>`).join('');
+      ${receiptIcon}
+      <div style="font-size:13px;font-weight:600;color:#E85D3A;white-space:nowrap">$${Number(e.amount).toFixed(2)}</div>
+      <button onclick="deleteExpense(${e.id})" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px;line-height:1" title="Delete">×</button>
+    </div>`;
+  }).join('')+`<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;font-weight:700"><span style="color:var(--muted)">Total (${filtered.length} expenses)</span><span style="color:#E85D3A">$${total.toFixed(2)}</span></div>`;
+}
+
+function viewReceipt(expId){
+  if(_fbToken()){
+    fbGet('orgs',ORG_ID+':receipt_'+expId).then(d=>{
+      if(d&&d.img){
+        const ov=document.createElement('div');
+        ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;cursor:pointer';
+        ov.onclick=()=>ov.remove();
+        ov.innerHTML='<img src="'+d.img+'" style="max-width:90vw;max-height:90vh;border-radius:12px;object-fit:contain">';
+        document.body.appendChild(ov);
+      } else { showDhToast('No receipt','Receipt image not found.','⚠️','var(--orange)'); }
+    }).catch(()=>showDhToast('Error','Could not load receipt.','⚠️','var(--red)'));
+  }
 }
 
 function renderFinance(){
