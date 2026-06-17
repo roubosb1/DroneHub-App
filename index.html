@@ -3259,6 +3259,37 @@ button{font-family:var(--font);}
   <!-- ── EXPENSES SUB-VIEW ── -->
   <div id="finance-sub-expenses" style="display:none">
 
+  <!-- Receipt Scanner -->
+  <div id="receipt-scan-card" class="card" style="margin-bottom:14px;position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="section-label" style="margin-bottom:0">Scan Receipt</div>
+      <span style="font-size:10px;color:var(--muted)">AI-powered</span>
+    </div>
+    <div id="receipt-drop-zone" style="border:1.5px dashed var(--border-bright);border-radius:12px;padding:28px;text-align:center;cursor:pointer;background:var(--navy-lift);transition:all .15s" onclick="document.getElementById('receipt-file-input').click()">
+      <input type="file" id="receipt-file-input" accept="image/*" capture="environment" style="display:none" onchange="handleReceiptFile(this)">
+      <div style="margin-bottom:6px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+      <div style="font-size:13px;font-weight:600;color:var(--offwhite)">Tap to take a photo or upload a receipt</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">AI will auto-detect vendor, amount, date, category &amp; country</div>
+    </div>
+    <div id="receipt-scanning" style="display:none;text-align:center;padding:24px">
+      <div style="width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue-bright);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>
+      <div style="font-size:13px;color:var(--offwhite);font-weight:600">Scanning receipt...</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">AI is reading vendor, amount, date &amp; category</div>
+    </div>
+    <div id="receipt-preview" style="display:none">
+      <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-start">
+        <img id="receipt-preview-img" style="width:100px;height:auto;border-radius:8px;border:1px solid var(--border);object-fit:cover;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div id="receipt-result-fields"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button onclick="receiptAccept()" style="padding:6px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;flex:1">Add Expense</button>
+            <button onclick="receiptDismiss()" style="padding:6px 16px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Discard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Expense tracker -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
 
@@ -18122,6 +18153,101 @@ function saveExpenses(){
         showDhToast('Expenses not saved','Expense records could not be saved to the cloud — changes may be lost if your browser cache is cleared.','⚠️','var(--orange)',7000);
       });
   }
+}
+
+// ── Receipt Scanner ──────────────────────────────────────────────────────────
+let _receiptScanData=null;
+let _receiptImageB64=null;
+
+function handleReceiptFile(input){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){showDhToast('Invalid file','Please upload an image of a receipt.','⚠️','var(--orange)');return;}
+  if(file.size>10*1024*1024){showDhToast('File too large','Max 10MB.','⚠️','var(--orange)');return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const dataUrl=reader.result;
+    const b64=dataUrl.split(',')[1];
+    const mime=file.type;
+    _receiptImageB64=dataUrl;
+    document.getElementById('receipt-drop-zone').style.display='none';
+    document.getElementById('receipt-scanning').style.display='block';
+    document.getElementById('receipt-preview').style.display='none';
+    scanReceipt(b64,mime);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function scanReceipt(b64,mimeType){
+  try{
+    const token=localStorage.getItem('dronehub_token');
+    const r=await fetch('/.netlify/functions/ai-receipt-scan',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({image:b64,mimeType})
+    });
+    const json=await r.json();
+    if(!r.ok) throw new Error(json.error||'Scan failed');
+    _receiptScanData=json.data;
+    showReceiptPreview(json.data);
+  }catch(e){
+    console.error('[receipt-scan]',e);
+    showDhToast('Scan failed',e.message||'Could not read receipt.','⚠️','var(--red)');
+    receiptDismiss();
+  }
+}
+
+function showReceiptPreview(d){
+  document.getElementById('receipt-scanning').style.display='none';
+  document.getElementById('receipt-preview').style.display='block';
+  document.getElementById('receipt-preview-img').src=_receiptImageB64;
+  const flag=d.country==='canada'?'🇨🇦 Canada (CAD)':'🇺🇸 United States (USD)';
+  const cats=['Equipment','Software','Fuel','Travel','Meals','Marketing','Insurance','Office','Subcontractor','Phone','Education','Other'];
+  const catOpts=cats.map(c=>`<option value="${c}" ${c===d.category?'selected':''}>${c}</option>`).join('');
+  document.getElementById('receipt-result-fields').innerHTML=`
+    <div style="display:grid;grid-template-columns:90px 1fr;gap:6px 8px;font-size:12px;align-items:center">
+      <span style="color:var(--muted);font-weight:600">Vendor</span>
+      <input id="rcpt-vendor" value="${d.vendor||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
+      <span style="color:var(--muted);font-weight:600">Date</span>
+      <input id="rcpt-date" type="date" value="${d.date||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
+      <span style="color:var(--muted);font-weight:600">Description</span>
+      <input id="rcpt-desc" value="${d.description||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
+      <span style="color:var(--muted);font-weight:600">Category</span>
+      <select id="rcpt-cat" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">${catOpts}</select>
+      <span style="color:var(--muted);font-weight:600">Country</span>
+      <select id="rcpt-country" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px">
+        <option value="canada" ${d.country==='canada'?'selected':''}>🇨🇦 Canada (CAD)</option>
+        <option value="usa" ${d.country==='usa'?'selected':''}>🇺🇸 United States (USD)</option>
+      </select>
+      <span style="color:var(--muted);font-weight:600">Total</span>
+      <input id="rcpt-total" type="number" step="0.01" value="${d.total||''}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--navy-mid);color:var(--white);font-size:12px;font-weight:700">
+      ${d.tax?`<span style="color:var(--muted);font-weight:600">Tax</span><span style="color:var(--muted)">$${Number(d.tax).toFixed(2)}</span>`:''}
+      ${d.confidence?`<span style="color:var(--muted);font-weight:600">Confidence</span><span style="color:${d.confidence==='high'?'var(--green)':d.confidence==='medium'?'var(--amber)':'var(--red)'};font-weight:600">${d.confidence}</span>`:''}
+    </div>`;
+}
+
+function receiptAccept(){
+  const date=document.getElementById('rcpt-date')?.value;
+  const desc=(document.getElementById('rcpt-vendor')?.value||'')+(document.getElementById('rcpt-desc')?.value?' — '+document.getElementById('rcpt-desc').value:'');
+  const cat=document.getElementById('rcpt-cat')?.value||'Other';
+  const total=parseFloat(document.getElementById('rcpt-total')?.value);
+  const market=document.getElementById('rcpt-country')?.value||'canada';
+  if(!date||!total||total<=0){showDhToast('Missing fields','Date and total are required.','⚠️','var(--orange)');return;}
+  expenses.push({id:Date.now(),date,desc,cat,amount:total,market,receiptImg:_receiptImageB64});
+  expenses.sort((a,b)=>b.date.localeCompare(a.date));
+  saveExpenses();
+  showDhToast('Expense added','$'+total.toFixed(2)+' — '+desc,'✓','var(--green)');
+  receiptDismiss();
+  renderFinance();
+}
+
+function receiptDismiss(){
+  _receiptScanData=null;
+  _receiptImageB64=null;
+  document.getElementById('receipt-drop-zone').style.display='';
+  document.getElementById('receipt-scanning').style.display='none';
+  document.getElementById('receipt-preview').style.display='none';
+  document.getElementById('receipt-file-input').value='';
 }
 
 let financeChartInst=null, expCatChartInst=null, financeView='bar';
