@@ -7532,6 +7532,9 @@ function _getT4EmployerInfo(){
 }
 function _saveT4EmployerInfo(info){
   try{localStorage.setItem(lsKey('t4_employer'),JSON.stringify(info));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':t4_employer',{data:JSON.stringify(info),updatedAt:Date.now()}).catch(e=>console.error('[_saveT4EmployerInfo] Firebase write failed:',e.message));
+  }
 }
 
 function openCRAT4Form(empName,year){
@@ -11972,6 +11975,7 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':income',         ls:'dronehub_income',            apply:d=>{try{incomeEntries=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_income',d);}},
     {fb:ORG_ID+':contractor_pay_history', ls:'dronehub_contractor_pay_history', apply:d=>{try{contractorPayHistory=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_contractor_pay_history',d);}},
     {fb:ORG_ID+':employee_payroll', ls:'dronehub_employee_payroll', apply:d=>{try{employeePayroll=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_employee_payroll',d);}},
+    {fb:ORG_ID+':t4_employer', ls:lsKey('t4_employer'), apply:d=>{localStorage.setItem(lsKey('t4_employer'),d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
     {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{
       localStorage.setItem('dronehub_orgs',d);
