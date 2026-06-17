@@ -6450,6 +6450,11 @@ function renderEmployeePayroll(){
   });
 
   el.innerHTML=Object.entries(byEmp).sort((a,b)=>a[0].localeCompare(b[0])).map(([name,data])=>{
+    const member=_findLinkedTeamMember(name);
+    const anyLinked=data.stubs.some(s=>s.linkedEmail)||member;
+    const linkBadge=anyLinked
+      ?`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--green);margin-left:8px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>${member?.email||data.stubs[0]?.linkedEmail||'linked'}</span>`
+      :'';
     const stubCards=data.stubs.map(s=>{
       const sid=JSON.stringify(s.id);
       const mo=s.date?new Date(s.date+'T12:00:00').toLocaleString('en',{month:'short'}):' ';
@@ -6463,7 +6468,7 @@ function renderEmployeePayroll(){
     }).join('');
     return `<div style="margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:4px">
-        <div style="font-size:15px;font-weight:700;color:var(--white)">${name}</div>
+        <div style="display:flex;align-items:center"><span style="font-size:15px;font-weight:700;color:var(--white)">${name}</span>${linkBadge}</div>
         <div style="font-size:11px;color:var(--muted)">${data.stubs.length} stubs · <span style="color:var(--green)">$${data.totalGross.toFixed(2)}</span> gross · <span style="color:var(--blue-bright)">$${data.totalNet.toFixed(2)}</span> net${data.totalRemit?` · <span style="color:var(--orange)">$${data.totalRemit.toFixed(2)}</span> remit`:''}</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
@@ -6473,12 +6478,55 @@ function renderEmployeePayroll(){
   }).join('');
 }
 
+function _findLinkedTeamMember(name){
+  const team=typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[];
+  const n=(name||'').toLowerCase().trim();
+  return team.find(m=>(m.name||'').toLowerCase().trim()===n)||null;
+}
+
+function linkPayStubToAccount(stubId){
+  const sid=JSON.stringify(stubId);
+  const s=employeePayroll.find(p=>JSON.stringify(p.id)===sid);
+  if(!s)return;
+  const team=typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[];
+  if(!team.length){alert('No team members found.');return;}
+  const opts=team.filter(m=>m.name).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(m=>
+    `<option value="${m.email||m.id}" ${(s.linkedEmail&&s.linkedEmail===(m.email||m.id))?'selected':''}>${m.name}${m.email?' ('+m.email+')':''}${m.role?' — '+m.role:''}</option>`
+  ).join('');
+  const html=`<div style="padding:20px;max-width:400px;margin:auto">
+    <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:12px">Link Pay Stub to Account</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Stub: <strong style="color:var(--offwhite)">${s.employee}</strong> — ${s.date}</div>
+    <select id="link-stub-sel" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box;margin-bottom:14px">
+      <option value="">— Select team member —</option>${opts}
+    </select>
+    <div style="display:flex;gap:8px">
+      <button onclick="(function(){
+        const sel=document.getElementById('link-stub-sel');
+        if(!sel.value)return;
+        const team=(typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]);
+        const m=team.find(t=>(t.email||t.id)===sel.value);
+        if(!m)return;
+        const stub=employeePayroll.find(p=>JSON.stringify(p.id)==='${sid}');
+        if(stub){stub.linkedEmail=m.email||m.id;stub.linkedName=m.name;stub.linkedUserId=m.id||'';saveEmployeePayroll();renderEmployeePayroll();}
+        closeModal();
+      })()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:13px;font-weight:600;cursor:pointer">Link</button>
+      <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+    </div>
+  </div>`;
+  openModal(html);
+}
+
 function viewEmployeePayStub(id){
   const sid=JSON.stringify(id);
   const s=employeePayroll.find(p=>JSON.stringify(p.id)===sid);
   if(!s)return;
 
-  // Earnings section
+  const linked=s.linkedEmail?s:null;
+  const member=_findLinkedTeamMember(s.employee);
+  const acct=linked||member;
+  const acctBadge=acct?`<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--green);margin-top:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span> Linked to ${s.linkedEmail||member?.email||'account'}</div>`
+    :`<button onclick="linkPayStubToAccount(${sid})" style="margin-top:6px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">Link to account</button>`;
+
   const workPay=s.vacationPay?(s.gross-s.vacationPay):0;
   const earningsRows=[];
   if(s.vacationPay&&workPay>0){
@@ -6486,7 +6534,6 @@ function viewEmployeePayStub(id){
     earningsRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">Vacation Pay (4%)</td><td style="padding:4px 10px;font-size:12px;color:var(--green);text-align:right">$${s.vacationPay.toFixed(2)}</td></tr>`);
   }
 
-  // Employee deductions
   const dedRows=[];
   if(s.deductions){
     EMP_DEDUCTION_FIELDS.forEach(f=>{
@@ -6497,23 +6544,25 @@ function viewEmployeePayStub(id){
     });
   }
 
-  // Employer contributions (DH)
   const empContribRows=[];
-  if(s.dhCpp) empContribRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">CPP (Employer 50%)</td><td style="padding:4px 10px;font-size:12px;color:var(--muted);text-align:right">$${s.dhCpp.toFixed(2)}</td></tr>`);
-  if(s.dhEi) empContribRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">EI (Employer — DH)</td><td style="padding:4px 10px;font-size:12px;color:var(--muted);text-align:right">$${s.dhEi.toFixed(2)}</td></tr>`);
+  if(s.dhCpp) empContribRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">CPP (Employer 50%)</td><td style="padding:4px 10px;font-size:12px;color:var(--orange);text-align:right">$${s.dhCpp.toFixed(2)}</td></tr>`);
+  if(s.dhEi) empContribRows.push(`<tr><td style="padding:4px 10px;font-size:12px;color:var(--offwhite)">EI (Employer — DH)</td><td style="padding:4px 10px;font-size:12px;color:var(--orange);text-align:right">$${s.dhEi.toFixed(2)}</td></tr>`);
 
-  const html=`<div style="padding:20px;max-width:450px;margin:auto">
+  const taxDed=(s.deductions?.federalTax||0)+(s.deductions?.provincialTax||0);
+
+  const html=`<div style="padding:20px;max-width:480px;margin:auto">
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Pay Stub</div>
-      <div style="font-size:18px;font-weight:800;color:var(--white)">${s.employee}</div>
+      <div style="font-size:20px;font-weight:800;color:var(--white)">${s.employee}</div>
       <div style="font-size:12px;color:var(--muted)">${s.date}${s.period?' · '+s.period:''}</div>
+      ${acctBadge}
     </div>
     ${s.hours?`<div style="text-align:center;margin-bottom:12px;font-size:12px;color:var(--muted)">${s.hours} hours @ $${s.rate?.toFixed(2)||'0.00'}/hr</div>`:''}
 
     <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Earnings</div>
       <div style="display:flex;justify-content:space-between;margin-bottom:${earningsRows.length?'6':'0'}px">
-        <span style="font-size:14px;font-weight:700;color:var(--offwhite)">Gross Pay</span>
+        <span style="font-size:14px;font-weight:700;color:var(--offwhite)">Total Cash Income (Gross)</span>
         <span style="font-size:14px;font-weight:700;color:var(--green)">$${(s.gross||0).toFixed(2)}</span>
       </div>
       ${earningsRows.length?`<table style="width:100%;border-collapse:collapse"><tbody>${earningsRows.join('')}</tbody></table>`:''}
@@ -6522,23 +6571,29 @@ function viewEmployeePayStub(id){
     <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Employee Deductions</div>
       ${dedRows.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tbody>${dedRows.join('')}</tbody></table>`:'<div style="font-size:12px;color:var(--muted)">None</div>'}
-      <div style="border-top:2px solid var(--border);padding-top:8px;display:flex;justify-content:space-between">
-        <span style="font-size:12px;font-weight:600;color:var(--muted)">Total Deductions</span>
-        <span style="font-size:12px;font-weight:600;color:var(--red)">-$${(s.totalDeductions||0).toFixed(2)}</span>
+      ${taxDed?`<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--muted)">Tax Deductions (Fed + Prov)</span><span style="font-size:11px;color:var(--red)">-$${taxDed.toFixed(2)}</span></div>`:''}
+      <div style="border-top:2px solid var(--border);padding-top:8px;margin-top:6px;display:flex;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;color:var(--offwhite)">Total Deductions</span>
+        <span style="font-size:13px;font-weight:700;color:var(--red)">-$${(s.totalDeductions||0).toFixed(2)}</span>
       </div>
     </div>
 
-    ${empContribRows.length?`<div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Employer Contributions (DroneHub)</div>
-      <table style="width:100%;border-collapse:collapse"><tbody>${empContribRows.join('')}</tbody></table>
-      ${s.dhRemittance?`<div style="border-top:2px solid var(--border);padding-top:8px;margin-top:8px;display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--muted)">Total CRA Remittance</span><span style="font-size:12px;font-weight:600;color:var(--orange)">$${s.dhRemittance.toFixed(2)}</span></div>`:''}
+    <div style="background:linear-gradient(135deg,rgba(91,141,239,.15),rgba(91,141,239,.05));border:1px solid var(--blue);border-radius:10px;padding:14px;text-align:center;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Net Pay (What ${s.employee.split(' ')[0]} Receives)</div>
+      <div style="font-size:26px;font-weight:800;color:var(--blue-bright)">$${(s.net||0).toFixed(2)}</div>
+    </div>
+
+    ${empContribRows.length||s.dhRemittance?`<div style="background:var(--navy-lift);border:1px solid rgba(255,165,0,.2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">DroneHub Employer Contributions</div>
+      ${empContribRows.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tbody>${empContribRows.join('')}</tbody></table>`:''}
+      ${s.dhRemittance?`<div style="border-top:2px solid rgba(255,165,0,.2);padding-top:8px;display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:var(--offwhite)">Total CRA Remittance</span><span style="font-size:13px;font-weight:700;color:var(--orange)">$${s.dhRemittance.toFixed(2)}</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">Employee deductions + Employer CPP/EI remitted to CRA monthly</div>`:''}
     </div>`:''}
 
-    <div style="background:linear-gradient(135deg,rgba(91,141,239,.15),rgba(91,141,239,.05));border:1px solid var(--blue);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Net Pay</div>
-      <div style="font-size:24px;font-weight:800;color:var(--blue-bright)">$${(s.net||0).toFixed(2)}</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="deleteEmployeePayStub(${sid});closeModal()" style="padding:10px;border-radius:10px;border:1px solid var(--red);background:rgba(240,82,82,.08);color:var(--red);font-size:12px;cursor:pointer;flex-shrink:0">Delete</button>
+      <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Close</button>
     </div>
-    <button onclick="closeModal()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Close</button>
   </div>`;
   openModal(html);
 }
