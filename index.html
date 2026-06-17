@@ -6450,45 +6450,25 @@ function renderEmployeePayroll(){
   });
 
   el.innerHTML=Object.entries(byEmp).sort((a,b)=>a[0].localeCompare(b[0])).map(([name,data])=>{
-    const stubRows=data.stubs.map(s=>{
-      const dedParts=[];
-      if(s.deductions){
-        EMP_DEDUCTION_FIELDS.forEach(f=>{
-          if(s.deductions[f.key])dedParts.push(`<span style="color:var(--muted);font-size:10px">${f.label}: <span style="color:var(--red)">-$${s.deductions[f.key].toFixed(2)}</span></span>`);
-        });
-      }
+    const stubCards=data.stubs.map(s=>{
       const sid=JSON.stringify(s.id);
-      const vacLine=s.vacationPay?`<span style="color:var(--muted);font-size:10px">Vacation: <span style="color:var(--green)">$${s.vacationPay.toFixed(2)}</span></span>`:'';
-      const remitLine=s.dhRemittance?`<span style="color:var(--muted);font-size:10px">CRA Remittance: <span style="color:var(--orange)">$${s.dhRemittance.toFixed(2)}</span></span>`:'';
-      const dhLine=(s.dhCpp||s.dhEi)?`<span style="color:var(--muted);font-size:10px">DH CPP: $${(s.dhCpp||0).toFixed(2)} · DH EI: $${(s.dhEi||0).toFixed(2)}</span>`:'';
-      const extraParts=[...dedParts];
-      if(vacLine)extraParts.push(vacLine);
-      if(dhLine)extraParts.push(dhLine);
-      if(remitLine)extraParts.push(remitLine);
-      return `<div class="card" style="margin-bottom:6px;padding:12px;cursor:pointer;transition:border-color .15s" onclick="viewEmployeePayStub(${sid})" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor=''">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--offwhite)">${s.date}${s.period?' — '+s.period:''}</div>
-            ${s.hours?`<div style="font-size:11px;color:var(--muted)">${s.hours} hrs @ $${s.rate?.toFixed(2)||'0.00'}/hr</div>`:''}
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:13px;font-weight:700;color:var(--green)">Gross: $${(s.gross||0).toFixed(2)}</div>
-            <div style="font-size:12px;color:var(--red)">Deductions: -$${(s.totalDeductions||0).toFixed(2)}</div>
-            <div style="font-size:14px;font-weight:700;color:var(--blue-bright)">Net: $${(s.net||0).toFixed(2)}</div>
-          </div>
-        </div>
-        ${extraParts.length?`<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${extraParts.join('')}</div>`:''}
-        <div style="text-align:right;margin-top:6px">
-          <button onclick="event.stopPropagation();deleteEmployeePayStub(${sid})" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--red);font-size:11px;cursor:pointer">Delete</button>
-        </div>
+      const mo=s.date?new Date(s.date+'T12:00:00').toLocaleString('en',{month:'short'}):' ';
+      const day=s.date?s.date.slice(8,10):'';
+      return `<div onclick="viewEmployeePayStub(${sid})" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .1s;min-width:0" onmouseover="this.style.borderColor='var(--blue)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${mo} ${day}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--blue-bright);margin-bottom:2px">$${(s.net||0).toFixed(2)}</div>
+        <div style="font-size:9px;color:var(--green)">Gross $${(s.gross||0).toFixed(2)}</div>
+        ${s.dhRemittance?`<div style="font-size:9px;color:var(--orange)">CRA $${s.dhRemittance.toFixed(2)}</div>`:''}
       </div>`;
     }).join('');
-    return `<div style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px">
-        <div style="font-size:14px;font-weight:700;color:var(--white)">${name}</div>
-        <div style="font-size:12px;color:var(--muted)">${data.stubs.length} stub${data.stubs.length!==1?'s':''} · <span style="color:var(--green)">Gross: $${data.totalGross.toFixed(2)}</span> · <span style="color:var(--blue-bright)">Net: $${data.totalNet.toFixed(2)}</span>${data.totalRemit?` · <span style="color:var(--orange)">Remittance: $${data.totalRemit.toFixed(2)}</span>`:''}</div>
+    return `<div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:4px">
+        <div style="font-size:15px;font-weight:700;color:var(--white)">${name}</div>
+        <div style="font-size:11px;color:var(--muted)">${data.stubs.length} stubs · <span style="color:var(--green)">$${data.totalGross.toFixed(2)}</span> gross · <span style="color:var(--blue-bright)">$${data.totalNet.toFixed(2)}</span> net${data.totalRemit?` · <span style="color:var(--orange)">$${data.totalRemit.toFixed(2)}</span> remit`:''}</div>
       </div>
-      ${stubRows}
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        ${stubCards}
+      </div>
     </div>`;
   }).join('');
 }
