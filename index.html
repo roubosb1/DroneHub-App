@@ -6280,6 +6280,24 @@ function renderContractorBreakdown(){
   }).join('');
 }
 
+function openModal(html){
+  let ov=document.getElementById('emp-modal-overlay');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='emp-modal-overlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  ov.onclick=function(e){if(e.target===ov)closeModal();};
+  const box=document.createElement('div');
+  box.style.cssText='background:var(--navy-card);border-radius:16px;width:100%;max-width:520px;border:1px solid var(--border-bright);overflow:hidden';
+  box.innerHTML=html;
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+}
+function closeModal(){
+  const ov=document.getElementById('emp-modal-overlay');
+  if(ov)ov.remove();
+}
+
 // ── Employee Payroll (with tax deductions) ──────────────────────────────────
 let employeePayroll=JSON.parse(localStorage.getItem('dronehub_employee_payroll')||'[]');
 function saveEmployeePayroll(){
