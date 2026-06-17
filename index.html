@@ -6501,7 +6501,7 @@ function renderEmployeePayroll(){
     byEmp[p.employee].totalRemit+=p.dhRemittance||0;
   });
 
-  el.innerHTML=Object.entries(byEmp).sort((a,b)=>a[0].localeCompare(b[0])).map(([name,data])=>{
+  el.innerHTML=Object.entries(byEmp).sort((a,b)=>{const la=a[1].stubs.reduce((m,s)=>s.date&&s.date>m?s.date:m,'');const lb=b[1].stubs.reduce((m,s)=>s.date&&s.date>m?s.date:m,'');return lb.localeCompare(la);}).map(([name,data])=>{
     const member=_findLinkedTeamMember(name);
     const anyLinked=data.stubs.some(s=>s.linkedEmail)||member;
     const linkBadge=anyLinked
