@@ -34,17 +34,7 @@ function isRateLimited(ip) {
   return _rateCounts[ip].count > 15;
 }
 
-function buildSystemPrompt() {
-  return `You are a payroll data extractor for a Canadian drone media company (DroneHub Media Company Corp) based in Ontario. You will receive one or two screenshots from the CRA Payroll Deductions Online Calculator (PDOC).
-
-The screenshots show two views:
-1. "Salary calculation" — shows employee name, pay date, salary/wages, vacation pay, total cash income, federal tax, provincial tax, CPP deductions, CPP2 deductions, EI deductions, total deductions, and net amount.
-2. "Employer remittance summary" — shows the same employee info plus employer CPP/CPP2 contributions, employer EI contributions, subtotals, tax deductions total, and the total amount to remit.
-
-Extract ALL of these fields. If you only see one screenshot, extract what you can.
-
-Respond with ONLY a JSON object, no markdown fences, no commentary:
-{
+const RECORD_SCHEMA = `{
   "employeeName": string,
   "employerName": string|null,
   "payDate": string (YYYY-MM-DD),
@@ -70,6 +60,29 @@ Respond with ONLY a JSON object, no markdown fences, no commentary:
   "federalTd1": number|null,
   "provincialTd1": number|null
 }`;
+
+function buildSystemPrompt(batch) {
+  const base = `You are a payroll data extractor for a Canadian drone media company (DroneHub Media Company Corp) based in Ontario. You will receive screenshots from the CRA Payroll Deductions Online Calculator (PDOC).
+
+The screenshots show two views:
+1. "Salary calculation" — shows employee name, pay date, salary/wages, vacation pay, total cash income, federal tax, provincial tax, CPP deductions, CPP2 deductions, EI deductions, total deductions, and net amount.
+2. "Employer remittance summary" — shows the same employee info plus employer CPP/CPP2 contributions, employer EI contributions, subtotals, tax deductions total, and the total amount to remit.
+
+Extract ALL of these fields. If you only see one type of screenshot for a given employee/date, extract what you can.`;
+
+  if (batch) {
+    return base + `
+
+You are receiving MULTIPLE screenshots — potentially for different employees and/or different pay dates. Match salary calculation screenshots with their corresponding employer remittance screenshots by employee name and pay date.
+
+Return a JSON ARRAY of records, one per unique employee+date combination. Respond with ONLY the JSON array, no markdown fences, no commentary:
+[${RECORD_SCHEMA}, ...]`;
+  }
+
+  return base + `
+
+Respond with ONLY a JSON object, no markdown fences, no commentary:
+${RECORD_SCHEMA}`;
 }
 
 exports.handler = async (event) => {
@@ -96,17 +109,17 @@ exports.handler = async (event) => {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired session' }) };
   }
 
-  let images;
+  let images, batch;
   try {
-    ({ images } = JSON.parse(event.body || '{}'));
+    ({ images, batch } = JSON.parse(event.body || '{}'));
   } catch (e) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
   if (!images || !Array.isArray(images) || images.length < 1) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'At least one image required' }) };
   }
-  if (images.length > 2) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Maximum 2 images' }) };
+  if (images.length > 20) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Maximum 20 images per scan' }) };
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -114,13 +127,19 @@ exports.handler = async (event) => {
     return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }) };
   }
 
+  const isBatch = batch && images.length > 2;
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
   const content = [];
   for (const img of images) {
     const mt = validTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
     content.push({ type: 'image', source: { type: 'base64', media_type: mt, data: img.data } });
+    if (img.label) {
+      content.push({ type: 'text', text: '(Above image is: ' + img.label.replace(/_/g, ' ') + ')' });
+    }
   }
-  content.push({ type: 'text', text: 'Extract all payroll data from these CRA PDOC calculator screenshots.' });
+  content.push({ type: 'text', text: isBatch
+    ? 'Extract all payroll data from these CRA PDOC calculator screenshots. There are multiple employees and/or pay dates. Match salary calculations with their employer remittance by employee name and date. Return a JSON array.'
+    : 'Extract all payroll data from these CRA PDOC calculator screenshots.' });
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -132,8 +151,8 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
-        system: buildSystemPrompt(),
+        max_tokens: isBatch ? 4096 : 1024,
+        system: buildSystemPrompt(isBatch),
         messages: [{ role: 'user', content }],
       }),
     });

@@ -3279,33 +3279,33 @@ button{font-family:var(--font);}
       <!-- AI Pay Stub Scanner -->
       <div class="card" style="margin-top:14px">
         <div class="section-label" style="margin-bottom:4px">Scan CRA Pay Stub Screenshots</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Upload both screenshots from the <strong>CRA Payroll Deductions Online Calculator</strong> — the employee salary calculation and the employer remittance summary.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Upload screenshots from the <strong>CRA Payroll Deductions Online Calculator</strong>. You can upload multiple at once — AI will match them by employee name and date.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="paystub-scan-zones">
           <div>
-            <div style="font-size:11px;font-weight:700;color:var(--blue-bright);margin-bottom:6px">1. Salary Calculation</div>
-            <div id="paystub-scan-zone-1" onclick="document.getElementById('paystub-scan-input-1').click()" style="border:1.5px dashed var(--blue);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(91,141,239,.03);min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--blue)'" ondrop="event.preventDefault();this.style.borderColor='var(--blue)';_stagePaystubFile(1,event.dataTransfer.files[0])">
+            <div style="font-size:11px;font-weight:700;color:var(--blue-bright);margin-bottom:6px">1. Salary Calculations</div>
+            <div id="paystub-scan-zone-1" onclick="document.getElementById('paystub-scan-input-1').click()" style="border:1.5px dashed var(--blue);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(91,141,239,.03);min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--blue)'" ondrop="event.preventDefault();this.style.borderColor='var(--blue)';_stagePaystubFiles(1,event.dataTransfer.files)">
               <div style="font-size:18px;margin-bottom:2px">📄</div>
               <div style="font-size:11px;font-weight:600;color:var(--blue-bright)">Employee deductions</div>
-              <div style="font-size:9px;color:var(--muted);margin-top:2px">Click or drop screenshot</div>
+              <div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>
             </div>
-            <input type="file" id="paystub-scan-input-1" accept="image/*" style="display:none" onchange="_stagePaystubFile(1,this.files[0])">
+            <input type="file" id="paystub-scan-input-1" accept="image/*" multiple style="display:none" onchange="_stagePaystubFiles(1,this.files)">
           </div>
           <div>
-            <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:6px">2. Employer Remittance</div>
-            <div id="paystub-scan-zone-2" onclick="document.getElementById('paystub-scan-input-2').click()" style="border:1.5px dashed var(--orange);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(255,152,56,.03);min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--orange)'" ondrop="event.preventDefault();this.style.borderColor='var(--orange)';_stagePaystubFile(2,event.dataTransfer.files[0])">
+            <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:6px">2. Employer Remittances</div>
+            <div id="paystub-scan-zone-2" onclick="document.getElementById('paystub-scan-input-2').click()" style="border:1.5px dashed var(--orange);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(255,152,56,.03);min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--orange)'" ondrop="event.preventDefault();this.style.borderColor='var(--orange)';_stagePaystubFiles(2,event.dataTransfer.files)">
               <div style="font-size:18px;margin-bottom:2px">📄</div>
               <div style="font-size:11px;font-weight:600;color:var(--orange)">Company remittance</div>
-              <div style="font-size:9px;color:var(--muted);margin-top:2px">Click or drop screenshot</div>
+              <div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>
             </div>
-            <input type="file" id="paystub-scan-input-2" accept="image/*" style="display:none" onchange="_stagePaystubFile(2,this.files[0])">
+            <input type="file" id="paystub-scan-input-2" accept="image/*" multiple style="display:none" onchange="_stagePaystubFiles(2,this.files)">
           </div>
         </div>
         <div id="paystub-scan-submit" style="display:none;text-align:center;margin-top:10px">
-          <button onclick="_submitStagedPaystubs()" style="padding:8px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Scan Both Screenshots</button>
+          <button id="paystub-scan-submit-btn" onclick="_submitStagedPaystubs()" style="padding:8px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Scan Screenshots</button>
         </div>
         <div id="paystub-scan-spinner" style="display:none;text-align:center;padding:20px">
-          <div style="font-size:14px;color:var(--blue-bright);margin-bottom:6px">Scanning pay stub...</div>
-          <div style="font-size:11px;color:var(--muted)">AI is extracting payroll data from both screenshots</div>
+          <div id="paystub-scan-spinner-text" style="font-size:14px;color:var(--blue-bright);margin-bottom:6px">Scanning pay stubs...</div>
+          <div id="paystub-scan-spinner-sub" style="font-size:11px;color:var(--muted)">AI is extracting payroll data</div>
         </div>
         <div id="paystub-scan-preview" style="display:none"></div>
       </div>
@@ -6954,44 +6954,62 @@ function handleEmpPayImport(files){
 }
 
 // ── AI Pay Stub Scanner ─────────────────────────────────────────────────────
-window._stagedPaystubs={1:null,2:null};
-async function _stagePaystubFile(slot,file){
-  if(!file)return;
-  const compressed=await _resizePaystubImage(file);
-  window._stagedPaystubs[slot]=compressed;
-  const zone=document.getElementById('paystub-scan-zone-'+slot);
+window._stagedPaystubs={1:[],2:[]};
+async function _stagePaystubFiles(slot,files){
+  if(!files||!files.length)return;
+  for(var i=0;i<files.length;i++){
+    var compressed=await _resizePaystubImage(files[i]);
+    window._stagedPaystubs[slot].push(compressed);
+  }
+  var count=window._stagedPaystubs[slot].length;
+  var zone=document.getElementById('paystub-scan-zone-'+slot);
+  var color=slot===1?'var(--blue-bright)':'var(--orange)';
   if(zone){
     zone.style.borderColor='var(--green)';
-    zone.innerHTML='<div style="font-size:18px;margin-bottom:2px">✅</div><div style="font-size:11px;font-weight:600;color:var(--green)">'+file.name.slice(0,25)+'</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Click to change</div>';
+    zone.innerHTML='<div style="font-size:18px;margin-bottom:2px">✅</div><div style="font-size:11px;font-weight:600;color:var(--green)">'+count+' screenshot'+(count>1?'s':'')+' ready</div><div style="font-size:9px;color:'+color+';margin-top:2px">Click to add more</div>';
   }
   var inp=document.getElementById('paystub-scan-input-'+slot);if(inp)inp.value='';
   var btn=document.getElementById('paystub-scan-submit');
-  if(btn&&window._stagedPaystubs[1]&&window._stagedPaystubs[2]) btn.style.display='';
+  if(btn&&window._stagedPaystubs[1].length&&window._stagedPaystubs[2].length){
+    btn.style.display='';
+    var total=window._stagedPaystubs[1].length+window._stagedPaystubs[2].length;
+    var sbtn=document.getElementById('paystub-scan-submit-btn');
+    if(sbtn) sbtn.textContent='Scan '+total+' Screenshots';
+  }
 }
 async function _submitStagedPaystubs(){
-  if(!window._stagedPaystubs[1]||!window._stagedPaystubs[2]){showDhToast&&showDhToast('Missing screenshot','Please upload both screenshots.','⚠️','var(--orange)');return;}
+  if(!window._stagedPaystubs[1].length||!window._stagedPaystubs[2].length){showDhToast&&showDhToast('Missing screenshots','Please upload screenshots for both sides.','⚠️','var(--orange)');return;}
   var zones=document.getElementById('paystub-scan-zones');
   var submit=document.getElementById('paystub-scan-submit');
   var spinner=document.getElementById('paystub-scan-spinner');
   var preview=document.getElementById('paystub-scan-preview');
   zones.style.display='none';submit.style.display='none';spinner.style.display='';preview.style.display='none';
+  var totalImgs=window._stagedPaystubs[1].length+window._stagedPaystubs[2].length;
+  var spinText=document.getElementById('paystub-scan-spinner-text');
+  var spinSub=document.getElementById('paystub-scan-spinner-sub');
+  if(spinText)spinText.textContent='Scanning '+totalImgs+' screenshots...';
+  if(spinSub)spinSub.textContent='AI is extracting and matching payroll data';
+  var allImages=[];
+  window._stagedPaystubs[1].forEach(function(img){img.label='salary_calculation';allImages.push(img);});
+  window._stagedPaystubs[2].forEach(function(img){img.label='employer_remittance';allImages.push(img);});
   try{
-    var images=[window._stagedPaystubs[1],window._stagedPaystubs[2]];
     var tok=_fbToken();
     if(!tok){showDhToast('Not logged in','Please log in first.','⚠️','var(--orange)');return;}
     var r=await fetch('/.netlify/functions/ai-paystub-scan',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
-      body:JSON.stringify({images:images})
+      body:JSON.stringify({images:allImages,batch:true})
     });
     if(!r.ok){var e=await r.json().catch(function(){return{};});throw new Error(e.error||'Scan failed');}
     var result=await r.json();
-    _showPaystubScanPreview(result.data);
+    var records=Array.isArray(result.data)?result.data:[result.data];
+    if(records.length>1){_showBatchPaystubPreview(records);}
+    else{_showPaystubScanPreview(records[0]);}
   }catch(e){
     showDhToast&&showDhToast('Scan failed',e.message,'⚠️','var(--red)');
     zones.style.display='';spinner.style.display='none';
   }
-  window._stagedPaystubs={1:null,2:null};
+  window._stagedPaystubs={1:[],2:[]};
 }
 
 function _resizePaystubImage(file){
@@ -7081,60 +7099,104 @@ function _showPaystubScanPreview(d){
     </div>
   </div>`;
 
-  // Store scanned data for accept
   window._scannedPaystub=d;
 }
 
-function _acceptPaystubScan(){
-  const d=window._scannedPaystub;if(!d)return;
-  const workPay=d.salaryOrWages||0;
-  const vacPay=d.vacationPay||0;
-  const gross=d.totalCashIncome||(workPay+vacPay);
-  const cppEmp=d.cppEmployee||0;
-  const cpp2Emp=d.cpp2Employee||0;
-  const eiEmp=d.eiEmployee||0;
-  const fedTax=d.federalTax||0;
-  const provTax=d.provincialTax||0;
-  const totalDed=d.totalDeductions||(fedTax+provTax+cppEmp+cpp2Emp+eiEmp);
-  const net=d.netAmount||(gross-totalDed);
-
-  const deductions={};
+function _buildPaystubRecord(d){
+  var workPay=d.salaryOrWages||0;
+  var vacPay=d.vacationPay||0;
+  var gross=d.totalCashIncome||(workPay+vacPay);
+  var cppEmp=d.cppEmployee||0;
+  var cpp2Emp=d.cpp2Employee||0;
+  var eiEmp=d.eiEmployee||0;
+  var fedTax=d.federalTax||0;
+  var provTax=d.provincialTax||0;
+  var totalDed=d.totalDeductions||(fedTax+provTax+cppEmp+cpp2Emp+eiEmp);
+  var net=d.netAmount||(gross-totalDed);
+  var deductions={};
   if(cppEmp)deductions.cpp=cppEmp;
   if(cpp2Emp)deductions.cpp2=cpp2Emp;
   if(eiEmp)deductions.ei=eiEmp;
   if(fedTax)deductions.federalTax=fedTax;
   if(provTax)deductions.provincialTax=provTax;
-
-  employeePayroll.push({
+  return {
     id:Date.now()+'_'+Math.random().toString(36).slice(2,8),
     employee:d.employeeName||'Unknown',
     date:d.payDate||new Date().toISOString().slice(0,10),
     period:d.payFrequency||'Biweekly',
-    hours:0,rate:0,gross,
-    deductions,totalDeductions:+totalDed.toFixed(2),net:+net.toFixed(2),
+    hours:0,rate:0,gross:gross,
+    deductions:deductions,totalDeductions:+totalDed.toFixed(2),net:+net.toFixed(2),
     vacationPay:d.vacationPay||0,
     dhCpp:d.cppEmployer||0,dhCpp2:d.cpp2Employer||0,
     dhEi:d.eiEmployer||0,
     dhRemittance:d.totalRemittance||0,
     notes:'Scanned from CRA PDOC'
+  };
+}
+
+function _showBatchPaystubPreview(records){
+  var spinner=document.getElementById('paystub-scan-spinner');
+  var preview=document.getElementById('paystub-scan-preview');
+  spinner.style.display='none';preview.style.display='';
+  window._scannedBatch=records;
+  var html='<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700;color:var(--white)">'+records.length+' Pay Stubs Found</div><div style="background:var(--green);color:#000;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">AI Scanned</div></div>';
+  records.forEach(function(d,i){
+    var gross=d.totalCashIncome||((d.salaryOrWages||0)+(d.vacationPay||0));
+    var net=d.netAmount||0;
+    var remit=d.totalRemittance||0;
+    html+='<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;background:var(--navy-lift)">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">';
+    html+='<div><span style="font-size:14px;font-weight:700;color:var(--white)">'+( d.employeeName||'Unknown')+'</span><span style="font-size:11px;color:var(--muted);margin-left:8px">'+(d.payDate||'')+'</span></div>';
+    html+='<div style="display:flex;gap:12px;font-size:12px">';
+    html+='<span style="color:var(--green);font-weight:600">$'+gross.toFixed(2)+' gross</span>';
+    html+='<span style="color:var(--blue-bright);font-weight:600">$'+net.toFixed(2)+' net</span>';
+    if(remit) html+='<span style="color:var(--orange);font-weight:600">$'+remit.toFixed(2)+' CRA</span>';
+    html+='</div></div></div>';
   });
-  employeePayroll.sort((a,b)=>b.date.localeCompare(a.date));
+  html+='<div style="display:flex;gap:10px;margin-top:12px">';
+  html+='<button onclick="_acceptBatchPaystubs()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer">Add All '+records.length+' Pay Stubs</button>';
+  html+='<button onclick="_dismissPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Discard</button>';
+  html+='</div></div>';
+  preview.innerHTML=html;
+}
+
+function _acceptBatchPaystubs(){
+  var records=window._scannedBatch;if(!records||!records.length)return;
+  var count=0;
+  records.forEach(function(d){
+    employeePayroll.push(_buildPaystubRecord(d));
+    count++;
+  });
+  employeePayroll.sort(function(a,b){return b.date.localeCompare(a.date);});
   saveEmployeePayroll();
   _dismissPaystubScan();
   renderEmployeePayroll();
   renderRemittanceSummary();
-  showDhToast&&showDhToast('Pay stub added',d.employeeName+' — $'+net.toFixed(2)+' net','✓','var(--green)',3000);
+  showDhToast&&showDhToast(count+' pay stubs added','Imported '+count+' records from CRA PDOC','✓','var(--green)',4000);
+}
+
+function _acceptPaystubScan(){
+  var d=window._scannedPaystub;if(!d)return;
+  employeePayroll.push(_buildPaystubRecord(d));
+  employeePayroll.sort(function(a,b){return b.date.localeCompare(a.date);});
+  saveEmployeePayroll();
+  _dismissPaystubScan();
+  renderEmployeePayroll();
+  renderRemittanceSummary();
+  var net=d.netAmount||((d.totalCashIncome||((d.salaryOrWages||0)+(d.vacationPay||0)))-(d.totalDeductions||0));
+  showDhToast&&showDhToast('Pay stub added',(d.employeeName||'Unknown')+' — $'+net.toFixed(2)+' net','✓','var(--green)',3000);
 }
 
 function _dismissPaystubScan(){
   window._scannedPaystub=null;
-  window._stagedPaystubs={1:null,2:null};
+  window._scannedBatch=null;
+  window._stagedPaystubs={1:[],2:[]};
   var zones=document.getElementById('paystub-scan-zones');
   if(zones)zones.style.display='';
   var z1=document.getElementById('paystub-scan-zone-1');
-  if(z1){z1.style.borderColor='var(--blue)';z1.innerHTML='<div style="font-size:18px;margin-bottom:2px">📄</div><div style="font-size:11px;font-weight:600;color:var(--blue-bright)">Employee deductions</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Click or drop screenshot</div>';}
+  if(z1){z1.style.borderColor='var(--blue)';z1.innerHTML='<div style="font-size:18px;margin-bottom:2px">📄</div><div style="font-size:11px;font-weight:600;color:var(--blue-bright)">Employee deductions</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>';}
   var z2=document.getElementById('paystub-scan-zone-2');
-  if(z2){z2.style.borderColor='var(--orange)';z2.innerHTML='<div style="font-size:18px;margin-bottom:2px">📄</div><div style="font-size:11px;font-weight:600;color:var(--orange)">Company remittance</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Click or drop screenshot</div>';}
+  if(z2){z2.style.borderColor='var(--orange)';z2.innerHTML='<div style="font-size:18px;margin-bottom:2px">📄</div><div style="font-size:11px;font-weight:600;color:var(--orange)">Company remittance</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>';}
   document.getElementById('paystub-scan-submit').style.display='none';
   document.getElementById('paystub-scan-spinner').style.display='none';
   document.getElementById('paystub-scan-preview').style.display='none';
