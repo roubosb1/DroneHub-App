@@ -130,13 +130,16 @@ exports.handler = async (event) => {
   const isBatch = batch && images.length > 2;
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
-  async function scanOneImage(img) {
-    const mt = validTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
-    const label = img.label ? img.label.replace(/_/g, ' ') : 'screenshot';
-    const content = [
-      { type: 'image', source: { type: 'base64', media_type: mt, data: img.data } },
-      { type: 'text', text: 'Extract all payroll data from this CRA PDOC calculator screenshot. This is a ' + label + '.' }
-    ];
+  async function scanPair(imgs) {
+    const content = [];
+    for (const img of imgs) {
+      const mt = validTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
+      content.push({ type: 'image', source: { type: 'base64', media_type: mt, data: img.data } });
+      if (img.label) {
+        content.push({ type: 'text', text: '(Above image is: ' + img.label.replace(/_/g, ' ') + ')' });
+      }
+    }
+    content.push({ type: 'text', text: 'Extract all payroll data from these CRA PDOC calculator screenshots.' });
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -158,32 +161,29 @@ exports.handler = async (event) => {
     return JSON.parse(cleaned);
   }
 
-  function mergeRecords(records) {
-    const map = {};
-    for (const r of records) {
-      const key = ((r.employeeName || 'Unknown') + '|' + (r.payDate || '')).toLowerCase();
-      if (!map[key]) { map[key] = Object.assign({}, r); }
-      else {
-        const existing = map[key];
-        for (const [k, v] of Object.entries(r)) {
-          if (v !== null && v !== undefined && v !== 0 && v !== '' && (existing[k] === null || existing[k] === undefined || existing[k] === 0 || existing[k] === '')) {
-            existing[k] = v;
-          }
-        }
-      }
-    }
-    return Object.values(map);
-  }
-
   try {
     if (isBatch) {
-      const results = await Promise.all(images.map(img => scanOneImage(img).catch(e => { console.error('[ai-paystub-scan] single image error:', e.message); return null; })));
-      const valid = results.filter(r => r !== null);
-      if (!valid.length) {
+      const salaryImgs = images.filter(i => i.label === 'salary_calculation');
+      const remitImgs = images.filter(i => i.label === 'employer_remittance');
+      const pairs = [];
+      const maxPairs = Math.max(salaryImgs.length, remitImgs.length);
+      for (let i = 0; i < maxPairs; i++) {
+        const pair = [];
+        if (salaryImgs[i]) pair.push(salaryImgs[i]);
+        if (remitImgs[i]) pair.push(remitImgs[i]);
+        if (pair.length) pairs.push(pair);
+      }
+      const results = await Promise.all(pairs.map(pair => scanPair(pair).catch(e => { console.error('[ai-paystub-scan] pair error:', e.message); return null; })));
+      const allRecords = [];
+      for (const r of results) {
+        if (!r) continue;
+        if (Array.isArray(r)) allRecords.push(...r);
+        else allRecords.push(r);
+      }
+      if (!allRecords.length) {
         return { statusCode: 502, headers, body: JSON.stringify({ error: 'AI could not extract data from any screenshot' }) };
       }
-      const merged = mergeRecords(valid);
-      return { statusCode: 200, headers, body: JSON.stringify({ data: merged }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ data: allRecords }) };
     }
 
     const content = [];
