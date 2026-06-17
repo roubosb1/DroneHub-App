@@ -3302,6 +3302,20 @@ button{font-family:var(--font);}
         <div id="remittance-summary-content"></div>
       </div>
     </div>
+
+      <!-- Year-End T4 Generation -->
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="section-label" style="margin-bottom:2px">Year-End T4 Summary</div>
+            <div style="font-size:11px;color:var(--muted)">Auto-generate T4 slips from pay stub data for CRA filing</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="t4-year-select" onchange="renderT4Summary()" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+          </div>
+        </div>
+        <div id="t4-summary-content"></div>
+      </div>
   </div><!-- end finance-sub-payroll -->
 
   <!-- ── CONTRACTORS SUB-VIEW ── -->
@@ -6092,7 +6106,7 @@ function setFinanceSubTab(sub){
       btn.style.color = active ? 'var(--blue-bright)' : 'var(--muted)';
     }
   });
-  if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); }
+  if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
   if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
@@ -7259,6 +7273,256 @@ function renderRemittanceSummary(){
         <div>Provincial Tax: <span style="color:var(--red)">$${totalProvTax.toFixed(2)}</span></div>
       </div>
     </div>`;
+}
+
+// ── Year-End T4 Generation ──────────────────────────────────────────────────
+function populateT4Years(){
+  const sel=document.getElementById('t4-year-select');
+  if(!sel)return;
+  const years=new Set();
+  employeePayroll.forEach(p=>{if(p.date)years.add(p.date.slice(0,4));});
+  const sorted=[...years].sort().reverse();
+  const cur=sel.value||sorted[0]||'';
+  sel.innerHTML=sorted.map(y=>`<option value="${y}" ${y===cur?'selected':''}>${y}</option>`).join('');
+  if(!sel.value&&sorted.length)sel.value=sorted[0];
+}
+
+function _calcT4(empName,year){
+  const stubs=employeePayroll.filter(p=>p.employee===empName&&p.date&&p.date.startsWith(year));
+  if(!stubs.length)return null;
+  const t4={employee:empName,year,periods:stubs.length};
+  t4.box14=stubs.reduce((a,s)=>a+(s.gross||0),0); // Employment income
+  t4.box16=stubs.reduce((a,s)=>a+(s.deductions?.cpp||0),0); // Employee CPP
+  t4.box17=stubs.reduce((a,s)=>a+(s.deductions?.cpp2||0),0); // Employee CPP2
+  t4.box18=stubs.reduce((a,s)=>a+(s.deductions?.ei||0),0); // Employee EI
+  t4.box22=stubs.reduce((a,s)=>a+(s.deductions?.federalTax||0)+(s.deductions?.provincialTax||0),0); // Income tax deducted
+  t4.box24=t4.box14; // EI insurable earnings (same as employment income for most)
+  t4.box26=t4.box14; // CPP pensionable earnings
+  t4.box40=stubs.reduce((a,s)=>a+(s.vacationPay||0),0); // Taxable allowances (vacation pay)
+  t4.box44=stubs.reduce((a,s)=>a+(s.deductions?.unionDues||0),0); // Union dues
+  t4.box20=stubs.reduce((a,s)=>a+(s.deductions?.pension||0),0); // RPP contributions
+  t4.fedTax=stubs.reduce((a,s)=>a+(s.deductions?.federalTax||0),0);
+  t4.provTax=stubs.reduce((a,s)=>a+(s.deductions?.provincialTax||0),0);
+  t4.dhCpp=stubs.reduce((a,s)=>a+(s.dhCpp||0),0);
+  t4.dhEi=stubs.reduce((a,s)=>a+(s.dhEi||0),0);
+  t4.totalRemit=stubs.reduce((a,s)=>a+(s.dhRemittance||0),0);
+  t4.netPaid=stubs.reduce((a,s)=>a+(s.net||0),0);
+  return t4;
+}
+
+function renderT4Summary(){
+  populateT4Years();
+  const el=document.getElementById('t4-summary-content');
+  if(!el)return;
+  const year=document.getElementById('t4-year-select')?.value;
+  if(!year){el.innerHTML='';return;}
+
+  const emps=new Set();
+  employeePayroll.forEach(p=>{if(p.date&&p.date.startsWith(year))emps.add(p.employee);});
+  if(!emps.size){
+    el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">No pay stubs for '+year+'</div>';
+    return;
+  }
+
+  const t4s=[...emps].sort().map(name=>_calcT4(name,year)).filter(Boolean);
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
+      ${t4s.map(t=>{
+        const member=_findLinkedTeamMember(t.employee);
+        const emailBadge=member?.email?`<div style="font-size:10px;color:var(--muted)">${member.email}</div>`:'';
+        return `<div class="card" style="margin-bottom:0;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--white)">${t.employee}</div>
+              ${emailBadge}
+            </div>
+            <div style="font-size:11px;font-weight:600;color:var(--muted);background:var(--navy-mid);border-radius:6px;padding:3px 8px">T4 — ${t.year}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:11px">
+            <span style="color:var(--muted);font-weight:600">Box 14</span><span style="color:var(--green)">$${t.box14.toFixed(2)} <span style="color:var(--muted);font-weight:400">Employment income</span></span>
+            <span style="color:var(--muted);font-weight:600">Box 16</span><span style="color:var(--red)">$${t.box16.toFixed(2)} <span style="color:var(--muted);font-weight:400">CPP contributions</span></span>
+            ${t.box17?`<span style="color:var(--muted);font-weight:600">Box 17</span><span style="color:var(--red)">$${t.box17.toFixed(2)} <span style="color:var(--muted);font-weight:400">CPP2 contributions</span></span>`:''}
+            <span style="color:var(--muted);font-weight:600">Box 18</span><span style="color:var(--red)">$${t.box18.toFixed(2)} <span style="color:var(--muted);font-weight:400">EI premiums</span></span>
+            <span style="color:var(--muted);font-weight:600">Box 22</span><span style="color:var(--red)">$${t.box22.toFixed(2)} <span style="color:var(--muted);font-weight:400">Income tax deducted</span></span>
+            <span style="color:var(--muted);font-weight:600">Box 24</span><span style="color:var(--offwhite)">$${t.box24.toFixed(2)} <span style="color:var(--muted);font-weight:400">EI insurable earnings</span></span>
+            <span style="color:var(--muted);font-weight:600">Box 26</span><span style="color:var(--offwhite)">$${t.box26.toFixed(2)} <span style="color:var(--muted);font-weight:400">CPP pensionable earnings</span></span>
+            ${t.box44?`<span style="color:var(--muted);font-weight:600">Box 44</span><span style="color:var(--red)">$${t.box44.toFixed(2)} <span style="color:var(--muted);font-weight:400">Union dues</span></span>`:''}
+            ${t.box20?`<span style="color:var(--muted);font-weight:600">Box 20</span><span style="color:var(--red)">$${t.box20.toFixed(2)} <span style="color:var(--muted);font-weight:400">RPP contributions</span></span>`:''}
+          </div>
+          <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;color:var(--muted)">
+            <div>Federal Tax: <span style="color:var(--red)">$${t.fedTax.toFixed(2)}</span></div>
+            <div>Provincial Tax: <span style="color:var(--red)">$${t.provTax.toFixed(2)}</span></div>
+            <div>ER CPP: <span style="color:var(--orange)">$${t.dhCpp.toFixed(2)}</span></div>
+            <div>ER EI: <span style="color:var(--orange)">$${t.dhEi.toFixed(2)}</span></div>
+            <div>Total Remittance: <span style="color:var(--orange)">$${t.totalRemit.toFixed(2)}</span></div>
+            <div>Net Paid: <span style="color:var(--blue-bright)">$${t.netPaid.toFixed(2)}</span></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button onclick="viewT4Detail('${t.employee}','${t.year}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer">View Full T4</button>
+            <button onclick="exportT4CSV('${t.employee}','${t.year}')" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Export CSV</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function viewT4Detail(empName,year){
+  const t=_calcT4(empName,year);
+  if(!t)return;
+  const member=_findLinkedTeamMember(empName);
+  const html=`<div style="padding:24px;max-width:520px;margin:auto">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.15em;margin-bottom:2px">Canada Revenue Agency</div>
+      <div style="font-size:20px;font-weight:800;color:var(--white)">T4 — Statement of Remuneration Paid</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Tax Year ${year}</div>
+    </div>
+
+    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Employee</div>
+          <div style="font-size:15px;font-weight:700;color:var(--white)">${empName}</div>
+          ${member?.email?`<div style="font-size:11px;color:var(--muted)">${member.email}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Employer</div>
+          <div style="font-size:13px;font-weight:600;color:var(--white)">DroneHub Media Company Corp</div>
+          <div style="font-size:11px;color:var(--muted)">Ontario, Canada</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted)">${t.periods} pay periods in ${year}</div>
+    </div>
+
+    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">T4 Box Summary</div>
+      <table style="width:100%;border-collapse:collapse">
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 14</span> <span style="color:var(--offwhite)">Employment income</span></td><td style="padding:6px 0;font-size:13px;font-weight:700;color:var(--green);text-align:right">$${t.box14.toFixed(2)}</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 16</span> <span style="color:var(--offwhite)">Employee CPP contributions</span></td><td style="padding:6px 0;font-size:13px;font-weight:700;color:var(--red);text-align:right">$${t.box16.toFixed(2)}</td></tr>
+          ${t.box17?`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 17</span> <span style="color:var(--offwhite)">Employee CPP2 contributions</span></td><td style="padding:6px 0;font-size:13px;font-weight:700;color:var(--red);text-align:right">$${t.box17.toFixed(2)}</td></tr>`:''}
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 18</span> <span style="color:var(--offwhite)">Employee EI premiums</span></td><td style="padding:6px 0;font-size:13px;font-weight:700;color:var(--red);text-align:right">$${t.box18.toFixed(2)}</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 22</span> <span style="color:var(--offwhite)">Income tax deducted</span></td><td style="padding:6px 0;font-size:13px;font-weight:700;color:var(--red);text-align:right">$${t.box22.toFixed(2)}</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 24</span> <span style="color:var(--offwhite)">EI insurable earnings</span></td><td style="padding:6px 0;font-size:13px;color:var(--offwhite);text-align:right">$${t.box24.toFixed(2)}</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 26</span> <span style="color:var(--offwhite)">CPP/QPP pensionable earnings</span></td><td style="padding:6px 0;font-size:13px;color:var(--offwhite);text-align:right">$${t.box26.toFixed(2)}</td></tr>
+          ${t.box44?`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 44</span> <span style="color:var(--offwhite)">Union dues</span></td><td style="padding:6px 0;font-size:13px;color:var(--red);text-align:right">$${t.box44.toFixed(2)}</td></tr>`:''}
+          ${t.box20?`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0;font-size:12px"><span style="color:var(--muted);font-weight:700;margin-right:8px">Box 20</span> <span style="color:var(--offwhite)">RPP contributions</span></td><td style="padding:6px 0;font-size:13px;color:var(--red);text-align:right">$${t.box20.toFixed(2)}</td></tr>`:''}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="background:var(--navy-lift);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Tax Breakdown</div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:var(--offwhite)">Federal Tax</span><span style="color:var(--red)">$${t.fedTax.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:var(--offwhite)">Provincial Tax (Ontario)</span><span style="color:var(--red)">$${t.provTax.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-top:1px solid var(--border);margin-top:4px;padding-top:8px"><span style="font-weight:700;color:var(--offwhite)">Total Tax Deducted (Box 22)</span><span style="font-weight:700;color:var(--red)">$${t.box22.toFixed(2)}</span></div>
+    </div>
+
+    <div style="background:var(--navy-lift);border:1px solid rgba(255,165,0,.2);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Employer Contributions (DroneHub)</div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:var(--offwhite)">Employer CPP</span><span style="color:var(--orange)">$${t.dhCpp.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span style="color:var(--offwhite)">Employer EI</span><span style="color:var(--orange)">$${t.dhEi.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-top:1px solid rgba(255,165,0,.2);margin-top:4px;padding-top:8px"><span style="font-weight:700;color:var(--offwhite)">Total CRA Remittance (${year})</span><span style="font-weight:700;color:var(--orange)">$${t.totalRemit.toFixed(2)}</span></div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(91,141,239,.15),rgba(91,141,239,.05));border:1px solid var(--blue);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total Net Paid to ${empName.split(' ')[0]} in ${year}</div>
+      <div style="font-size:26px;font-weight:800;color:var(--blue-bright)">$${t.netPaid.toFixed(2)}</div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="exportT4CSV('${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:600;cursor:pointer">Export CSV</button>
+      <button onclick="printT4('${empName}','${year}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer">Print T4</button>
+      <button onclick="closeModal()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer">Close</button>
+    </div>
+  </div>`;
+  openModal(html);
+}
+
+function exportT4CSV(empName,year){
+  const t=_calcT4(empName,year);
+  if(!t)return;
+  const rows=[
+    ['T4 Statement of Remuneration Paid — '+year],
+    ['Employee',empName],
+    ['Employer','DroneHub Media Company Corp'],
+    ['Province','Ontario'],
+    ['Pay Periods',t.periods],
+    [],
+    ['Box','Description','Amount'],
+    ['14','Employment income',t.box14.toFixed(2)],
+    ['16','Employee CPP contributions',t.box16.toFixed(2)],
+    ['17','Employee CPP2 contributions',t.box17.toFixed(2)],
+    ['18','Employee EI premiums',t.box18.toFixed(2)],
+    ['22','Income tax deducted',t.box22.toFixed(2)],
+    ['24','EI insurable earnings',t.box24.toFixed(2)],
+    ['26','CPP pensionable earnings',t.box26.toFixed(2)],
+    ['44','Union dues',t.box44.toFixed(2)],
+    ['20','RPP contributions',t.box20.toFixed(2)],
+    [],
+    ['','Federal tax',t.fedTax.toFixed(2)],
+    ['','Provincial tax',t.provTax.toFixed(2)],
+    [],
+    ['','Employer CPP',t.dhCpp.toFixed(2)],
+    ['','Employer EI',t.dhEi.toFixed(2)],
+    ['','Total CRA remittance',t.totalRemit.toFixed(2)],
+    ['','Total net paid',t.netPaid.toFixed(2)]
+  ];
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`T4_${empName.replace(/\s+/g,'_')}_${year}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function printT4(empName,year){
+  const t=_calcT4(empName,year);
+  if(!t)return;
+  const member=_findLinkedTeamMember(empName);
+  const w=window.open('','_blank','width=800,height=1000');
+  w.document.write(`<!DOCTYPE html><html><head><title>T4 — ${empName} — ${year}</title>
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#222}
+  h1{font-size:18px;text-align:center;margin-bottom:4px}h2{font-size:13px;text-align:center;color:#666;margin-top:0}
+  .info{display:flex;justify-content:space-between;margin:20px 0;padding:14px;background:#f5f5f5;border-radius:8px}
+  table{width:100%;border-collapse:collapse;margin:16px 0}td,th{padding:8px 12px;text-align:left;border-bottom:1px solid #ddd;font-size:13px}
+  th{background:#f0f0f0;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .amt{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  .section{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin:20px 0 8px;padding-top:12px;border-top:2px solid #ddd}
+  .total{font-weight:700;font-size:14px;border-top:2px solid #333}
+  @media print{body{margin:20px}}</style></head><body>
+  <h1>T4 — Statement of Remuneration Paid</h1>
+  <h2>Canada Revenue Agency · Tax Year ${year}</h2>
+  <div class="info"><div><strong>Employee:</strong> ${empName}${member?.email?'<br><span style="color:#666;font-size:12px">'+member.email+'</span>':''}</div><div style="text-align:right"><strong>Employer:</strong> DroneHub Media Company Corp<br><span style="color:#666;font-size:12px">Ontario, Canada · ${t.periods} pay periods</span></div></div>
+  <table><thead><tr><th>Box</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+  <tr><td>14</td><td>Employment income</td><td class="amt">$${t.box14.toFixed(2)}</td></tr>
+  <tr><td>16</td><td>Employee CPP contributions</td><td class="amt">$${t.box16.toFixed(2)}</td></tr>
+  ${t.box17?`<tr><td>17</td><td>Employee CPP2 contributions</td><td class="amt">$${t.box17.toFixed(2)}</td></tr>`:''}
+  <tr><td>18</td><td>Employee EI premiums</td><td class="amt">$${t.box18.toFixed(2)}</td></tr>
+  <tr><td>22</td><td>Income tax deducted</td><td class="amt">$${t.box22.toFixed(2)}</td></tr>
+  <tr><td>24</td><td>EI insurable earnings</td><td class="amt">$${t.box24.toFixed(2)}</td></tr>
+  <tr><td>26</td><td>CPP/QPP pensionable earnings</td><td class="amt">$${t.box26.toFixed(2)}</td></tr>
+  ${t.box44?`<tr><td>44</td><td>Union dues</td><td class="amt">$${t.box44.toFixed(2)}</td></tr>`:''}
+  ${t.box20?`<tr><td>20</td><td>RPP contributions</td><td class="amt">$${t.box20.toFixed(2)}</td></tr>`:''}
+  </tbody></table>
+  <div class="section">Tax Breakdown</div>
+  <table><tbody>
+  <tr><td></td><td>Federal tax</td><td class="amt">$${t.fedTax.toFixed(2)}</td></tr>
+  <tr><td></td><td>Provincial tax (Ontario)</td><td class="amt">$${t.provTax.toFixed(2)}</td></tr>
+  <tr class="total"><td></td><td>Total tax deducted</td><td class="amt">$${t.box22.toFixed(2)}</td></tr>
+  </tbody></table>
+  <div class="section">Employer Contributions</div>
+  <table><tbody>
+  <tr><td></td><td>Employer CPP</td><td class="amt">$${t.dhCpp.toFixed(2)}</td></tr>
+  <tr><td></td><td>Employer EI</td><td class="amt">$${t.dhEi.toFixed(2)}</td></tr>
+  <tr class="total"><td></td><td>Total CRA remittance</td><td class="amt">$${t.totalRemit.toFixed(2)}</td></tr>
+  </tbody></table>
+  <div style="text-align:center;margin-top:24px;padding:16px;background:#f0f7ff;border-radius:8px"><div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total Net Paid to ${empName.split(' ')[0]}</div><div style="font-size:28px;font-weight:800;color:#2563eb">$${t.netPaid.toFixed(2)}</div></div>
+  <div style="text-align:center;margin-top:20px;font-size:11px;color:#999">Generated by DroneHub Operations Hub</div>
+  </body></html>`);
+  w.document.close();
+  w.print();
 }
 
 function setFinanceMarket(m){
