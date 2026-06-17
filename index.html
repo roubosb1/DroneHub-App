@@ -6406,10 +6406,11 @@ function clearAllEmployeePayroll(){
   showDhToast&&showDhToast('Cleared','All employee pay stubs deleted','🗑','var(--red)',3000);
 }
 
-function deleteEmployeePayStub(id){
+function deleteEmployeePayStub(key){
   if(!confirm('Delete this pay stub?'))return;
-  const sid=String(id);
-  employeePayroll=employeePayroll.filter(p=>String(p.id)!==sid);
+  const s=window._empStubMap[key];
+  if(!s)return;
+  employeePayroll=employeePayroll.filter(p=>p!==s);
   saveEmployeePayroll();renderEmployeePayroll();
 }
 
@@ -6428,6 +6429,7 @@ function populateEmpPayFilters(){
 }
 
 function renderEmployeePayroll(){
+  window._empStubMap={};window._empStubIdx=0;
   populateEmpPayFilters();
   const el=document.getElementById('employee-payroll-content');
   if(!el)return;
@@ -6456,9 +6458,11 @@ function renderEmployeePayroll(){
       ?`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--green);margin-left:8px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>${member?.email||data.stubs[0]?.linkedEmail||'linked'}</span>`
       :'';
     const stubCards=data.stubs.map(s=>{
+      const sk='s'+(window._empStubIdx=(window._empStubIdx||0)+1);
+      window._empStubMap[sk]=s;
       const mo=s.date?new Date(s.date+'T12:00:00').toLocaleString('en',{month:'short'}):' ';
       const day=s.date?s.date.slice(8,10):'';
-      return `<div class="emp-stub-tile" data-stubid="${String(s.id)}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .1s;min-width:0" onmouseover="this.style.borderColor='var(--blue)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
+      return `<div class="emp-stub-tile" data-sk="${sk}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .1s;min-width:0" onmouseover="this.style.borderColor='var(--blue)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${mo} ${day}</div>
         <div style="font-size:14px;font-weight:700;color:var(--blue-bright);margin-bottom:2px">$${(s.net||0).toFixed(2)}</div>
         <div style="font-size:9px;color:var(--green)">Gross $${(s.gross||0).toFixed(2)}</div>
@@ -6477,7 +6481,7 @@ function renderEmployeePayroll(){
   }).join('');
 
   el.querySelectorAll('.emp-stub-tile').forEach(tile=>{
-    tile.addEventListener('click',function(){ viewEmployeePayStub(this.dataset.stubid); });
+    tile.addEventListener('click',function(){ viewEmployeePayStub(this.dataset.sk); });
   });
 }
 
@@ -6487,9 +6491,8 @@ function _findLinkedTeamMember(name){
   return team.find(m=>(m.name||'').toLowerCase().trim()===n)||null;
 }
 
-function linkPayStubToAccount(stubId){
-  const sid=String(stubId);
-  const s=employeePayroll.find(p=>String(p.id)===sid);
+function linkPayStubToAccount(key){
+  const s=window._empStubMap[key];
   if(!s)return;
   const team=typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[];
   if(!team.length){alert('No team members found.');return;}
@@ -6509,7 +6512,7 @@ function linkPayStubToAccount(stubId){
         const team=(typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]);
         const m=team.find(t=>(t.email||t.id)===sel.value);
         if(!m)return;
-        const stub=employeePayroll.find(p=>String(p.id)==='${sid}');
+        const stub=window._empStubMap['${key}'];
         if(stub){stub.linkedEmail=m.email||m.id;stub.linkedName=m.name;stub.linkedUserId=m.id||'';saveEmployeePayroll();renderEmployeePayroll();}
         closeModal();
       })()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:13px;font-weight:600;cursor:pointer">Link</button>
@@ -6519,16 +6522,16 @@ function linkPayStubToAccount(stubId){
   openModal(html);
 }
 
-function viewEmployeePayStub(id){
-  const sid=String(id);
-  const s=employeePayroll.find(p=>String(p.id)===sid);
-  if(!s)return;
+window._empStubMap={};
+function viewEmployeePayStub(key){
+  const s=window._empStubMap[key];
+  if(!s){alert('Stub not found — key: '+key);return;}
 
   const linked=s.linkedEmail?s:null;
   const member=_findLinkedTeamMember(s.employee);
   const acct=linked||member;
   const acctBadge=acct?`<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--green);margin-top:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span> Linked to ${s.linkedEmail||member?.email||'account'}</div>`
-    :`<button onclick="linkPayStubToAccount('${sid}')" style="margin-top:6px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">Link to account</button>`;
+    :`<button onclick="linkPayStubToAccount('${key}')" style="margin-top:6px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">Link to account</button>`;
 
   const workPay=s.vacationPay?(s.gross-s.vacationPay):0;
   const earningsRows=[];
@@ -6594,7 +6597,7 @@ function viewEmployeePayStub(id){
     </div>`:''}
 
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button onclick="deleteEmployeePayStub('${sid}');closeModal()" style="padding:10px;border-radius:10px;border:1px solid var(--red);background:rgba(240,82,82,.08);color:var(--red);font-size:12px;cursor:pointer;flex-shrink:0">Delete</button>
+      <button onclick="deleteEmployeePayStub('${key}');closeModal()" style="padding:10px;border-radius:10px;border:1px solid var(--red);background:rgba(240,82,82,.08);color:var(--red);font-size:12px;cursor:pointer;flex-shrink:0">Delete</button>
       <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Close</button>
     </div>
   </div>`;
