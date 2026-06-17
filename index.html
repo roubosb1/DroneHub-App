@@ -7528,23 +7528,22 @@ function printT4(empName,year){
 
 // ── CRA T4 Official Form Generator ─────────────────────────────────────────
 function _getT4EmployerInfo(){
-  try{return JSON.parse(localStorage.getItem('dronehub_t4_employer')||'{}');}catch(e){return {};}
+  try{return JSON.parse(localStorage.getItem(lsKey('t4_employer'))||'{}');}catch(e){return {};}
 }
 function _saveT4EmployerInfo(info){
-  try{localStorage.setItem('dronehub_t4_employer',JSON.stringify(info));}catch(e){}
+  try{localStorage.setItem(lsKey('t4_employer'),JSON.stringify(info));}catch(e){}
 }
 
 function openCRAT4Form(empName,year){
   const t=_calcT4(empName,year);
   if(!t)return;
   const member=_findLinkedTeamMember(empName);
+  const biz=typeof bizSettings!=='undefined'?bizSettings:{};
   const emp=_getT4EmployerInfo();
-  // Pre-fill employer address from Bailey's contractor record if not saved yet
-  if(!emp.addr){
-    const baileyC=typeof CONTRACTORS!=='undefined'&&CONTRACTORS.bailey;
-    if(baileyC&&baileyC.addr) emp.addr=baileyC.addr;
-  }
-  if(!emp.name) emp.name='DroneHub Media Company Corp';
+  // Pull from business profile — each org has their own bizSettings
+  if(!emp.name) emp.name=biz.name||'';
+  if(!emp.addr) emp.addr=[biz.addr1,biz.addr2].filter(Boolean).join(', ')||'';
+  if(!emp.bn) emp.bn=biz.hst||'';
   // Find employee address from CONTRACTORS or member
   const empN=(empName||'').toLowerCase().trim();
   let eeAddr=member?.address||member?.addr||'';
@@ -7574,7 +7573,7 @@ function openCRAT4Form(empName,year){
         </div>
         <div>
           <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Employer Name</label>
-          <input id="t4-er-name" value="${emp.name||'DroneHub Media Company Corp'}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
+          <input id="t4-er-name" value="${emp.name||''}" placeholder="Your Business Name" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
         </div>
         <div style="grid-column:span 2">
           <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Employer Address</label>
