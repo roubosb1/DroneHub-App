@@ -18758,7 +18758,23 @@ function renderIncomeList(){
 }
 
 let expenses=JSON.parse(localStorage.getItem('dronehub_expenses')||'[]');
-// Migrate old receiptImg fields → save to Firebase, strip from expense object
+
+// Receipt Storage API (Firebase Cloud Storage via Netlify function)
+const _RECEIPT_STORE='/.netlify/functions/receipt-storage';
+async function receiptStorageCall(action,receiptId,image){
+  const tok=_fbToken();if(!tok)return null;
+  const body={action,receiptId,orgId:ORG_ID};
+  if(image)body.image=image;
+  const r=await fetch(_RECEIPT_STORE,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+    body:JSON.stringify(body)
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'Storage error');}
+  return r.json();
+}
+
+// Migrate old receiptImg fields → save to Cloud Storage, strip from expense object
 (function _migrateReceiptImgs(){
   let changed=false;
   expenses.forEach(e=>{
@@ -18768,7 +18784,8 @@ let expenses=JSON.parse(localStorage.getItem('dronehub_expenses')||'[]');
       delete e.receiptImg;
       changed=true;
       setTimeout(()=>{
-        if(_fbToken()) fbSetStrict('orgs',ORG_ID+':receipt_'+e.id,{img,ts:Date.now()}).catch(()=>{});
+        const raw=img.includes(',')?img.split(',')[1]:img;
+        receiptStorageCall('upload','receipt_'+e.id,raw).catch(()=>{});
       },3000);
     }
   });
@@ -18909,7 +18926,8 @@ function receiptAccept(){
   expenses.sort((a,b)=>b.date.localeCompare(a.date));
   saveExpenses();
   if(_receiptImageB64&&_fbToken()){
-    try{fbSetStrict('orgs',ORG_ID+':receipt_'+expId,{img:_receiptImageB64,ts:Date.now()}).catch(()=>{});}catch(e){}
+    const raw=_receiptImageB64.includes(',')?_receiptImageB64.split(',')[1]:_receiptImageB64;
+    receiptStorageCall('upload','receipt_'+expId,raw).catch(e=>console.warn('Receipt upload failed:',e.message));
   }
   showDhToast('Expense added','$'+total.toFixed(2)+' — '+desc,'✓','var(--green)');
   receiptDismiss();
@@ -18994,12 +19012,12 @@ function renderExpenseList(){
 
 function viewReceipt(expId){
   if(_fbToken()){
-    fbGet('orgs',ORG_ID+':receipt_'+expId).then(d=>{
-      if(d&&d.img){
+    receiptStorageCall('get','receipt_'+expId).then(d=>{
+      if(d&&d.image){
         const ov=document.createElement('div');
         ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;cursor:pointer';
         ov.onclick=()=>ov.remove();
-        ov.innerHTML='<img src="'+d.img+'" style="max-width:90vw;max-height:90vh;border-radius:12px;object-fit:contain">';
+        ov.innerHTML='<img src="data:image/jpeg;base64,'+d.image+'" style="max-width:90vw;max-height:90vh;border-radius:12px;object-fit:contain">';
         document.body.appendChild(ov);
       } else { showDhToast('No receipt','Receipt image not found.','⚠️','var(--orange)'); }
     }).catch(()=>showDhToast('Error','Could not load receipt.','⚠️','var(--red)'));
