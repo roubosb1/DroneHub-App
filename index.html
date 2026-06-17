@@ -3272,6 +3272,32 @@ button{font-family:var(--font);}
         <input type="file" id="emp-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleEmpPayImport(this.files)">
         <div id="emp-import-status" style="font-size:12px;margin-top:8px;color:var(--green)"></div>
       </div>
+
+      <!-- AI Pay Stub Scanner -->
+      <div class="card" style="margin-top:14px">
+        <div class="section-label" style="margin-bottom:4px">Scan CRA Pay Stub Screenshots</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Upload 1-2 screenshots from the <strong>CRA Payroll Deductions Online Calculator</strong> (salary calculation + employer remittance). AI will extract all payroll data automatically.</div>
+        <div id="paystub-scan-zone" onclick="document.getElementById('paystub-scan-input').click()" style="border:1.5px dashed var(--blue);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(91,141,239,.03)" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--blue)'" ondrop="event.preventDefault();this.style.borderColor='var(--blue)';handlePaystubScanFiles(event.dataTransfer.files)">
+          <div style="font-size:20px;margin-bottom:4px">📸</div>
+          <div style="font-size:12px;font-weight:600;color:var(--blue-bright)">Drop CRA screenshots here or click to upload</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Select both screenshots at once for best results</div>
+        </div>
+        <input type="file" id="paystub-scan-input" accept="image/*" multiple style="display:none" onchange="handlePaystubScanFiles(this.files)">
+        <div id="paystub-scan-spinner" style="display:none;text-align:center;padding:20px">
+          <div style="font-size:14px;color:var(--blue-bright);margin-bottom:6px">Scanning pay stub...</div>
+          <div style="font-size:11px;color:var(--muted)">AI is extracting payroll data</div>
+        </div>
+        <div id="paystub-scan-preview" style="display:none"></div>
+      </div>
+
+      <!-- Monthly Remittance Summary -->
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div class="section-label" style="margin-bottom:0">Monthly CRA Remittance Summary</div>
+          <select id="remittance-month-select" onchange="renderRemittanceSummary()" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+        </div>
+        <div id="remittance-summary-content"></div>
+      </div>
     </div>
   </div><!-- end finance-sub-payroll -->
 
@@ -6063,7 +6089,7 @@ function setFinanceSubTab(sub){
       btn.style.color = active ? 'var(--blue-bright)' : 'var(--muted)';
     }
   });
-  if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); }
+  if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
   if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
@@ -6776,6 +6802,305 @@ function handleEmpPayImport(files){
   if(/\.xlsx?$/i.test(file.name)) reader.readAsArrayBuffer(file);
   else reader.readAsText(file);
   document.getElementById('emp-import-file').value='';
+}
+
+// ── AI Pay Stub Scanner ─────────────────────────────────────────────────────
+async function handlePaystubScanFiles(files){
+  if(!files||!files.length)return;
+  const zone=document.getElementById('paystub-scan-zone');
+  const spinner=document.getElementById('paystub-scan-spinner');
+  const preview=document.getElementById('paystub-scan-preview');
+  zone.style.display='none';spinner.style.display='';preview.style.display='none';
+
+  try{
+    const images=[];
+    for(let i=0;i<Math.min(files.length,2);i++){
+      const compressed=await _resizePaystubImage(files[i]);
+      images.push(compressed);
+    }
+    const tok=_fbToken();
+    if(!tok){showDhToast('Not logged in','Please log in first.','⚠️','var(--orange)');return;}
+    const r=await fetch('/.netlify/functions/ai-paystub-scan',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({images})
+    });
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'Scan failed');}
+    const{data}=await r.json();
+    _showPaystubScanPreview(data);
+  }catch(e){
+    showDhToast&&showDhToast('Scan failed',e.message,'⚠️','var(--red)');
+    zone.style.display='';spinner.style.display='none';
+  }
+  document.getElementById('paystub-scan-input').value='';
+}
+
+function _resizePaystubImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const max=1400;
+        let w=img.width,h=img.height;
+        if(w>max){h=Math.round(h*(max/w));w=max;}
+        if(h>max){w=Math.round(w*(max/h));h=max;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        const dataUrl=c.toDataURL('image/jpeg',0.85);
+        const b64=dataUrl.split(',')[1];
+        resolve({data:b64,mimeType:'image/jpeg'});
+      };
+      img.onerror=()=>reject(new Error('Failed to load image'));
+      img.src=reader.result;
+    };
+    reader.onerror=()=>reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function _showPaystubScanPreview(d){
+  const zone=document.getElementById('paystub-scan-zone');
+  const spinner=document.getElementById('paystub-scan-spinner');
+  const preview=document.getElementById('paystub-scan-preview');
+  spinner.style.display='none';preview.style.display='';
+
+  const workPay=d.salaryOrWages||0;
+  const vacPay=d.vacationPay||0;
+  const gross=d.totalCashIncome||(workPay+vacPay);
+  const fedTax=d.federalTax||0;
+  const provTax=d.provincialTax||0;
+  const cppEmp=d.cppEmployee||0;
+  const cpp2Emp=d.cpp2Employee||0;
+  const eiEmp=d.eiEmployee||0;
+  const totalDed=d.totalDeductions||(fedTax+provTax+cppEmp+cpp2Emp+eiEmp);
+  const net=d.netAmount||(gross-totalDed);
+  const cppER=d.cppEmployer||0;
+  const cpp2ER=d.cpp2Employer||0;
+  const eiER=d.eiEmployer||0;
+  const totalRemit=d.totalRemittance||0;
+
+  preview.innerHTML=`<div style="margin-top:12px;border:1px solid var(--blue);border-radius:10px;padding:16px;background:rgba(91,141,239,.03)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--white)">${d.employeeName||'Unknown'}</div>
+        <div style="font-size:11px;color:var(--muted)">${d.payDate||''} · ${d.payFrequency||'Biweekly'} · ${d.province||'Ontario'}</div>
+      </div>
+      <div style="background:var(--green);color:#000;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">AI Scanned</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--navy-lift);border-radius:8px;padding:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Earnings</div>
+        <div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>Working Pay</span><span>$${workPay.toFixed(2)}</span></div>
+        <div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>Vacation (4%)</span><span>$${vacPay.toFixed(2)}</span></div>
+        <div style="font-size:13px;font-weight:700;color:var(--green);display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span>Gross</span><span>$${gross.toFixed(2)}</span></div>
+      </div>
+      <div style="background:var(--navy-lift);border-radius:8px;padding:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Employee Deductions</div>
+        <div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>Federal Tax</span><span style="color:var(--red)">-$${fedTax.toFixed(2)}</span></div>
+        <div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>Provincial Tax</span><span style="color:var(--red)">-$${provTax.toFixed(2)}</span></div>
+        <div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>CPP</span><span style="color:var(--red)">-$${cppEmp.toFixed(2)}</span></div>
+        ${cpp2Emp?`<div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>CPP2</span><span style="color:var(--red)">-$${cpp2Emp.toFixed(2)}</span></div>`:''}
+        <div style="font-size:12px;color:var(--offwhite);display:flex;justify-content:space-between"><span>EI</span><span style="color:var(--red)">-$${eiEmp.toFixed(2)}</span></div>
+        <div style="font-size:13px;font-weight:700;color:var(--red);display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid var(--border)"><span>Total</span><span>-$${totalDed.toFixed(2)}</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:linear-gradient(135deg,rgba(91,141,239,.15),rgba(91,141,239,.05));border:1px solid var(--blue);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:2px">Net Pay</div>
+        <div style="font-size:20px;font-weight:800;color:var(--blue-bright)">$${net.toFixed(2)}</div>
+      </div>
+      <div style="background:linear-gradient(135deg,rgba(255,160,0,.1),rgba(255,160,0,.03));border:1px solid var(--orange);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:2px">CRA Remittance</div>
+        <div style="font-size:20px;font-weight:800;color:var(--orange)">$${totalRemit.toFixed(2)}</div>
+      </div>
+    </div>
+    ${(cppER||eiER)?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Employer: CPP $${cppER.toFixed(2)}${cpp2ER?' + CPP2 $'+cpp2ER.toFixed(2):''} · EI $${eiER.toFixed(2)}</div>`:''}
+    <div style="display:flex;gap:10px">
+      <button onclick="_acceptPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer">Add Pay Stub</button>
+      <button onclick="_dismissPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Discard</button>
+    </div>
+  </div>`;
+
+  // Store scanned data for accept
+  window._scannedPaystub=d;
+}
+
+function _acceptPaystubScan(){
+  const d=window._scannedPaystub;if(!d)return;
+  const workPay=d.salaryOrWages||0;
+  const vacPay=d.vacationPay||0;
+  const gross=d.totalCashIncome||(workPay+vacPay);
+  const cppEmp=d.cppEmployee||0;
+  const cpp2Emp=d.cpp2Employee||0;
+  const eiEmp=d.eiEmployee||0;
+  const fedTax=d.federalTax||0;
+  const provTax=d.provincialTax||0;
+  const totalDed=d.totalDeductions||(fedTax+provTax+cppEmp+cpp2Emp+eiEmp);
+  const net=d.netAmount||(gross-totalDed);
+
+  const deductions={};
+  if(cppEmp)deductions.cpp=cppEmp;
+  if(cpp2Emp)deductions.cpp2=cpp2Emp;
+  if(eiEmp)deductions.ei=eiEmp;
+  if(fedTax)deductions.federalTax=fedTax;
+  if(provTax)deductions.provincialTax=provTax;
+
+  employeePayroll.push({
+    id:Date.now()+'_'+Math.random().toString(36).slice(2,8),
+    employee:d.employeeName||'Unknown',
+    date:d.payDate||new Date().toISOString().slice(0,10),
+    period:d.payFrequency||'Biweekly',
+    hours:0,rate:0,gross,
+    deductions,totalDeductions:+totalDed.toFixed(2),net:+net.toFixed(2),
+    vacationPay:d.vacationPay||0,
+    dhCpp:d.cppEmployer||0,dhCpp2:d.cpp2Employer||0,
+    dhEi:d.eiEmployer||0,
+    dhRemittance:d.totalRemittance||0,
+    notes:'Scanned from CRA PDOC'
+  });
+  employeePayroll.sort((a,b)=>b.date.localeCompare(a.date));
+  saveEmployeePayroll();
+  _dismissPaystubScan();
+  renderEmployeePayroll();
+  renderRemittanceSummary();
+  showDhToast&&showDhToast('Pay stub added',d.employeeName+' — $'+net.toFixed(2)+' net','✓','var(--green)',3000);
+}
+
+function _dismissPaystubScan(){
+  window._scannedPaystub=null;
+  document.getElementById('paystub-scan-zone').style.display='';
+  document.getElementById('paystub-scan-spinner').style.display='none';
+  document.getElementById('paystub-scan-preview').style.display='none';
+}
+
+// ── Monthly CRA Remittance Summary ──────────────────────────────────────────
+function populateRemittanceMonths(){
+  const sel=document.getElementById('remittance-month-select');
+  if(!sel)return;
+  const months=new Set();
+  employeePayroll.forEach(p=>{
+    if(p.date)months.add(p.date.slice(0,7)); // YYYY-MM
+  });
+  // Add current month
+  months.add(new Date().toISOString().slice(0,7));
+  const cur=sel.value;
+  const sorted=[...months].sort().reverse();
+  sel.innerHTML=sorted.map(m=>{
+    const [y,mo]=m.split('-');
+    const label=new Date(y,parseInt(mo)-1).toLocaleString('en',{month:'long',year:'numeric'});
+    return `<option value="${m}"${m===cur?' selected':''}>${label}</option>`;
+  }).join('');
+  if(!cur&&sorted.length)sel.value=sorted[0];
+}
+
+function renderRemittanceSummary(){
+  populateRemittanceMonths();
+  const el=document.getElementById('remittance-summary-content');
+  if(!el)return;
+  const month=document.getElementById('remittance-month-select')?.value;
+  if(!month){el.innerHTML='';return;}
+
+  const stubs=employeePayroll.filter(p=>p.date&&p.date.startsWith(month));
+  if(!stubs.length){
+    el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">No pay stubs for this month</div>';
+    return;
+  }
+
+  // Group by pay date to find pay periods
+  const byDate={};
+  stubs.forEach(s=>{
+    if(!byDate[s.date])byDate[s.date]=[];
+    byDate[s.date].push(s);
+  });
+  const payPeriods=Object.keys(byDate).sort();
+  const numPeriods=payPeriods.length;
+
+  // Unique employees
+  const empNames=new Set();
+  stubs.forEach(s=>empNames.add(s.employee));
+  const numEmployees=empNames.size;
+
+  // Totals
+  let totalGross=0,totalNet=0,totalDeductions=0,totalRemittance=0;
+  let totalCppEmp=0,totalCppER=0,totalEiEmp=0,totalEiER=0,totalFedTax=0,totalProvTax=0;
+  stubs.forEach(s=>{
+    totalGross+=s.gross||0;
+    totalNet+=s.net||0;
+    totalDeductions+=s.totalDeductions||0;
+    totalRemittance+=s.dhRemittance||0;
+    if(s.deductions){
+      totalCppEmp+=s.deductions.cpp||0;
+      totalEiEmp+=s.deductions.ei||0;
+      totalFedTax+=s.deductions.federalTax||0;
+      totalProvTax+=s.deductions.provincialTax||0;
+    }
+    totalCppER+=s.dhCpp||0;
+    totalEiER+=s.dhEi||0;
+  });
+
+  // Per-period breakdown
+  const periodRows=payPeriods.map(date=>{
+    const ps=byDate[date];
+    const pGross=ps.reduce((a,s)=>a+(s.gross||0),0);
+    const pRemit=ps.reduce((a,s)=>a+(s.dhRemittance||0),0);
+    const pEmps=new Set(ps.map(s=>s.employee)).size;
+    return `<tr>
+      <td style="padding:6px 10px;font-size:12px;color:var(--offwhite)">${date}</td>
+      <td style="padding:6px 10px;font-size:12px;color:var(--muted);text-align:center">${pEmps}</td>
+      <td style="padding:6px 10px;font-size:12px;color:var(--green);text-align:right">$${pGross.toFixed(2)}</td>
+      <td style="padding:6px 10px;font-size:12px;color:var(--orange);text-align:right">$${pRemit.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  const [yr,mo]=month.split('-');
+  const monthLabel=new Date(yr,parseInt(mo)-1).toLocaleString('en',{month:'long',year:'numeric'});
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+      <div style="background:var(--navy-lift);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Employees Paid</div>
+        <div style="font-size:22px;font-weight:800;color:var(--white)">${numEmployees}</div>
+        <div style="font-size:10px;color:var(--muted)">${numPeriods} pay period${numPeriods!==1?'s':''}</div>
+      </div>
+      <div style="background:var(--navy-lift);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Total Cash Income</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green)">$${totalGross.toFixed(2)}</div>
+        <div style="font-size:10px;color:var(--muted)">Wages + vacation</div>
+      </div>
+      <div style="background:linear-gradient(135deg,rgba(255,160,0,.12),rgba(255,160,0,.03));border:1px solid var(--orange);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Remit to CRA</div>
+        <div style="font-size:22px;font-weight:800;color:var(--orange)">$${totalRemittance.toFixed(2)}</div>
+        <div style="font-size:10px;color:var(--muted)">${monthLabel}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:left;text-transform:uppercase;letter-spacing:.06em">Pay Date</th>
+        <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.06em">Employees</th>
+        <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em">Cash Income</th>
+        <th style="padding:5px 10px;font-size:10px;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.06em">Remittance</th>
+      </tr></thead>
+      <tbody>${periodRows}
+        <tr style="border-top:2px solid var(--border)">
+          <td style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--white)">TOTAL</td>
+          <td style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--white);text-align:center">${numEmployees}</td>
+          <td style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--green);text-align:right">$${totalGross.toFixed(2)}</td>
+          <td style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--orange);text-align:right">$${totalRemittance.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="background:var(--navy-lift);border-radius:8px;padding:12px;font-size:11px;color:var(--muted)">
+      <div style="font-weight:700;margin-bottom:6px;color:var(--offwhite)">Remittance Breakdown</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px">
+        <div>Employee CPP: <span style="color:var(--red)">$${totalCppEmp.toFixed(2)}</span></div>
+        <div>Employer CPP: <span style="color:var(--orange)">$${totalCppER.toFixed(2)}</span></div>
+        <div>Employee EI: <span style="color:var(--red)">$${totalEiEmp.toFixed(2)}</span></div>
+        <div>Employer EI: <span style="color:var(--orange)">$${totalEiER.toFixed(2)}</span></div>
+        <div>Federal Tax: <span style="color:var(--red)">$${totalFedTax.toFixed(2)}</span></div>
+        <div>Provincial Tax: <span style="color:var(--red)">$${totalProvTax.toFixed(2)}</span></div>
+      </div>
+    </div>`;
 }
 
 function setFinanceMarket(m){
