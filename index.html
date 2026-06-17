@@ -9018,9 +9018,9 @@ function showPane(id,ev){
   if(id==='settings'){loadSettings();renderContractorSettingsCards();renderPortalAccounts();renderTeamMemberSettings();render2FAStatus();renderPricingSetup();renderSettingsProfile();}
   if(id==='tracker'){trackerSetTab(_trackerTab);}
   if(id==='finance'){
-    renderFinance();
     const savedFinSub=localStorage.getItem('dronehub_finance_sub')||'overview';
     setFinanceSubTab(savedFinSub);
+    try{renderFinance();}catch(e){console.warn('[renderFinance]',e.message);}
   }
   if(id==='sales'){
     // Restore last sales sub-view and contact list tab from localStorage
@@ -23775,11 +23775,9 @@ async function gateShowAdminView(session){
   // Restore last visited tab — 'jobs' and 'clients' now live inside Sales
   const _raw=localStorage.getItem('dronehub_active_pane')||'quote';
   const _finSub=localStorage.getItem('dronehub_finance_sub')||'overview';
-  console.log('[TAB-RESTORE] _raw='+_raw+' _finSub='+_finSub);
   const savedPane=(_raw==='jobs'||_raw==='clients')?'sales':((_raw==='payroll'||(_raw==='finance'&&_finSub!=='overview'))?'finance':_raw);
-  console.log('[TAB-RESTORE] calling showPane('+savedPane+')');
   showPane(savedPane||'quote');
-  if(_raw==='payroll'||_raw==='finance'){setTimeout(function(){console.log('[TAB-RESTORE] setTimeout firing setFinanceSubTab('+_finSub+')');setFinanceSubTab(_finSub);},100);}
+  if(_raw==='payroll'||_raw==='finance'){setTimeout(function(){setFinanceSubTab(_finSub);},100);}
   // On mobile: always open profile pane on login
   if(window.innerWidth<=768 && typeof mobShowProfile==='function') setTimeout(mobShowProfile,120);
   // Auto-mark invoice paid if returning from Stripe success
