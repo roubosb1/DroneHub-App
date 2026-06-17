@@ -18148,6 +18148,22 @@ function copyReminderText(){
 
 
 let expenses=JSON.parse(localStorage.getItem('dronehub_expenses')||'[]');
+// Migrate old receiptImg fields → save to Firebase, strip from expense object
+(function _migrateReceiptImgs(){
+  let changed=false;
+  expenses.forEach(e=>{
+    if(e.receiptImg){
+      e.hasReceipt=true;
+      const img=e.receiptImg;
+      delete e.receiptImg;
+      changed=true;
+      setTimeout(()=>{
+        if(_fbToken()) fbSetStrict('orgs',ORG_ID+':receipt_'+e.id,{img,ts:Date.now()}).catch(()=>{});
+      },3000);
+    }
+  });
+  if(changed){try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(ex){}}
+})();
 function saveExpenses(){
   try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(e){}
   if(_fbToken()){
