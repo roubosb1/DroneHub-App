@@ -6106,6 +6106,7 @@ function setFinanceSubTab(sub){
       btn.style.color = active ? 'var(--blue-bright)' : 'var(--muted)';
     }
   });
+  try{localStorage.setItem('dronehub_finance_sub',sub);}catch(e){}
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
   if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
@@ -8922,15 +8923,8 @@ function showPane(id,ev){
   if(id==='tracker'){trackerSetTab(_trackerTab);}
   if(id==='finance'){
     renderFinance();
-    // Re-render whichever sub-tab is currently visible
-    const payrollVis = document.getElementById('finance-sub-payroll')?.style.display;
-    if(payrollVis && payrollVis!=='none'){ refreshPayrollPeriods(); renderPayroll(); }
-    const contractorsVis = document.getElementById('finance-sub-contractors')?.style.display;
-    if(contractorsVis && contractorsVis!=='none'){ renderContractorBreakdown(); }
-    const invoicesVis = document.getElementById('finance-sub-invoices')?.style.display;
-    if(invoicesVis && invoicesVis!=='none'){ renderInvoiceTracker && renderInvoiceTracker(); }
-    const expensesVis = document.getElementById('finance-sub-expenses')?.style.display;
-    if(expensesVis && expensesVis!=='none'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
+    const savedFinSub=localStorage.getItem('dronehub_finance_sub')||'overview';
+    setFinanceSubTab(savedFinSub);
   }
   if(id==='sales'){
     // Restore last sales sub-view and contact list tab from localStorage
