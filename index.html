@@ -6701,29 +6701,25 @@ function _importPivotedPayroll(rows){
       const dhVal=parseFloat(row[emp.dhCol])||0;
 
       if(/total cash|gross/i.test(a)){
-        // "Total Cash Income" / "CPP Remittance"
-        if(empVal) block[emp.name].gross=empVal;      // Gross pay
-        if(dhVal) block[emp.name].totalCpp=dhVal;      // Total CPP (to split 50/50)
+        // If gross already set, this is a second block (year-end totals) — flush first
+        if(block[emp.name].gross){flushBlock();currentDate=currentDate;}
+        if(empVal) block[emp.name].gross=empVal;
+        if(dhVal) block[emp.name].totalCpp=dhVal;
       }
       else if(/federal/i.test(a)){
-        // "Federal Deductions" / "EI Contribution EM"
-        if(empVal) block[emp.name].federalTax=empVal;  // Federal income tax
-        if(dhVal) block[emp.name].eiEmployee=dhVal;    // Employee EI contribution
+        if(empVal) block[emp.name].federalTax=empVal;
+        if(dhVal) block[emp.name].eiEmployee=dhVal;
       }
       else if(/province|provincial/i.test(a)){
-        // "Province Deductions" / "EI Remittance DH"
-        if(empVal) block[emp.name].provincialTax=empVal; // Provincial income tax
-        if(dhVal) block[emp.name].eiEmployer=dhVal;      // Employer EI (DH pays)
+        if(empVal) block[emp.name].provincialTax=empVal;
+        if(dhVal) block[emp.name].eiEmployer=dhVal;
       }
       else if(/net amount|net pay/i.test(a)){
-        // "Net Amount" / "Tax Deductions"
-        if(empVal) block[emp.name].net=empVal;           // Take-home pay
-        // dhVal = total tax deductions (Federal+Provincial combined, for verification)
+        if(empVal) block[emp.name].net=empVal;
       }
       else if(/vacation/i.test(a)){
-        // "Vacation" / "Total Remittance"
-        if(empVal) block[emp.name].vacation=empVal;      // 4% vacation pay (included in gross)
-        if(dhVal) block[emp.name].totalRemittance=dhVal;  // Total CRA remittance
+        if(empVal) block[emp.name].vacation=empVal;
+        if(dhVal) block[emp.name].totalRemittance=dhVal;
       }
     }
   }
