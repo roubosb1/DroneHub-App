@@ -701,6 +701,15 @@ input::placeholder{color:var(--muted);}
 .cal-cell:hover{background:rgba(91,141,239,.05);}
 .cal-cell.other-month{background:var(--navy-mid);opacity:.45;pointer-events:none;}
 .cal-cell.today{background:rgba(91,141,239,.08)}
+
+/* ── Calendar view transitions ── */
+#cal-month-view,#cal-day-view,#cal-week-view{transition:opacity .28s ease,transform .28s ease;}
+.cal-view-enter{opacity:0;transform:scale(.97) translateY(8px);}
+.cal-view-exit{opacity:0;transform:scale(1.03) translateY(-8px);}
+.cal-view-slide-left{opacity:0;transform:translateX(-30px);}
+.cal-view-slide-right{opacity:0;transform:translateX(30px);}
+.cal-view-zoom-in{opacity:0;transform:scale(.92);}
+.cal-view-zoom-out{opacity:0;transform:scale(1.08);}
 .cal-event{font-size:10px;padding:2px 5px;border-radius:4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;font-weight:600}
 .cal-event-quoted{background:rgba(136,146,187,.15);color:var(--muted)}
 .cal-event-confirmed{background:var(--amber-bg);color:var(--amber)}
@@ -7740,21 +7749,38 @@ function calNav(dir){
       d.setDate(d.getDate()+dir);
       _calSelectedDate=d.toISOString().slice(0,10);
       calYear=d.getFullYear(); calMonth=d.getMonth();
-      renderCalDayView(_calSelectedDate); return;
+      _calSlideTransition('cal-day-view',dir,()=>renderCalDayView(_calSelectedDate)); return;
     }
     if(_calView==='week'){
       const d=new Date(_calSelectedDate+'T12:00:00');
       d.setDate(d.getDate()+dir*7);
       _calSelectedDate=d.toISOString().slice(0,10);
       calYear=d.getFullYear(); calMonth=d.getMonth();
-      renderCalWeekView(_calSelectedDate); return;
+      _calSlideTransition('cal-week-view',dir,()=>renderCalWeekView(_calSelectedDate)); return;
     }
   }
   calMonth+=dir;
   if(calMonth>11){calMonth=0;calYear++;}
   else if(calMonth<0){calMonth=11;calYear--;}
   _mcNavDir=dir;
-  renderCalendar();
+  if(window.innerWidth>768){
+    _calSlideTransition('cal-month-view',dir,()=>renderCalendar());
+  } else {
+    renderCalendar();
+  }
+}
+function _calSlideTransition(elId,dir,renderFn){
+  const el=document.getElementById(elId);
+  if(!el){renderFn();return;}
+  el.classList.add(dir>0?'cal-view-slide-left':'cal-view-slide-right');
+  setTimeout(()=>{
+    renderFn();
+    el.classList.remove('cal-view-slide-left','cal-view-slide-right');
+    el.classList.add(dir>0?'cal-view-slide-right':'cal-view-slide-left');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      el.classList.remove('cal-view-slide-left','cal-view-slide-right');
+    }));
+  },180);
 }
 function calToday(){
   const t=new Date();
@@ -7778,14 +7804,14 @@ function calViewRefresh(){
 
 // ── Switch between Day / Week / Month views ──────────────────────────────────
 function setCalView(view,dateStr){
-  if(window.innerWidth<=768) return; // mobile uses its own UI
+  if(window.innerWidth<=768) return;
+  const prevView=_calView;
   _calView=view;
   if(dateStr){
     _calSelectedDate=dateStr;
     const d=new Date(dateStr+'T12:00:00');
     calYear=d.getFullYear(); calMonth=d.getMonth();
   }
-  // Update button states
   ['day','week','month'].forEach(v=>{
     const btn=document.getElementById('cal-vbtn-'+v);
     if(!btn) return;
@@ -7793,16 +7819,39 @@ function setCalView(view,dateStr){
     btn.style.background=on?'rgba(91,141,239,.18)':'transparent';
     btn.style.color=on?'var(--blue-bright)':'var(--muted)';
   });
-  // Show correct view container
   const mv=document.getElementById('cal-month-view');
   const dv=document.getElementById('cal-day-view');
   const wv=document.getElementById('cal-week-view');
-  if(mv) mv.style.display=view==='month'?'':'none';
-  if(dv) dv.style.display=view==='day'?'block':'none';
-  if(wv) wv.style.display=view==='week'?'block':'none';
-  if(view==='month') renderCalendar();
-  else if(view==='day') renderCalDayView(_calSelectedDate);
-  else if(view==='week') renderCalWeekView(_calSelectedDate);
+  const views={month:mv,day:dv,week:wv};
+  const order={month:0,week:1,day:2};
+  const zoomingIn=order[view]>order[prevView];
+  // Fade out the old view
+  const oldEl=views[prevView];
+  const newEl=views[view];
+  if(oldEl&&newEl&&prevView!==view){
+    oldEl.classList.add(zoomingIn?'cal-view-exit':'cal-view-enter');
+    setTimeout(()=>{
+      oldEl.style.display='none';
+      oldEl.classList.remove('cal-view-exit','cal-view-enter');
+      // Render the new view while hidden
+      if(view==='month') renderCalendar();
+      else if(view==='day') renderCalDayView(_calSelectedDate);
+      else if(view==='week') renderCalWeekView(_calSelectedDate);
+      // Show new view with entrance animation
+      newEl.classList.add(zoomingIn?'cal-view-enter':'cal-view-exit');
+      newEl.style.display=view==='month'?'':'block';
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        newEl.classList.remove('cal-view-enter','cal-view-exit');
+      }));
+    },200);
+  } else {
+    if(mv) mv.style.display=view==='month'?'':'none';
+    if(dv) dv.style.display=view==='day'?'block':'none';
+    if(wv) wv.style.display=view==='week'?'block':'none';
+    if(view==='month') renderCalendar();
+    else if(view==='day') renderCalDayView(_calSelectedDate);
+    else if(view==='week') renderCalWeekView(_calSelectedDate);
+  }
 }
 
 // ── Gather all events for a given date string ─────────────────────────────────
