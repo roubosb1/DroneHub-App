@@ -36,6 +36,29 @@ function getTemplate() {
   return _templateBytes;
 }
 
+function decryptSIN(payload) {
+  if (!payload || typeof payload !== 'string') return payload || '';
+  try {
+    const parsed = JSON.parse(payload);
+    if (parsed.v !== 1 || !parsed.iv || !parsed.ct) return payload;
+    const keyHex = process.env.MSG_ENCRYPTION_KEY;
+    if (!keyHex || keyHex.length < 64) return '';
+    const key = Buffer.from(keyHex, 'hex');
+    const iv = Buffer.from(parsed.iv, 'hex');
+    const ct = Buffer.from(parsed.ct, 'hex');
+    const authTagLen = 16;
+    const authTag = ct.slice(ct.length - authTagLen);
+    const ciphertext = ct.slice(0, ct.length - authTagLen);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return decrypted.toString('utf8');
+  } catch (e) {
+    console.error('[t4-fill] SIN decryption failed:', e.message);
+    return '';
+  }
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -71,6 +94,11 @@ exports.handler = async (event) => {
   }
 
   try {
+    const sinPlaintext = decryptSIN(d.sin);
+    if (!sinPlaintext) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Could not decrypt SIN. Encryption key may be missing.' }) };
+    }
+
     const templateBytes = getTemplate();
     const pdf = await PDFDocument.load(templateBytes);
     const form = pdf.getForm();
@@ -79,7 +107,7 @@ exports.handler = async (event) => {
       'Slip1EmployersName': d.employerName || '',
       'Slip1Year': d.year || '',
       'Slip1Box54': d.employerBN || '',
-      'Slip1Box12': d.sin || '',
+      'Slip1Box12': sinPlaintext,
       'Slip1LastName': d.lastName || '',
       'Slip1FirstName': d.firstName || '',
       'Slip1Initial': d.initial || '',

@@ -7847,9 +7847,13 @@ async function _downloadCRAT4PDF(containerId,empName,year){
   const sinFmt=d.eeSIN.slice(0,3)+' '+d.eeSIN.slice(3,6)+' '+d.eeSIN.slice(6);
   const btn=event.target;
   const origText=btn.textContent;
-  btn.textContent='Generating...';
+  btn.textContent='Encrypting & generating...';
   btn.disabled=true;
   try{
+    const encryptedSIN=await dhEncrypt(sinFmt);
+    if(!encryptedSIN||encryptedSIN===sinFmt){
+      alert('Could not encrypt SIN. Make sure you are logged in.');return;
+    }
     const tok=_fbToken();
     const r=await fetch('/.netlify/functions/t4-fill',{
       method:'POST',
@@ -7858,7 +7862,7 @@ async function _downloadCRAT4PDF(containerId,empName,year){
         employerName:d.erName,
         employerBN:d.erBN.replace(/\s/g,''),
         year:year,
-        sin:sinFmt,
+        sin:encryptedSIN,
         lastName:lastName,
         firstName:firstName,
         initial:'',
