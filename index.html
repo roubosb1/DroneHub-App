@@ -7539,6 +7539,22 @@ function openCRAT4Form(empName,year){
   if(!t)return;
   const member=_findLinkedTeamMember(empName);
   const emp=_getT4EmployerInfo();
+  // Pre-fill employer address from Bailey's contractor record if not saved yet
+  if(!emp.addr){
+    const baileyC=typeof CONTRACTORS!=='undefined'&&CONTRACTORS.bailey;
+    if(baileyC&&baileyC.addr) emp.addr=baileyC.addr;
+  }
+  if(!emp.name) emp.name='DroneHub Media Company Corp';
+  // Find employee address from CONTRACTORS or member
+  const empN=(empName||'').toLowerCase().trim();
+  let eeAddr=member?.address||member?.addr||'';
+  if(!eeAddr&&typeof CONTRACTORS!=='undefined'){
+    const cMatch=Object.values(CONTRACTORS).find(c=>(c.name||'').toLowerCase().trim()===empN);
+    if(cMatch&&cMatch.addr) eeAddr=cMatch.addr;
+  }
+  // Find employee email/phone from member or contractor
+  const eeEmail=member?.email||'';
+  const eePhone=member?.phone||'';
   const bx=(v)=>v?v.toFixed(2):'';
   const _id='t4f_'+Date.now();
 
@@ -7580,7 +7596,7 @@ function openCRAT4Form(empName,year){
         </div>
         <div>
           <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Employee Address</label>
-          <input id="t4-ee-addr" value="${member?.address||''}" placeholder="456 Worker Ave, City, ON" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
+          <input id="t4-ee-addr" value="${eeAddr}" placeholder="456 Worker Ave, City, ON" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-mid);color:var(--offwhite);box-sizing:border-box">
         </div>
         <div>
           <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">Province of Employment</label>
