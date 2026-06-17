@@ -7291,17 +7291,20 @@ function _calcT4(empName,year){
   const stubs=employeePayroll.filter(p=>p.employee===empName&&p.date&&p.date.startsWith(year));
   if(!stubs.length)return null;
   const t4={employee:empName,year,periods:stubs.length};
-  t4.box14=stubs.reduce((a,s)=>a+(s.gross||0),0); // Employment income
+  t4.box14=stubs.reduce((a,s)=>a+(s.gross||0),0); // Employment income (includes vacation pay)
   t4.box16=stubs.reduce((a,s)=>a+(s.deductions?.cpp||0),0); // Employee CPP
   t4.box17=stubs.reduce((a,s)=>a+(s.deductions?.cpp2||0),0); // Employee CPP2
   t4.box18=stubs.reduce((a,s)=>a+(s.deductions?.ei||0),0); // Employee EI
   t4.box22=stubs.reduce((a,s)=>a+(s.deductions?.federalTax||0)+(s.deductions?.provincialTax||0),0); // Income tax deducted
   // CRA annual maximums by year
   const eiMax={2024:63200,2025:65700,2026:68400};
-  const cppMax={2024:68500,2025:71300,2026:73200};
+  const cppMax1={2024:68500,2025:71300,2026:73200}; // First CPP ceiling
+  const cppMax2={2024:73200,2025:79400,2026:81200}; // Second CPP ceiling (CPP2)
   t4.box24=Math.min(t4.box14,eiMax[year]||eiMax[2025]); // EI insurable earnings (capped)
-  t4.box26=Math.min(t4.box14,cppMax[year]||cppMax[2025]); // CPP pensionable earnings (capped)
-  t4.box40=stubs.reduce((a,s)=>a+(s.vacationPay||0),0); // Taxable allowances (vacation pay)
+  t4.box26=Math.min(t4.box14,cppMax1[year]||cppMax1[2025]); // CPP pensionable earnings (capped at first ceiling)
+  // Box 40: only non-zero if there are actual taxable allowances/benefits beyond regular pay
+  // Vacation pay is already included in Box 14 gross — do NOT put it in Box 40
+  t4.box40=stubs.reduce((a,s)=>a+(s.deductions?.taxableAllowances||0),0);
   t4.box44=stubs.reduce((a,s)=>a+(s.deductions?.unionDues||0),0); // Union dues
   t4.box20=stubs.reduce((a,s)=>a+(s.deductions?.pension||0),0); // RPP contributions
   t4.fedTax=stubs.reduce((a,s)=>a+(s.deductions?.federalTax||0),0);
