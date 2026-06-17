@@ -7736,78 +7736,102 @@ function _printCRAT4(containerId,empName,year){
   if(!d)return;
   const lastName=empName.includes(' ')?empName.split(' ').slice(-1)[0]:empName;
   const firstName=empName.includes(' ')?empName.split(' ').slice(0,-1).join(' '):empName;
-  const sinMask=d.eeSIN?d.eeSIN.slice(0,3)+' '+d.eeSIN.slice(3,6)+' '+d.eeSIN.slice(6):'___  ___  ___';
-  const w=window.open('','_blank','width=850,height=1100');
-  w.document.write(`<!DOCTYPE html><html><head><title>T4 — ${empName} — ${year}</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Courier New',monospace;padding:30px;font-size:11px;color:#000;background:#fff}
-.t4{border:2px solid #000;max-width:750px;margin:0 auto}
-.t4-header{background:#000;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
-.t4-header h1{font-size:16px;font-weight:700;letter-spacing:1px}
-.t4-header span{font-size:12px}
-.row{display:flex;border-bottom:1px solid #000}
-.cell{padding:6px 8px;border-right:1px solid #000;flex:1}
-.cell:last-child{border-right:none}
-.cell-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
-.cell-value{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-.cell-box{font-size:9px;color:#999;margin-bottom:1px}
-.cell-sm{flex:0 0 80px}
-.cell-md{flex:0 0 120px}
-.cell-lg{flex:0 0 200px}
-.cell-amt{text-align:right;font-family:'Courier New',monospace}
-.section-label{background:#eee;padding:4px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #000}
-@media print{body{padding:10px}@page{margin:15mm}}
-</style></head><body>
-<div class="t4">
-  <div class="t4-header"><h1>T4</h1><span>STATEMENT OF REMUNERATION PAID · ${year}</span></div>
-
-  <div class="section-label">Employer</div>
-  <div class="row">
-    <div class="cell cell-lg"><div class="cell-label">Business Number</div><div class="cell-value">${d.erBN||'—'}</div></div>
-    <div class="cell"><div class="cell-label">Employer's Name</div><div class="cell-value">${d.erName}</div></div>
-  </div>
-  <div class="row">
-    <div class="cell"><div class="cell-label">Employer's Address</div><div class="cell-value">${d.erAddr||'—'}</div></div>
-  </div>
-
-  <div class="section-label">Employee</div>
-  <div class="row">
-    <div class="cell cell-md"><div class="cell-label">Social Insurance Number</div><div class="cell-value">${sinMask}</div></div>
-    <div class="cell"><div class="cell-label">Last Name</div><div class="cell-value">${lastName}</div></div>
-    <div class="cell"><div class="cell-label">First Name</div><div class="cell-value">${firstName}</div></div>
-    <div class="cell cell-sm"><div class="cell-label">Province</div><div class="cell-value">${d.eeProv}</div></div>
-  </div>
-  <div class="row">
-    <div class="cell"><div class="cell-label">Employee's Address</div><div class="cell-value">${d.eeAddr||'—'}</div></div>
-  </div>
-
-  <div class="section-label">Income &amp; Deductions</div>
-  <div class="row">
-    <div class="cell"><div class="cell-box">Box 14</div><div class="cell-label">Employment Income</div><div class="cell-value cell-amt">${d.box14||'—'}</div></div>
-    <div class="cell"><div class="cell-box">Box 22</div><div class="cell-label">Income Tax Deducted</div><div class="cell-value cell-amt">${d.box22||'—'}</div></div>
-    <div class="cell"><div class="cell-box">Box 24</div><div class="cell-label">EI Insurable Earnings</div><div class="cell-value cell-amt">${d.box24||'—'}</div></div>
-  </div>
-  <div class="row">
-    <div class="cell"><div class="cell-box">Box 16</div><div class="cell-label">Employee's CPP Contributions</div><div class="cell-value cell-amt">${d.box16||'—'}</div></div>
-    <div class="cell"><div class="cell-box">Box 18</div><div class="cell-label">Employee's EI Premiums</div><div class="cell-value cell-amt">${d.box18||'—'}</div></div>
-    <div class="cell"><div class="cell-box">Box 26</div><div class="cell-label">CPP/QPP Pensionable Earnings</div><div class="cell-value cell-amt">${d.box26||'—'}</div></div>
-  </div>
-  ${d.box17||d.box20||d.box44?`<div class="row">
-    ${d.box17?'<div class="cell"><div class="cell-box">Box 17</div><div class="cell-label">Employee CPP2 Contributions</div><div class="cell-value cell-amt">'+d.box17+'</div></div>':''}
-    ${d.box20?'<div class="cell"><div class="cell-box">Box 20</div><div class="cell-label">RPP Contributions</div><div class="cell-value cell-amt">'+d.box20+'</div></div>':''}
-    ${d.box44?'<div class="cell"><div class="cell-box">Box 44</div><div class="cell-label">Union Dues</div><div class="cell-value cell-amt">'+d.box44+'</div></div>':''}
-  </div>`:''}
-  ${d.box40?`<div class="row">
-    <div class="cell"><div class="cell-box">Box 40</div><div class="cell-label">Other Taxable Allowances</div><div class="cell-value cell-amt">${d.box40}</div></div>
-    <div class="cell"></div><div class="cell"></div>
-  </div>`:''}
-
-  <div class="section-label" style="background:#f0f0f0;font-size:8px;padding:6px 8px;color:#666">
-    Generated by DroneHub Operations Hub · This is not an official CRA document — verify all amounts before filing
-  </div>
-</div>
-</body></html>`);
+  const sin=d.eeSIN||'';
+  const sinFmt=sin?sin.slice(0,3)+' '+sin.slice(3,6)+' '+sin.slice(6):'';
+  const t=_calcT4(empName,year);
+  const fmtAmt=v=>{if(!v||v==='0.00')return'';const n=parseFloat(v);return isNaN(n)?v:n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  const w=window.open('','_blank','width=900,height=1200');
+  w.document.write('<!DOCTYPE html><html><head><title>T4 — '+empName+' — '+year+'</title>'+
+'<style>'+
+'*{margin:0;padding:0;box-sizing:border-box}'+
+'body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#000;padding:12px}'+
+'@page{size:letter;margin:10mm}'+
+'@media print{body{padding:0}}'+
+'.t4-slip{width:720px;margin:0 auto;border:1.5px solid #000;position:relative;font-size:10px}'+
+'.t4-top{display:flex;border-bottom:1.5px solid #000}'+
+'.t4-top-left{width:50%;border-right:1.5px solid #000;padding:6px 8px}'+
+'.t4-top-right{width:50%;padding:6px 8px}'+
+'.t4-title{font-size:22px;font-weight:700;letter-spacing:2px;margin-bottom:2px}'+
+'.t4-subtitle{font-size:8px;color:#333;text-transform:uppercase;letter-spacing:.5px}'+
+'.t4-year{font-size:32px;font-weight:700;text-align:right;margin-top:-20px}'+
+'.lbl{font-size:7px;color:#444;text-transform:uppercase;letter-spacing:.3px;line-height:1.2}'+
+'.val{font-size:11px;font-weight:600;min-height:14px;margin-top:1px}'+
+'.val-amt{font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}'+
+'.bx{display:inline-block;font-size:7px;color:#666;border:1px solid #999;border-radius:2px;padding:0 3px;margin-right:3px;font-weight:700}'+
+'.grid-cell{border:0.5px solid #000;padding:4px 6px;min-height:34px}'+
+'.grid-cell-sm{min-height:28px}'+
+'.er-section{border-bottom:1.5px solid #000}'+
+'.ee-section{border-bottom:1.5px solid #000}'+
+'.amt-grid{display:grid;grid-template-columns:repeat(3,1fr)}'+
+'.amt-grid .grid-cell{display:flex;flex-direction:column;justify-content:space-between}'+
+'.copy-label{text-align:center;font-size:8px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;padding:3px;border-bottom:1px solid #000;background:#f5f5f5}'+
+'.footer-note{font-size:7px;color:#888;text-align:center;padding:4px;border-top:1px solid #ccc}'+
+'</style></head><body>'+
+'<div class="t4-slip">'+
+'<div class="copy-label">T4 — Employee Copy / Copie de l\'employé</div>'+
+'<div class="t4-top">'+
+'<div class="t4-top-left">'+
+'<div class="t4-title">T4</div>'+
+'<div class="t4-subtitle">Statement of Remuneration Paid</div>'+
+'<div class="t4-subtitle" style="color:#666">État de la rémunération payée</div>'+
+'</div>'+
+'<div class="t4-top-right">'+
+'<div class="t4-year">'+year+'</div>'+
+'<div style="margin-top:4px"><div class="lbl">Tax Year / Année d\'imposition</div></div>'+
+'</div></div>'+
+'<div class="er-section">'+
+'<div style="display:grid;grid-template-columns:240px 1fr">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">54</span> Employer\'s account number / Numéro de compte de l\'employeur</div><div class="val">'+(d.erBN||'')+'</div></div>'+
+'<div class="grid-cell"><div class="lbl">Employer\'s name — Nom de l\'employeur</div><div class="val">'+d.erName+'</div><div class="val" style="font-size:9px;font-weight:400;color:#444;margin-top:2px">'+(d.erAddr||'')+'</div></div>'+
+'</div></div>'+
+'<div class="ee-section">'+
+'<div style="display:grid;grid-template-columns:160px 1fr 1fr 100px">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">12</span> Social insurance number<br>Numéro d\'assurance sociale</div><div class="val" style="font-size:13px;letter-spacing:2px">'+sinFmt+'</div></div>'+
+'<div class="grid-cell"><div class="lbl">Last name / Nom de famille</div><div class="val">'+lastName+'</div></div>'+
+'<div class="grid-cell"><div class="lbl">First name / Prénom</div><div class="val">'+firstName+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">10</span> Province</div><div class="val">'+d.eeProv+'</div></div>'+
+'</div>'+
+'<div style="display:grid;grid-template-columns:1fr">'+
+'<div class="grid-cell grid-cell-sm"><div class="lbl">Employee\'s address / Adresse de l\'employé</div><div class="val" style="font-size:10px">'+(d.eeAddr||'')+'</div></div>'+
+'</div></div>'+
+'<div class="amt-grid">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">14</span> Employment income<br>Revenus d\'emploi</div><div class="val-amt">'+fmtAmt(d.box14)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">16</span> Employee\'s CPP contributions<br>Cotisations de l\'employé au RPC</div><div class="val-amt">'+fmtAmt(d.box16)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">17</span> Employee\'s CPP2 contributions<br>Deuxièmes cotisations au RPC</div><div class="val-amt">'+fmtAmt(d.box17)+'</div></div>'+
+'</div>'+
+'<div class="amt-grid">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">22</span> Income tax deducted<br>Impôt sur le revenu retenu</div><div class="val-amt">'+fmtAmt(d.box22)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">18</span> Employee\'s EI premiums<br>Cotisations de l\'employé à l\'AE</div><div class="val-amt">'+fmtAmt(d.box18)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">20</span> RPP contributions<br>Cotisations à un RPA</div><div class="val-amt">'+fmtAmt(d.box20)+'</div></div>'+
+'</div>'+
+'<div class="amt-grid">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">24</span> EI insurable earnings<br>Gains assurables d\'AE</div><div class="val-amt">'+fmtAmt(d.box24)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">26</span> CPP/QPP pensionable earnings<br>Gains ouvrant droit à pension</div><div class="val-amt">'+fmtAmt(d.box26)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">44</span> Union dues<br>Cotisations syndicales</div><div class="val-amt">'+fmtAmt(d.box44)+'</div></div>'+
+'</div>'+
+'<div class="amt-grid">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">40</span> Other taxable allowances and benefits<br>Autres allocations et avantages imposables</div><div class="val-amt">'+fmtAmt(d.box40)+'</div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">46</span> Charitable donations<br>Dons de bienfaisance</div><div class="val-amt"></div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">50</span> RPP or DPSP registration number<br>N° d\'agrément du RPA ou RPDB</div><div class="val-amt"></div></div>'+
+'</div>'+
+'<div class="amt-grid">'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">52</span> Pension adjustment<br>Facteur d\'équivalence</div><div class="val-amt"></div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">28</span> Exempt / Exemption — CPP/QPP</div><div class="val-amt"></div></div>'+
+'<div class="grid-cell"><div class="lbl"><span class="bx">28</span> Exempt / Exemption — EI/AE</div><div class="val-amt"></div></div>'+
+'</div>'+
+'<div class="footer-note">This T4 was generated from payroll records in DroneHub Operations Hub. Verify all amounts before filing with the CRA.</div>'+
+'</div>'+
+(t?'<div style="margin:20px auto;max-width:720px;border:1px solid #ccc;border-radius:6px;padding:12px;font-size:10px;color:#555;page-break-before:avoid">'+
+'<div style="font-weight:700;margin-bottom:6px;font-size:11px;color:#333">Employer Records (not part of T4)</div>'+
+'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 16px">'+
+'<div>Employer CPP: <strong>$'+t.dhCpp.toFixed(2)+'</strong></div>'+
+'<div>Employer EI: <strong>$'+t.dhEi.toFixed(2)+'</strong></div>'+
+'<div>Total CRA Remittance: <strong>$'+t.totalRemit.toFixed(2)+'</strong></div>'+
+'<div>Federal Tax: <strong>$'+t.fedTax.toFixed(2)+'</strong></div>'+
+'<div>Provincial Tax: <strong>$'+t.provTax.toFixed(2)+'</strong></div>'+
+'<div>Net Paid: <strong>$'+t.netPaid.toFixed(2)+'</strong></div>'+
+'</div></div>':'')+
+'</body></html>');
   w.document.close();
   w.print();
 }
