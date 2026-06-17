@@ -9002,7 +9002,7 @@ function showPane(id,ev){
   syncMobileNav(id);
   // Persist so refresh returns to the same tab
   try{localStorage.setItem('dronehub_active_pane',id);}catch(e){}
-  if(id==='payroll'){showPane('finance');setFinanceSubTab('payroll');return;}
+  if(id==='payroll'){showPane('finance');setTimeout(function(){setFinanceSubTab('payroll');},50);return;}
   if(id==='finance' && !document.getElementById('fin-sub-tab-overview')) {} // sub-tabs not yet rendered, skip
   if(id==='model'){renderEditorSelectors();}
   if(id==='jobs'){showPane('sales');setSalesView('jobs');return;}
@@ -23774,9 +23774,10 @@ async function gateShowAdminView(session){
   if(userDisplay) userDisplay.innerHTML=`<div style="display:flex;align-items:center;gap:8px">${avatarHtml}<div><span style="color:var(--white);font-weight:700">${displayName}</span><span style="font-size:10px;color:var(--blue-bright);margin-left:6px;font-weight:600">${title}</span></div></div>`;
   // Restore last visited tab — 'jobs' and 'clients' now live inside Sales
   const _raw=localStorage.getItem('dronehub_active_pane')||'quote';
-  const savedPane=(_raw==='jobs'||_raw==='clients')?'sales':(_raw==='payroll'?'finance':_raw);
+  const _finSub=localStorage.getItem('dronehub_finance_sub')||'overview';
+  const savedPane=(_raw==='jobs'||_raw==='clients')?'sales':((_raw==='payroll'||(_raw==='finance'&&_finSub!=='overview'))?'finance':_raw);
   showPane(savedPane||'quote');
-  if(_raw==='payroll'){setFinanceSubTab('payroll');}
+  if(_raw==='payroll'||_raw==='finance'){setTimeout(function(){setFinanceSubTab(_finSub);},100);}
   // On mobile: always open profile pane on login
   if(window.innerWidth<=768 && typeof mobShowProfile==='function') setTimeout(mobShowProfile,120);
   // Auto-mark invoice paid if returning from Stripe success
@@ -23842,9 +23843,11 @@ function gateShowTeamView(session){
   // 'jobs' and 'clients' now live inside 'sales'
   const firstAllowed=allowed[0]||'tracker';
   const _rawSaved=localStorage.getItem('dronehub_active_pane')||'';
-  const savedPane=(_rawSaved==='jobs'||_rawSaved==='clients')?'sales':_rawSaved;
+  const _finSubSaved=localStorage.getItem('dronehub_finance_sub')||'overview';
+  const savedPane=(_rawSaved==='jobs'||_rawSaved==='clients')?'sales':(_rawSaved==='payroll'?'finance':_rawSaved);
   const startPane=(savedPane&&allowed.includes(savedPane))?savedPane:firstAllowed;
   showPane(startPane);
+  if((_rawSaved==='payroll'||_rawSaved==='finance')&&allowed.includes('finance')){setTimeout(function(){setFinanceSubTab(_finSubSaved);},100);}
   // On mobile: always open profile pane on login
   if(window.innerWidth<=768 && typeof mobShowProfile==='function') setTimeout(mobShowProfile,120);
 
