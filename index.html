@@ -18178,15 +18178,38 @@ function handleReceiptFile(input){
   reader.readAsDataURL(file);
 }
 
+function _resizeReceiptImage(dataUrl,maxW){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxW){h=Math.round(h*(maxW/w));w=maxW;}
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      const jpg=c.toDataURL('image/jpeg',0.8);
+      resolve(jpg.split(',')[1]);
+    };
+    img.src=dataUrl;
+  });
+}
+
 async function scanReceipt(b64,mimeType){
   try{
+    const tok=_fbToken();
+    if(!tok){showDhToast('Not signed in','Please sign in first.','⚠️','var(--orange)');receiptDismiss();return;}
+    const compressed=await _resizeReceiptImage(_receiptImageB64,1200);
     const r=await fetch('/.netlify/functions/ai-receipt-scan',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_fbToken()},
-      body:JSON.stringify({image:b64,mimeType})
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({image:compressed,mimeType:'image/jpeg'})
     });
+    if(!r.ok){
+      let msg='Scan failed (HTTP '+r.status+')';
+      try{const j=await r.json();msg=j.error||msg;}catch(e){}
+      throw new Error(msg);
+    }
     const json=await r.json();
-    if(!r.ok) throw new Error(json.error||'Scan failed');
     _receiptScanData=json.data;
     showReceiptPreview(json.data);
   }catch(e){
