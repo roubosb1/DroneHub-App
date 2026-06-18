@@ -7073,12 +7073,13 @@ function _openPayrollCalc(){
     +'</div>');
 }
 function _runPayrollCalc(){
+  try{
   var name=document.getElementById('pc-name').value.trim();
   var date=document.getElementById('pc-date').value;
   var salary=parseFloat(document.getElementById('pc-salary').value)||0;
-  if(!name){showToast('Enter employee name','error');return;}
-  if(!date){showToast('Enter pay date','error');return;}
-  if(!salary){showToast('Enter salary amount','error');return;}
+  if(!name){showDhToast('Missing Field','Enter employee name','⚠️','var(--orange)');return;}
+  if(!date){showDhToast('Missing Field','Enter pay date','⚠️','var(--orange)');return;}
+  if(!salary){showDhToast('Missing Field','Enter salary amount','⚠️','var(--orange)');return;}
   var r=_calcPayroll({
     employeeName:name,payDate:date,
     salary:salary,
@@ -7114,6 +7115,7 @@ function _runPayrollCalc(){
     +'<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;color:var(--orange)"><span>Total CRA Remittance</span><span>$'+r.totalRemittance.toFixed(2)+'</span></div>'
     +'</div></div></div>'
     +'<div style="text-align:center;margin-top:12px"><button onclick="_addCalcPaystub()" style="padding:9px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Add to Payroll</button></div>';
+  }catch(err){showDhToast('Calculator Error',err.message||'Unknown error','❌','var(--red)');}
 }
 function _addCalcPaystub(){
   var r=window._lastPayrollCalc;if(!r)return;
