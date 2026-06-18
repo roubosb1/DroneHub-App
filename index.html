@@ -7804,8 +7804,8 @@ function _cgRenderUSContent(){
       +'<span style="color:var(--muted)">As a new employer, you\'ll be assigned a standard rate. File quarterly wage reports and pay SUTA on time to keep your rate low.</span></div>'
     );
   }
-  h+=_cgSection('dollar','Each Pay Period — Federal Deposit via EFTPS',
-    '<div style="margin-bottom:10px">After each payroll run, you must deposit the following taxes to the IRS via '+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'. These are combined into a single deposit — you do <strong>not</strong> make separate payments for each line item.</div>'
+  h+=_cgSection('dollar','Federal Tax Deposits via EFTPS',
+    '<div style="margin-bottom:10px">You must deposit federal payroll taxes (income tax withholding + Social Security + Medicare) to the IRS via '+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'. Most employers are <strong>monthly depositors</strong> — you total up all payroll runs for the month and make <strong>one combined deposit by the 15th of the following month</strong>. You do not need to deposit after every payroll run.</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
     +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee Federal Income Tax</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
     +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee Social Security (6.2%)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
@@ -7830,8 +7830,8 @@ function _cgRenderUSContent(){
     +'</div>'
   );
   if(!si.noTax){
-    h+=_cgSection('stateTax','Each Pay Period — State Tax Deposit',
-      '<div style="margin-bottom:10px">In addition to your federal EFTPS deposit, you must separately deposit state income tax withholding to <strong>'+si.agency+'</strong>.</div>'
+    h+=_cgSection('stateTax','State Tax Deposits',
+      '<div style="margin-bottom:10px">In addition to your federal EFTPS deposit, you must separately deposit state income tax withholding to <strong>'+si.agency+'</strong>. Most states follow a similar monthly schedule — one deposit covering all payroll runs for the month.</div>'
       +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px;margin-bottom:10px">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="color:var(--muted)">'+st.name+' income tax withheld</span>'
