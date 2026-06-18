@@ -16638,7 +16638,8 @@ function renderPayroll(){
   if(allJobs) allJobs.style.display='';
   if(ctabs) ctabs.style.display='';
 
-  // All jobs list
+  // All jobs list (hidden — kept for data but not displayed)
+  if(!allJobs||allJobs.style.display==='none'){return;}
   if(!savedJobs.length){allJobs.innerHTML='<div style="color:#7A8AAA;font-style:italic">No jobs saved yet.</div>';return;}
   allJobs.innerHTML=savedJobs.map(j=>{
     const st=j.status||'quoted';
