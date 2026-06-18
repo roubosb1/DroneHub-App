@@ -6946,29 +6946,67 @@ function handleEmpPayImport(files){
 }
 
 // ── CRA Payroll Calculator (2026) ────────────────────────────────────────────
-var _payrollCfg2026={
-  fedRate:0.14,bpa:16452,cea:1501,
-  fedBrackets:[
+var _fedCfg2026={
+  rate:0.14,bpa:16452,cea:1501,
+  brackets:[
     {max:58523,rate:0.14,k:0},
-    {max:117045,rate:0.205,k:3804.00},
-    {max:181440,rate:0.26,k:10241.48},
-    {max:258482,rate:0.29,k:15684.68},
-    {max:Infinity,rate:0.33,k:26023.96}
+    {max:117045,rate:0.205,k:3804},
+    {max:181440,rate:0.26,k:10241},
+    {max:258482,rate:0.29,k:15685},
+    {max:Infinity,rate:0.33,k:26024}
   ],
   cppRate:0.0595,cppBase:0.0495,cppEnh:0.01,
   cppYBE:3500,cppYMPE:74600,
   cpp2Rate:0.04,cpp2YAMPE:85000,
-  eiRate:0.0163,eiMIE:68900,eiEmployerMult:1.4,
-  onBPA:12989,
-  onBrackets:[
-    {max:53891,rate:0.0505,k:0},
-    {max:107785,rate:0.0915,k:2210},
-    {max:150000,rate:0.1116,k:4376},
-    {max:220000,rate:0.1216,k:5876},
-    {max:Infinity,rate:0.1316,k:8076}
-  ],
-  onSur1:5818,onSur2:7307
+  eiRate:0.0163,eiMIE:68900,eiEmployerMult:1.4
 };
+var _provCfg2026={
+  AB:{name:'Alberta',bpa:22769,rate:0.08,brackets:[
+    {max:61200,rate:0.08,k:0},{max:154259,rate:0.10,k:1224},{max:185111,rate:0.12,k:4309},
+    {max:246813,rate:0.13,k:6160},{max:370220,rate:0.14,k:8628},{max:Infinity,rate:0.15,k:12331}]},
+  BC:{name:'British Columbia',bpa:13216,rate:0.0506,brackets:[
+    {max:50363,rate:0.0506,k:0},{max:100728,rate:0.077,k:1330},{max:115648,rate:0.105,k:4150},
+    {max:140430,rate:0.1229,k:6220},{max:190405,rate:0.147,k:9604},{max:265545,rate:0.168,k:13603},
+    {max:Infinity,rate:0.205,k:23428}],
+    taxReduction:function(V1,A){var r=Math.max(0,575-0.0356*Math.max(0,A-25570));return Math.min(V1,r);}},
+  SK:{name:'Saskatchewan',bpa:20381,rate:0.105,brackets:[
+    {max:54532,rate:0.105,k:0},{max:155805,rate:0.125,k:1091},{max:Infinity,rate:0.145,k:4207}]},
+  MB:{name:'Manitoba',bpa:15780,rate:0.108,brackets:[
+    {max:47000,rate:0.108,k:0},{max:100000,rate:0.1275,k:917},{max:Infinity,rate:0.174,k:5567}]},
+  ON:{name:'Ontario',bpa:12989,rate:0.0505,brackets:[
+    {max:53891,rate:0.0505,k:0},{max:107785,rate:0.0915,k:2210},{max:150000,rate:0.1116,k:4376},
+    {max:220000,rate:0.1216,k:5876},{max:Infinity,rate:0.1316,k:8076}],
+    surtax:function(V1){return 0.20*Math.max(0,V1-5818)+0.36*Math.max(0,V1-7307);},
+    healthPremium:function(A){
+      if(A<=20000)return 0;if(A<=25000)return Math.min(300,0.06*(A-20000));
+      if(A<=36000)return 300;if(A<=38500)return 300+0.06*(A-36000);
+      if(A<=48000)return 450;if(A<=48600)return 450+0.25*(A-48000);
+      if(A<=72000)return 600;if(A<=72600)return 600+0.25*(A-72000);
+      if(A<=200600)return 750;if(A<=201200)return 750+0.25*(A-200600);return 900;}},
+  NB:{name:'New Brunswick',bpa:13664,rate:0.094,brackets:[
+    {max:52333,rate:0.094,k:0},{max:104666,rate:0.14,k:2407},{max:193861,rate:0.16,k:4501},
+    {max:Infinity,rate:0.195,k:11286}]},
+  NS:{name:'Nova Scotia',bpa:11932,rate:0.0879,brackets:[
+    {max:30995,rate:0.0879,k:0},{max:61991,rate:0.1495,k:1909},{max:97417,rate:0.1667,k:2976},
+    {max:157124,rate:0.175,k:3784},{max:Infinity,rate:0.21,k:9283}]},
+  PE:{name:'Prince Edward Island',bpa:15000,rate:0.095,brackets:[
+    {max:33928,rate:0.095,k:0},{max:65820,rate:0.1347,k:1347},{max:106890,rate:0.166,k:3407},
+    {max:142250,rate:0.1762,k:4497},{max:200000,rate:0.19,k:6460},{max:Infinity,rate:0.20,k:8460}]},
+  NL:{name:'Newfoundland and Labrador',bpa:13094,rate:0.087,brackets:[
+    {max:44678,rate:0.087,k:0},{max:89354,rate:0.145,k:2591},{max:159528,rate:0.158,k:3753},
+    {max:223340,rate:0.178,k:6943},{max:285319,rate:0.198,k:11410},{max:570638,rate:0.208,k:14263},
+    {max:1141275,rate:0.213,k:17117},{max:Infinity,rate:0.218,k:22823}]},
+  YT:{name:'Yukon',bpa:16452,rate:0.064,brackets:[
+    {max:58523,rate:0.064,k:0},{max:117045,rate:0.09,k:1522},{max:181440,rate:0.109,k:3745},
+    {max:500000,rate:0.128,k:7193},{max:Infinity,rate:0.15,k:18193}]},
+  NT:{name:'Northwest Territories',bpa:18198,rate:0.059,brackets:[
+    {max:53003,rate:0.059,k:0},{max:106009,rate:0.086,k:1431},{max:172346,rate:0.122,k:5247},
+    {max:Infinity,rate:0.1405,k:8436}]},
+  NU:{name:'Nunavut',bpa:19659,rate:0.04,brackets:[
+    {max:55801,rate:0.04,k:0},{max:111602,rate:0.07,k:1674},{max:181439,rate:0.09,k:3906},
+    {max:Infinity,rate:0.115,k:8442}]}
+};
+var _provOrder=['AB','BC','SK','MB','ON','NB','NS','PE','NL','YT','NT','NU'];
 function _payPeriods(freq){
   var m={Weekly:52,Biweekly:26,'Semi-monthly':24,Monthly:12};return m[freq]||26;
 }
@@ -6976,62 +7014,52 @@ function _bracketTax(A,brackets){
   for(var i=0;i<brackets.length;i++){if(A<=brackets[i].max)return brackets[i].rate*A-brackets[i].k;}
   var last=brackets[brackets.length-1];return last.rate*A-last.k;
 }
-function _ontarioOHP(A){
-  if(A<=20000)return 0;
-  if(A<=25000)return Math.min(300,0.06*(A-20000));
-  if(A<=36000)return 300;
-  if(A<=38500)return 300+0.06*(A-36000);
-  if(A<=48000)return 450;
-  if(A<=48600)return 450+0.25*(A-48000);
-  if(A<=72000)return 600;
-  if(A<=72600)return 600+0.25*(A-72000);
-  if(A<=200600)return 750;
-  if(A<=201200)return 750+0.25*(A-200600);
-  return 900;
-}
 function _calcPayroll(params){
-  var c=_payrollCfg2026;
+  var f=_fedCfg2026;
+  var provCode=params.province||'ON';
+  var p=_provCfg2026[provCode]||_provCfg2026.ON;
   var P=_payPeriods(params.payFrequency||'Biweekly');
   var salary=+(params.salary||0);
   var vacRate=+(params.vacationPayRate||0.04);
   var vacPay=+(salary*vacRate).toFixed(2);
   var gross=+(salary+vacPay).toFixed(2);
   var Ag=gross*P;
-  var cppPensionable=Math.max(0,Math.min(Ag,c.cppYMPE)-c.cppYBE);
-  var cppTotal=+(cppPensionable*c.cppRate).toFixed(2);
+  var cppPensionable=Math.max(0,Math.min(Ag,f.cppYMPE)-f.cppYBE);
+  var cppTotal=+(cppPensionable*f.cppRate).toFixed(2);
   var cppPer=+(cppTotal/P).toFixed(2);
-  var cppBaseCr=cppPensionable*c.cppBase;
-  var cppEnhDed=cppPensionable*c.cppEnh;
-  var cpp2Pensionable=Math.max(0,Math.min(Ag,c.cpp2YAMPE)-c.cppYMPE);
-  var cpp2Total=+(cpp2Pensionable*c.cpp2Rate).toFixed(2);
+  var cppBaseCr=cppPensionable*f.cppBase;
+  var cppEnhDed=cppPensionable*f.cppEnh;
+  var cpp2Pensionable=Math.max(0,Math.min(Ag,f.cpp2YAMPE)-f.cppYMPE);
+  var cpp2Total=+(cpp2Pensionable*f.cpp2Rate).toFixed(2);
   var cpp2Per=+(cpp2Total/P).toFixed(2);
-  var eiInsurable=Math.min(Ag,c.eiMIE);
-  var eiTotal=+(eiInsurable*c.eiRate).toFixed(2);
+  var eiInsurable=Math.min(Ag,f.eiMIE);
+  var eiTotal=+(eiInsurable*f.eiRate).toFixed(2);
   var eiPer=+(eiTotal/P).toFixed(2);
   var A=Ag-cppEnhDed;
-  var fedTD1=+(params.federalTd1||c.bpa);
-  var T3=_bracketTax(A,c.fedBrackets);
-  var K1=c.fedRate*fedTD1;
-  var K2=c.fedRate*cppBaseCr;
-  var K3=c.fedRate*eiTotal;
-  var K4=c.fedRate*Math.min(A,c.cea);
+  var fedTD1=+(params.federalTd1||f.bpa);
+  var T3=_bracketTax(A,f.brackets);
+  var K1=f.rate*fedTD1;
+  var K2=f.rate*cppBaseCr;
+  var K3=f.rate*eiTotal;
+  var K4=f.rate*Math.min(A,f.cea);
   var T1=Math.max(0,T3-K1-K2-K3-K4);
   var fedTaxPer=+(T1/P).toFixed(2);
-  var provTD1=+(params.provincialTd1||c.onBPA);
-  var V=_bracketTax(A,c.onBrackets);
-  var K1P=0.0505*provTD1;
-  var K2P=0.0505*cppBaseCr;
-  var K3P=0.0505*eiTotal;
+  var provTD1=+(params.provincialTd1||p.bpa);
+  var V=_bracketTax(A,p.brackets);
+  var K1P=p.rate*provTD1;
+  var K2P=p.rate*cppBaseCr;
+  var K3P=p.rate*eiTotal;
   var V1=Math.max(0,V-K1P-K2P-K3P);
-  var V2=0.20*Math.max(0,V1-c.onSur1)+0.36*Math.max(0,V1-c.onSur2);
-  var LCP=_ontarioOHP(A);
-  var provTaxPer=+((V1+V2+LCP)/P).toFixed(2);
+  var V2=p.surtax?p.surtax(V1):0;
+  var S1=p.taxReduction?p.taxReduction(V1,A):0;
+  var LCP=p.healthPremium?p.healthPremium(A):0;
+  var provTaxPer=+(Math.max(0,V1-S1+V2+LCP)/P).toFixed(2);
   var totalTax=+(fedTaxPer+provTaxPer).toFixed(2);
   var totalDed=+(fedTaxPer+provTaxPer+cppPer+cpp2Per+eiPer).toFixed(2);
   var net=+(gross-totalDed).toFixed(2);
   var cppEmployer=cppPer;
   var cpp2Employer=cpp2Per;
-  var eiEmployer=+(eiPer*c.eiEmployerMult).toFixed(2);
+  var eiEmployer=+(eiPer*f.eiEmployerMult).toFixed(2);
   var totalRemit=+(fedTaxPer+provTaxPer+cppPer+cppEmployer+cpp2Per+cpp2Employer+eiPer+eiEmployer).toFixed(2);
   return {
     salary:salary,vacationPay:vacPay,gross:gross,
@@ -7042,7 +7070,7 @@ function _calcPayroll(params){
     totalRemittance:totalRemit,
     payFrequency:params.payFrequency||'Biweekly',
     employeeName:params.employeeName||'',payDate:params.payDate||'',
-    province:params.province||'Ontario',
+    province:provCode,provinceName:p.name,
     federalTd1:fedTD1,provincialTd1:provTD1
   };
 }
@@ -7054,11 +7082,15 @@ function _openPayrollCalc(){
   var opts=[...names].sort().map(function(n){return'<option value="'+n+'">'+n+'</option>';}).join('');
   var lastEmp=employeePayroll.length?employeePayroll[employeePayroll.length-1]:null;
   var defTD1F=lastEmp&&lastEmp._fedTd1?lastEmp._fedTd1:16452;
-  var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:12989;
-  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="font-size:11px;color:var(--muted)">CRA 2026 · Ontario · T4127 formulas</div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px">'
-    +'<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
+  var defProv=lastEmp&&lastEmp._provCode?lastEmp._provCode:'ON';
+  var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:(_provCfg2026[defProv]||_provCfg2026.ON).bpa;
+  var provOpts=_provOrder.map(function(code){var pc=_provCfg2026[code];return'<option value="'+code+'"'+(code===defProv?' selected':'')+'>'+pc.name+'</option>';}).join('');
+  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="font-size:11px;color:var(--muted)">CRA 2026 · T4127 formulas · All provinces &amp; territories</div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
     +'<input id="pc-name" list="pc-names-list" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px" placeholder="e.g. Alex Shewan">'
     +'<datalist id="pc-names-list"><option value="">'+opts+'</datalist></div>'
+    +'<div><label style="font-size:12px;color:var(--muted)">Province / Territory</label><select id="pc-prov" onchange="_pcProvChange()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px">'+provOpts+'</select></div></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Pay Date</label><input id="pc-date" type="date" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px"></div>'
     +'<div><label style="font-size:12px;color:var(--muted)">Pay Frequency</label><select id="pc-freq" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px"><option value="Weekly">Weekly (52)</option><option value="Biweekly" selected>Biweekly (26)</option><option value="Semi-monthly">Semi-monthly (24)</option><option value="Monthly">Monthly (12)</option></select></div></div>'
@@ -7072,6 +7104,11 @@ function _openPayrollCalc(){
     +'<div id="pc-results" style="display:none"></div>'
     +'</div>');
 }
+function _pcProvChange(){
+  var code=document.getElementById('pc-prov').value;
+  var p=_provCfg2026[code];
+  if(p)document.getElementById('pc-td1p').value=p.bpa;
+}
 function _runPayrollCalc(){
   try{
   var name=document.getElementById('pc-name').value.trim();
@@ -7080,20 +7117,22 @@ function _runPayrollCalc(){
   if(!name){showDhToast('Missing Field','Enter employee name','⚠️','var(--orange)');return;}
   if(!date){showDhToast('Missing Field','Enter pay date','⚠️','var(--orange)');return;}
   if(!salary){showDhToast('Missing Field','Enter salary amount','⚠️','var(--orange)');return;}
+  var provCode=document.getElementById('pc-prov').value||'ON';
+  var pCfg=_provCfg2026[provCode]||_provCfg2026.ON;
   var r=_calcPayroll({
     employeeName:name,payDate:date,
     salary:salary,
     vacationPayRate:(parseFloat(document.getElementById('pc-vac').value)||0)/100,
     payFrequency:document.getElementById('pc-freq').value,
-    province:'Ontario',
-    federalTd1:parseFloat(document.getElementById('pc-td1f').value)||16452,
-    provincialTd1:parseFloat(document.getElementById('pc-td1p').value)||12989
+    province:provCode,
+    federalTd1:parseFloat(document.getElementById('pc-td1f').value)||_fedCfg2026.bpa,
+    provincialTd1:parseFloat(document.getElementById('pc-td1p').value)||pCfg.bpa
   });
   window._lastPayrollCalc=r;
   var el=document.getElementById('pc-results');
   el.style.display='';
   el.innerHTML='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:4px">'
-    +'<div style="background:rgba(34,217,122,.08);padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">'+r.employeeName+'</span><span style="font-size:11px;color:var(--muted)">'+r.payDate+' · '+r.payFrequency+'</span></div>'
+    +'<div style="background:rgba(34,217,122,.08);padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">'+r.employeeName+'</span><span style="font-size:11px;color:var(--muted)">'+r.payDate+' · '+r.payFrequency+' · '+(r.provinceName||r.province)+'</span></div>'
     +'<div style="padding:12px 14px;font-size:12px">'
     +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Salary / Wages</span><span>$'+r.salary.toFixed(2)+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Vacation Pay</span><span>$'+r.vacationPay.toFixed(2)+'</span></div>'
@@ -7128,7 +7167,7 @@ function _addCalcPaystub(){
     vacationPay:r.vacationPay,
     dhCpp:r.cppEmployer,dhCpp2:r.cpp2Employer,dhEi:r.eiEmployer,
     dhRemittance:r.totalRemittance,
-    _fedTd1:r.federalTd1,_provTd1:r.provincialTd1,
+    _fedTd1:r.federalTd1,_provTd1:r.provincialTd1,_provCode:r.province,
     notes:'Calculated via Payroll Calculator'
   };
   employeePayroll.push(rec);
