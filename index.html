@@ -7007,6 +7007,135 @@ var _provCfg2026={
     {max:Infinity,rate:0.115,k:8442}]}
 };
 var _provOrder=['AB','BC','SK','MB','ON','NB','NS','PE','NL','YT','NT','NU'];
+// ── US Payroll Calculator (2026) ─────────────────────────────────────────────
+var _usFedCfg2026={
+  stdDed:{S:8600,MFJ:12900,HoH:8600},
+  brackets:{
+    S:[{max:7500,rate:0,k:0},{max:19900,rate:0.10,k:750},{max:57900,rate:0.12,k:1148},
+      {max:113200,rate:0.22,k:6938},{max:209275,rate:0.24,k:9202},{max:263725,rate:0.32,k:25944},
+      {max:648100,rate:0.35,k:33855.75},{max:Infinity,rate:0.37,k:46817.75}],
+    MFJ:[{max:19300,rate:0,k:0},{max:44100,rate:0.10,k:1930},{max:120100,rate:0.12,k:2812},
+      {max:230700,rate:0.22,k:14822},{max:422850,rate:0.24,k:19436},{max:531750,rate:0.32,k:53264},
+      {max:788000,rate:0.35,k:69216.50},{max:Infinity,rate:0.37,k:84976.50}],
+    HoH:[{max:15550,rate:0,k:0},{max:33250,rate:0.10,k:1555},{max:83000,rate:0.12,k:2220},
+      {max:121250,rate:0.22,k:10520},{max:217300,rate:0.24,k:12945},{max:271750,rate:0.32,k:30329},
+      {max:656150,rate:0.35,k:38481.50},{max:Infinity,rate:0.37,k:51604.50}]
+  },
+  ssRate:0.062,ssWageBase:184500,
+  medRate:0.0145,addMedRate:0.009,addMedThresh:200000,
+  futaRate:0.006,futaWageBase:7000
+};
+var _usStateCfg2026={
+  AL:{name:'Alabama',type:'prog',brackets:[
+    {max:500,rate:0.02,k:0},{max:3000,rate:0.04,k:10},{max:Infinity,rate:0.05,k:40}]},
+  AK:{name:'Alaska',type:'none'},
+  AZ:{name:'Arizona',type:'flat',rate:0.025},
+  AR:{name:'Arkansas',type:'prog',brackets:[
+    {max:4600,rate:0.02,k:0},{max:Infinity,rate:0.039,k:87.40}]},
+  CA:{name:'California',type:'prog',brackets:[
+    {max:11079,rate:0.01,k:0},{max:26264,rate:0.02,k:110.79},{max:41452,rate:0.04,k:636.07},
+    {max:57542,rate:0.06,k:1465.11},{max:72724,rate:0.08,k:2615.95},{max:371479,rate:0.093,k:3561.36},
+    {max:445771,rate:0.103,k:7276.15},{max:742953,rate:0.113,k:11733.86},
+    {max:1000000,rate:0.123,k:19163.39},{max:Infinity,rate:0.133,k:29163.39}]},
+  CO:{name:'Colorado',type:'flat',rate:0.044},
+  CT:{name:'Connecticut',type:'prog',brackets:[
+    {max:10000,rate:0.03,k:0},{max:50000,rate:0.05,k:200},{max:100000,rate:0.055,k:450},
+    {max:200000,rate:0.06,k:950},{max:500000,rate:0.065,k:1950},{max:Infinity,rate:0.0699,k:4400}]},
+  DE:{name:'Delaware',type:'prog',brackets:[
+    {max:2000,rate:0,k:0},{max:5000,rate:0.022,k:44},{max:10000,rate:0.039,k:129},
+    {max:20000,rate:0.048,k:219},{max:25000,rate:0.052,k:299},{max:60000,rate:0.0555,k:386.50},
+    {max:Infinity,rate:0.066,k:1016.50}]},
+  FL:{name:'Florida',type:'none'},
+  GA:{name:'Georgia',type:'flat',rate:0.0519},
+  HI:{name:'Hawaii',type:'prog',brackets:[
+    {max:9600,rate:0.014,k:0},{max:14400,rate:0.032,k:172.80},{max:19200,rate:0.055,k:504},
+    {max:24000,rate:0.064,k:676.80},{max:36000,rate:0.068,k:772.80},{max:48000,rate:0.072,k:916.80},
+    {max:125000,rate:0.076,k:1108.80},{max:175000,rate:0.079,k:1483.80},
+    {max:225000,rate:0.0825,k:2096.30},{max:275000,rate:0.09,k:3783.80},
+    {max:325000,rate:0.10,k:6533.80},{max:Infinity,rate:0.11,k:9783.80}]},
+  ID:{name:'Idaho',type:'flat',rate:0.053},
+  IL:{name:'Illinois',type:'flat',rate:0.0495},
+  IN:{name:'Indiana',type:'flat',rate:0.0295},
+  IA:{name:'Iowa',type:'flat',rate:0.038},
+  KS:{name:'Kansas',type:'flat',rate:0.052},
+  KY:{name:'Kentucky',type:'flat',rate:0.035},
+  LA:{name:'Louisiana',type:'flat',rate:0.03},
+  ME:{name:'Maine',type:'prog',brackets:[
+    {max:27399,rate:0.058,k:0},{max:64849,rate:0.0675,k:260.29},{max:Infinity,rate:0.0715,k:519.69}]},
+  MD:{name:'Maryland',type:'prog',brackets:[
+    {max:1000,rate:0.02,k:0},{max:2000,rate:0.03,k:10},{max:3000,rate:0.04,k:30},
+    {max:100000,rate:0.0475,k:52.50},{max:125000,rate:0.05,k:302.50},{max:150000,rate:0.0525,k:615},
+    {max:250000,rate:0.055,k:990},{max:500000,rate:0.0575,k:1615},
+    {max:1000000,rate:0.0625,k:4115},{max:Infinity,rate:0.065,k:6615}]},
+  MA:{name:'Massachusetts',type:'prog',brackets:[
+    {max:1083150,rate:0.05,k:0},{max:Infinity,rate:0.09,k:43326}]},
+  MI:{name:'Michigan',type:'flat',rate:0.0425},
+  MN:{name:'Minnesota',type:'prog',brackets:[
+    {max:33310,rate:0.0535,k:0},{max:109430,rate:0.068,k:483},{max:203150,rate:0.0785,k:1632.02},
+    {max:Infinity,rate:0.0985,k:5695.02}]},
+  MS:{name:'Mississippi',type:'flat',rate:0.04},
+  MO:{name:'Missouri',type:'prog',brackets:[
+    {max:1348,rate:0,k:0},{max:2696,rate:0.02,k:26.96},{max:4044,rate:0.025,k:40.44},
+    {max:5392,rate:0.03,k:60.66},{max:6740,rate:0.035,k:87.62},{max:8088,rate:0.04,k:121.32},
+    {max:9436,rate:0.045,k:161.76},{max:Infinity,rate:0.047,k:180.63}]},
+  MT:{name:'Montana',type:'prog',brackets:[
+    {max:47500,rate:0.047,k:0},{max:Infinity,rate:0.0565,k:451.25}]},
+  NE:{name:'Nebraska',type:'prog',brackets:[
+    {max:4130,rate:0.0246,k:0},{max:24760,rate:0.0351,k:43.37},{max:Infinity,rate:0.0455,k:300.87}]},
+  NV:{name:'Nevada',type:'none'},
+  NH:{name:'New Hampshire',type:'none'},
+  NJ:{name:'New Jersey',type:'prog',brackets:[
+    {max:20000,rate:0.014,k:0},{max:35000,rate:0.0175,k:70},{max:40000,rate:0.035,k:682.50},
+    {max:75000,rate:0.0553,k:1494.50},{max:500000,rate:0.0637,k:2124.50},
+    {max:1000000,rate:0.0897,k:15124.50},{max:Infinity,rate:0.1075,k:32924.50}]},
+  NM:{name:'New Mexico',type:'prog',brackets:[
+    {max:5500,rate:0.015,k:0},{max:16500,rate:0.032,k:93.50},{max:33500,rate:0.043,k:275},
+    {max:66500,rate:0.047,k:409},{max:210000,rate:0.049,k:542},{max:Infinity,rate:0.059,k:2642}]},
+  NY:{name:'New York',type:'prog',brackets:[
+    {max:8500,rate:0.04,k:0},{max:11700,rate:0.045,k:42.50},{max:13900,rate:0.0525,k:130.25},
+    {max:80650,rate:0.055,k:165},{max:215400,rate:0.06,k:568.25},{max:1077550,rate:0.0685,k:2399.15},
+    {max:5000000,rate:0.0965,k:32570.55},{max:25000000,rate:0.103,k:65070.55},
+    {max:Infinity,rate:0.109,k:215070.55}]},
+  NC:{name:'North Carolina',type:'flat',rate:0.0399},
+  ND:{name:'North Dakota',type:'prog',brackets:[
+    {max:48475,rate:0,k:0},{max:244825,rate:0.0195,k:945.26},{max:Infinity,rate:0.025,k:2291.80}]},
+  OH:{name:'Ohio',type:'prog',brackets:[
+    {max:26050,rate:0,k:0},{max:Infinity,rate:0.0275,k:716.38}]},
+  OK:{name:'Oklahoma',type:'prog',brackets:[
+    {max:3750,rate:0,k:0},{max:4900,rate:0.025,k:93.75},{max:7200,rate:0.035,k:142.75},
+    {max:Infinity,rate:0.045,k:214.75}]},
+  OR:{name:'Oregon',type:'prog',brackets:[
+    {max:4550,rate:0.0475,k:0},{max:11400,rate:0.0675,k:91},{max:125000,rate:0.0875,k:319},
+    {max:Infinity,rate:0.099,k:1756.50}]},
+  PA:{name:'Pennsylvania',type:'flat',rate:0.0307},
+  RI:{name:'Rhode Island',type:'prog',brackets:[
+    {max:82050,rate:0.0375,k:0},{max:186450,rate:0.0475,k:820.50},{max:Infinity,rate:0.0599,k:3132.48}]},
+  SC:{name:'South Carolina',type:'prog',brackets:[
+    {max:3640,rate:0,k:0},{max:18230,rate:0.03,k:109.20},{max:Infinity,rate:0.06,k:656.10}]},
+  SD:{name:'South Dakota',type:'none'},
+  TN:{name:'Tennessee',type:'none'},
+  TX:{name:'Texas',type:'none'},
+  UT:{name:'Utah',type:'flat',rate:0.045},
+  VT:{name:'Vermont',type:'prog',brackets:[
+    {max:49400,rate:0.0335,k:0},{max:119700,rate:0.066,k:1605.50},{max:249700,rate:0.076,k:2802.50},
+    {max:Infinity,rate:0.0875,k:5674.05}]},
+  VA:{name:'Virginia',type:'prog',brackets:[
+    {max:3000,rate:0.02,k:0},{max:5000,rate:0.03,k:30},{max:17000,rate:0.05,k:130},
+    {max:Infinity,rate:0.0575,k:257.50}]},
+  WA:{name:'Washington',type:'none'},
+  WV:{name:'West Virginia',type:'prog',brackets:[
+    {max:10000,rate:0.0222,k:0},{max:25000,rate:0.0296,k:74},{max:40000,rate:0.0333,k:166.50},
+    {max:60000,rate:0.0444,k:610.50},{max:Infinity,rate:0.0482,k:838.50}]},
+  WI:{name:'Wisconsin',type:'prog',brackets:[
+    {max:15110,rate:0.035,k:0},{max:51950,rate:0.044,k:135.99},{max:332720,rate:0.053,k:603.54},
+    {max:Infinity,rate:0.0765,k:8422.46}]},
+  WY:{name:'Wyoming',type:'none'},
+  DC:{name:'District of Columbia',type:'prog',brackets:[
+    {max:10000,rate:0.04,k:0},{max:40000,rate:0.06,k:200},{max:60000,rate:0.065,k:400},
+    {max:250000,rate:0.085,k:1600},{max:500000,rate:0.0925,k:3475},{max:1000000,rate:0.0975,k:5975},
+    {max:Infinity,rate:0.1075,k:15975}]}
+};
+var _usStateOrder=['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
 function _payPeriods(freq){
   var m={Weekly:52,Biweekly:26,'Semi-monthly':24,Monthly:12};return m[freq]||26;
 }
@@ -7074,6 +7203,53 @@ function _calcPayroll(params){
     federalTd1:fedTD1,provincialTd1:provTD1
   };
 }
+function _calcUSPayroll(params){
+  var uf=_usFedCfg2026;
+  var stCode=params.state||'CA';
+  var st=_usStateCfg2026[stCode]||_usStateCfg2026.CA;
+  var filing=params.filing||'S';
+  var P=_payPeriods(params.payFrequency||'Biweekly');
+  var gross=+(params.gross||0);
+  var pretax=+(params.pretaxDeductions||0);
+  var Ag=gross*P;
+  var taxableAg=Math.max(0,(gross-pretax)*P);
+  var stdDed=uf.stdDed[filing]||uf.stdDed.S;
+  var fedTaxable=Math.max(0,taxableAg-stdDed);
+  var fedBrackets=uf.brackets[filing]||uf.brackets.S;
+  var fedAnnual=_bracketTax(fedTaxable,fedBrackets);
+  var addlW=+(params.additionalWithholding||0);
+  var fedTaxPer=+(Math.max(0,fedAnnual)/P+addlW).toFixed(2);
+  var ssAnnual=Math.min(Ag,uf.ssWageBase)*uf.ssRate;
+  var ssPer=+(ssAnnual/P).toFixed(2);
+  var medAnnual=Ag*uf.medRate;
+  var addMed=Math.max(0,Ag-uf.addMedThresh)*uf.addMedRate;
+  var medPer=+((medAnnual+addMed)/P).toFixed(2);
+  var stateTaxPer=0;
+  if(st.type==='flat'){
+    stateTaxPer=+(Math.max(0,taxableAg)*st.rate/P).toFixed(2);
+  }else if(st.type==='prog'){
+    stateTaxPer=+(Math.max(0,_bracketTax(Math.max(0,taxableAg),st.brackets))/P).toFixed(2);
+  }
+  var totalTax=+(fedTaxPer+stateTaxPer).toFixed(2);
+  var totalDed=+(fedTaxPer+stateTaxPer+ssPer+medPer).toFixed(2);
+  var net=+(gross-pretax-totalDed).toFixed(2);
+  var ssEmployer=+(Math.min(Ag,uf.ssWageBase)*uf.ssRate/P).toFixed(2);
+  var medEmployer=+(Ag*uf.medRate/P).toFixed(2);
+  var futaPer=+(Math.min(Ag,uf.futaWageBase)*uf.futaRate/P).toFixed(2);
+  var totalRemit=+(fedTaxPer+stateTaxPer+ssPer+ssEmployer+medPer+medEmployer+futaPer).toFixed(2);
+  return {
+    gross:gross,pretaxDeductions:pretax,
+    federalTax:fedTaxPer,stateTax:stateTaxPer,totalTax:totalTax,
+    socialSecurity:ssPer,medicare:medPer,
+    totalDeductions:totalDed,net:net,
+    ssEmployer:ssEmployer,medEmployer:medEmployer,futaEmployer:futaPer,
+    totalRemittance:totalRemit,
+    payFrequency:params.payFrequency||'Biweekly',
+    employeeName:params.employeeName||'',payDate:params.payDate||'',
+    state:stCode,stateName:st.name,filing:filing,
+    country:'US'
+  };
+}
 function _openPayrollCalc(){
   var names=new Set();
   employeePayroll.forEach(function(p){if(p.employee)names.add(p.employee);});
@@ -7085,7 +7261,8 @@ function _openPayrollCalc(){
   var defProv=lastEmp&&lastEmp._provCode?lastEmp._provCode:'ON';
   var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:(_provCfg2026[defProv]||_provCfg2026.ON).bpa;
   var provOpts=_provOrder.map(function(code){var pc=_provCfg2026[code];return'<option value="'+code+'"'+(code===defProv?' selected':'')+'>'+pc.name+'</option>';}).join('');
-  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="font-size:11px;color:var(--muted)">CRA 2026 · T4127 formulas · All provinces &amp; territories</div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px">'
+  window._pcCountry='CA';window._pcNameOpts=opts;window._pcDefProv=defProv;window._pcDefTD1F=defTD1F;window._pcDefTD1P=defTD1P;window._pcProvOpts=provOpts;
+  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="display:flex;gap:8px;margin-top:8px"><button id="pc-tab-ca" onclick="_pcSwitchCountry(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇨🇦 Canada</button><button id="pc-tab-us" onclick="_pcSwitchCountry(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇺🇸 United States</button></div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px"><div id="pc-subtitle" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center">CRA 2026 · T4127 formulas · All provinces &amp; territories</div><div id="pc-form-body">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
     +'<input id="pc-name" list="pc-names-list" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px" placeholder="e.g. Alex Shewan">'
@@ -7100,7 +7277,7 @@ function _openPayrollCalc(){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Federal TD1 Claim</label><input id="pc-td1f" type="number" step="0.01" value="'+defTD1F+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div>'
     +'<div><label style="font-size:12px;color:var(--muted)">Provincial TD1 Claim</label><input id="pc-td1p" type="number" step="0.01" value="'+defTD1P+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div></div>'
-    +'<div style="text-align:center;margin:14px 0 10px"><button onclick="_runPayrollCalc()" style="padding:9px 30px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--green),#1aae5f);color:#000;font-size:13px;font-weight:700;cursor:pointer">Calculate Deductions</button></div>'
+    +'</div><div style="text-align:center;margin:14px 0 10px"><button onclick="_pcCalc()" style="padding:9px 30px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--green),#1aae5f);color:#000;font-size:13px;font-weight:700;cursor:pointer">Calculate Deductions</button></div>'
     +'<div id="pc-results" style="display:none"></div>'
     +'</div>');
 }
@@ -7169,6 +7346,127 @@ function _addCalcPaystub(){
     dhRemittance:r.totalRemittance,
     _fedTd1:r.federalTd1,_provTd1:r.provincialTd1,_provCode:r.province,
     notes:'Calculated via Payroll Calculator'
+  };
+  employeePayroll.push(rec);
+  saveEmployeePayroll();renderEmployeePayroll();renderRemittanceSummary();renderT4Summary();
+  closeModal();
+  showToast('Pay stub added for '+r.employeeName,'success');
+}
+function _pcSwitchCountry(c){
+  if(c===window._pcCountry)return;
+  if(!window._pcCAFormCache){
+    window._pcCAFormCache=document.getElementById('pc-form-body').innerHTML;
+  }
+  window._pcCountry=c;
+  var caTab=document.getElementById('pc-tab-ca');
+  var usTab=document.getElementById('pc-tab-us');
+  var sub=document.getElementById('pc-subtitle');
+  var body=document.getElementById('pc-form-body');
+  var res=document.getElementById('pc-results');
+  res.style.display='none';res.innerHTML='';
+  if(c==='US'){
+    caTab.style.background='var(--navy-mid)';caTab.style.color='var(--muted)';
+    usTab.style.background='var(--green)';usTab.style.color='#000';
+    sub.textContent='IRS 2026 · Pub 15-T percentage method · All 50 states + DC';
+    body.innerHTML=_pcBuildUSForm();
+  }else{
+    usTab.style.background='var(--navy-mid)';usTab.style.color='var(--muted)';
+    caTab.style.background='var(--green)';caTab.style.color='#000';
+    sub.innerHTML='CRA 2026 · T4127 formulas · All provinces &amp; territories';
+    body.innerHTML=window._pcCAFormCache;
+  }
+}
+function _pcBuildUSForm(){
+  var opts=window._pcNameOpts||'';
+  var stOpts=_usStateOrder.map(function(code){
+    var st=_usStateCfg2026[code];
+    return'<option value="'+code+'">'+st.name+(st.type==='none'?' (no state tax)':'')+'</option>';
+  }).join('');
+  var is='style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px"';
+  var ls='style="font-size:12px;color:var(--muted)"';
+  return'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label '+ls+'>Employee Name</label>'
+    +'<input id="pc-name" list="pc-names-list" '+is+' placeholder="e.g. John Smith">'
+    +'<datalist id="pc-names-list"><option value="">'+opts+'</datalist></div>'
+    +'<div><label '+ls+'>State</label>'
+    +'<select id="pc-state" '+is+'>'+stOpts+'</select></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label '+ls+'>Pay Date</label><input id="pc-date" type="date" '+is+'></div>'
+    +'<div><label '+ls+'>Pay Frequency</label><select id="pc-freq" '+is+'><option value="Weekly">Weekly (52)</option><option value="Biweekly" selected>Biweekly (26)</option><option value="Semi-monthly">Semi-monthly (24)</option><option value="Monthly">Monthly (12)</option></select></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label '+ls+'>Gross Wages (per period)</label><input id="pc-gross" type="number" step="0.01" min="0" placeholder="0.00" '+is+' style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div>'
+    +'<div><label '+ls+'>Filing Status (W-4)</label><select id="pc-filing" '+is+'><option value="S">Single</option><option value="MFJ">Married Filing Jointly</option><option value="HoH">Head of Household</option></select></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label '+ls+'>Pre-tax Deductions (401k etc.)</label><input id="pc-pretax" type="number" step="0.01" min="0" value="0" '+is+' style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div>'
+    +'<div><label '+ls+'>Additional Federal W/H</label><input id="pc-addl" type="number" step="0.01" min="0" value="0" '+is+' style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div></div>';
+}
+function _pcCalc(){
+  if(window._pcCountry==='US'){_runUSPayrollCalc();}else{_runPayrollCalc();}
+}
+function _runUSPayrollCalc(){
+  try{
+  var name=document.getElementById('pc-name').value.trim();
+  var date=document.getElementById('pc-date').value;
+  var gross=parseFloat(document.getElementById('pc-gross').value)||0;
+  if(!name){showDhToast('Missing Field','Enter employee name','⚠️','var(--orange)');return;}
+  if(!date){showDhToast('Missing Field','Enter pay date','⚠️','var(--orange)');return;}
+  if(!gross){showDhToast('Missing Field','Enter gross wages','⚠️','var(--orange)');return;}
+  var stCode=document.getElementById('pc-state').value;
+  var filing=document.getElementById('pc-filing').value;
+  var addl=parseFloat(document.getElementById('pc-addl').value)||0;
+  var pretax=parseFloat(document.getElementById('pc-pretax').value)||0;
+  var r=_calcUSPayroll({
+    employeeName:name,payDate:date,gross:gross,pretaxDeductions:pretax,
+    payFrequency:document.getElementById('pc-freq').value,
+    state:stCode,filing:filing,additionalWithholding:addl
+  });
+  window._lastPayrollCalc=r;
+  var el=document.getElementById('pc-results');
+  el.style.display='';
+  var fl={S:'Single',MFJ:'Married Filing Jointly',HoH:'Head of Household'}[filing]||filing;
+  el.innerHTML='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:4px">'
+    +'<div style="background:rgba(34,217,122,.08);padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">'+r.employeeName+'</span><span style="font-size:11px;color:var(--muted)">'+r.payDate+' · '+r.payFrequency+' · '+r.stateName+' · '+fl+'</span></div>'
+    +'<div style="padding:12px 14px;font-size:12px">'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Gross Wages</span><span>$'+gross.toFixed(2)+'</span></div>'
+    +(pretax?'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--muted)"><span>Pre-tax Deductions</span><span>-$'+pretax.toFixed(2)+'</span></div>':'')
+    +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Federal Income Tax</span><span>$'+r.federalTax.toFixed(2)+'</span></div>'
+    +(r.stateTax?'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>State Tax ('+r.stateName+')</span><span>$'+r.stateTax.toFixed(2)+'</span></div>':'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--muted)"><span>State Tax</span><span>$0.00 (no state tax)</span></div>')
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Social Security (6.2%)</span><span>$'+r.socialSecurity.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Medicare (1.45%)</span><span>$'+r.medicare.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-weight:700;color:var(--orange)"><span>Total Deductions</span><span>$'+r.totalDeductions.toFixed(2)+'</span></div>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--border);font-weight:700;font-size:14px;color:var(--green)"><span>Net Pay</span><span>$'+r.net.toFixed(2)+'</span></div>'
+    +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)">'
+    +'<div style="font-weight:700;margin-bottom:4px">Employer Portions</div>'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Social Security (employer)</span><span>$'+r.ssEmployer.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Medicare (employer)</span><span>$'+r.medEmployer.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>FUTA (employer)</span><span>$'+r.futaEmployer.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;color:var(--orange)"><span>Total Remittance</span><span>$'+r.totalRemittance.toFixed(2)+'</span></div>'
+    +'</div>'
+    +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">'
+    +'<div style="font-weight:700;margin-bottom:3px">Filing Requirements</div>'
+    +'<div>• Federal: Deposit via EFTPS · File Form 941 quarterly · Form W-2 annually</div>'
+    +'<div>• FUTA: File Form 940 annually · Deposit if liability exceeds $500</div>'
+    +'<div>• State: Requirements vary — check your state tax authority</div>'
+    +'</div>'
+    +'</div></div>'
+    +'<div style="text-align:center;margin-top:12px"><button onclick="_addUSCalcPaystub()" style="padding:9px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Add to Payroll</button></div>';
+  }catch(err){showDhToast('Calculator Error',err.message||'Unknown error','❌','var(--red)');}
+}
+function _addUSCalcPaystub(){
+  var r=window._lastPayrollCalc;if(!r||r.country!=='US')return;
+  var rec={
+    id:Date.now()+'_'+Math.random().toString(36).slice(2,8),
+    employee:r.employeeName,date:r.payDate,
+    period:r.payFrequency,hours:0,rate:0,gross:r.gross,
+    deductions:{federalTax:r.federalTax,provincialTax:r.stateTax,cpp:r.socialSecurity,ei:r.medicare},
+    totalDeductions:r.totalDeductions,net:r.net,
+    vacationPay:0,
+    dhCpp:r.ssEmployer,dhCpp2:0,dhEi:r.medEmployer,
+    dhRemittance:r.totalRemittance,
+    _country:'US',_state:r.state,_filing:r.filing,_futa:r.futaEmployer,
+    notes:'US Payroll — '+r.stateName+' — '+(r.filing==='MFJ'?'Married Filing Jointly':r.filing==='HoH'?'Head of Household':'Single')
   };
   employeePayroll.push(rec);
   saveEmployeePayroll();renderEmployeePayroll();renderRemittanceSummary();renderT4Summary();
@@ -31106,9 +31404,9 @@ function addSocialNotification(postId,text,type){
   notificationsSave(notifs);
   refreshNotificationBadge();
   // Show a toast alert for the new notification
-  const icons={approval:'✅',revision:'✏️',message:'💬',date_change:'📅',video_approved:'🎬',video_changes:'↩',booking:'📬'};
-  const titles={approval:'Client Approved',revision:'Revision Requested',message:'New Message',date_change:'Date Changed',video_approved:'Video Approved',video_changes:'Changes Requested',booking:'New Booking Request'};
-  const colors={approval:'#22D97A',revision:'#FB923C',video_approved:'#22D97A',video_changes:'#F5C842',booking:'var(--amber)',message:'var(--blue-bright)',date_change:'var(--blue-bright)'};
+  const icons={approval:'✅',revision:'✏️',message:'💬',date_change:'📅',video_approved:'🎬',video_changes:'↩',booking:'📬',tax_update:'💰'};
+  const titles={approval:'Client Approved',revision:'Revision Requested',message:'New Message',date_change:'Date Changed',video_approved:'Video Approved',video_changes:'Changes Requested',booking:'New Booking Request',tax_update:'Payroll Tax Update'};
+  const colors={approval:'#22D97A',revision:'#FB923C',video_approved:'#22D97A',video_changes:'#F5C842',booking:'var(--amber)',message:'var(--blue-bright)',date_change:'var(--blue-bright)',tax_update:'#F5C842'};
   showDhToast(titles[type]||'Notification', text, icons[type]||'🔔', colors[type]||'var(--blue-bright)');
 }
 
@@ -32080,7 +32378,8 @@ function renderNotificationPanel(){
     approval:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',bg:'rgba(34,217,122,.08)',accent:'rgba(34,217,122,.25)',label:'Approved'},
     revision:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',bg:'rgba(251,146,60,.08)',accent:'rgba(251,146,60,.25)',label:'Revision'},
     message:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',bg:'rgba(91,141,239,.08)',accent:'rgba(91,141,239,.25)',label:'Message'},
-    date_change:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',bg:'rgba(167,139,250,.08)',accent:'rgba(167,139,250,.25)',label:'Date changed'}
+    date_change:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',bg:'rgba(167,139,250,.08)',accent:'rgba(167,139,250,.25)',label:'Date changed'},
+    tax_update:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',bg:'rgba(245,200,66,.08)',accent:'rgba(245,200,66,.25)',label:'Tax update'}
   };
   const defaultType={icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',bg:'rgba(255,255,255,.04)',accent:'var(--border)',label:'Update'};
   const requestedJobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested');
@@ -32105,7 +32404,8 @@ function renderNotificationPanel(){
   }).join('');
   const notifRows=notifs.map(n=>{
     const cfg=typeConfig[n.type]||defaultType;
-    return `<div onclick="document.getElementById('notif-panel').style.display='none';showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
+    const navAction=n.type==='tax_update'?"showPane('finance')":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
+    return `<div onclick="document.getElementById('notif-panel').style.display='none';${navAction}" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="width:32px;height:32px;border-radius:10px;background:${cfg.bg};border:1px solid ${cfg.accent};display:flex;align-items:center;justify-content:center;flex-shrink:0">${cfg.icon}</div>
         <div style="flex:1;min-width:0">
@@ -32143,6 +32443,48 @@ function notificationsClear(){
   notificationsSave([]);
   renderNotificationPanel();
 }
+function _checkPayrollTaxUpdates(){
+  var now=new Date(),yr=now.getFullYear(),mo=now.getMonth();
+  var nextYr=yr+1;
+  var checks=[
+    {month:10,key:'nov',msgs:[
+      '🇨🇦 CRA has announced '+nextYr+' CPP/CPP2 maximum pensionable earnings (YMPE/YAMPE) and contribution rates. Update cppYMPE, cpp2YAMPE, cppRate, cpp2Rate in _fedCfg'+nextYr+'.',
+      '🇨🇦 CRA has announced '+nextYr+' EI maximum insurable earnings (MIE) and premium rate. Update eiMIE, eiRate in _fedCfg'+nextYr+'.',
+      '🇨🇦 CRA has announced '+nextYr+' Basic Personal Amount (BPA) and Canada Employment Amount (CEA). Update bpa, cea in _fedCfg'+nextYr+'.',
+      '🇨🇦 Check '+nextYr+' T4 reporting caps: CPP pensionable max, EI insurable max, pension adjustment limits.',
+      '🇺🇸 IRS has announced '+nextYr+' inflation adjustments (Rev. Proc.). Check new bracket thresholds, standard deductions, and FICA wage base for Social Security.'
+    ]},
+    {month:0,key:'jan',msgs:[
+      '🇨🇦 CRA has published the '+yr+' T4127 (January edition). Update _fedCfg'+yr+' and _provCfg'+yr+' with final brackets, KP constants, and all provincial BPAs.',
+      '🇨🇦 Verify '+yr+' provincial health premiums (ON), surtax thresholds (ON), and tax reductions (BC) are current.',
+      '🇺🇸 IRS has published '+yr+' Pub 15-T withholding tables. Update _usFedCfg'+yr+' brackets, standard deductions (S/MFJ/HoH), and FICA wage bases.',
+      '🇺🇸 Check all 50 state tax agencies for '+yr+' bracket and rate changes.'
+    ]},
+    {month:6,key:'jul',msgs:[
+      '🇨🇦 CRA mid-year T4127 update (July edition) may be available. Check for provincial rate changes (e.g. BC budget adjustments).',
+      '🇺🇸 Check for mid-year state tax rate changes that took effect July 1.'
+    ]}
+  ];
+  var fired=false;
+  checks.forEach(function(c){
+    if(mo!==c.month)return;
+    var lsKey='dh_tax_notif_'+yr+'_'+c.key;
+    if(localStorage.getItem(lsKey))return;
+    localStorage.setItem(lsKey,'1');
+    c.msgs.forEach(function(m){
+      var notifs=notificationsLoad();
+      notifs.unshift({id:'tax_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),text:m,type:'tax_update',at:new Date().toISOString(),read:false});
+      if(notifs.length>50)notifs.splice(50);
+      notificationsSave(notifs);
+    });
+    fired=true;
+  });
+  if(fired){
+    refreshNotificationBadge();
+    showDhToast('Payroll Tax Update','New tax rates and caps are available — update your payroll calculator','💰','#F5C842');
+  }
+}
+setTimeout(_checkPayrollTaxUpdates,3000);
 
 // ── Chat log renderer ─────────────────────────────────────────────────────────────────────
 function renderChatLog(chatLog, viewerRole, postId){
