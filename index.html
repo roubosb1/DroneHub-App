@@ -3248,6 +3248,7 @@ button{font-family:var(--font);}
           <div style="font-size:11px;color:var(--muted)">Upload pay stubs with full tax deduction breakdowns</div>
         </div>
         <div style="display:flex;gap:8px">
+          <button onclick="_openPayrollCalc()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Calculator</button>
           <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
           <button onclick="clearAllEmployeePayroll()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(240,82,82,.08);color:var(--red);font-size:11px;cursor:pointer">Clear All</button>
         </div>
@@ -6951,6 +6952,196 @@ function handleEmpPayImport(files){
   if(/\.xlsx?$/i.test(file.name)) reader.readAsArrayBuffer(file);
   else reader.readAsText(file);
   document.getElementById('emp-import-file').value='';
+}
+
+// ── CRA Payroll Calculator (2026) ────────────────────────────────────────────
+var _payrollCfg2026={
+  fedRate:0.14,bpa:16452,cea:1501,
+  fedBrackets:[
+    {max:58523,rate:0.14,k:0},
+    {max:117045,rate:0.205,k:3804.00},
+    {max:181440,rate:0.26,k:10241.48},
+    {max:258482,rate:0.29,k:15684.68},
+    {max:Infinity,rate:0.33,k:26023.96}
+  ],
+  cppRate:0.0595,cppBase:0.0495,cppEnh:0.01,
+  cppYBE:3500,cppYMPE:74600,
+  cpp2Rate:0.04,cpp2YAMPE:85000,
+  eiRate:0.0163,eiMIE:68900,eiEmployerMult:1.4,
+  onBPA:12989,
+  onBrackets:[
+    {max:53891,rate:0.0505,k:0},
+    {max:107785,rate:0.0915,k:2209.53},
+    {max:150000,rate:0.1116,k:4376.11},
+    {max:220000,rate:0.1216,k:5876.11},
+    {max:Infinity,rate:0.1316,k:8076.11}
+  ],
+  onSur1:5818,onSur2:7307
+};
+function _payPeriods(freq){
+  var m={Weekly:52,Biweekly:26,'Semi-monthly':24,Monthly:12};return m[freq]||26;
+}
+function _bracketTax(A,brackets){
+  for(var i=0;i<brackets.length;i++){if(A<=brackets[i].max)return brackets[i].rate*A-brackets[i].k;}
+  var last=brackets[brackets.length-1];return last.rate*A-last.k;
+}
+function _ontarioOHP(A){
+  if(A<=20000)return 0;
+  if(A<=25000)return Math.min(300,0.06*(A-20000));
+  if(A<=36000)return 300;
+  if(A<=38500)return 300+0.06*(A-36000);
+  if(A<=48000)return 450;
+  if(A<=48600)return 450+0.25*(A-48000);
+  if(A<=72000)return 600;
+  if(A<=72600)return 600+0.25*(A-72000);
+  if(A<=200600)return 750;
+  if(A<=201200)return 750+0.25*(A-200600);
+  return 900;
+}
+function _calcPayroll(params){
+  var c=_payrollCfg2026;
+  var P=_payPeriods(params.payFrequency||'Biweekly');
+  var salary=+(params.salary||0);
+  var vacRate=+(params.vacationPayRate||0.04);
+  var vacPay=+(salary*vacRate).toFixed(2);
+  var gross=+(salary+vacPay).toFixed(2);
+  var Ag=gross*P;
+  var cppPensionable=Math.max(0,Math.min(Ag,c.cppYMPE)-c.cppYBE);
+  var cppTotal=+(cppPensionable*c.cppRate).toFixed(2);
+  var cppPer=+(cppTotal/P).toFixed(2);
+  var cppBaseCr=cppPensionable*c.cppBase;
+  var cppEnhDed=cppPensionable*c.cppEnh;
+  var cpp2Pensionable=Math.max(0,Math.min(Ag,c.cpp2YAMPE)-c.cppYMPE);
+  var cpp2Total=+(cpp2Pensionable*c.cpp2Rate).toFixed(2);
+  var cpp2Per=+(cpp2Total/P).toFixed(2);
+  var eiInsurable=Math.min(Ag,c.eiMIE);
+  var eiTotal=+(eiInsurable*c.eiRate).toFixed(2);
+  var eiPer=+(eiTotal/P).toFixed(2);
+  var A=Ag-cppEnhDed;
+  var fedTD1=+(params.federalTd1||c.bpa);
+  var T3=_bracketTax(A,c.fedBrackets);
+  var K1=c.fedRate*fedTD1;
+  var K2=c.fedRate*cppBaseCr;
+  var K3=c.fedRate*eiTotal;
+  var K4=c.fedRate*Math.min(A,c.cea);
+  var T1=Math.max(0,T3-K1-K2-K3-K4);
+  var fedTaxPer=+(T1/P).toFixed(2);
+  var provTD1=+(params.provincialTd1||c.onBPA);
+  var V=_bracketTax(A,c.onBrackets);
+  var K1P=0.0505*provTD1;
+  var K2P=0.0505*cppBaseCr;
+  var K3P=0.0505*eiTotal;
+  var V1=Math.max(0,V-K1P-K2P-K3P);
+  var V2=0.20*Math.max(0,V1-c.onSur1)+0.36*Math.max(0,V1-c.onSur2);
+  var LCP=_ontarioOHP(A);
+  var provTaxPer=+((V1+V2+LCP)/P).toFixed(2);
+  var totalTax=+(fedTaxPer+provTaxPer).toFixed(2);
+  var totalDed=+(fedTaxPer+provTaxPer+cppPer+cpp2Per+eiPer).toFixed(2);
+  var net=+(gross-totalDed).toFixed(2);
+  var cppEmployer=cppPer;
+  var cpp2Employer=cpp2Per;
+  var eiEmployer=+(eiPer*c.eiEmployerMult).toFixed(2);
+  var totalRemit=+(fedTaxPer+provTaxPer+cppPer+cppEmployer+cpp2Per+cpp2Employer+eiPer+eiEmployer).toFixed(2);
+  return {
+    salary:salary,vacationPay:vacPay,gross:gross,
+    federalTax:fedTaxPer,provincialTax:provTaxPer,totalTax:totalTax,
+    cppEmployee:cppPer,cpp2Employee:cpp2Per,eiEmployee:eiPer,
+    totalDeductions:totalDed,net:net,
+    cppEmployer:cppEmployer,cpp2Employer:cpp2Employer,eiEmployer:eiEmployer,
+    totalRemittance:totalRemit,
+    payFrequency:params.payFrequency||'Biweekly',
+    employeeName:params.employeeName||'',payDate:params.payDate||'',
+    province:params.province||'Ontario',
+    federalTd1:fedTD1,provincialTd1:provTD1
+  };
+}
+function _openPayrollCalc(){
+  var names=new Set();
+  employeePayroll.forEach(function(p){if(p.employee)names.add(p.employee);});
+  var teamMembers=typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[];
+  teamMembers.forEach(function(m){if(m.name)names.add(m.name);});
+  var opts=[...names].sort().map(function(n){return'<option value="'+n+'">'+n+'</option>';}).join('');
+  var lastEmp=employeePayroll.length?employeePayroll[employeePayroll.length-1]:null;
+  var defTD1F=lastEmp&&lastEmp._fedTd1?lastEmp._fedTd1:16452;
+  var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:12989;
+  showModal('Payroll Calculator','<div style="max-height:70vh;overflow-y:auto;padding:2px">'
+    +'<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
+    +'<input id="pc-name" list="pc-names-list" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px" placeholder="e.g. Alex Shewan">'
+    +'<datalist id="pc-names-list"><option value="">'+opts+'</datalist></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label style="font-size:12px;color:var(--muted)">Pay Date</label><input id="pc-date" type="date" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px"></div>'
+    +'<div><label style="font-size:12px;color:var(--muted)">Pay Frequency</label><select id="pc-freq" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px"><option value="Weekly">Weekly (52)</option><option value="Biweekly" selected>Biweekly (26)</option><option value="Semi-monthly">Semi-monthly (24)</option><option value="Monthly">Monthly (12)</option></select></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label style="font-size:12px;color:var(--muted)">Salary / Wages</label><input id="pc-salary" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div>'
+    +'<div><label style="font-size:12px;color:var(--muted)">Vacation Pay %</label><input id="pc-vac" type="number" step="0.5" min="0" max="100" value="4" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div><label style="font-size:12px;color:var(--muted)">Federal TD1 Claim</label><input id="pc-td1f" type="number" step="0.01" value="'+defTD1F+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div>'
+    +'<div><label style="font-size:12px;color:var(--muted)">Provincial TD1 Claim</label><input id="pc-td1p" type="number" step="0.01" value="'+defTD1P+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div></div>'
+    +'<div style="text-align:center;margin:14px 0 10px"><button onclick="_runPayrollCalc()" style="padding:9px 30px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--green),#1aae5f);color:#000;font-size:13px;font-weight:700;cursor:pointer">Calculate Deductions</button></div>'
+    +'<div id="pc-results" style="display:none"></div>'
+    +'</div>');
+}
+function _runPayrollCalc(){
+  var name=document.getElementById('pc-name').value.trim();
+  var date=document.getElementById('pc-date').value;
+  var salary=parseFloat(document.getElementById('pc-salary').value)||0;
+  if(!name){showToast('Enter employee name','error');return;}
+  if(!date){showToast('Enter pay date','error');return;}
+  if(!salary){showToast('Enter salary amount','error');return;}
+  var r=_calcPayroll({
+    employeeName:name,payDate:date,
+    salary:salary,
+    vacationPayRate:(parseFloat(document.getElementById('pc-vac').value)||0)/100,
+    payFrequency:document.getElementById('pc-freq').value,
+    province:'Ontario',
+    federalTd1:parseFloat(document.getElementById('pc-td1f').value)||16452,
+    provincialTd1:parseFloat(document.getElementById('pc-td1p').value)||12989
+  });
+  window._lastPayrollCalc=r;
+  var el=document.getElementById('pc-results');
+  el.style.display='';
+  el.innerHTML='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:4px">'
+    +'<div style="background:rgba(34,217,122,.08);padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">'+r.employeeName+'</span><span style="font-size:11px;color:var(--muted)">'+r.payDate+' · '+r.payFrequency+'</span></div>'
+    +'<div style="padding:12px 14px;font-size:12px">'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Salary / Wages</span><span>$'+r.salary.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Vacation Pay</span><span>$'+r.vacationPay.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-weight:700;color:var(--blue-bright)"><span>Total Cash Income</span><span>$'+r.gross.toFixed(2)+'</span></div>'
+    +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Federal Tax</span><span>$'+r.federalTax.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Provincial Tax</span><span>$'+r.provincialTax.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>CPP</span><span>$'+r.cppEmployee.toFixed(2)+'</span></div>'
+    +(r.cpp2Employee?'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>CPP2</span><span>$'+r.cpp2Employee.toFixed(2)+'</span></div>':'')
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>EI</span><span>$'+r.eiEmployee.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-weight:700;color:var(--orange)"><span>Total Deductions</span><span>$'+r.totalDeductions.toFixed(2)+'</span></div>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--border);font-weight:700;font-size:14px;color:var(--green)"><span>Net Pay</span><span>$'+r.net.toFixed(2)+'</span></div>'
+    +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)">'
+    +'<div style="font-weight:700;margin-bottom:4px">Employer Portions</div>'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>CPP (employer)</span><span>$'+r.cppEmployer.toFixed(2)+'</span></div>'
+    +(r.cpp2Employer?'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>CPP2 (employer)</span><span>$'+r.cpp2Employer.toFixed(2)+'</span></div>':'')
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>EI (employer)</span><span>$'+r.eiEmployer.toFixed(2)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;color:var(--orange)"><span>Total CRA Remittance</span><span>$'+r.totalRemittance.toFixed(2)+'</span></div>'
+    +'</div></div></div>'
+    +'<div style="text-align:center;margin-top:12px"><button onclick="_addCalcPaystub()" style="padding:9px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Add to Payroll</button></div>';
+}
+function _addCalcPaystub(){
+  var r=window._lastPayrollCalc;if(!r)return;
+  var rec={
+    id:Date.now()+'_'+Math.random().toString(36).slice(2,8),
+    employee:r.employeeName,date:r.payDate,
+    period:r.payFrequency,hours:0,rate:0,gross:r.gross,
+    deductions:{cpp:r.cppEmployee,cpp2:r.cpp2Employee,ei:r.eiEmployee,federalTax:r.federalTax,provincialTax:r.provincialTax},
+    totalDeductions:r.totalDeductions,net:r.net,
+    vacationPay:r.vacationPay,
+    dhCpp:r.cppEmployer,dhCpp2:r.cpp2Employer,dhEi:r.eiEmployer,
+    dhRemittance:r.totalRemittance,
+    _fedTd1:r.federalTd1,_provTd1:r.provincialTd1,
+    notes:'Calculated via Payroll Calculator'
+  };
+  employeePayroll.push(rec);
+  saveEmployeePayroll();renderEmployeePayroll();
+  closeModal();
+  showToast('Pay stub added for '+r.employeeName,'success');
 }
 
 // ── AI Pay Stub Scanner ─────────────────────────────────────────────────────
