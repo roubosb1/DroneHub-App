@@ -6313,7 +6313,9 @@ function openModal(html,opts){
   ov.onclick=function(e){if(e.target===ov)closeModal();};
   const box=document.createElement('div');
   var mw=(opts&&opts.maxWidth)||520;
-  box.style.cssText='background:var(--navy-card);border-radius:16px;width:100%;max-width:'+mw+'px;border:1px solid var(--border-bright);overflow:hidden';
+  var mh=(opts&&opts.maxHeight)?';max-height:'+opts.maxHeight:'';
+  var df=(opts&&opts.flex)?';display:flex;flex-direction:column':'';
+  box.style.cssText='background:var(--navy-card);border-radius:16px;width:100%;max-width:'+mw+'px;border:1px solid var(--border-bright);overflow:hidden'+mh+df;
   box.innerHTML=html;
   ov.appendChild(box);
   document.body.appendChild(ov);
@@ -7643,8 +7645,8 @@ function _openComplianceGuide(){
     +'<button id="cg-tab-us" onclick="_cgSwitch(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇺🇸 United States</button>'
     +'<button id="cg-tab-ca" onclick="_cgSwitch(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇨🇦 Canada</button>'
     +'</div></div>'
-    +'<div id="cg-body" style="max-height:60vh;overflow-y:auto;padding:16px 20px"></div>'
-    +'<div style="border-top:1px solid var(--border);padding:12px 20px">'
+    +'<div id="cg-body" style="flex:1;overflow-y:auto;padding:16px 20px;min-height:0"></div>'
+    +'<div style="border-top:1px solid var(--border);padding:12px 20px;flex-shrink:0">'
     +'<div id="cg-chat-toggle" onclick="_cgToggleChat()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.2);border-radius:10px">'
     +'<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0115 13h-3.5L9 15.5 6.5 13H3a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 013 3z" stroke="var(--blue-bright)" stroke-width="1.2" stroke-linejoin="round"/><circle cx="6" cy="8" r="1" fill="var(--blue-bright)"/><circle cx="9" cy="8" r="1" fill="var(--blue-bright)"/><circle cx="12" cy="8" r="1" fill="var(--blue-bright)"/></svg>'
     +'<div style="flex:1"><span style="font-size:12px;font-weight:700;color:var(--blue-bright)">Ask the Filing Assistant</span><br>'
@@ -7662,7 +7664,7 @@ function _openComplianceGuide(){
     +'</div>'
     +'<div style="margin-top:6px;font-size:9px;color:var(--muted);text-align:center">AI assistant — not a substitute for professional tax advice. Verify information with official sources.</div>'
     +'</div>'
-    +'</div>',{maxWidth:700});
+    +'</div>',{maxWidth:700,maxHeight:'90vh',flex:true});
   window._cgCountry='US';
   window._cgChatHistory=[];
   window._cgChatOpen=false;
