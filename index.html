@@ -7653,9 +7653,21 @@ function _cgSwitch(c){
   if(c==='US'){us.style.background='var(--green)';us.style.color='#000';ca.style.background='var(--navy-mid)';ca.style.color='var(--muted)';_cgRenderUS();}
   else{ca.style.background='var(--green)';ca.style.color='#000';us.style.background='var(--navy-mid)';us.style.color='var(--muted)';_cgRenderCA();}
 }
+var _cgIcons={
+  building:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 14V3a1 1 0 011-1h6a1 1 0 011 1v11M6 14V11h2v3M4 4.5h1.5M4 6.5h1.5M4 8.5h1.5M8 4.5H6.5M8 6.5H6.5M8 8.5H6.5M10 14V7h3a1 1 0 011 1v6M11.5 9H13M11.5 11H13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="1" y1="14" x2="15" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  state:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1L2 4v1h12V4L8 1zM3 6v6M6 6v6M10 6v6M13 6v6M1.5 12.5h13a.5.5 0 01.5.5v1H1v-1a.5.5 0 01.5-.5z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  dollar:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 3.5v9M10.5 5.8c0-.9-.7-1.3-1.5-1.4h-2c-.8.1-1.5.6-1.5 1.4s.7 1.3 1.5 1.4h2c.8.1 1.5.6 1.5 1.4s-.7 1.3-1.5 1.4H7c-.8-.1-1.5-.6-1.5-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  stateTax:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="2.5" width="13" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 5.5h13M5 8.5h6M5 10.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  clipboard:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="2" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 1.5h4a1 1 0 011 1V3H5v-.5a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7h5M5.5 9h5M5.5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  calendar:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 6h13M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="4" y="8" width="2" height="1.5" rx=".4" fill="currentColor"/><rect x="7" y="8" width="2" height="1.5" rx=".4" fill="currentColor"/><rect x="10" y="8" width="2" height="1.5" rx=".4" fill="currentColor"/><rect x="4" y="11" width="2" height="1.5" rx=".4" fill="currentColor"/></svg>',
+  chart:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13V8M6.5 13V5M10 13V7M13.5 13V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  maple:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.5l-1.2 3.2-2.8-.6 1.5 2.6L3 8.5l2.8.2L5 12l3-2 3 2-.8-3.3 2.8-.2-2.5-1.8 1.5-2.6-2.8.6L8 1.5z" stroke="currentColor" stroke-width="1" stroke-linejoin="round" fill="currentColor" fill-opacity=".15"/><line x1="8" y1="12" x2="8" y2="14.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  shield:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.5L2.5 4v4c0 3.5 2.5 5.5 5.5 6.5 3-1 5.5-3 5.5-6.5V4L8 1.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5.5 8.5l2 2 3-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
 function _cgSection(icon,title,body){
+  var svg=_cgIcons[icon]||icon;
   return'<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">'
-    +'<div style="background:rgba(34,217,122,.06);padding:10px 14px;font-size:13px;font-weight:700;color:var(--green)">'+icon+' '+title+'</div>'
+    +'<div style="background:rgba(34,217,122,.06);padding:10px 14px;font-size:13px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px">'+svg+' '+title+'</div>'
     +'<div style="padding:12px 14px;font-size:12px;color:var(--offwhite);line-height:1.7">'+body+'</div></div>';
 }
 function _cgLink(text,url){
@@ -7691,70 +7703,113 @@ function _cgRenderUSContent(){
   });
   var eftpsTotal=+(fedTotal+ssEmpT+ssErT+medEmpT+medErT).toFixed(2);
   var h='';
-  h+=_cgSection('1️⃣','One-Time Setup — Federal',
-    '<div style="display:flex;flex-direction:column;gap:8px">'
-    +'<div><strong>Get an EIN</strong> — '+_cgLink('Apply online at IRS.gov','https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online')+'<br><span style="color:var(--muted)">Instant approval. Required before you can pay employees or open EFTPS.</span></div>'
-    +'<div><strong>Register for EFTPS</strong> — '+_cgLink('Enroll at eftps.gov','https://www.eftps.gov/eftps/')+'<br><span style="color:var(--muted)">PIN arrives by mail in 5–7 business days. This is how you deposit federal taxes.</span></div>'
-    +'<div><strong>Create SSA Business Account</strong> — '+_cgLink('Register at ssa.gov/bso','https://www.ssa.gov/bso/')+'<br><span style="color:var(--muted)">Needed to e-file W-2s at year end.</span></div>'
+  h+=_cgSection('building','One-Time Setup — Federal',
+    '<div style="display:flex;flex-direction:column;gap:12px">'
+    +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Step 1 — Get an EIN (Employer Identification Number)</strong><br>'
+    +'Your EIN is your company\'s federal tax ID. You need it before paying employees, opening an EFTPS account, or filing any federal return.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Apply online at IRS.gov','https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online')+' — approval is instant. You\'ll receive your EIN immediately upon completion.<br>'
+    +'<span style="color:var(--muted)">Keep your EIN confirmation letter (CP 575) in a safe place — you\'ll need it for banking, state registration, and annual filings.</span></div>'
+    +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Step 2 — Register for EFTPS (Electronic Federal Tax Payment System)</strong><br>'
+    +'EFTPS is the only way to deposit federal payroll taxes (income tax withholding, Social Security, and Medicare). You cannot pay these by check or through IRS Direct Pay.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Enroll at eftps.gov','https://www.eftps.gov/eftps/')+' using your EIN. A PIN will arrive by mail in 5–7 business days. Once enrolled, you can schedule deposits online or by phone (1-800-555-4477).<br>'
+    +'<span style="color:var(--muted)">Tip: Enroll as soon as you get your EIN — the mailed PIN takes time, and you\'ll need it before your first deposit is due.</span></div>'
+    +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Step 3 — Create an SSA Business Services Online (BSO) Account</strong><br>'
+    +'BSO is where you electronically file W-2s and W-3s at year end. The Social Security Administration requires electronic filing if you have 25+ employees.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register at ssa.gov/bso','https://www.ssa.gov/bso/')+' — you\'ll need your EIN and a valid email address. Registration takes about 10 minutes.</span></div>'
     +'</div>'
   );
   if(!si.noTax){
-    h+=_cgSection('2️⃣','One-Time Setup — '+st.name,
-      '<div style="display:flex;flex-direction:column;gap:8px">'
-      +'<div><strong>Register for State Withholding</strong> — '+_cgLink(si.agency,si.url)+'<br><span style="color:var(--muted)">Apply for a state withholding tax account number. Required to remit state income tax.</span></div>'
-      +'<div><strong>Register for State Unemployment (SUTA)</strong> — '+_cgLink('State unemployment agency',si.suta)+'<br><span style="color:var(--muted)">Employer-paid tax. Rate varies by experience rating (typically 1–5% on first ~$10K per employee).</span></div>'
+    h+=_cgSection('state','One-Time Setup — '+st.name,
+      '<div style="display:flex;flex-direction:column;gap:12px">'
+      +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Register for State Withholding Tax</strong><br>'
+      +'You must register with '+si.agency+' to get a state withholding account number. This is separate from your federal EIN.<br>'
+      +'<span style="color:var(--muted)">How:</span> '+_cgLink('Visit '+si.agency,si.url)+' and apply for an employer withholding account. Processing time varies by state (instant to 2 weeks).<br>'
+      +'<span style="color:var(--muted)">You\'ll use this account number when depositing state income tax withheld from employees and when filing quarterly state returns.</span></div>'
+      +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Register for State Unemployment Insurance (SUTA/SUI)</strong><br>'
+      +'SUTA is an employer-paid tax that funds unemployment benefits. Every state requires it, regardless of company size.<br>'
+      +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register with your state unemployment agency',si.suta)+'<br>'
+      +'<span style="color:var(--muted)">New employer rates typically range from 1% to 5% on the first $7,000–$56,500 per employee (varies by state). Your rate decreases over time with a clean claims history.</span></div>'
       +'</div>'
     );
   }else{
-    h+=_cgSection('2️⃣','One-Time Setup — '+st.name,
-      '<div style="color:var(--green);font-weight:600">'+st.name+' has no state income tax.</div>'
-      +'<div style="margin-top:6px"><strong>State Unemployment (SUTA)</strong> — '+_cgLink('Register here',si.suta)+'<br><span style="color:var(--muted)">Still required — employer-paid unemployment insurance, even in no-income-tax states.</span></div>'
+    h+=_cgSection('state','One-Time Setup — '+st.name,
+      '<div style="padding:10px 12px;background:rgba(34,217,122,.06);border-radius:8px;margin-bottom:12px"><strong style="color:var(--green)">'+st.name+' has no state income tax.</strong><br>'
+      +'<span style="color:var(--muted)">You do not need to register for state withholding or file state income tax returns for employees working in '+st.name+'.</span></div>'
+      +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Register for State Unemployment Insurance (SUTA/SUI)</strong><br>'
+      +'Even though '+st.name+' has no income tax, SUTA registration is still required. This is an employer-paid tax that funds state unemployment benefits.<br>'
+      +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register here',si.suta)+'<br>'
+      +'<span style="color:var(--muted)">As a new employer, you\'ll be assigned a standard rate. File quarterly wage reports and pay SUTA on time to keep your rate low.</span></div>'
     );
   }
-  h+=_cgSection('💰','Each Pay Period — Federal Deposit via EFTPS',
-    '<div style="margin-bottom:8px">After each payroll run, deposit the following to the IRS via '+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+':</div>'
+  h+=_cgSection('dollar','Each Pay Period — Federal Deposit via EFTPS',
+    '<div style="margin-bottom:10px">After each payroll run, you must deposit the following taxes to the IRS via '+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'. These are combined into a single deposit — you do <strong>not</strong> make separate payments for each line item.</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee Federal Income Tax</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee Social Security (6.2%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer Social Security (6.2%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhCpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee Medicare (1.45%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.ei||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer Medicare (1.45%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhEi||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total EFTPS Deposit</td><td style="text-align:right;font-weight:700;color:var(--green)">'+(latestStub?'$'+((latestStub.deductions.federalTax||0)+(latestStub.deductions.cpp||0)+(latestStub.dhCpp||0)+(latestStub.deductions.ei||0)+(latestStub.dhEi||0)).toFixed(2)+'/period':'calculate first')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee Federal Income Tax</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee Social Security (6.2%)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employer Social Security (6.2%)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.dhCpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee Medicare (1.45%)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.ei||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employer Medicare (1.45%)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.dhEi||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total EFTPS Deposit</td><td style="text-align:right;font-weight:700;color:var(--green);white-space:nowrap">'+(latestStub?'$'+((latestStub.deductions.federalTax||0)+(latestStub.deductions.cpp||0)+(latestStub.dhCpp||0)+(latestStub.deductions.ei||0)+(latestStub.dhEi||0)).toFixed(2)+'/period':'calculate first')+'</td></tr>'
     +'</table>'
-    +'<div style="margin-top:10px;padding:8px 10px;background:rgba(91,141,239,.08);border-radius:6px;font-size:11px;color:var(--blue-bright)">'
-    +'<strong>Deposit schedule:</strong> Monthly (by 15th of next month) if your annual tax liability is under $50,000. Semi-weekly if over $50,000. New employers default to monthly.'
+    +'<div style="margin-top:12px;padding:10px 12px;background:rgba(91,141,239,.08);border-radius:8px;font-size:11px;color:var(--blue-bright);line-height:1.6">'
+    +'<strong>How to make the deposit:</strong><br>'
+    +'1. Log in to '+_cgLink('EFTPS.gov','https://www.eftps.gov/eftps/')+' with your EIN, PIN, and password<br>'
+    +'2. Select <strong>Make a Payment</strong> → Tax Form <strong>941</strong><br>'
+    +'3. Enter the total amount shown above as a single payment<br>'
+    +'4. Choose the settlement date (must be on or before the due date)<br>'
+    +'5. Save your confirmation number for your records'
+    +'</div>'
+    +'<div style="margin-top:8px;padding:10px 12px;background:rgba(255,152,56,.08);border-radius:8px;font-size:11px;color:var(--orange);line-height:1.6">'
+    +'<strong>Deposit schedule — when is it due?</strong><br>'
+    +'• <strong>Monthly depositor</strong> (tax liability under $50,000/year): deposit by the <strong>15th of the following month</strong>. Example: January payroll taxes are due February 15th.<br>'
+    +'• <strong>Semi-weekly depositor</strong> (tax liability $50,000+/year): deposit within 3 business days of payday. Wed/Thu/Fri paydays → due the following Wednesday. Sat/Sun/Mon/Tue paydays → due the following Friday.<br>'
+    +'• <strong>New employers</strong> default to monthly. The IRS will notify you if your schedule changes based on your lookback period (Form 941 liability from 2 years prior).'
     +'</div>'
   );
   if(!si.noTax){
-    h+=_cgSection('🏛️','Each Pay Period — State Tax Deposit',
-      '<div>Deposit state income tax withholding to '+_cgLink(si.agency,si.url)+'</div>'
-      +'<div style="margin-top:4px">'+(latestStub?'<strong>$'+(latestStub.deductions.provincialTax||0).toFixed(2)+'</strong> per period based on latest pay stub':'Amount from calculator — State Tax line')+'</div>'
-      +'<div style="margin-top:8px;padding:8px 10px;background:rgba(91,141,239,.08);border-radius:6px;font-size:11px;color:var(--blue-bright)">'
-      +'<strong>Schedule:</strong> Varies by state and liability. Most states follow monthly or semi-weekly schedules similar to federal. Check your '+_cgLink('state portal',si.url)+' for specifics.'
+    h+=_cgSection('stateTax','Each Pay Period — State Tax Deposit',
+      '<div style="margin-bottom:10px">In addition to your federal EFTPS deposit, you must separately deposit state income tax withholding to <strong>'+si.agency+'</strong>.</div>'
+      +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px;margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="color:var(--muted)">'+st.name+' income tax withheld</span>'
+      +'<strong>'+(latestStub?'$'+(latestStub.deductions.provincialTax||0).toFixed(2)+'/period':'from calculator')+'</strong></div></div>'
+      +'<div style="padding:10px 12px;background:rgba(91,141,239,.08);border-radius:8px;font-size:11px;color:var(--blue-bright);line-height:1.6">'
+      +'<strong>How to deposit:</strong><br>'
+      +'1. Log in to '+_cgLink(si.agency,si.url)+'<br>'
+      +'2. Navigate to your withholding tax account and submit a payment for the amount above<br>'
+      +'3. Most states accept ACH debit (free), credit card (fee), or electronic check<br><br>'
+      +'<strong>Schedule:</strong> Most states use monthly or semi-weekly schedules similar to federal. '
+      +'Check your '+_cgLink('state portal',si.url)+' after registration — your specific schedule depends on your tax liability.'
       +'</div>'
     );
   }
-  h+=_cgSection('📋','Quarterly Filings',
-    '<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 941</strong></td><td style="color:var(--muted)">Federal quarterly return — reports all federal withholding + FICA</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/businesses/small-businesses-self-employed/e-file-form-940-941-or-944-for-small-businesses')+'</td></tr>'
-    +(!si.noTax?'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>'+si.quarterly+'</strong></td><td style="color:var(--muted)">'+st.name+' quarterly withholding return</td><td style="text-align:right;white-space:nowrap">'+_cgLink('State portal',si.url)+'</td></tr>':'')
-    +'<tr><td style="padding:6px 0"><strong>FUTA deposit</strong></td><td style="color:var(--muted)">Deposit if cumulative FUTA liability exceeds $500</td><td style="text-align:right;white-space:nowrap">'+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'</td></tr>'
+  h+=_cgSection('clipboard','Quarterly Filings',
+    '<div style="margin-bottom:10px">Every quarter, you must file returns that reconcile the deposits you\'ve been making. These reports tell the IRS and your state exactly how much you withheld and deposited.</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>Form 941</strong><br><span style="color:var(--muted);font-size:10px">Employer\'s Quarterly Federal Tax Return</span></td><td style="color:var(--muted)">Reports total wages paid, federal income tax withheld, and employer + employee Social Security and Medicare taxes. Must match your EFTPS deposits.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('e-File','https://www.irs.gov/businesses/small-businesses-self-employed/e-file-form-940-941-or-944-for-small-businesses')+'</td></tr>'
+    +(!si.noTax?'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>'+si.quarterly+'</strong><br><span style="color:var(--muted);font-size:10px">'+st.name+' quarterly return</span></td><td style="color:var(--muted)">Reports state income tax withheld and wages paid. File through '+si.agency+'.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('State portal',si.url)+'</td></tr>':'')
+    +'<tr><td style="padding:8px 0"><strong>FUTA deposit</strong><br><span style="color:var(--muted);font-size:10px">Federal unemployment</span></td><td style="color:var(--muted)">If your cumulative FUTA liability exceeds $500 during the quarter, you must deposit it via EFTPS. Use Tax Form 940 when making the EFTPS payment.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'</td></tr>'
     +'</table>'
-    +'<div style="margin-top:10px;padding:8px 10px;background:rgba(255,152,56,.08);border-radius:6px;font-size:11px;color:var(--orange)">'
-    +'<strong>Due dates:</strong> Q1 → Apr 30 &nbsp;|&nbsp; Q2 → Jul 31 &nbsp;|&nbsp; Q3 → Oct 31 &nbsp;|&nbsp; Q4 → Jan 31'
+    +'<div style="margin-top:12px;padding:10px 12px;background:rgba(255,152,56,.08);border-radius:8px;font-size:11px;color:var(--orange);line-height:1.6">'
+    +'<strong>Quarterly due dates:</strong><br>'
+    +'Q1 (Jan–Mar) → <strong>April 30</strong> &nbsp;|&nbsp; Q2 (Apr–Jun) → <strong>July 31</strong><br>'
+    +'Q3 (Jul–Sep) → <strong>October 31</strong> &nbsp;|&nbsp; Q4 (Oct–Dec) → <strong>January 31</strong><br>'
+    +'<span style="opacity:.8">If the due date falls on a weekend or holiday, the deadline moves to the next business day. If you deposited all taxes on time, you get 10 extra days to file.</span>'
     +'</div>'
   );
-  h+=_cgSection('📅','Annual Filings (due Jan 31)',
-    '<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>W-2</strong></td><td style="color:var(--muted)">Wage & tax statement — one per employee</td><td style="text-align:right;white-space:nowrap">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>W-3</strong></td><td style="color:var(--muted)">Transmittal of W-2s to Social Security Administration</td><td style="text-align:right;white-space:nowrap">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 940</strong></td><td style="color:var(--muted)">Annual FUTA return ($7,000 wage base × 0.6%)</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/businesses/small-businesses-self-employed/e-file-form-940-941-or-944-for-small-businesses')+'</td></tr>'
-    +(!si.noTax?'<tr><td style="padding:6px 0"><strong>'+si.annual+'</strong></td><td style="color:var(--muted)">'+st.name+' annual reconciliation / W-2 transmittal</td><td style="text-align:right;white-space:nowrap">'+_cgLink('State portal',si.url)+'</td></tr>':'')
+  h+=_cgSection('calendar','Annual Filings (due Jan 31)',
+    '<div style="margin-bottom:10px">At year end, you must file annual returns and provide wage statements to employees and government agencies. Most are due <strong>January 31</strong> of the following year.</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>W-2</strong><br><span style="color:var(--muted);font-size:10px">Wage & Tax Statement</span></td><td style="color:var(--muted)">One per employee. Shows total wages, federal/state tax withheld, and Social Security/Medicare. Give copies to employees by Jan 31 and file with SSA.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>W-3</strong><br><span style="color:var(--muted);font-size:10px">Transmittal of W-2s</span></td><td style="color:var(--muted)">Summary of all W-2s submitted. Filed automatically when you e-file W-2s through BSO.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>Form 940</strong><br><span style="color:var(--muted);font-size:10px">Annual FUTA Return</span></td><td style="color:var(--muted)">Reports total FUTA tax for the year (0.6% on first $7,000 per employee after state credit). Due Jan 31, but you get until Feb 10 if you deposited all FUTA on time.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('e-File','https://www.irs.gov/businesses/small-businesses-self-employed/e-file-form-940-941-or-944-for-small-businesses')+'</td></tr>'
+    +(!si.noTax?'<tr><td style="padding:8px 0"><strong>'+si.annual+'</strong><br><span style="color:var(--muted);font-size:10px">'+st.name+' annual return</span></td><td style="color:var(--muted)">Annual reconciliation of state withholding and/or state copy of W-2s. Due date varies by state — check your portal.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('State portal',si.url)+'</td></tr>':'')
     +'</table>'
   );
   if(stubs.length){
-    h+=_cgSection('📊','Your Running Totals ('+stubs.length+' US pay stubs on file)',
-      '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    h+=_cgSection('chart','Your Running Totals ('+stubs.length+' US pay stubs on file)',
+      '<div style="margin-bottom:8px;color:var(--muted);font-size:11px">These totals help you verify that your deposits and quarterly filings match what\'s been withheld and owed.</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
       +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Federal Income Tax withheld</td><td style="text-align:right">$'+fedTotal.toFixed(2)+'</td></tr>'
       +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Social Security (employee + employer)</td><td style="text-align:right">$'+(ssEmpT+ssErT).toFixed(2)+'</td></tr>'
       +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Medicare (employee + employer)</td><td style="text-align:right">$'+(medEmpT+medErT).toFixed(2)+'</td></tr>'
@@ -7808,47 +7863,65 @@ function _cgRenderCAContent(){
   };
   var pi=provInfo[code]||provInfo.ON;
   var h='';
-  h+=_cgSection('1️⃣','One-Time Setup — CRA',
-    '<div style="display:flex;flex-direction:column;gap:8px">'
-    +'<div><strong>Register for a Payroll Account</strong> — '+_cgLink('CRA Business Registration','https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/registering-your-business/register.html')+'<br><span style="color:var(--muted)">You need a Business Number (BN) with an RP (payroll) program account. Apply online via CRA My Business Account.</span></div>'
-    +'<div><strong>Open CRA My Business Account</strong> — '+_cgLink('my-business.cra-arc.gc.ca','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'<br><span style="color:var(--muted)">This is where you remit payroll deductions and file T4s online.</span></div>'
+  h+=_cgSection('maple','One-Time Setup — CRA',
+    '<div style="display:flex;flex-direction:column;gap:12px">'
+    +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Step 1 — Get a Business Number (BN) with a Payroll Account (RP)</strong><br>'
+    +'Your BN is your company\'s identifier with the CRA. The "RP" program account under your BN is specifically for payroll. You need it before making any remittance.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register online via CRA','https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/registering-your-business/register.html')+'. If you already have a BN (for GST/HST, for example), you just need to add an RP account — you don\'t need a new BN.<br>'
+    +'<span style="color:var(--muted)">Your payroll account number will look like: 123456789RP0001</span></div>'
+    +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Step 2 — Set Up CRA My Business Account</strong><br>'
+    +'This is your online portal for everything payroll: remitting deductions, filing T4s, viewing your remittance schedule, and checking your account balance.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register at CRA My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'. You\'ll need your BN and a CRA security code (mailed in 5–10 business days, or instant if you use a Sign-In Partner like your bank).</span></div>'
     +'</div>'
   );
-  h+=_cgSection('2️⃣','One-Time Setup — '+prov.name,
-    '<div style="display:flex;flex-direction:column;gap:8px">'
-    +'<div><strong>Workers\' Compensation</strong> — '+_cgLink(pi.wcb,pi.wcbUrl)+'<br><span style="color:var(--muted)">Register and pay premiums. Mandatory for all employers in '+prov.name+'.</span></div>'
-    +(pi.eht?'<div><strong>'+pi.eht+'</strong> — '+_cgLink('Ontario EHT',pi.ehtUrl)+'<br><span style="color:var(--muted)">Ontario employers with annual payroll over $1M must pay EHT (0.98%–1.95%).</span></div>':'')
+  h+=_cgSection('shield','One-Time Setup — '+prov.name,
+    '<div style="display:flex;flex-direction:column;gap:12px">'
+    +'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">Workers\' Compensation Insurance</strong><br>'
+    +'Registration with '+pi.wcb+' is mandatory for all employers in '+prov.name+'. This covers workplace injuries and is separate from CRA payroll deductions.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register with '+pi.wcb,pi.wcbUrl)+'. Premium rates vary by industry classification and claims history. You\'ll report payroll annually and pay premiums based on your rate × insurable earnings.</span></div>'
+    +(pi.eht?'<div style="padding:10px 12px;background:var(--navy-mid);border-radius:8px"><strong style="color:var(--blue-bright)">'+pi.eht+'</strong><br>'
+    +'Ontario employers with total annual payroll over $1,000,000 must pay EHT (0.98%–1.95%). Employers under $1M are exempt.<br>'
+    +'<span style="color:var(--muted)">How:</span> '+_cgLink('Register for Ontario EHT',pi.ehtUrl)+'. File an annual return and remit based on your total Ontario payroll.</span></div>':'')
     +'</div>'
   );
-  h+=_cgSection('💰','Each Pay Period — CRA Remittance',
-    '<div style="margin-bottom:8px">Remit payroll deductions to the CRA via '+_cgLink('My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+' or your bank:</div>'
+  h+=_cgSection('dollar','Each Pay Period — CRA Remittance',
+    '<div style="margin-bottom:10px">After each payroll run, remit all payroll deductions to the CRA as a <strong>single combined payment</strong>. Unlike the US, federal and provincial taxes are bundled together in one remittance to the CRA.</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee CPP contributions</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer CPP (1:1 match)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhCpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee EI premiums</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.ei||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer EI (1.4× employee)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhEi||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Federal income tax</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Provincial income tax</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.provincialTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
-    +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total CRA Remittance</td><td style="text-align:right;font-weight:700;color:var(--green)">'+(latestStub?'$'+(latestStub.dhRemittance||0).toFixed(2)+'/period':'calculate first')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee CPP contributions</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employer CPP (1:1 match)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.dhCpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employee EI premiums</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.ei||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Employer EI (1.4× employee)</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.dhEi||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Federal income tax</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 0;color:var(--muted)">Provincial income tax</td><td style="text-align:right;white-space:nowrap">'+(latestStub?'$'+(latestStub.deductions.provincialTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total CRA Remittance</td><td style="text-align:right;font-weight:700;color:var(--green);white-space:nowrap">'+(latestStub?'$'+(latestStub.dhRemittance||0).toFixed(2)+'/period':'calculate first')+'</td></tr>'
     +'</table>'
-    +'<div style="margin-top:10px;padding:8px 10px;background:rgba(91,141,239,.08);border-radius:6px;font-size:11px;color:var(--blue-bright)">'
-    +'<strong>Remittance schedule:</strong><br>'
-    +'• <strong>Regular remitter</strong> (AMWA &lt; $25K): due 15th of following month<br>'
-    +'• <strong>Quarterly</strong> (AMWA &lt; $3K, perfect filing history): due 15th of month after quarter end<br>'
-    +'• <strong>Accelerated — Threshold 1</strong> (AMWA $25K–$99K): due 25th (pay days 1–15) or 10th (pay days 16–end)<br>'
-    +'• <strong>Accelerated — Threshold 2</strong> (AMWA ≥ $100K): due within 3 working days'
+    +'<div style="margin-top:12px;padding:10px 12px;background:rgba(91,141,239,.08);border-radius:8px;font-size:11px;color:var(--blue-bright);line-height:1.6">'
+    +'<strong>How to remit:</strong><br>'
+    +'1. Log in to '+_cgLink('CRA My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'<br>'
+    +'2. Select your RP payroll account → Make a remittance<br>'
+    +'3. Enter the total amount above as a single payment<br>'
+    +'4. Or pay through your bank\'s online bill payment — payee is "CRA Payroll" and your account number is your 15-digit payroll account (e.g., 123456789RP0001)'
+    +'</div>'
+    +'<div style="margin-top:8px;padding:10px 12px;background:rgba(255,152,56,.08);border-radius:8px;font-size:11px;color:var(--orange);line-height:1.6">'
+    +'<strong>Remittance schedule — when is it due?</strong><br>'
+    +'• <strong>Regular remitter</strong> (AMWA* under $25K): due the <strong>15th of the following month</strong><br>'
+    +'• <strong>Quarterly remitter</strong> (AMWA under $3K + perfect filing history): due the <strong>15th of the month after the quarter ends</strong><br>'
+    +'• <strong>Accelerated Threshold 1</strong> (AMWA $25K–$99K): two remittances per month — due the <strong>25th</strong> for pay days 1–15, and the <strong>10th</strong> for pay days 16–end<br>'
+    +'• <strong>Accelerated Threshold 2</strong> (AMWA $100K+): due within <strong>3 working days</strong> of each payday<br>'
+    +'<span style="opacity:.8">*AMWA = Average Monthly Withholding Amount (your total remittances ÷ 12 from two calendar years ago). The CRA tells you your category — check My Business Account.</span>'
     +'</div>'
   );
-  h+=_cgSection('📋','Annual Filings (due Feb 28)',
-    '<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>T4 Slips</strong></td><td style="color:var(--muted)">Statement of Remuneration Paid — one per employee</td><td style="text-align:right;white-space:nowrap">'+_cgLink('File via My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>T4 Summary</strong></td><td style="color:var(--muted)">Summary of all T4 slips for the year</td><td style="text-align:right;white-space:nowrap">'+_cgLink('CRA','https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/completing-filing-information-returns/t4-information-employers/t4-summary.html')+'</td></tr>'
-    +'<tr><td style="padding:6px 0"><strong>ROE</strong></td><td style="color:var(--muted)">Record of Employment — file within 5 days of any employee separation</td><td style="text-align:right;white-space:nowrap">'+_cgLink('ROE Web','https://www.canada.ca/en/employment-social-development/programs/ei/ei-list/ei-roe/access-roe.html')+'</td></tr>'
+  h+=_cgSection('calendar','Annual Filings (due Feb 28)',
+    '<div style="margin-bottom:10px">At the end of each calendar year, you must file T4 information returns with the CRA and provide T4 slips to employees. The deadline is <strong>February 28</strong> (or the last day of February in a leap year).</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>T4 Slips</strong><br><span style="color:var(--muted);font-size:10px">Statement of Remuneration Paid</span></td><td style="color:var(--muted)">One per employee. Reports total employment income, CPP/EI/tax deducted. Give copies to employees and file with CRA by Feb 28.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 0"><strong>T4 Summary</strong><br><span style="color:var(--muted);font-size:10px">Summary of all T4 slips</span></td><td style="color:var(--muted)">Totals from all T4 slips, plus your total remittances for the year. Generated automatically when you e-file T4s through My Business Account.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('CRA','https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/completing-filing-information-returns/t4-information-employers/t4-summary.html')+'</td></tr>'
+    +'<tr><td style="padding:8px 0"><strong>ROE</strong><br><span style="color:var(--muted);font-size:10px">Record of Employment</span></td><td style="color:var(--muted)">Not annual — file within <strong>5 calendar days</strong> of any employee\'s last day of work, reduction in hours, or leave of absence. Required for the employee to apply for EI benefits.</td><td style="text-align:right;white-space:nowrap;vertical-align:top">'+_cgLink('ROE Web','https://www.canada.ca/en/employment-social-development/programs/ei/ei-list/ei-roe/access-roe.html')+'</td></tr>'
     +'</table>'
   );
   if(caStubs.length){
     var totalRemit=+(totalFed+totalProv+totalCpp+totalCppEr+totalCpp2Er+totalEi+totalEiEr).toFixed(2);
-    h+=_cgSection('📊','Your Running Totals ('+caStubs.length+' Canadian pay stubs on file)',
+    h+=_cgSection('chart','Your Running Totals ('+caStubs.length+' Canadian pay stubs on file)',
       '<table style="width:100%;border-collapse:collapse;font-size:12px">'
       +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Federal income tax</td><td style="text-align:right">$'+totalFed.toFixed(2)+'</td></tr>'
       +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Provincial income tax</td><td style="text-align:right">$'+totalProv.toFixed(2)+'</td></tr>'
