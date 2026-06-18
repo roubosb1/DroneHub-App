@@ -6451,7 +6451,7 @@ function deleteEmployeePayStub(key){
   if(!confirm('Delete this pay stub?'))return;
   const s=window._empStubMap[key];
   if(!s)return;
-  employeePayroll=employeePayroll.filter(p=>p!==s);
+  employeePayroll=employeePayroll.filter(p=>p.id!==s.id);
   saveEmployeePayroll();renderEmployeePayroll();renderRemittanceSummary();renderT4Summary();
 }
 
