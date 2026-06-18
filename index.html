@@ -7736,7 +7736,7 @@ function _cgRenderUSContent(){
   }
   h+=_cgSection('📋','Quarterly Filings',
     '<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 941</strong></td><td style="color:var(--muted)">Federal quarterly return — reports all federal withholding + FICA</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/e-file-employment-tax-forms')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 941</strong></td><td style="color:var(--muted)">Federal quarterly return — reports all federal withholding + FICA</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/businesses/small-businesses-self-employed/e-file-form-940-941-or-944-for-small-businesses')+'</td></tr>'
     +(!si.noTax?'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>'+si.quarterly+'</strong></td><td style="color:var(--muted)">'+st.name+' quarterly withholding return</td><td style="text-align:right;white-space:nowrap">'+_cgLink('State portal',si.url)+'</td></tr>':'')
     +'<tr><td style="padding:6px 0"><strong>FUTA deposit</strong></td><td style="color:var(--muted)">Deposit if cumulative FUTA liability exceeds $500</td><td style="text-align:right;white-space:nowrap">'+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'</td></tr>'
     +'</table>'
@@ -7748,7 +7748,7 @@ function _cgRenderUSContent(){
     '<table style="width:100%;border-collapse:collapse;font-size:12px">'
     +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>W-2</strong></td><td style="color:var(--muted)">Wage & tax statement — one per employee</td><td style="text-align:right;white-space:nowrap">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
     +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>W-3</strong></td><td style="color:var(--muted)">Transmittal of W-2s to Social Security Administration</td><td style="text-align:right;white-space:nowrap">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
-    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 940</strong></td><td style="color:var(--muted)">Annual FUTA return ($7,000 wage base × 0.6%)</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/e-file-employment-tax-forms')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 940</strong></td><td style="color:var(--muted)">Annual FUTA return ($7,000 wage base × 0.6%)</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/businesses/small-businesses-self-employed/e-file-form-940-941-or-944-for-small-businesses')+'</td></tr>'
     +(!si.noTax?'<tr><td style="padding:6px 0"><strong>'+si.annual+'</strong></td><td style="color:var(--muted)">'+st.name+' annual reconciliation / W-2 transmittal</td><td style="text-align:right;white-space:nowrap">'+_cgLink('State portal',si.url)+'</td></tr>':'')
     +'</table>'
   );
