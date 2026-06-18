@@ -6452,7 +6452,7 @@ function deleteEmployeePayStub(key){
   const s=window._empStubMap[key];
   if(!s)return;
   employeePayroll=employeePayroll.filter(p=>p!==s);
-  saveEmployeePayroll();renderEmployeePayroll();
+  saveEmployeePayroll();renderEmployeePayroll();renderRemittanceSummary();renderT4Summary();
 }
 
 function populateEmpPayFilters(){
