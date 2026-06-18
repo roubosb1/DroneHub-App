@@ -7007,7 +7007,41 @@ var _provCfg2026={
     {max:Infinity,rate:0.115,k:8442}]}
 };
 var _provOrder=['AB','BC','SK','MB','ON','NB','NS','PE','NL','YT','NT','NU'];
-// ── US Payroll Calculator (2026) ─────────────────────────────────────────────
+// ── US Payroll Calculator ────────────────────────────────────────────────────
+var _usFedCfg2024={
+  stdDed:{S:8600,MFJ:12900,HoH:8600},
+  brackets:{
+    S:[{max:6000,rate:0,k:0},{max:17600,rate:0.10,k:600},{max:53150,rate:0.12,k:952},
+      {max:106525,rate:0.22,k:6267},{max:197950,rate:0.24,k:8397.50},{max:249725,rate:0.32,k:24233.50},
+      {max:615350,rate:0.35,k:31725.25},{max:Infinity,rate:0.37,k:44032.25}],
+    MFJ:[{max:16300,rate:0,k:0},{max:39500,rate:0.10,k:1630},{max:110600,rate:0.12,k:2420},
+      {max:217350,rate:0.22,k:13480},{max:400200,rate:0.24,k:17827},{max:503750,rate:0.32,k:49843},
+      {max:747500,rate:0.35,k:64955.50},{max:Infinity,rate:0.37,k:79905.50}],
+    HoH:[{max:13300,rate:0,k:0},{max:29850,rate:0.10,k:1330},{max:76400,rate:0.12,k:1927},
+      {max:113800,rate:0.22,k:9567},{max:205250,rate:0.24,k:11843},{max:257000,rate:0.32,k:28263},
+      {max:622650,rate:0.35,k:35973},{max:Infinity,rate:0.37,k:48426}]
+  },
+  ssRate:0.062,ssWageBase:168600,
+  medRate:0.0145,addMedRate:0.009,addMedThresh:200000,
+  futaRate:0.006,futaWageBase:7000
+};
+var _usFedCfg2025={
+  stdDed:{S:8600,MFJ:12900,HoH:8600},
+  brackets:{
+    S:[{max:6400,rate:0,k:0},{max:18325,rate:0.10,k:640},{max:54875,rate:0.12,k:1006.50},
+      {max:109750,rate:0.22,k:6494},{max:203700,rate:0.24,k:8689},{max:256925,rate:0.32,k:24985},
+      {max:632750,rate:0.35,k:32692.75},{max:Infinity,rate:0.37,k:45347.75}],
+    MFJ:[{max:17100,rate:0,k:0},{max:40950,rate:0.10,k:1710},{max:114050,rate:0.12,k:2529},
+      {max:223800,rate:0.22,k:13934},{max:411700,rate:0.24,k:18410},{max:518150,rate:0.32,k:51346},
+      {max:768700,rate:0.35,k:66890.50},{max:Infinity,rate:0.37,k:82264.50}],
+    HoH:[{max:13900,rate:0,k:0},{max:30900,rate:0.10,k:1390},{max:78750,rate:0.12,k:2008},
+      {max:117250,rate:0.22,k:9883},{max:211200,rate:0.24,k:12228},{max:264400,rate:0.32,k:29124},
+      {max:640250,rate:0.35,k:37056},{max:Infinity,rate:0.37,k:49861}]
+  },
+  ssRate:0.062,ssWageBase:176100,
+  medRate:0.0145,addMedRate:0.009,addMedThresh:200000,
+  futaRate:0.006,futaWageBase:7000
+};
 var _usFedCfg2026={
   stdDed:{S:8600,MFJ:12900,HoH:8600},
   brackets:{
@@ -7136,6 +7170,66 @@ var _usStateCfg2026={
     {max:Infinity,rate:0.1075,k:15975}]}
 };
 var _usStateOrder=['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'];
+var _usStateOverrides={
+  2024:{
+    AR:{name:'Arkansas',type:'prog',brackets:[
+      {max:4400,rate:0.02,k:0},{max:8800,rate:0.04,k:88},{max:Infinity,rate:0.044,k:123.20}]},
+    GA:{name:'Georgia',type:'flat',rate:0.0549},
+    ID:{name:'Idaho',type:'flat',rate:0.058},
+    IN:{name:'Indiana',type:'flat',rate:0.0305},
+    IA:{name:'Iowa',type:'prog',brackets:[
+      {max:6210,rate:0.044,k:0},{max:31050,rate:0.0482,k:26.08},{max:Infinity,rate:0.057,k:299.32}]},
+    KS:{name:'Kansas',type:'prog',brackets:[
+      {max:15000,rate:0.031,k:0},{max:30000,rate:0.0525,k:322.50},{max:Infinity,rate:0.057,k:457.50}]},
+    KY:{name:'Kentucky',type:'flat',rate:0.04},
+    LA:{name:'Louisiana',type:'prog',brackets:[
+      {max:12500,rate:0.0185,k:0},{max:50000,rate:0.035,k:206.25},{max:Infinity,rate:0.0425,k:581.25}]},
+    MS:{name:'Mississippi',type:'flat',rate:0.047},
+    MT:{name:'Montana',type:'prog',brackets:[
+      {max:20500,rate:0.047,k:0},{max:Infinity,rate:0.059,k:246}]},
+    NC:{name:'North Carolina',type:'flat',rate:0.045},
+    NE:{name:'Nebraska',type:'prog',brackets:[
+      {max:3700,rate:0.0246,k:0},{max:22170,rate:0.0351,k:38.85},{max:35730,rate:0.0501,k:371.40},
+      {max:Infinity,rate:0.0584,k:667.96}]},
+    OH:{name:'Ohio',type:'prog',brackets:[
+      {max:26050,rate:0,k:0},{max:92150,rate:0.0275,k:716.38},{max:Infinity,rate:0.035,k:1407.50}]},
+    OK:{name:'Oklahoma',type:'prog',brackets:[
+      {max:1000,rate:0.0025,k:0},{max:2500,rate:0.0075,k:5},{max:3750,rate:0.0175,k:30},
+      {max:4900,rate:0.0275,k:67.50},{max:7200,rate:0.0375,k:116.50},{max:Infinity,rate:0.0475,k:188.50}]},
+    SC:{name:'South Carolina',type:'prog',brackets:[
+      {max:3460,rate:0,k:0},{max:17330,rate:0.03,k:103.80},{max:Infinity,rate:0.064,k:693.02}]},
+    UT:{name:'Utah',type:'flat',rate:0.0465},
+    WV:{name:'West Virginia',type:'prog',brackets:[
+      {max:10000,rate:0.0236,k:0},{max:25000,rate:0.0296,k:60},{max:40000,rate:0.0333,k:152.50},
+      {max:60000,rate:0.0444,k:596.50},{max:Infinity,rate:0.0512,k:1004.50}]}
+  },
+  2025:{
+    GA:{name:'Georgia',type:'flat',rate:0.0539},
+    ID:{name:'Idaho',type:'flat',rate:0.0569},
+    IN:{name:'Indiana',type:'flat',rate:0.03},
+    IA:{name:'Iowa',type:'flat',rate:0.039},
+    KY:{name:'Kentucky',type:'flat',rate:0.04},
+    MS:{name:'Mississippi',type:'flat',rate:0.044},
+    MT:{name:'Montana',type:'prog',brackets:[
+      {max:20500,rate:0.047,k:0},{max:Infinity,rate:0.059,k:246}]},
+    NC:{name:'North Carolina',type:'flat',rate:0.0425},
+    NE:{name:'Nebraska',type:'prog',brackets:[
+      {max:3700,rate:0.0246,k:0},{max:22170,rate:0.0351,k:38.85},{max:35730,rate:0.0501,k:371.40},
+      {max:Infinity,rate:0.0584,k:667.96}]},
+    OH:{name:'Ohio',type:'prog',brackets:[
+      {max:26050,rate:0,k:0},{max:92150,rate:0.0275,k:716.38},{max:Infinity,rate:0.035,k:1407.50}]},
+    SC:{name:'South Carolina',type:'prog',brackets:[
+      {max:3560,rate:0,k:0},{max:17780,rate:0.03,k:106.80},{max:Infinity,rate:0.062,k:675.76}]},
+    UT:{name:'Utah',type:'flat',rate:0.0455}
+  }
+};
+var _usFedCfgByYear={2024:_usFedCfg2024,2025:_usFedCfg2025,2026:_usFedCfg2026};
+function _getUSFedCfg(year){return _usFedCfgByYear[year]||_usFedCfg2026;}
+function _getUSStateCfg(year,code){
+  var ov=_usStateOverrides[year];
+  if(ov&&ov[code])return ov[code];
+  return _usStateCfg2026[code]||_usStateCfg2026.CA;
+}
 function _payPeriods(freq){
   var m={Weekly:52,Biweekly:26,'Semi-monthly':24,Monthly:12};return m[freq]||26;
 }
@@ -7204,9 +7298,11 @@ function _calcPayroll(params){
   };
 }
 function _calcUSPayroll(params){
-  var uf=_usFedCfg2026;
+  var yr=parseInt((params.payDate||'').substring(0,4))||2026;
+  if(yr<2024)yr=2024;if(yr>2026)yr=2026;
+  var uf=_getUSFedCfg(yr);
   var stCode=params.state||'CA';
-  var st=_usStateCfg2026[stCode]||_usStateCfg2026.CA;
+  var st=_getUSStateCfg(yr,stCode);
   var filing=params.filing||'S';
   var P=_payPeriods(params.payFrequency||'Biweekly');
   var gross=+(params.gross||0);
@@ -7247,7 +7343,7 @@ function _calcUSPayroll(params){
     payFrequency:params.payFrequency||'Biweekly',
     employeeName:params.employeeName||'',payDate:params.payDate||'',
     state:stCode,stateName:st.name,filing:filing,
-    country:'US'
+    country:'US',taxYear:yr
   };
 }
 function _openPayrollCalc(){
@@ -7367,7 +7463,7 @@ function _pcSwitchCountry(c){
   if(c==='US'){
     caTab.style.background='var(--navy-mid)';caTab.style.color='var(--muted)';
     usTab.style.background='var(--green)';usTab.style.color='#000';
-    sub.textContent='IRS 2026 · Pub 15-T percentage method · All 50 states + DC';
+    sub.textContent='IRS Pub 15-T · 2024–2026 rates by pay date · All 50 states + DC';
     body.innerHTML=_pcBuildUSForm();
   }else{
     usTab.style.background='var(--navy-mid)';usTab.style.color='var(--muted)';
@@ -7425,7 +7521,7 @@ function _runUSPayrollCalc(){
   el.style.display='';
   var fl={S:'Single',MFJ:'Married Filing Jointly',HoH:'Head of Household'}[filing]||filing;
   el.innerHTML='<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:4px">'
-    +'<div style="background:rgba(34,217,122,.08);padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">'+r.employeeName+'</span><span style="font-size:11px;color:var(--muted)">'+r.payDate+' · '+r.payFrequency+' · '+r.stateName+' · '+fl+'</span></div>'
+    +'<div style="background:rgba(34,217,122,.08);padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">'+r.employeeName+'</span><span style="font-size:11px;color:var(--muted)">'+r.payDate+' · '+r.payFrequency+' · '+r.stateName+' · '+fl+' · '+r.taxYear+' rates</span></div>'
     +'<div style="padding:12px 14px;font-size:12px">'
     +'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--offwhite)"><span>Gross Wages</span><span>$'+gross.toFixed(2)+'</span></div>'
     +(pretax?'<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--muted)"><span>Pre-tax Deductions</span><span>-$'+pretax.toFixed(2)+'</span></div>':'')
