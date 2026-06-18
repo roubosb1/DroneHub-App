@@ -7130,7 +7130,7 @@ function _addCalcPaystub(){
     notes:'Calculated via Payroll Calculator'
   };
   employeePayroll.push(rec);
-  saveEmployeePayroll();renderEmployeePayroll();
+  saveEmployeePayroll();renderEmployeePayroll();renderRemittanceSummary();renderT4Summary();
   closeModal();
   showToast('Pay stub added for '+r.employeeName,'success');
 }
