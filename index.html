@@ -3239,6 +3239,7 @@ button{font-family:var(--font);}
         </div>
         <div style="display:flex;gap:8px">
           <button onclick="_openPayrollCalc()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Calculator</button>
+          <button onclick="_openComplianceGuide()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(255,152,56,.1);color:var(--orange);font-size:12px;font-weight:700;cursor:pointer">Filing Guide</button>
           <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
           <button onclick="clearAllEmployeePayroll()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(240,82,82,.08);color:var(--red);font-size:11px;cursor:pointer">Clear All</button>
         </div>
@@ -7568,6 +7569,296 @@ function _addUSCalcPaystub(){
   saveEmployeePayroll();renderEmployeePayroll();renderRemittanceSummary();renderT4Summary();
   closeModal();
   showToast('Pay stub added for '+r.employeeName,'success');
+}
+
+// ── Payroll Compliance & Filing Guide ────────────────────────────────────────
+var _usStateFilingInfo={
+  AL:{agency:'Alabama Dept of Revenue',url:'https://myalabamataxes.alabama.gov',suta:'https://labor.alabama.gov',quarterly:'Form A-1',annual:'Form A-3'},
+  AK:{agency:'Alaska Dept of Labor',url:'',suta:'https://labor.alaska.gov',quarterly:'N/A',annual:'N/A',noTax:true},
+  AZ:{agency:'Arizona Dept of Revenue',url:'https://azdor.gov',suta:'https://des.az.gov',quarterly:'Form A1-QRT',annual:'Form A1-R'},
+  AR:{agency:'Arkansas Dept of Finance',url:'https://www.dfa.arkansas.gov/income-tax',suta:'https://www.dws.arkansas.gov',quarterly:'AR-941M',annual:'AR-3MAR'},
+  CA:{agency:'California EDD',url:'https://edd.ca.gov/en/payroll_taxes',suta:'https://edd.ca.gov',quarterly:'DE 9/DE 9C',annual:'DE 7'},
+  CO:{agency:'Colorado Dept of Revenue',url:'https://tax.colorado.gov',suta:'https://cdle.colorado.gov',quarterly:'DR 1094',annual:'DR 1093'},
+  CT:{agency:'Connecticut DRS',url:'https://portal.ct.gov/drs',suta:'https://www.ctdol.state.ct.us',quarterly:'CT-941',annual:'CT-W3'},
+  DE:{agency:'Delaware Div of Revenue',url:'https://revenue.delaware.gov',suta:'https://dol.delaware.gov',quarterly:'W1',annual:'W-3'},
+  FL:{agency:'N/A',url:'',suta:'https://floridarevenue.com/taxes/taxesfees/pages/reemployment.aspx',quarterly:'N/A',annual:'N/A',noTax:true},
+  GA:{agency:'Georgia Dept of Revenue',url:'https://gtc.dor.ga.gov',suta:'https://dol.georgia.gov',quarterly:'G-7',annual:'G-1003'},
+  HI:{agency:'Hawaii Dept of Taxation',url:'https://tax.hawaii.gov',suta:'https://labor.hawaii.gov',quarterly:'HW-14',annual:'HW-3'},
+  ID:{agency:'Idaho State Tax Commission',url:'https://tax.idaho.gov',suta:'https://www.labor.idaho.gov',quarterly:'910',annual:'967'},
+  IL:{agency:'Illinois Dept of Revenue',url:'https://mytax.illinois.gov',suta:'https://ides.illinois.gov',quarterly:'IL-941',annual:'IL-W-3'},
+  IN:{agency:'Indiana DOR',url:'https://intime.dor.in.gov',suta:'https://www.in.gov/dwd',quarterly:'WH-1',annual:'WH-3'},
+  IA:{agency:'Iowa Dept of Revenue',url:'https://tax.iowa.gov',suta:'https://www.iowaworkforcedevelopment.gov',quarterly:'44-095',annual:'VSP'},
+  KS:{agency:'Kansas Dept of Revenue',url:'https://www.ksrevenue.gov',suta:'https://www.dol.ks.gov',quarterly:'KW-5',annual:'KW-3'},
+  KY:{agency:'Kentucky DOR',url:'https://revenue.ky.gov',suta:'https://kcc.ky.gov',quarterly:'K-1E',annual:'K-3'},
+  LA:{agency:'Louisiana Dept of Revenue',url:'https://www.revenue.louisiana.gov',suta:'https://www.laworks.net',quarterly:'L-1',annual:'L-3'},
+  ME:{agency:'Maine Revenue Services',url:'https://www.maine.gov/revenue',suta:'https://www.maine.gov/labor',quarterly:'941ME',annual:'W-3ME'},
+  MD:{agency:'Comptroller of Maryland',url:'https://interactive.marylandtaxes.gov',suta:'https://www.dllr.state.md.us',quarterly:'MW506',annual:'MW508'},
+  MA:{agency:'Massachusetts DOR',url:'https://www.mass.gov/orgs/massachusetts-department-of-revenue',suta:'https://www.mass.gov/orgs/department-of-unemployment-assistance',quarterly:'M-941',annual:'M-W3'},
+  MI:{agency:'Michigan Treasury',url:'https://mto.treasury.michigan.gov',suta:'https://www.michigan.gov/leo',quarterly:'5080',annual:'5081'},
+  MN:{agency:'Minnesota DOR',url:'https://www.revenue.state.mn.us',suta:'https://uimn.org',quarterly:'MN-941',annual:'W-2 filing'},
+  MS:{agency:'Mississippi DOR',url:'https://www.dor.ms.gov',suta:'https://mdes.ms.gov',quarterly:'89-100',annual:'89-140'},
+  MO:{agency:'Missouri DOR',url:'https://mytax.mo.gov',suta:'https://labor.mo.gov',quarterly:'MO-941',annual:'MO-W-3'},
+  MT:{agency:'Montana DOR',url:'https://mtrevenue.gov',suta:'https://uid.dli.mt.gov',quarterly:'MW-1',annual:'MW-3'},
+  NE:{agency:'Nebraska DOR',url:'https://revenue.nebraska.gov',suta:'https://dol.nebraska.gov',quarterly:'941N',annual:'W-3N'},
+  NV:{agency:'N/A',url:'',suta:'https://ui.nv.gov/ess.html',quarterly:'N/A',annual:'N/A',noTax:true},
+  NH:{agency:'N/A',url:'',suta:'https://www.nhes.nh.gov',quarterly:'N/A',annual:'N/A',noTax:true},
+  NJ:{agency:'NJ Division of Taxation',url:'https://www.nj.gov/treasury/taxation',suta:'https://myunemployment.nj.gov',quarterly:'NJ-927',annual:'NJ-W-3'},
+  NM:{agency:'New Mexico TRD',url:'https://www.tax.newmexico.gov',suta:'https://www.dws.state.nm.us',quarterly:'CRS-1',annual:'RPD-41072'},
+  NY:{agency:'New York Tax Dept',url:'https://www.tax.ny.gov',suta:'https://dol.ny.gov',quarterly:'NYS-45',annual:'NYS-45 Q4'},
+  NC:{agency:'NC Dept of Revenue',url:'https://www.ncdor.gov',suta:'https://des.nc.gov',quarterly:'NC-5Q',annual:'NC-3'},
+  ND:{agency:'North Dakota Tax Dept',url:'https://www.tax.nd.gov',suta:'https://www.jobsnd.com',quarterly:'306',annual:'307'},
+  OH:{agency:'Ohio Dept of Taxation',url:'https://tax.ohio.gov',suta:'https://unemployment.ohio.gov',quarterly:'IT-501',annual:'IT-3'},
+  OK:{agency:'Oklahoma Tax Commission',url:'https://oktap.tax.ok.gov',suta:'https://oesc.ok.gov',quarterly:'OW-9',annual:'OW-6'},
+  OR:{agency:'Oregon DOR',url:'https://www.oregon.gov/dor',suta:'https://www.oregon.gov/employ',quarterly:'OQ',annual:'OR-WR'},
+  PA:{agency:'PA Dept of Revenue',url:'https://mypath.pa.gov',suta:'https://www.uc.pa.gov',quarterly:'REV-1667',annual:'REV-1667'},
+  RI:{agency:'Rhode Island Tax',url:'https://www.tax.ri.gov',suta:'https://dlt.ri.gov',quarterly:'RI-941',annual:'RI-W3'},
+  SC:{agency:'SC Dept of Revenue',url:'https://dor.sc.gov/mydorway',suta:'https://dew.sc.gov',quarterly:'WH-1605',annual:'WH-1606'},
+  SD:{agency:'N/A',url:'',suta:'https://dlr.sd.gov',quarterly:'N/A',annual:'N/A',noTax:true},
+  TN:{agency:'N/A',url:'',suta:'https://www.jobs4tn.gov',quarterly:'N/A',annual:'N/A',noTax:true},
+  TX:{agency:'N/A',url:'',suta:'https://www.twc.texas.gov',quarterly:'N/A',annual:'N/A',noTax:true},
+  UT:{agency:'Utah State Tax Commission',url:'https://tap.tax.utah.gov',suta:'https://jobs.utah.gov',quarterly:'TC-941',annual:'TC-941E'},
+  VT:{agency:'Vermont Dept of Taxes',url:'https://tax.vermont.gov',suta:'https://labor.vermont.gov',quarterly:'WHT-436',annual:'WH-434'},
+  VA:{agency:'Virginia Tax',url:'https://www.individual.tax.virginia.gov',suta:'https://www.vec.virginia.gov',quarterly:'VA-5',annual:'VA-6'},
+  WA:{agency:'N/A',url:'',suta:'https://esd.wa.gov',quarterly:'N/A',annual:'N/A',noTax:true},
+  WV:{agency:'WV State Tax Dept',url:'https://tax.wv.gov',suta:'https://workforcewv.org',quarterly:'IT-101',annual:'IT-103'},
+  WI:{agency:'Wisconsin DOR',url:'https://www.revenue.wi.gov',suta:'https://dwd.wisconsin.gov',quarterly:'WT-6',annual:'WT-7'},
+  WY:{agency:'N/A',url:'',suta:'https://doe.state.wy.us',quarterly:'N/A',annual:'N/A',noTax:true},
+  DC:{agency:'DC OTR',url:'https://mytax.dc.gov',suta:'https://does.dc.gov',quarterly:'FR-900Q',annual:'FR-900A'}
+};
+function _openComplianceGuide(){
+  var ls='style="font-size:12px;color:var(--muted)"';
+  var stOpts=_usStateOrder.map(function(code){
+    var st=_usStateCfg2026[code];
+    return'<option value="'+code+'">'+st.name+'</option>';
+  }).join('');
+  var provOpts=_provOrder.map(function(code){
+    var pc=_provCfg2026[code];
+    return'<option value="'+code+'">'+pc.name+'</option>';
+  }).join('');
+  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)">'
+    +'<div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Filing Guide</div>'
+    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Step-by-step instructions for remitting taxes and filing reports</div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+    +'<button id="cg-tab-us" onclick="_cgSwitch(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇺🇸 United States</button>'
+    +'<button id="cg-tab-ca" onclick="_cgSwitch(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇨🇦 Canada</button>'
+    +'</div></div>'
+    +'<div id="cg-body" style="max-height:70vh;overflow-y:auto;padding:16px 20px"></div>');
+  window._cgCountry='US';
+  _cgRenderUS();
+}
+function _cgSwitch(c){
+  if(c===window._cgCountry)return;
+  window._cgCountry=c;
+  var us=document.getElementById('cg-tab-us'),ca=document.getElementById('cg-tab-ca');
+  if(c==='US'){us.style.background='var(--green)';us.style.color='#000';ca.style.background='var(--navy-mid)';ca.style.color='var(--muted)';_cgRenderUS();}
+  else{ca.style.background='var(--green)';ca.style.color='#000';us.style.background='var(--navy-mid)';us.style.color='var(--muted)';_cgRenderCA();}
+}
+function _cgSection(icon,title,body){
+  return'<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">'
+    +'<div style="background:rgba(34,217,122,.06);padding:10px 14px;font-size:13px;font-weight:700;color:var(--green)">'+icon+' '+title+'</div>'
+    +'<div style="padding:12px 14px;font-size:12px;color:var(--offwhite);line-height:1.7">'+body+'</div></div>';
+}
+function _cgLink(text,url){
+  return url?'<a href="'+url+'" target="_blank" rel="noopener" style="color:var(--blue-bright);text-decoration:underline">'+text+'</a>':text;
+}
+function _cgRenderUS(){
+  var el=document.getElementById('cg-body');
+  var stOpts=_usStateOrder.map(function(code){
+    var st=_usStateCfg2026[code];
+    return'<option value="'+code+'"'+(code==='TX'?' selected':'')+'>'+st.name+'</option>';
+  }).join('');
+  el.innerHTML='<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted)">Select your state</label>'
+    +'<select id="cg-state" onchange="_cgRenderUSContent()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px">'+stOpts+'</select></div>'
+    +'<div id="cg-us-content"></div>';
+  _cgRenderUSContent();
+}
+function _cgRenderUSContent(){
+  var code=document.getElementById('cg-state').value;
+  var si=_usStateFilingInfo[code]||{};
+  var st=_usStateCfg2026[code]||{};
+  var el=document.getElementById('cg-us-content');
+  var stubs=employeePayroll.filter(function(p){return p._country==='US';});
+  var latestStub=stubs.length?stubs[stubs.length-1]:null;
+  var fedTotal=0,ssEmpT=0,ssErT=0,medEmpT=0,medErT=0,stateT=0,futaT=0;
+  stubs.forEach(function(s){
+    fedTotal+=s.deductions?s.deductions.federalTax||0:0;
+    ssEmpT+=s.deductions?s.deductions.cpp||0:0;
+    ssErT+=s.dhCpp||0;
+    medEmpT+=s.deductions?s.deductions.ei||0:0;
+    medErT+=s.dhEi||0;
+    stateT+=s.deductions?s.deductions.provincialTax||0:0;
+    futaT+=s._futa||0;
+  });
+  var eftpsTotal=+(fedTotal+ssEmpT+ssErT+medEmpT+medErT).toFixed(2);
+  var h='';
+  h+=_cgSection('1️⃣','One-Time Setup — Federal',
+    '<div style="display:flex;flex-direction:column;gap:8px">'
+    +'<div><strong>Get an EIN</strong> — '+_cgLink('Apply online at IRS.gov','https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online')+'<br><span style="color:var(--muted)">Instant approval. Required before you can pay employees or open EFTPS.</span></div>'
+    +'<div><strong>Register for EFTPS</strong> — '+_cgLink('Enroll at eftps.gov','https://www.eftps.gov/eftps/')+'<br><span style="color:var(--muted)">PIN arrives by mail in 5–7 business days. This is how you deposit federal taxes.</span></div>'
+    +'<div><strong>Create SSA Business Account</strong> — '+_cgLink('Register at ssa.gov/bso','https://www.ssa.gov/bso/')+'<br><span style="color:var(--muted)">Needed to e-file W-2s at year end.</span></div>'
+    +'</div>'
+  );
+  if(!si.noTax){
+    h+=_cgSection('2️⃣','One-Time Setup — '+st.name,
+      '<div style="display:flex;flex-direction:column;gap:8px">'
+      +'<div><strong>Register for State Withholding</strong> — '+_cgLink(si.agency,si.url)+'<br><span style="color:var(--muted)">Apply for a state withholding tax account number. Required to remit state income tax.</span></div>'
+      +'<div><strong>Register for State Unemployment (SUTA)</strong> — '+_cgLink('State unemployment agency',si.suta)+'<br><span style="color:var(--muted)">Employer-paid tax. Rate varies by experience rating (typically 1–5% on first ~$10K per employee).</span></div>'
+      +'</div>'
+    );
+  }else{
+    h+=_cgSection('2️⃣','One-Time Setup — '+st.name,
+      '<div style="color:var(--green);font-weight:600">'+st.name+' has no state income tax.</div>'
+      +'<div style="margin-top:6px"><strong>State Unemployment (SUTA)</strong> — '+_cgLink('Register here',si.suta)+'<br><span style="color:var(--muted)">Still required — employer-paid unemployment insurance, even in no-income-tax states.</span></div>'
+    );
+  }
+  h+=_cgSection('💰','Each Pay Period — Federal Deposit via EFTPS',
+    '<div style="margin-bottom:8px">After each payroll run, deposit the following to the IRS via '+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+':</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee Federal Income Tax</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee Social Security (6.2%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer Social Security (6.2%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhCpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee Medicare (1.45%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.ei||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer Medicare (1.45%)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhEi||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total EFTPS Deposit</td><td style="text-align:right;font-weight:700;color:var(--green)">'+(latestStub?'$'+((latestStub.deductions.federalTax||0)+(latestStub.deductions.cpp||0)+(latestStub.dhCpp||0)+(latestStub.deductions.ei||0)+(latestStub.dhEi||0)).toFixed(2)+'/period':'calculate first')+'</td></tr>'
+    +'</table>'
+    +'<div style="margin-top:10px;padding:8px 10px;background:rgba(91,141,239,.08);border-radius:6px;font-size:11px;color:var(--blue-bright)">'
+    +'<strong>Deposit schedule:</strong> Monthly (by 15th of next month) if your annual tax liability is under $50,000. Semi-weekly if over $50,000. New employers default to monthly.'
+    +'</div>'
+  );
+  if(!si.noTax){
+    h+=_cgSection('🏛️','Each Pay Period — State Tax Deposit',
+      '<div>Deposit state income tax withholding to '+_cgLink(si.agency,si.url)+'</div>'
+      +'<div style="margin-top:4px">'+(latestStub?'<strong>$'+(latestStub.deductions.provincialTax||0).toFixed(2)+'</strong> per period based on latest pay stub':'Amount from calculator — State Tax line')+'</div>'
+      +'<div style="margin-top:8px;padding:8px 10px;background:rgba(91,141,239,.08);border-radius:6px;font-size:11px;color:var(--blue-bright)">'
+      +'<strong>Schedule:</strong> Varies by state and liability. Most states follow monthly or semi-weekly schedules similar to federal. Check your '+_cgLink('state portal',si.url)+' for specifics.'
+      +'</div>'
+    );
+  }
+  h+=_cgSection('📋','Quarterly Filings',
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 941</strong></td><td style="color:var(--muted)">Federal quarterly return — reports all federal withholding + FICA</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/e-file-employment-tax-forms')+'</td></tr>'
+    +(!si.noTax?'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>'+si.quarterly+'</strong></td><td style="color:var(--muted)">'+st.name+' quarterly withholding return</td><td style="text-align:right;white-space:nowrap">'+_cgLink('State portal',si.url)+'</td></tr>':'')
+    +'<tr><td style="padding:6px 0"><strong>FUTA deposit</strong></td><td style="color:var(--muted)">Deposit if cumulative FUTA liability exceeds $500</td><td style="text-align:right;white-space:nowrap">'+_cgLink('EFTPS','https://www.eftps.gov/eftps/')+'</td></tr>'
+    +'</table>'
+    +'<div style="margin-top:10px;padding:8px 10px;background:rgba(255,152,56,.08);border-radius:6px;font-size:11px;color:var(--orange)">'
+    +'<strong>Due dates:</strong> Q1 → Apr 30 &nbsp;|&nbsp; Q2 → Jul 31 &nbsp;|&nbsp; Q3 → Oct 31 &nbsp;|&nbsp; Q4 → Jan 31'
+    +'</div>'
+  );
+  h+=_cgSection('📅','Annual Filings (due Jan 31)',
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>W-2</strong></td><td style="color:var(--muted)">Wage & tax statement — one per employee</td><td style="text-align:right;white-space:nowrap">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>W-3</strong></td><td style="color:var(--muted)">Transmittal of W-2s to Social Security Administration</td><td style="text-align:right;white-space:nowrap">'+_cgLink('SSA BSO','https://www.ssa.gov/bso/')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>Form 940</strong></td><td style="color:var(--muted)">Annual FUTA return ($7,000 wage base × 0.6%)</td><td style="text-align:right;white-space:nowrap">'+_cgLink('e-File','https://www.irs.gov/e-file-employment-tax-forms')+'</td></tr>'
+    +(!si.noTax?'<tr><td style="padding:6px 0"><strong>'+si.annual+'</strong></td><td style="color:var(--muted)">'+st.name+' annual reconciliation / W-2 transmittal</td><td style="text-align:right;white-space:nowrap">'+_cgLink('State portal',si.url)+'</td></tr>':'')
+    +'</table>'
+  );
+  if(stubs.length){
+    h+=_cgSection('📊','Your Running Totals ('+stubs.length+' US pay stubs on file)',
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Federal Income Tax withheld</td><td style="text-align:right">$'+fedTotal.toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Social Security (employee + employer)</td><td style="text-align:right">$'+(ssEmpT+ssErT).toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Medicare (employee + employer)</td><td style="text-align:right">$'+(medEmpT+medErT).toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">State income tax withheld</td><td style="text-align:right">$'+stateT.toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">FUTA (employer)</td><td style="text-align:right">$'+futaT.toFixed(2)+'</td></tr>'
+      +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total Federal (EFTPS) deposited</td><td style="text-align:right;font-weight:700;color:var(--green)">$'+eftpsTotal.toFixed(2)+'</td></tr>'
+      +'</table>'
+    );
+  }
+  el.innerHTML=h;
+}
+function _cgRenderCA(){
+  var el=document.getElementById('cg-body');
+  var provOpts=_provOrder.map(function(code){
+    var pc=_provCfg2026[code];
+    return'<option value="'+code+'"'+(code==='ON'?' selected':'')+'>'+pc.name+'</option>';
+  }).join('');
+  el.innerHTML='<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted)">Select your province</label>'
+    +'<select id="cg-prov" onchange="_cgRenderCAContent()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px">'+provOpts+'</select></div>'
+    +'<div id="cg-ca-content"></div>';
+  _cgRenderCAContent();
+}
+function _cgRenderCAContent(){
+  var code=document.getElementById('cg-prov').value;
+  var prov=_provCfg2026[code]||_provCfg2026.ON;
+  var caStubs=employeePayroll.filter(function(p){return !p._country||p._country!=='US';});
+  var latestStub=caStubs.length?caStubs[caStubs.length-1]:null;
+  var totalCpp=0,totalCpp2=0,totalEi=0,totalFed=0,totalProv=0,totalCppEr=0,totalCpp2Er=0,totalEiEr=0;
+  caStubs.forEach(function(s){
+    if(s.deductions){
+      totalCpp+=s.deductions.cpp||0;
+      totalEi+=s.deductions.ei||0;
+      totalFed+=s.deductions.federalTax||0;
+      totalProv+=s.deductions.provincialTax||0;
+    }
+    totalCppEr+=s.dhCpp||0;totalCpp2Er+=s.dhCpp2||0;totalEiEr+=s.dhEi||0;
+  });
+  var provInfo={
+    AB:{wcb:'WCB Alberta',wcbUrl:'https://www.wcb.ab.ca'},
+    BC:{wcb:'WorkSafeBC',wcbUrl:'https://www.worksafebc.com'},
+    SK:{wcb:'WCB Saskatchewan',wcbUrl:'https://www.wcbsask.com'},
+    MB:{wcb:'WCB Manitoba',wcbUrl:'https://www.wcb.mb.ca'},
+    ON:{wcb:'WSIB',wcbUrl:'https://www.wsib.ca',eht:'Employer Health Tax (EHT)',ehtUrl:'https://www.ontario.ca/page/employer-health-tax'},
+    NB:{wcb:'WorkSafeNB',wcbUrl:'https://www.worksafenb.ca'},
+    NS:{wcb:'WCB Nova Scotia',wcbUrl:'https://www.wcb.ns.ca'},
+    PE:{wcb:'WCB PEI',wcbUrl:'https://www.wcb.pe.ca'},
+    NL:{wcb:'WorkplaceNL',wcbUrl:'https://workplacenl.ca'},
+    YT:{wcb:'YWCHSB',wcbUrl:'https://wcb.yk.ca'},
+    NT:{wcb:'WSCC',wcbUrl:'https://www.wscc.nt.ca'},
+    NU:{wcb:'WSCC Nunavut',wcbUrl:'https://www.wscc.nt.ca'}
+  };
+  var pi=provInfo[code]||provInfo.ON;
+  var h='';
+  h+=_cgSection('1️⃣','One-Time Setup — CRA',
+    '<div style="display:flex;flex-direction:column;gap:8px">'
+    +'<div><strong>Register for a Payroll Account</strong> — '+_cgLink('CRA Business Registration','https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/registering-your-business/register.html')+'<br><span style="color:var(--muted)">You need a Business Number (BN) with an RP (payroll) program account. Apply online via CRA My Business Account.</span></div>'
+    +'<div><strong>Open CRA My Business Account</strong> — '+_cgLink('my-business.cra-arc.gc.ca','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'<br><span style="color:var(--muted)">This is where you remit payroll deductions and file T4s online.</span></div>'
+    +'</div>'
+  );
+  h+=_cgSection('2️⃣','One-Time Setup — '+prov.name,
+    '<div style="display:flex;flex-direction:column;gap:8px">'
+    +'<div><strong>Workers\' Compensation</strong> — '+_cgLink(pi.wcb,pi.wcbUrl)+'<br><span style="color:var(--muted)">Register and pay premiums. Mandatory for all employers in '+prov.name+'.</span></div>'
+    +(pi.eht?'<div><strong>'+pi.eht+'</strong> — '+_cgLink('Ontario EHT',pi.ehtUrl)+'<br><span style="color:var(--muted)">Ontario employers with annual payroll over $1M must pay EHT (0.98%–1.95%).</span></div>':'')
+    +'</div>'
+  );
+  h+=_cgSection('💰','Each Pay Period — CRA Remittance',
+    '<div style="margin-bottom:8px">Remit payroll deductions to the CRA via '+_cgLink('My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+' or your bank:</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee CPP contributions</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.cpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer CPP (1:1 match)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhCpp||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employee EI premiums</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.ei||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Employer EI (1.4× employee)</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.dhEi||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Federal income tax</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.federalTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Provincial income tax</td><td style="text-align:right">'+(latestStub?'$'+(latestStub.deductions.provincialTax||0).toFixed(2)+'/period':'from calculator')+'</td></tr>'
+    +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total CRA Remittance</td><td style="text-align:right;font-weight:700;color:var(--green)">'+(latestStub?'$'+(latestStub.dhRemittance||0).toFixed(2)+'/period':'calculate first')+'</td></tr>'
+    +'</table>'
+    +'<div style="margin-top:10px;padding:8px 10px;background:rgba(91,141,239,.08);border-radius:6px;font-size:11px;color:var(--blue-bright)">'
+    +'<strong>Remittance schedule:</strong><br>'
+    +'• <strong>Regular remitter</strong> (AMWA &lt; $25K): due 15th of following month<br>'
+    +'• <strong>Quarterly</strong> (AMWA &lt; $3K, perfect filing history): due 15th of month after quarter end<br>'
+    +'• <strong>Accelerated — Threshold 1</strong> (AMWA $25K–$99K): due 25th (pay days 1–15) or 10th (pay days 16–end)<br>'
+    +'• <strong>Accelerated — Threshold 2</strong> (AMWA ≥ $100K): due within 3 working days'
+    +'</div>'
+  );
+  h+=_cgSection('📋','Annual Filings (due Feb 28)',
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>T4 Slips</strong></td><td style="color:var(--muted)">Statement of Remuneration Paid — one per employee</td><td style="text-align:right;white-space:nowrap">'+_cgLink('File via My Business Account','https://www.canada.ca/en/revenue-agency/services/e-services/digital-services-businesses/business-account.html')+'</td></tr>'
+    +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>T4 Summary</strong></td><td style="color:var(--muted)">Summary of all T4 slips for the year</td><td style="text-align:right;white-space:nowrap">'+_cgLink('CRA','https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/completing-filing-information-returns/t4-information-employers/t4-summary.html')+'</td></tr>'
+    +'<tr><td style="padding:6px 0"><strong>ROE</strong></td><td style="color:var(--muted)">Record of Employment — file within 5 days of any employee separation</td><td style="text-align:right;white-space:nowrap">'+_cgLink('ROE Web','https://www.canada.ca/en/employment-social-development/programs/ei/ei-list/ei-roe/access-roe.html')+'</td></tr>'
+    +'</table>'
+  );
+  if(caStubs.length){
+    var totalRemit=+(totalFed+totalProv+totalCpp+totalCppEr+totalCpp2Er+totalEi+totalEiEr).toFixed(2);
+    h+=_cgSection('📊','Your Running Totals ('+caStubs.length+' Canadian pay stubs on file)',
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Federal income tax</td><td style="text-align:right">$'+totalFed.toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">Provincial income tax</td><td style="text-align:right">$'+totalProv.toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">CPP (employee + employer)</td><td style="text-align:right">$'+(totalCpp+totalCppEr).toFixed(2)+'</td></tr>'
+      +'<tr style="border-bottom:1px solid var(--border)"><td style="padding:4px 0;color:var(--muted)">EI (employee + employer)</td><td style="text-align:right">$'+(totalEi+totalEiEr).toFixed(2)+'</td></tr>'
+      +'<tr><td style="padding:6px 0;font-weight:700;color:var(--green)">Total CRA remittance</td><td style="text-align:right;font-weight:700;color:var(--green)">$'+totalRemit.toFixed(2)+'</td></tr>'
+      +'</table>'
+    );
+  }
+  document.getElementById('cg-ca-content').innerHTML=h;
 }
 
 // ── AI Pay Stub Scanner ─────────────────────────────────────────────────────
