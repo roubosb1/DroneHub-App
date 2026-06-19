@@ -3257,51 +3257,6 @@ button{font-family:var(--font);}
 
       <div id="employee-payroll-content"></div>
 
-      <!-- Bulk import -->
-      <div class="card" style="margin-top:14px">
-        <div class="section-label" style="margin-bottom:4px">Bulk import employee pay stubs</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Supports <strong>Numbers/Excel payroll sheets</strong> (employee names across top, pay periods down) or flat CSV with columns: <strong>Employee Name, Pay Date, Gross Pay, CPP, EI, Federal Tax, Provincial Tax, Net Pay</strong>.</div>
-        <div id="emp-import-dropzone" onclick="document.getElementById('emp-import-file').click()" style="border:1.5px dashed var(--border-bright);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border-bright)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-bright)';handleEmpPayImport(event.dataTransfer.files)">
-          <div style="font-size:12px;font-weight:600;color:var(--offwhite)">Drop CSV here or click to browse</div>
-        </div>
-        <input type="file" id="emp-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleEmpPayImport(this.files)">
-        <div id="emp-import-status" style="font-size:12px;margin-top:8px;color:var(--green)"></div>
-      </div>
-
-      <!-- AI Pay Stub Scanner -->
-      <div class="card" style="margin-top:14px">
-        <div class="section-label" style="margin-bottom:4px">Scan CRA Pay Stub Screenshots</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Upload screenshots from the <strong>CRA Payroll Deductions Online Calculator</strong>. Upload them in the same order on both sides — 1st salary pairs with 1st remittance, etc.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="paystub-scan-zones">
-          <div>
-            <div style="font-size:11px;font-weight:700;color:var(--blue-bright);margin-bottom:6px">1. Salary Calculations</div>
-            <div id="paystub-scan-zone-1" onclick="document.getElementById('paystub-scan-input-1').click()" style="border:1.5px dashed var(--blue);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(91,141,239,.03);min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--blue)'" ondrop="event.preventDefault();this.style.borderColor='var(--blue)';_stagePaystubFiles(1,event.dataTransfer.files)">
-              <div style="font-size:18px;margin-bottom:2px">📄</div>
-              <div style="font-size:11px;font-weight:600;color:var(--blue-bright)">Employee deductions</div>
-              <div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>
-            </div>
-            <input type="file" id="paystub-scan-input-1" accept="image/*" multiple style="display:none" onchange="_stagePaystubFiles(1,this.files)">
-          </div>
-          <div>
-            <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:6px">2. Employer Remittances</div>
-            <div id="paystub-scan-zone-2" onclick="document.getElementById('paystub-scan-input-2').click()" style="border:1.5px dashed var(--orange);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(255,152,56,.03);min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--orange)'" ondrop="event.preventDefault();this.style.borderColor='var(--orange)';_stagePaystubFiles(2,event.dataTransfer.files)">
-              <div style="font-size:18px;margin-bottom:2px">📄</div>
-              <div style="font-size:11px;font-weight:600;color:var(--orange)">Company remittance</div>
-              <div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>
-            </div>
-            <input type="file" id="paystub-scan-input-2" accept="image/*" multiple style="display:none" onchange="_stagePaystubFiles(2,this.files)">
-          </div>
-        </div>
-        <div id="paystub-scan-submit" style="display:none;text-align:center;margin-top:10px">
-          <button id="paystub-scan-submit-btn" onclick="_submitStagedPaystubs()" style="padding:8px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Scan Screenshots</button>
-        </div>
-        <div id="paystub-scan-spinner" style="display:none;text-align:center;padding:20px">
-          <div id="paystub-scan-spinner-text" style="font-size:14px;color:var(--blue-bright);margin-bottom:6px">Scanning pay stubs...</div>
-          <div id="paystub-scan-spinner-sub" style="font-size:11px;color:var(--muted)">AI is extracting payroll data</div>
-        </div>
-        <div id="paystub-scan-preview" style="display:none"></div>
-      </div>
-
       <!-- Monthly Remittance Summary -->
       <div class="card" style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -6360,9 +6315,7 @@ function openAddEmployeePayStub(){
     </div>`
   ).join('');
 
-  const html=`<div style="padding:20px">
-    <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:14px">Add Employee Pay Stub</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  const manualHtml=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
         <div style="margin-bottom:10px">
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Employee</label>
@@ -6410,9 +6363,79 @@ function openAddEmployeePayStub(){
     <div style="display:flex;gap:10px;margin-top:16px">
       <button onclick="submitEmployeePayStub()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer">Save Pay Stub</button>
       <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+    </div>`;
+
+  const importHtml=`<div style="text-align:center;padding:20px 0">
+      <div style="font-size:13px;color:var(--offwhite);margin-bottom:6px;font-weight:600">Import from Numbers/Excel/CSV</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.5">Supports payroll sheets with employee names across the top and pay periods down the rows,<br>or flat CSV with columns: Employee Name, Pay Date, Gross Pay, CPP, EI, Federal Tax, Provincial Tax, Net Pay</div>
+      <div id="emp-import-dropzone" onclick="document.getElementById('emp-import-file').click()" style="border:1.5px dashed var(--border-bright);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:border-color .15s;margin:0 20px" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border-bright)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-bright)';handleEmpPayImport(event.dataTransfer.files)">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style="margin-bottom:6px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="var(--green)" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div style="font-size:12px;font-weight:600;color:var(--offwhite)">Drop file here or click to browse</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">.csv, .xlsx, .xls</div>
+      </div>
+      <input type="file" id="emp-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleEmpPayImport(this.files)">
+      <div id="emp-import-status" style="font-size:12px;margin-top:10px;color:var(--green)"></div>
+    </div>`;
+
+  const scanHtml=`<div style="padding:10px 0">
+      <div style="font-size:13px;color:var(--offwhite);margin-bottom:4px;font-weight:600;text-align:center">Scan CRA Calculator Screenshots</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;text-align:center;line-height:1.5">Upload screenshots from the CRA Payroll Deductions Online Calculator.<br>Upload in the same order on both sides — 1st salary pairs with 1st remittance.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="paystub-scan-zones">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--blue-bright);margin-bottom:6px">1. Salary Calculations</div>
+          <div id="paystub-scan-zone-1" onclick="document.getElementById('paystub-scan-input-1').click()" style="border:1.5px dashed var(--blue);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(91,141,239,.03);min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--blue)'" ondrop="event.preventDefault();this.style.borderColor='var(--blue)';_stagePaystubFiles(1,event.dataTransfer.files)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="margin-bottom:4px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="var(--blue-bright)" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="var(--blue-bright)" stroke-width="1.5"/></svg>
+            <div style="font-size:11px;font-weight:600;color:var(--blue-bright)">Employee deductions</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>
+          </div>
+          <input type="file" id="paystub-scan-input-1" accept="image/*" multiple style="display:none" onchange="_stagePaystubFiles(1,this.files)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:6px">2. Employer Remittances</div>
+          <div id="paystub-scan-zone-2" onclick="document.getElementById('paystub-scan-input-2').click()" style="border:1.5px dashed var(--orange);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;background:rgba(255,152,56,.03);min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--orange)'" ondrop="event.preventDefault();this.style.borderColor='var(--orange)';_stagePaystubFiles(2,event.dataTransfer.files)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="margin-bottom:4px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="var(--orange)" stroke-width="1.5"/></svg>
+            <div style="font-size:11px;font-weight:600;color:var(--orange)">Company remittance</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:2px">Drop or click — multiple OK</div>
+          </div>
+          <input type="file" id="paystub-scan-input-2" accept="image/*" multiple style="display:none" onchange="_stagePaystubFiles(2,this.files)">
+        </div>
+      </div>
+      <div id="paystub-scan-submit" style="display:none;text-align:center;margin-top:12px">
+        <button id="paystub-scan-submit-btn" onclick="_submitStagedPaystubs()" style="padding:10px 28px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Scan Screenshots</button>
+      </div>
+      <div id="paystub-scan-spinner" style="display:none;text-align:center;padding:20px">
+        <div id="paystub-scan-spinner-text" style="font-size:14px;color:var(--blue-bright);margin-bottom:6px">Scanning pay stubs...</div>
+        <div id="paystub-scan-spinner-sub" style="font-size:11px;color:var(--muted)">AI is extracting payroll data</div>
+      </div>
+      <div id="paystub-scan-preview" style="display:none"></div>
+    </div>`;
+
+  const tabStyle='flex:1;padding:7px 0;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
+  const html=`<div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+    <div style="font-size:16px;font-weight:700;color:var(--white)">Add Pay Stub</div>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button id="ps-tab-manual" onclick="_psTab('manual')" style="${tabStyle};background:var(--green);color:#000">Manual Entry</button>
+      <button id="ps-tab-import" onclick="_psTab('import')" style="${tabStyle};background:var(--navy-mid);color:var(--muted)">Import Excel/CSV</button>
+      <button id="ps-tab-scan" onclick="_psTab('scan')" style="${tabStyle};background:var(--navy-mid);color:var(--muted)">Scan Screenshots</button>
     </div>
-  </div>`;
+  </div>
+  <div id="ps-tab-body" style="padding:16px 20px"></div>`;
   openModal(html,{maxWidth:750});
+  window._psTabContent={manual:manualHtml,import:importHtml,scan:scanHtml};
+  window._stagedPaystubs={1:[],2:[]};
+  _psTab('manual');
+}
+function _psTab(tab){
+  var body=document.getElementById('ps-tab-body');
+  if(!body||!window._psTabContent)return;
+  body.innerHTML=window._psTabContent[tab]||'';
+  var tabs=['manual','import','scan'];
+  tabs.forEach(function(t){
+    var btn=document.getElementById('ps-tab-'+t);
+    if(!btn)return;
+    if(t===tab){btn.style.background='var(--green)';btn.style.color='#000';}
+    else{btn.style.background='var(--navy-mid)';btn.style.color='var(--muted)';}
+  });
 }
 
 function submitEmployeePayStub(){
