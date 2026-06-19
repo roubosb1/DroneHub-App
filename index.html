@@ -3290,7 +3290,6 @@ button{font-family:var(--font);}
           <button onclick="_openPayrollCalc()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Calculator</button>
           <button onclick="_openComplianceGuide()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(255,152,56,.1);color:var(--orange);font-size:12px;font-weight:700;cursor:pointer">Filing Guide</button>
           <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
-          <button onclick="clearAllEmployeePayroll()" style="padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(240,82,82,.08);color:var(--red);font-size:11px;cursor:pointer">Clear All</button>
         </div>
       </div>
 
@@ -6205,7 +6204,59 @@ function handleCpImportFile(files){
       const descIdx=headers.findIndex(h=>/desc|note|memo|detail|reference/i.test(h));
       const amtIdx=headers.findIndex(h=>/amount|total|paid|pay|sum|cost|fee|earning|net|gross/i.test(h));
       const mktIdx=headers.findIndex(h=>/country|market|currency|region/i.test(h));
-      if(nameIdx<0||amtIdx<0){alert('CSV must have at least a Name/Contractor and Amount column.\n\nDetected columns: '+headers.join(', ')+'\n\nExpected a column matching "name/contractor" and "amount/total/paid".');return;}
+
+      // Pivot table detection: contractor names as columns with "Total Amount" / "HST" sub-headers
+      if(nameIdx<0||amtIdx<0){
+        let pivotNames=null,pivotSubRow=null,pivotDataStart=-1;
+        for(let r=0;r<Math.min(5,lines.length);r++){
+          const row=splitRow(lines[r]);
+          const nextRow=r+1<lines.length?splitRow(lines[r+1]):[];
+          const hasAmtSub=nextRow.some(c=>/total.?amount|amount.*sum|gross|paid/i.test(c));
+          if(hasAmtSub){
+            pivotNames=row;pivotSubRow=nextRow;pivotDataStart=r+2;break;
+          }
+        }
+        if(!pivotNames||pivotDataStart<0){
+          alert('CSV must have at least a Name/Contractor and Amount column.\n\nDetected columns: '+headers.join(', ')+'\n\nExpected a column matching "name/contractor" and "amount/total/paid".');return;
+        }
+        // Build contractor map: [{name, amtCol, hstCol}]
+        const contractors=[];
+        for(let c=1;c<pivotNames.length;c++){
+          const nm=pivotNames[c].trim();
+          if(!nm||/grand.?total/i.test(nm)) continue;
+          const sub=(pivotSubRow[c]||'').toLowerCase();
+          if(/total.?amount|amount|sum|gross|paid/i.test(sub)){
+            const hstCol=(c+1<pivotSubRow.length&&/hst|gst|tax/i.test(pivotSubRow[c+1]))?c+1:-1;
+            contractors.push({name:nm,amtCol:c,hstCol});
+          }
+        }
+        const dateCol=pivotSubRow.findIndex(h=>/date|period|ym/i.test(h));
+        const descCol=pivotNames.findIndex(h=>/desc/i.test(h));
+        const mkt=file.name.toLowerCase().includes('us')?'usa':'canada';
+        let added=0;
+        for(let i=pivotDataStart;i<lines.length;i++){
+          const cols=splitRow(lines[i]);
+          const rawDate=dateCol>=0?cols[dateCol]:'';
+          const date=rawDate.replace(/\s.*$/,'');
+          contractors.forEach(ct=>{
+            const raw=(cols[ct.amtCol]||'').replace(/[^0-9.\-]/g,'');
+            const amount=parseFloat(raw);
+            if(!amount||amount<=0) return;
+            const desc=descCol>=0&&cols[descCol]?cols[descCol]:'Imported payment';
+            contractorPayHistory.push({id:Date.now()+Math.random(),name:ct.name,date,desc,amount,market:mkt});
+            added++;
+          });
+        }
+        if(added){
+          contractorPayHistory.sort((a,b)=>b.date.localeCompare(a.date));
+          saveContractorPayHistory();
+          renderContractorBreakdown();
+          document.getElementById('cp-import-status').textContent='✓ '+added+' payment'+(added!==1?'s':'')+' imported (pivot)';
+          setTimeout(()=>{document.getElementById('cp-import-status').textContent='';},4000);
+        }else{alert('No valid rows found in pivot table.');}
+        return;
+      }
+
       let added=0;
       for(let i=1;i<lines.length;i++){
         const cols=splitRow(lines[i]);
