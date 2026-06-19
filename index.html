@@ -3833,10 +3833,10 @@ button{font-family:var(--font);}
           <div style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.5">Select teammates to invite, then start the call. They'll see a join link posted in the channel.</div>
 
           <div style="font-size:10px;font-weight:700;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px">Invite teammates</div>
-          <div id="lc-invite-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:28px;max-width:480px"></div>
+          <div id="lc-invite-list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px"></div>
 
           <!-- Call options -->
-          <div style="display:flex;flex-direction:column;gap:12px;max-width:480px">
+          <div style="display:flex;flex-direction:column;gap:12px">
 
             <!-- Daily.co option -->
             <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:12px;padding:16px 18px">
@@ -14789,7 +14789,7 @@ async function sendInvoiceEmail(){
 
   if(typeof emailjs==='undefined'){
     alert('EmailJS not loaded — please refresh and try again.');
-    if(btn){btn.textContent='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Send to client';btn.disabled=false;}
+    if(btn){btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Send to client';btn.disabled=false;}
     return;
   }
 
@@ -14826,7 +14826,7 @@ async function sendInvoiceEmail(){
   }).catch(err=>{
     const msg=err?.text||err?.message||JSON.stringify(err)||'error';
     console.error('EmailJS error:',msg);
-    if(btn){btn.textContent='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Send to client';btn.disabled=false;}
+    if(btn){btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Send to client';btn.disabled=false;}
     if(statusEl){
       statusEl.textContent='Failed to send email: '+msg;
       statusEl.style.background='rgba(240,82,82,.1)';
@@ -15166,7 +15166,7 @@ async function openStripeCheckout(amount, invoiceNumber, clientEmail, currency, 
     }
   }catch(e){
     console.error('Checkout error:',e);
-    if(btn){btn.textContent='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now';btn.disabled=false;}
+    if(btn){btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now';btn.disabled=false;}
     alert('Could not create checkout session: '+e.message);
   }
 }
@@ -23417,7 +23417,7 @@ function lcDeleteChannel(channelId){
   document.getElementById('lc-channel-title').textContent='Select a channel';
   document.getElementById('lc-channel-desc').textContent='Choose a channel from the sidebar';
   document.getElementById('lc-channel-icon').innerHTML=LC_SVG.general;
-  document.getElementById('lc-messages').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px" id="lc-empty-state"><div style="margin-bottom:10px;color:var(--muted)">${_icon('chat',32)}</div>Select a channel to start chatting</div>';
+  document.getElementById('lc-messages').innerHTML=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px" id="lc-empty-state"><div style="margin-bottom:10px;color:var(--muted)">${_icon('chat',32)}</div>Select a channel to start chatting</div>`;
   document.getElementById('lc-pinned-bar').style.display='none';
   renderLouChat();
 }
