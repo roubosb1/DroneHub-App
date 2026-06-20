@@ -1,9 +1,10 @@
 /**
  * Filemail API Proxy
  * POST /.netlify/functions/filemail-proxy
- * Body: { action, email?, password?, logintoken?, refreshtoken?, search?, limit?, skip? }
+ * Body: { action, email?, password?, logintoken?, search?, limit?, skip? }
  *
- * Proxies requests to the Filemail API so the API key never touches the frontend.
+ * Proxies requests to the Filemail v1 API so the API key never touches the frontend.
+ * All Filemail v1 endpoints use GET with query parameters.
  *
  * Required Netlify environment variable:
  *   FILEMAIL_API_KEY — your Filemail API key
@@ -11,32 +12,19 @@
 
 const https = require('https');
 
-const FM_BASE = 'https://api-public.filemail.com';
-
-function fmRequest(method, path, body, headers = {}) {
+function fmGet(path, params = {}) {
+  params.apikey = process.env.FILEMAIL_API_KEY;
+  const qs = new URLSearchParams(params).toString();
+  const fullPath = path + (qs ? '?' + qs : '');
   return new Promise((resolve, reject) => {
-    const url = new URL(path, FM_BASE);
-    const opts = {
-      hostname: url.hostname,
-      path: url.pathname + url.search,
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.FILEMAIL_API_KEY,
-        ...headers,
-      },
-    };
-    const req = https.request(opts, (res) => {
+    https.get('https://www.filemail.com' + fullPath, (res) => {
       let data = '';
       res.on('data', (c) => (data += c));
       res.on('end', () => {
         try { resolve({ status: res.statusCode, data: JSON.parse(data) }); }
         catch (e) { resolve({ status: res.statusCode, data }); }
       });
-    });
-    req.on('error', reject);
-    if (body) req.write(JSON.stringify(body));
-    req.end();
+    }).on('error', reject);
   });
 }
 
@@ -62,50 +50,44 @@ exports.handler = async (event) => {
 
   try {
     if (action === 'login') {
-      const res = await fmRequest('POST', '/auth/login', {
-        email: req.email,
+      const res = await fmGet('/api/authentication/login', {
+        username: req.email,
         password: req.password,
         source: 'Web',
-        apikey: process.env.FILEMAIL_API_KEY,
-      });
-      return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
-    }
-
-    if (action === 'refresh') {
-      const res = await fmRequest('POST', '/auth/refreshtoken', {
-        refreshtoken: req.refreshtoken,
-      });
-      return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
-    }
-
-    if (action === 'sent') {
-      const params = new URLSearchParams();
-      if (req.search) params.set('search', req.search);
-      if (req.limit) params.set('limit', String(req.limit));
-      if (req.skip) params.set('skip', String(req.skip));
-      if (req.getexpired) params.set('getexpired', 'true');
-      const qs = params.toString();
-      const res = await fmRequest('GET', '/transfer/sent' + (qs ? '?' + qs : ''), null, {
-        logintoken: req.logintoken,
-      });
-      return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
-    }
-
-    if (action === 'received') {
-      const params = new URLSearchParams();
-      if (req.search) params.set('search', req.search);
-      if (req.limit) params.set('limit', String(req.limit));
-      if (req.skip) params.set('skip', String(req.skip));
-      const qs = params.toString();
-      const res = await fmRequest('GET', '/transfer/received' + (qs ? '?' + qs : ''), null, {
-        logintoken: req.logintoken,
       });
       return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
     }
 
     if (action === 'logout') {
-      const res = await fmRequest('POST', '/auth/logout', null, {
+      const res = await fmGet('/api/authentication/logout', {
         logintoken: req.logintoken,
+      });
+      return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
+    }
+
+    if (action === 'sent') {
+      const params = { logintoken: req.logintoken };
+      if (req.search) params.search = req.search;
+      if (req.limit) params.limit = String(req.limit);
+      if (req.skip) params.skip = String(req.skip);
+      if (req.getexpired) params.getexpired = 'true';
+      const res = await fmGet('/api/transfer/sent/get', params);
+      return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
+    }
+
+    if (action === 'received') {
+      const params = { logintoken: req.logintoken };
+      if (req.search) params.search = req.search;
+      if (req.limit) params.limit = String(req.limit);
+      if (req.skip) params.skip = String(req.skip);
+      const res = await fmGet('/api/transfer/received/get', params);
+      return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
+    }
+
+    if (action === 'get') {
+      const res = await fmGet('/api/transfer/get', {
+        logintoken: req.logintoken,
+        transferid: req.transferid,
       });
       return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
     }
