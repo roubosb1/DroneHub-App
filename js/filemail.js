@@ -172,6 +172,37 @@ function fmSearchDebounce(){
   },400);
 }
 
+function _fmFormatSize(bytes){
+  if(!bytes) return '';
+  if(bytes>1e9) return (bytes/1e9).toFixed(1)+' GB';
+  if(bytes>1e6) return (bytes/1e6).toFixed(1)+' MB';
+  if(bytes>1e3) return (bytes/1e3).toFixed(0)+' KB';
+  return bytes+' B';
+}
+
+function _fmFileIcon(filename){
+  const ext=(filename||'').split('.').pop().toLowerCase();
+  const video=['mp4','mov','avi','mkv','wmv','m4v','webm','prproj','fcpx'];
+  const image=['jpg','jpeg','png','gif','tiff','tif','raw','cr2','nef','arw','dng','psd','ai','heic'];
+  const audio=['mp3','wav','aac','flac','m4a','ogg'];
+  const doc=['pdf','doc','docx','xls','xlsx','csv','txt','rtf'];
+  const zip=['zip','rar','7z','tar','gz'];
+  if(video.includes(ext)) return {icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',color:'var(--blue-bright)'};
+  if(image.includes(ext)) return {icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',color:'#E879F9'};
+  if(audio.includes(ext)) return {icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',color:'var(--amber)'};
+  if(doc.includes(ext)) return {icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',color:'var(--green)'};
+  if(zip.includes(ext)) return {icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>',color:'var(--muted)'};
+  return {icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/></svg>',color:'var(--muted)'};
+}
+
+function fmToggleTransfer(id){
+  const el=document.getElementById('fm-detail-'+id);
+  if(!el) return;
+  el.style.display=el.style.display==='none'?'block':'none';
+  const chevron=document.getElementById('fm-chev-'+id);
+  if(chevron) chevron.style.transform=el.style.display==='none'?'':'rotate(180deg)';
+}
+
 function _fmRenderTransferList(transfers){
   const list=document.getElementById('fm-transfers-list');
   if(!list) return;
@@ -179,41 +210,54 @@ function _fmRenderTransferList(transfers){
     list.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px">No transfers found.</div>';
     return;
   }
-  list.innerHTML=transfers.map(t=>{
+  list.innerHTML=transfers.map((t,idx)=>{
     const date=t.created?new Date(t.created).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):'';
     const expired=t.status==='STATUS_DELETED'||t.status==='STATUS_CANCELLED'||(t.expiredate&&t.expiredate<Date.now());
     const files=t.files||[];
     const totalSize=files.reduce((s,f)=>s+(f.filesize||0),0);
-    const sizeStr=totalSize>1e9?(totalSize/1e9).toFixed(1)+' GB':totalSize>1e6?(totalSize/1e6).toFixed(1)+' MB':totalSize>1e3?(totalSize/1e3).toFixed(0)+' KB':'';
+    const sizeStr=_fmFormatSize(totalSize);
     const recipients=(t.recipients||[]).map(r=>r.to||r.email||'').filter(Boolean).join(', ');
     const subject=t.subject||t.message||'';
+    const tid='fmt'+idx;
     const linkBtn=_fmLinkJobId
-      ?`<button onclick="fmLinkToProject('${t.id}','${(t.url||'').replace(/'/g,"\\'")}')" style="padding:4px 12px;border-radius:7px;border:1px solid rgba(34,217,122,.5);background:rgba(34,217,122,.1);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Link to Project</button>`
+      ?`<button onclick="event.stopPropagation();fmLinkToProject('${t.id}','${(t.url||'').replace(/'/g,"\\'")}')" style="padding:4px 12px;border-radius:7px;border:1px solid rgba(34,217,122,.5);background:rgba(34,217,122,.1);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Link to Project</button>`
       :'';
-    return `<div class="card" style="margin-bottom:8px;padding:12px;${expired?'opacity:.5':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">
+
+    // Build file rows for expanded view
+    const fileRows=files.map(f=>{
+      const fi=_fmFileIcon(f.filename);
+      const fSize=_fmFormatSize(f.filesize);
+      const dlUrl=f.downloadurl||f.url||'';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background='transparent'">
+        <span style="color:${fi.color};flex-shrink:0">${fi.icon}</span>
+        <span style="color:var(--offwhite);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${f.filename||'file'}</span>
+        <span style="color:var(--muted);font-size:10px;white-space:nowrap;flex-shrink:0">${fSize}</span>
+        ${dlUrl&&!expired?`<a href="${dlUrl}" target="_blank" onclick="event.stopPropagation()" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">Download</a>`:''}
+      </div>`;
+    }).join('');
+
+    const message=t.message?`<div style="font-size:11px;color:var(--muted);padding:8px 10px;line-height:1.5;background:rgba(0,0,0,.15);border-radius:8px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${t.message}</div>`:'';
+
+    return `<div class="card" style="margin-bottom:8px;padding:0;${expired?'opacity:.5':''}">
+      <div onclick="fmToggleTransfer('${tid}')" style="padding:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:10px" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background='transparent'">
         <div style="min-width:0;flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${subject||'(No subject)'}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px">
-            ${date}${recipients?' · To: '+recipients:''}${sizeStr?' · '+sizeStr:''}${expired?' · <span style="color:var(--red)">Expired</span>':''}
+          <div style="font-size:13px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px">
+            <svg id="fm-chev-${tid}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .15s"><polyline points="6 9 12 15 18 9"/></svg>
+            ${subject||'(No subject)'}
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;margin-left:16px">
+            ${date}${recipients?' · To: '+recipients:''}${files.length?' · '+files.length+' file'+(files.length>1?'s':''):''} ${sizeStr?' · '+sizeStr:''}${expired?' · <span style="color:var(--red)">Expired</span>':''}
           </div>
         </div>
-        <div style="display:flex;gap:5px;flex-shrink:0">
+        <div style="display:flex;gap:5px;flex-shrink:0" onclick="event.stopPropagation()">
           ${linkBtn}
-          ${t.url?`<a href="${t.url}" target="_blank" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap">Open ↗</a>`:''}
-          ${t.compressedfileurl&&!expired?`<a href="${t.compressedfileurl}" target="_blank" style="padding:4px 10px;border-radius:7px;border:1px solid rgba(91,141,239,.5);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap">↓ ZIP</a>`:''}
+          ${t.compressedfileurl&&!expired?`<a href="${t.compressedfileurl}" target="_blank" style="padding:4px 10px;border-radius:7px;border:1px solid rgba(91,141,239,.5);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap">↓ All (ZIP)</a>`:''}
         </div>
       </div>
-      ${files.length?`<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px">
-        ${files.slice(0,6).map(f=>{
-          const fSize=f.filesize>1e6?(f.filesize/1e6).toFixed(1)+' MB':f.filesize>1e3?(f.filesize/1e3).toFixed(0)+' KB':'';
-          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;font-size:11px">
-            <span style="color:var(--offwhite);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px">${f.filename||'file'}</span>
-            <span style="color:var(--muted);white-space:nowrap;flex-shrink:0">${fSize}</span>
-          </div>`;
-        }).join('')}
-        ${files.length>6?`<div style="font-size:10px;color:var(--muted);padding-top:2px">+${files.length-6} more files</div>`:''}
-      </div>`:''}
+      <div id="fm-detail-${tid}" style="display:none;padding:0 12px 12px;border-top:1px solid var(--border)">
+        ${message}
+        ${files.length?`<div style="margin-top:6px">${fileRows}</div>`:'<div style="padding:10px;color:var(--muted);font-size:11px">No files in this transfer.</div>'}
+      </div>
     </div>`;
   }).join('');
 }
