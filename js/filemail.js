@@ -21,10 +21,11 @@ async function _fmEnsureToken(){
   if(_fmRefreshToken){
     try{
       const res=await _fmProxy({action:'refresh',refreshtoken:_fmRefreshToken});
-      if(res.logintoken){
-        _fmLoginToken=res.logintoken;
-        _fmRefreshToken=res.refreshtoken;
-        _fmTokenExpiry=res.logintokenExpireDate||Date.now()+6*24*60*60*1000;
+      const d=res.data||res;
+      if(d.logintoken){
+        _fmLoginToken=d.logintoken;
+        _fmRefreshToken=d.refreshtoken;
+        _fmTokenExpiry=d.logintokenExpireDate||Date.now()+6*24*60*60*1000;
         sessionStorage.setItem('fm_login',JSON.stringify({lt:_fmLoginToken,rt:_fmRefreshToken,exp:_fmTokenExpiry}));
         return true;
       }
@@ -49,15 +50,17 @@ async function fmLogin(){
   if(msg){msg.textContent='Signing in…';msg.style.color='var(--muted)';}
   try{
     const res=await _fmProxy({action:'login',email,password:pass});
-    if(res.logintoken){
-      _fmLoginToken=res.logintoken;
-      _fmRefreshToken=res.refreshtoken;
-      _fmTokenExpiry=res.logintokenExpireDate||Date.now()+6*24*60*60*1000;
+    // Response may be {logintoken,...} or {data:{logintoken,...}}
+    const d=res.data||res;
+    if(d.logintoken){
+      _fmLoginToken=d.logintoken;
+      _fmRefreshToken=d.refreshtoken;
+      _fmTokenExpiry=d.logintokenExpireDate||Date.now()+6*24*60*60*1000;
       sessionStorage.setItem('fm_login',JSON.stringify({lt:_fmLoginToken,rt:_fmRefreshToken,exp:_fmTokenExpiry}));
       if(typeof showDhToast==='function') showDhToast('Filemail connected','You are now signed in to Filemail.','✓','var(--green)');
       fmRenderBrowser();
     } else {
-      if(msg){msg.textContent=res.errormessage||res.error||'Login failed. Check your credentials.';msg.style.color='var(--red)';}
+      if(msg){msg.textContent=d.errormessage||res.errormessage||res.error||'Login failed. Check your credentials.';msg.style.color='var(--red)';}
     }
   }catch(e){
     if(msg){msg.textContent='Connection error. Try again.';msg.style.color='var(--red)';}

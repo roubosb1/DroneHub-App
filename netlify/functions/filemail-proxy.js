@@ -65,6 +65,8 @@ exports.handler = async (event) => {
       const res = await fmRequest('POST', '/auth/login', {
         email: req.email,
         password: req.password,
+        source: 'Web',
+        apikey: process.env.FILEMAIL_API_KEY,
       });
       return { statusCode: res.status, headers: cors, body: JSON.stringify(res.data) };
     }
