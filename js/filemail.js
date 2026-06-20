@@ -218,22 +218,157 @@ function _fmRenderTransferList(transfers){
 function fmLinkToProject(transferId, transferUrl){
   if(!_fmLinkJobId) return;
   const mode=_trackerMode||'video';
-  const key=mode==='photo'?'dronehub_photo_tracker':'dronehub_tracker';
-  const stages=JSON.parse(localStorage.getItem(key)||'{}');
-  const ts=stages[_fmLinkJobId]||{};
-
-  // Add to filemailLinks array
-  const existing=ts.filemailLinks||[];
-  if(ts.filemailLink&&!existing.includes(ts.filemailLink)) existing.unshift(ts.filemailLink);
-  if(!existing.includes(transferUrl)) existing.push(transferUrl);
-  ts.filemailLinks=existing;
-  if(!ts.filemailLink) ts.filemailLink=transferUrl;
-
-  stages[_fmLinkJobId]=ts;
-  try{localStorage.setItem(key,JSON.stringify(stages));}catch(e){}
-  if(_fbToken()) fbSubSet('tracker_meta','stages_'+mode,stages).catch(()=>{});
-
+  _fmLinkJob(mode, _fmLinkJobId, transferUrl);
   if(typeof showDhToast==='function') showDhToast('Linked!','Filemail transfer linked to this project.','✓','var(--green)');
   fmCloseBrowser();
   if(typeof renderTracker==='function') renderTracker();
+}
+
+function _fmLinkJob(mode, jobId, url){
+  const key=mode==='photo'?'dronehub_photo_tracker':'dronehub_tracker';
+  const stages=JSON.parse(localStorage.getItem(key)||'{}');
+  const ts=stages[jobId]||{};
+  const existing=ts.filemailLinks||[];
+  if(ts.filemailLink&&!existing.includes(ts.filemailLink)) existing.unshift(ts.filemailLink);
+  if(!existing.includes(url)) existing.push(url);
+  ts.filemailLinks=existing;
+  if(!ts.filemailLink) ts.filemailLink=url;
+  stages[jobId]=ts;
+  try{localStorage.setItem(key,JSON.stringify(stages));}catch(e){}
+  if(_fbToken()) fbSubSet('tracker_meta','stages_'+mode,stages).catch(()=>{});
+}
+
+// ─── AUTO-MATCH: link Filemail transfers to tracker projects by address/client ─
+
+let _fmAutoSynced=false;
+
+function _fmNormalize(str){
+  return (str||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function _fmMatchScore(transferText, projectAddr, clientName){
+  const t=_fmNormalize(transferText);
+  if(!t) return 0;
+  const addr=_fmNormalize(projectAddr);
+  const client=_fmNormalize(clientName);
+
+  // Exact address match (strongest signal)
+  if(addr.length>=5 && t.includes(addr)) return 100;
+
+  // Street number + street name match (e.g. "123 Main St" in "Files for 123 Main Street shoot")
+  if(addr.length>=5){
+    const addrParts=addr.split(' ').filter(p=>p.length>=2);
+    if(addrParts.length>=2){
+      const matched=addrParts.filter(p=>t.includes(p));
+      const ratio=matched.length/addrParts.length;
+      if(ratio>=0.7 && addrParts.length>=2) return Math.round(ratio*80);
+    }
+  }
+
+  // Client name match
+  if(client.length>=3 && t.includes(client)) return 60;
+
+  // Partial client name (first + last name tokens)
+  if(client.length>=3){
+    const nameParts=client.split(' ').filter(p=>p.length>=3);
+    if(nameParts.length>=2){
+      const matched=nameParts.filter(p=>t.includes(p));
+      if(matched.length>=2) return 50;
+    }
+  }
+
+  return 0;
+}
+
+async function fmAutoSync(mode){
+  if(!await _fmEnsureToken()) return {matched:0, msg:'Not signed in to Filemail.'};
+
+  const transfers=await fmLoadTransfers();
+  if(!transfers||!transfers.length) return {matched:0, msg:'No Filemail transfers found.'};
+
+  mode=mode||_trackerMode||'video';
+  const key=mode==='photo'?'dronehub_photo_tracker':'dronehub_tracker';
+  const stages=JSON.parse(localStorage.getItem(key)||'{}');
+  const isPhoto=mode==='photo';
+
+  // Build list of tracker jobs
+  const jobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>
+    (j.status==='confirmed'||j.status==='completed')&&(isPhoto?j.isPhoto:!j.isPhoto)
+  );
+  const standalone=isPhoto
+    ?(typeof getPhotoStandaloneProjects==='function'?getPhotoStandaloneProjects():[])
+    :(typeof getStandaloneProjects==='function'?getStandaloneProjects():[]);
+  standalone.forEach(sp=>{
+    if(!jobs.find(j=>j.id===sp.id)){
+      jobs.push({id:sp.id, name:sp.address||sp.clientName||'', address:sp.address, clientId:null, clientName:sp.clientName});
+    }
+  });
+
+  let matched=0;
+  const details=[];
+
+  jobs.forEach(j=>{
+    const ts=stages[j.id]||{};
+    const existingLinks=ts.filemailLinks||[];
+    if(ts.filemailLink&&!existingLinks.includes(ts.filemailLink)) existingLinks.push(ts.filemailLink);
+
+    const client=(typeof clients!=='undefined')?clients.find(c=>c.id===j.clientId):null;
+    const addr=j.address||j.name||'';
+    const cName=client?.name||j.clientName||'';
+
+    transfers.forEach(t=>{
+      if(t.status==='STATUS_DELETED'||t.status==='STATUS_CANCELLED') return;
+      if(t.expiredate && t.expiredate<Date.now()) return;
+      const url=t.url||'';
+      if(!url) return;
+      if(existingLinks.includes(url)) return;
+
+      const searchText=[t.subject,t.message,(t.recipients||[]).map(r=>r.to||'').join(' ')].join(' ');
+      const score=_fmMatchScore(searchText, addr, cName);
+
+      if(score>=50){
+        _fmLinkJob(mode, j.id, url);
+        existingLinks.push(url);
+        matched++;
+        details.push({job:addr||cName, transfer:t.subject||'(untitled)', score});
+      }
+    });
+  });
+
+  if(matched>0 && typeof renderTracker==='function') renderTracker();
+  return {matched, details, msg:matched?`Linked ${matched} transfer${matched>1?'s':''} to projects.`:'No new matches found.'};
+}
+
+async function fmSyncButton(){
+  const btn=document.getElementById('fm-sync-btn');
+  if(btn){btn.disabled=true;btn.textContent='Syncing…';}
+
+  if(!await _fmEnsureToken()){
+    fmOpenBrowser();
+    if(btn){btn.disabled=false;btn.textContent='Sync Filemail';}
+    return;
+  }
+
+  const result=await fmAutoSync();
+  if(typeof showDhToast==='function'){
+    if(result.matched>0){
+      showDhToast('Filemail synced',result.msg,'✓','var(--green)');
+    } else {
+      showDhToast('Filemail synced',result.msg,'✓','var(--muted)');
+    }
+  }
+  if(btn){btn.disabled=false;btn.textContent='Sync Filemail';}
+}
+
+// Auto-sync once per session when tracker loads (if already signed in)
+function fmTryAutoSync(){
+  if(_fmAutoSynced) return;
+  _fmAutoSynced=true;
+  _fmEnsureToken().then(ok=>{
+    if(ok) fmAutoSync().then(r=>{
+      if(r.matched>0 && typeof showDhToast==='function'){
+        showDhToast('Filemail auto-linked',r.msg,'✓','var(--green)');
+      }
+    });
+  });
 }

@@ -1851,6 +1851,7 @@ function renderTracker(){
     </tr>`;
   }).join('');
   if(window.innerWidth<=768) setTimeout(mobTrkRefresh, 50);
+  if(typeof fmTryAutoSync==='function') fmTryAutoSync();
 }
 
 // ── Tracker queue manual order ────────────────────────────────────────────────
