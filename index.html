@@ -1203,7 +1203,7 @@
             Photo
           </button>
         </div>
-        <button id="fm-sync-btn" onclick="fmSyncButton()" title="Auto-match Filemail transfers to projects by address/client" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Sync Filemail</button>
+        <button onclick="fmOpenBrowser()" title="Browse Filemail transfers" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s" onmouseover="this.style.background='rgba(34,217,122,.15)'" onmouseout="this.style.background='rgba(34,217,122,.08)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Filemail</button>
         <!-- Add project dropdown -->
         <div style="position:relative" id="tracker-add-wrap">
           <div style="display:flex;border:1px solid var(--blue);border-radius:8px;overflow:hidden">
@@ -1674,6 +1674,15 @@
   <!-- ── EXPENSES SUB-VIEW ── -->
   <div id="finance-sub-expenses" style="display:none">
 
+  <!-- 2025 Data Import -->
+  <div id="import-2025-card" class="card" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--offwhite)">Import 2025 Tax Data</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Load all expenses &amp; income from the 2025 Numbers spreadsheet</div>
+    </div>
+    <button id="import-2025-btn" onclick="import2025Data()" style="padding:8px 20px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Import 2025 Data</button>
+  </div>
+
   <!-- Receipt Scanner -->
   <div id="receipt-scan-card" class="card" style="margin-bottom:14px;position:relative">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1719,17 +1728,12 @@
       <div class="row" style="margin-bottom:8px">
         <label style="min-width:90px;font-size:12px">Category</label>
         <select id="inc-cat" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
-          <option value="Job Revenue">Job revenue</option>
-          <option value="Retainer">Retainer / recurring</option>
-          <option value="Consulting">Consulting</option>
-          <option value="Referral">Referral / commission</option>
-          <option value="Rental">Equipment rental</option>
-          <option value="Other Income">Other income</option>
+          <option value="Transfer From US to Canada">Transfer From US to Canada</option>
         </select>
       </div>
       <div class="row" style="margin-bottom:8px">
         <label style="min-width:90px;font-size:12px">Country</label>
-        <select id="inc-market" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
+        <select id="inc-market" onchange="_updateIncCatDropdown()" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)">
           <option value="canada">🇨🇦 Canada (CAD)</option>
           <option value="usa">🇺🇸 United States (USD)</option>
         </select>
@@ -1769,23 +1773,12 @@
       <div class="row" style="margin-bottom:8px">
         <label style="min-width:90px;font-size:12px">Category</label>
         <select id="exp-cat" style="flex:1;padding:5px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
-          <option value="Equipment">Equipment / gear</option>
-          <option value="Software">Software / subscriptions</option>
-          <option value="Fuel">Fuel / vehicle</option>
-          <option value="Travel">Travel</option>
-          <option value="Meals">Meals &amp; entertainment</option>
-          <option value="Marketing">Marketing / advertising</option>
-          <option value="Insurance">Insurance</option>
-          <option value="Office">Office / supplies</option>
-          <option value="Subcontractor">Subcontractor</option>
-          <option value="Phone">Phone / internet</option>
-          <option value="Education">Education / training</option>
-          <option value="Other">Other</option>
+          <option value="Accounting">Accounting</option>
         </select>
       </div>
       <div class="row" style="margin-bottom:8px">
         <label style="min-width:90px;font-size:12px">Country</label>
-        <select id="exp-market" style="flex:1;padding:5px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
+        <select id="exp-market" onchange="_updateExpCatDropdown()" style="flex:1;padding:5px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
           <option value="canada">🇨🇦 Canada (CAD)</option>
           <option value="usa">🇺🇸 United States (USD)</option>
         </select>
@@ -1807,18 +1800,6 @@
           </select>
           <select id="exp-filter-cat" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
             <option value="">All categories</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Software">Software</option>
-            <option value="Fuel">Fuel</option>
-            <option value="Travel">Travel</option>
-            <option value="Meals">Meals &amp; entertainment</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Insurance">Insurance</option>
-            <option value="Office">Office</option>
-            <option value="Subcontractor">Subcontractor</option>
-            <option value="Phone">Phone / internet</option>
-            <option value="Education">Education</option>
-            <option value="Other">Other</option>
           </select>
         </div>
       </div>
@@ -1856,18 +1837,7 @@
         <div class="row" style="gap:8px;align-items:center">
           <label style="font-size:12px">Default category for unmatched rows:</label>
           <select id="import-default-cat" style="padding:4px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
-            <option value="Other">Other</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Software">Software</option>
-            <option value="Fuel">Fuel</option>
-            <option value="Travel">Travel</option>
-            <option value="Meals">Meals &amp; entertainment</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Insurance">Insurance</option>
-            <option value="Office">Office</option>
-            <option value="Subcontractor">Subcontractor</option>
-            <option value="Phone">Phone</option>
-            <option value="Education">Education</option>
+            <option value="Miscellaneous">Miscellaneous</option>
           </select>
         </div>
         <button onclick="runImport()" style="padding:7px 20px;border-radius:16px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:12px;font-weight:500;cursor:pointer">Import expenses ✓</button>

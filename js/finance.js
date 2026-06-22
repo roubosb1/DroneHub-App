@@ -88,7 +88,7 @@ function setFinanceSubTab(sub){
   try{localStorage.setItem('dronehub_finance_sub',sub);localStorage.setItem('dronehub_active_pane',sub==='overview'?'finance':sub==='payroll'?'payroll':'finance');}catch(e){}
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
-  if(sub === 'expenses'){ renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
+  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
 }
 
@@ -4154,6 +4154,41 @@ function setInitialStatus(s){
 
 
 let incomeEntries=JSON.parse(localStorage.getItem('dronehub_income')||'[]');
+
+async function import2025Data(){
+  const btn=document.getElementById('import-2025-btn');
+  if(btn){btn.disabled=true;btn.textContent='Importing…';}
+  try{
+    const [expRes,incRes]=await Promise.all([
+      fetch('/data/expenses_2025.json'),
+      fetch('/data/income_2025.json')
+    ]);
+    if(!expRes.ok||!incRes.ok) throw new Error('Could not load import files');
+    const expData=await expRes.json();
+    const incData=await incRes.json();
+    const existingExpIds=new Set(expenses.map(e=>e.id));
+    const existingIncIds=new Set(incomeEntries.map(e=>e.id));
+    let addedExp=0, addedInc=0;
+    expData.forEach(e=>{
+      if(!existingExpIds.has(e.id)){expenses.push(e);addedExp++;}
+    });
+    incData.forEach(e=>{
+      if(!existingIncIds.has(e.id)){incomeEntries.push(e);addedInc++;}
+    });
+    expenses.sort((a,b)=>b.date.localeCompare(a.date));
+    incomeEntries.sort((a,b)=>b.date.localeCompare(a.date));
+    saveExpenses();
+    saveIncome();
+    if(typeof renderFinance==='function') renderFinance();
+    try{if(typeof showDhToast==='function') showDhToast('2025 data imported',addedExp+' expenses + '+addedInc+' income entries loaded.','check','var(--green)');}catch(te){}
+    if(btn){btn.textContent='Imported ✓';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';}
+  }catch(e){
+    console.error('[import2025]',e);
+    try{if(typeof showDhToast==='function') showDhToast('Import failed',e.message,'alert-triangle','var(--red)');}catch(te){}
+    if(btn){btn.disabled=false;btn.textContent='Import 2025 Data';}
+  }
+}
+
 function saveIncome(){
   try{localStorage.setItem('dronehub_income',JSON.stringify(incomeEntries));}catch(e){}
   if(_fbToken()){
@@ -4333,7 +4368,8 @@ function showReceiptPreview(d){
     confBadge.style.background=cc+'22';confBadge.style.color=cc;confBadge.style.border='1px solid '+cc+'44';
     confBadge.textContent=d.confidence+' confidence';
   }else{confBadge.style.display='none';}
-  const cats=['Equipment','Software','Fuel','Travel','Meals','Marketing','Insurance','Office','Subcontractor','Phone','Education','Other'];
+  const rcptMarket=d.country||'canada';
+  const cats=_getExpenseCats(rcptMarket);
   const catOpts=cats.map(c=>`<option value="${c}" ${c===d.category?'selected':''}>${c}</option>`).join('');
   const inputStyle='width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--navy-mid);color:var(--white);font-size:13px;font-family:var(--font);box-sizing:border-box';
   const labelStyle='font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px';
@@ -4443,6 +4479,13 @@ function renderExpenseList(){
     yearSel.innerHTML='<option value="">All years</option>'+years.map(y=>`<option value="${y}"${y===prev?' selected':''}>${y}</option>`).join('');
     if(prev) yearSel.value=prev;
   }
+  const catFilterSel=document.getElementById('exp-filter-cat');
+  if(catFilterSel){
+    const usedCats=[...new Set(expenses.map(e=>e.cat).filter(Boolean))].sort();
+    const prevCat=catFilterSel.value;
+    catFilterSel.innerHTML='<option value="">All categories</option>'+usedCats.map(c=>`<option value="${c}"${c===prevCat?' selected':''}>${c}</option>`).join('');
+    if(prevCat) catFilterSel.value=prevCat;
+  }
   const filtered=expenses.filter(e=>{
     if(filterCat&&e.cat!==filterCat) return false;
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
@@ -4482,6 +4525,8 @@ function viewReceipt(expId){
 
 function renderFinance(){
   if(!document.getElementById('pane-finance')) return;
+  _updateExpCatDropdown();
+  _updateIncCatDropdown();
 
   // Filter jobs by market (Canada = no market field OR market='canada'; USA = any US market key)
   const isUSFinance = financeMarket==='usa';
@@ -4577,29 +4622,38 @@ function renderFinance(){
   // Category donut chart
   const catColors={
     // Equipment / tech
-    'Equipment':'#5B7FDB','Equipment Lease':'#4A6FCA','Software':'#1D9E75',
+    'Equipment':'#5B7FDB','Equipment Lease':'#4A6FCA','Equipment Purchase':'#5B7FDB','Equipment Repair':'#4A6FCA',
+    'Software':'#1D9E75','Software Subscription':'#1D9E75','Subscriptions':'#1D9E75',
     // People costs
-    'Contractors':'#E85D3A','Subcontractor':'#D44E2E','Payroll':'#F5A623',
-    'Payroll Tax':'#E8931A','Subcontractors':'#D44E2E',
+    'Contract':'#E85D3A','Contractors':'#E85D3A','Subcontractor':'#D44E2E',
+    'Payroll':'#F5A623','Payroll Fee':'#E8931A','Payroll Tax':'#E8931A',
     // Travel & vehicles
-    'Travel':'#00B4D8','Vehicle Expense':'#0096C7','Vehicle':'#0096C7',
-    'Fuel':'#C87D1E','Fuel/EV':'#B87010','Gas':'#C87D1E',
+    'Travel':'#00B4D8','Vehicle Insurance':'#0096C7','Vehicle Maintenance':'#0096C7','Car Maintenance':'#0096C7',
+    'Fuel/EV':'#B87010','Fuel':'#C87D1E','Gas':'#C87D1E','Parking':'#0077B6',
+    'Auto Loan':'#0096C7',
     // Marketing / advertising
-    'Marketing':'#9B5DE5','Advertising':'#8A4DD4','Advertising & Promotion':'#9B5DE5',
+    'Advertisement':'#9B5DE5','Marketing':'#9B5DE5',
     // Admin & finance
-    'Bank Fees':'#64748B','Accounting':'#475569','Taxes':'#DC2626',
-    'Tax':'#DC2626','Business License':'#7C3AED','Legal':'#6D28D9',
-    'Insurance':'#0D9488',
+    'Bank Fee':'#64748B','Accounting':'#475569','Wise Fees':'#64748B',
+    'Business Insurance':'#0D9488','Insurance':'#0D9488',
     // Food / entertainment
-    'Meals':'#F59E0B','Meals & Entertainment':'#F59E0B','Entertainment':'#FBBF24',
+    'Meals & Entertainment':'#F59E0B','Meals':'#F59E0B','Golf':'#34D399',
     // Office / supplies
-    'Office':'#6B7280','Supplies':'#9CA3AF','Office Supplies':'#6B7280',
+    'Office/Bedroom Supplies':'#6B7280','Office/Bedroom':'#6B7280','Office':'#6B7280','Supplies':'#9CA3AF',
     // Phone / utilities
-    'Phone':'#06B6D4','Phone/Internet':'#06B6D4','Internet':'#0EA5E9',
-    'Utilities':'#14B8A6',
+    'Internet/Phone':'#06B6D4','Phone':'#06B6D4',
+    // Financial transfers
+    'Account Transfer':'#94A3B8','CC CashBack':'#14B8A6','CC Payment':'#94A3B8','Cheque Deposit':'#94A3B8','Payments and Credits':'#94A3B8',
+    'Zelle Payment':'#7C3AED','DroneHub Canada':'#5B7FDB','Wise':'#64748B',
+    'Credited':'#14B8A6','Accounting Fees':'#475569',
+    // Income
+    'Invoice Payment':'#1D9E75','Zelle Debit':'#1D9E75','Zelle debit':'#1D9E75',
+    'Misc. Debit':'#1D9E75','Misc. debit':'#1D9E75','Miscellaneous Debit':'#1D9E75',
+    'Transfer From US to Canada':'#1D9E75',
     // Misc
-    'Gifts':'#EC4899','Personal':'#A78BFA','Education':'#34D399',
-    'Transfer Funds':'#94A3B8','Other':'#B4B2A9',
+    'Gift':'#EC4899','Gifts':'#EC4899','Personal':'#A78BFA','Rent':'#7C3AED',
+    'Repair':'#D44E2E','Reimbursements':'#14B8A6','Miscellaneous':'#B4B2A9',
+    'Student Loan':'#A78BFA','Other':'#B4B2A9',
   };
   // Deterministic color generator for any category not in the map above
   // Hashes the category name to a consistent hue so the same category always
@@ -4652,21 +4706,60 @@ function renderFinance(){
 // ─── BULK EXPENSE IMPORT ─────────────────────────────────────────────────────
 let importRows=[], importHeaders=[];
 
-const ALL_CATS=['Equipment','Software','Fuel','Travel','Meals','Marketing','Insurance','Office','Subcontractor','Phone','Education','Other'];
+// ── Market-specific categories ──────────────────────────────────────────────
+const US_EXPENSE_CATS=['Accounting Fees','Bank Fee','Business Insurance','Car Maintenance','Contract','Credited','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom Supplies','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursement','Rent','Repair','Software Subscription','Supplies','Travel','Wise','Zelle Payment'];
+const US_TRANSFER_CATS=['Account Transfer','CC CashBack','CC Payment','Cheque Deposit','Payments and Credits'];
+const US_INCOME_CATS=['Invoice Payment','Misc. Debit','Zelle Debit'];
+
+const CA_EXPENSE_CATS=['Accounting','Accounting Fees','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
+const CA_INCOME_CATS=['Invoice Payment','Transfer From US to Canada'];
+
+const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
+
+function _getExpenseCats(market){
+  return market==='usa'?[...US_EXPENSE_CATS,...US_TRANSFER_CATS]:CA_EXPENSE_CATS;
+}
+function _getIncomeCats(market){
+  return market==='usa'?US_INCOME_CATS:CA_INCOME_CATS;
+}
+function _updateExpCatDropdown(){
+  const market=document.getElementById('exp-market')?.value||'canada';
+  const sel=document.getElementById('exp-cat');
+  if(!sel) return;
+  const prev=sel.value;
+  const cats=_getExpenseCats(market);
+  sel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(cats.includes(prev)) sel.value=prev;
+}
+function _updateIncCatDropdown(){
+  const market=document.getElementById('inc-market')?.value||'canada';
+  const sel=document.getElementById('inc-cat');
+  if(!sel) return;
+  const prev=sel.value;
+  const cats=_getIncomeCats(market);
+  sel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(cats.includes(prev)) sel.value=prev;
+}
 
 // Keyword → category auto-detection
 const CAT_KEYWORDS={
-  Equipment:['equipment','gear','camera','drone','battery','lens','tripod','storage','sd card','hard drive','memory'],
-  Software:['software','subscription','adobe','lightroom','google','microsoft','office','dropbox','app','saas','license'],
-  Fuel:['fuel','gas','petrol','shell','esso','petro','circle k','ultramar','canadian tire fuel'],
-  Travel:['hotel','airbnb','flight','airline','parking','uber','lyft','taxi','transit','train','via rail','porter'],
-  Meals:['restaurant','food','coffee','tim horton','starbucks','mcdonald','subway','pizza','donut','meal','dine','cafe','bar','grill','kitchen','bistro','eatery'],
-  Marketing:['marketing','advertising','facebook ads','google ads','instagram','linkedin','print','brochure','flyer'],
-  Insurance:['insurance','aviva','intact','belair','coverage','premium'],
-  Office:['staples','office','supplies','paper','ink','fedex','ups','canada post','shipping','print'],
-  Phone:['rogers','bell','telus','fido','koodo','public mobile','phone','internet','data plan','wireless'],
-  Education:['course','training','workshop','seminar','book','udemy','skillshare','education','conference'],
-  Subcontractor:['contractor','freelance','subcontract','invoice','consultant'],
+  'Equipment Purchase':['equipment','gear','camera','drone','battery','lens','tripod','storage','sd card','hard drive','memory'],
+  'Software Subscription':['software','subscription','adobe','lightroom','google','microsoft','office','dropbox','app','saas','license'],
+  'Subscriptions':['software','subscription','adobe','lightroom','google','microsoft','office','dropbox','app','saas','license'],
+  'Fuel/EV':['fuel','gas','petrol','shell','esso','petro','circle k','ultramar','canadian tire fuel','ev charge','supercharge','tesla'],
+  Travel:['hotel','airbnb','flight','airline','uber','lyft','taxi','transit','train','via rail','porter'],
+  'Meals & Entertainment':['restaurant','food','coffee','tim horton','starbucks','mcdonald','subway','pizza','donut','meal','dine','cafe','bar','grill','kitchen','bistro','eatery'],
+  Advertisement:['marketing','advertising','facebook ads','google ads','instagram','linkedin','print','brochure','flyer'],
+  'Vehicle Insurance':['insurance','aviva','intact','belair','coverage','premium','auto insurance'],
+  'Business Insurance':['business insurance','liability','e&o','errors and omissions'],
+  'Office/Bedroom':['staples','office','supplies','paper','ink','fedex','ups','canada post','shipping','print'],
+  'Internet/Phone':['rogers','bell','telus','fido','koodo','public mobile','phone','internet','data plan','wireless'],
+  Golf:['golf','tee time','course','range','club'],
+  Parking:['parking','meter','lot'],
+  Contract:['contractor','freelance','subcontract','consultant'],
+  Rent:['rent','lease','office space'],
+  'Bank Fee':['bank fee','service charge','monthly fee','nsf','overdraft','wire fee'],
+  Accounting:['accounting','bookkeeping','accountant','tax prep'],
 };
 
 function guessCategory(desc){
@@ -4745,6 +4838,11 @@ function handleImportFile(files){
 function showImportMapper(){
   const mapper=document.getElementById('import-mapper');
   mapper.style.display='block';
+
+  const defCatSel=document.getElementById('import-default-cat');
+  if(defCatSel){
+    defCatSel.innerHTML=ALL_CATS.map(c=>`<option value="${c}"${c==='Miscellaneous'?' selected':''}>${c}</option>`).join('');
+  }
 
   const dateIdx=guessColIndex(importHeaders,'date');
   const descIdx=guessColIndex(importHeaders,'desc');

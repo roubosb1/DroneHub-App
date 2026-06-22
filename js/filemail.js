@@ -1,10 +1,8 @@
 // ─── FILEMAIL INTEGRATION — browse & link transfers to tracker projects ──────
 
-let _fmLoginToken = null;
-let _fmRefreshToken = null;
-let _fmTokenExpiry = 0;
 let _fmTransfers = null;
-let _fmLinkJobId = null; // which tracker job we're linking to
+let _fmLinkJobId = null;
+let _fmConnected = null; // null=unknown, true/false after ping
 
 function _fmProxy(body){
   return fetch('/.netlify/functions/filemail-proxy',{
@@ -12,83 +10,36 @@ function _fmProxy(body){
   }).then(r=>r.json());
 }
 
-function _fmIsLoggedIn(){
-  return _fmLoginToken && Date.now() < _fmTokenExpiry;
-}
-
-async function _fmEnsureToken(){
-  if(_fmIsLoggedIn()) return true;
-  if(_fmRefreshToken){
-    try{
-      const res=await _fmProxy({action:'refresh',refreshtoken:_fmRefreshToken});
-      const d=res.data||res;
-      if(d.logintoken){
-        _fmLoginToken=d.logintoken;
-        _fmRefreshToken=d.refreshtoken;
-        _fmTokenExpiry=d.logintokenExpireDate||Date.now()+6*24*60*60*1000;
-        sessionStorage.setItem('fm_login',JSON.stringify({lt:_fmLoginToken,rt:_fmRefreshToken,exp:_fmTokenExpiry}));
-        return true;
-      }
-    }catch(e){}
-  }
-  // Try restoring from session
+async function _fmEnsureConnected(){
+  if(_fmConnected===true) return true;
   try{
-    const s=JSON.parse(sessionStorage.getItem('fm_login')||'null');
-    if(s&&s.lt&&s.exp>Date.now()){
-      _fmLoginToken=s.lt; _fmRefreshToken=s.rt; _fmTokenExpiry=s.exp;
+    const res=await _fmProxy({action:'ping'});
+    if(res.email || res.userid || res.username || (res.responsestatus&&res.responsestatus!=='Failed')){
+      _fmConnected=true;
       return true;
     }
-  }catch(e){}
-  return false;
-}
-
-async function fmLogin(){
-  const email=(document.getElementById('fm-email')?.value||'').trim();
-  const pass=document.getElementById('fm-pass')?.value||'';
-  const msg=document.getElementById('fm-login-msg');
-  if(!email||!pass){if(msg){msg.textContent='Enter your Filemail email and password.';msg.style.color='var(--red)';}return;}
-  if(msg){msg.textContent='Signing in…';msg.style.color='var(--muted)';}
-  try{
-    const res=await _fmProxy({action:'login',email,password:pass});
-    // Response may be {logintoken,...} or {data:{logintoken,...}}
-    const d=res.data||res;
-    if(d.logintoken){
-      _fmLoginToken=d.logintoken;
-      _fmRefreshToken=d.refreshtoken;
-      _fmTokenExpiry=d.logintokenExpireDate||Date.now()+6*24*60*60*1000;
-      sessionStorage.setItem('fm_login',JSON.stringify({lt:_fmLoginToken,rt:_fmRefreshToken,exp:_fmTokenExpiry}));
-      if(typeof showDhToast==='function') showDhToast('Filemail connected','You are now signed in to Filemail.','✓','var(--green)');
-      fmRenderBrowser();
-    } else {
-      if(msg){msg.textContent=d.errormessage||res.errormessage||res.error||'Login failed. Check your credentials.';msg.style.color='var(--red)';}
+    if(res.statusCode===401 || res.status===401 || res.error){
+      _fmConnected=false;
+      return false;
     }
+    _fmConnected=true;
+    return true;
   }catch(e){
-    if(msg){msg.textContent='Connection error. Try again.';msg.style.color='var(--red)';}
+    _fmConnected=false;
+    return false;
   }
 }
 
-function fmLogout(){
-  if(_fmLoginToken) _fmProxy({action:'logout',logintoken:_fmLoginToken}).catch(()=>{});
-  _fmLoginToken=null;_fmRefreshToken=null;_fmTokenExpiry=0;_fmTransfers=null;
-  sessionStorage.removeItem('fm_login');
-  if(typeof showDhToast==='function') showDhToast('Signed out','Filemail session ended.','✓','var(--muted)');
-  fmRenderBrowser();
-}
-
-async function fmLoadTransfers(search){
-  if(!await _fmEnsureToken()) return [];
-  const body={action:'sent',logintoken:_fmLoginToken,limit:50};
-  if(search) body.search=search;
-  const res=await _fmProxy(body);
-  if(res.responsestatus==='OK'||res.data){
-    _fmTransfers=res.data?.transfers||res.transfers||[];
-    return _fmTransfers;
-  }
-  if(res.responsestatus==='LoginRequired'){
-    _fmLoginToken=null;sessionStorage.removeItem('fm_login');
+async function fmLoadTransfers(){
+  const body={action:'sent',limit:50,getexpired:true};
+  try{
+    const res=await _fmProxy(body);
+    const transfers=res.transfers||res.data?.transfers||[];
+    _fmTransfers=transfers;
+    return transfers;
+  }catch(e){
     return [];
   }
-  return [];
 }
 
 function fmOpenBrowser(jobId){
@@ -98,7 +49,7 @@ function fmOpenBrowser(jobId){
     overlay=document.createElement('div');
     overlay.id='fm-browser-overlay';
     overlay.onclick=e=>{if(e.target===overlay)fmCloseBrowser();};
-    overlay.style.cssText='display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.style.cssText='position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px';
     overlay.innerHTML=`<div onclick="event.stopPropagation()" style="background:var(--navy-deep,#0f1724);border:1px solid var(--border-bright,#2a3454);border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)">
       <div id="fm-browser-content" style="padding:20px"></div>
     </div>`;
@@ -118,58 +69,62 @@ async function fmRenderBrowser(){
   const root=document.getElementById('fm-browser-content');
   if(!root) return;
 
-  if(!await _fmEnsureToken()){
-    root.innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="font-size:16px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Filemail
-        </div>
-        <button onclick="fmCloseBrowser()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px">✕</button>
+  root.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Filemail
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Sign in with your Filemail account to browse and link file transfers to projects.</div>
-      <input id="fm-email" type="email" placeholder="Filemail email" autocomplete="email"
-        style="width:100%;padding:10px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);margin-bottom:8px;box-sizing:border-box">
-      <input id="fm-pass" type="password" placeholder="Password" autocomplete="current-password"
-        onkeydown="if(event.key==='Enter')fmLogin()"
-        style="width:100%;padding:10px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);margin-bottom:12px;box-sizing:border-box">
-      <button onclick="fmLogin()" style="padding:10px 28px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
-      <span id="fm-login-msg" style="font-size:11px;margin-left:10px"></span>`;
+      <button onclick="fmCloseBrowser()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="fm-transfers-list" style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Connecting to Filemail…</div>`;
+
+  const connected=await _fmEnsureConnected();
+  if(!connected){
+    document.getElementById('fm-transfers-list').innerHTML=`
+      <div style="text-align:center;padding:30px">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div style="color:var(--white);font-size:14px;font-weight:700;margin-bottom:6px">Filemail Not Connected</div>
+        <div style="color:var(--muted);font-size:12px;line-height:1.6;max-width:400px;margin:0 auto">
+          The Filemail API key needs to be added to Netlify environment variables.<br>
+          Go to your <a href="https://www.filemail.com" target="_blank" style="color:var(--blue-bright)">Filemail account settings</a> to find your API key,
+          then add it as <code style="background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;font-size:11px">FILEMAIL_API_KEY</code> in Netlify.
+        </div>
+        <button onclick="fmRetryConnect()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid var(--border-bright);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">Retry Connection</button>
+      </div>`;
     return;
   }
 
-  // Logged in — show transfers
-  root.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:16px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Filemail Transfers
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button onclick="fmLogout()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Sign Out</button>
-        <button onclick="fmCloseBrowser()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px">✕</button>
-      </div>
-    </div>
-    <div style="margin-bottom:14px">
-      <input id="fm-search" type="text" placeholder="Search transfers…" oninput="fmSearchDebounce()"
-        style="width:100%;padding:9px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font);box-sizing:border-box">
-    </div>
-    <div id="fm-transfers-list" style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Loading transfers…</div>`;
-
+  // Connected — load transfers
   const transfers=await fmLoadTransfers();
   _fmRenderTransferList(transfers);
+
+  // Add sync button at top
+  const syncRow=document.createElement('div');
+  syncRow.style.cssText='display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap';
+  syncRow.innerHTML=`
+    <button onclick="fmRunSync()" id="fm-modal-sync" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:#22D97A;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Auto-Sync to Tracker
+    </button>
+    <span style="font-size:11px;color:var(--muted)">Match transfers to projects by address / client name</span>`;
+  const list=document.getElementById('fm-transfers-list');
+  list.parentNode.insertBefore(syncRow,list);
 }
 
-let _fmSearchTimer=null;
-function fmSearchDebounce(){
-  clearTimeout(_fmSearchTimer);
-  _fmSearchTimer=setTimeout(async()=>{
-    const q=(document.getElementById('fm-search')?.value||'').trim();
-    const list=document.getElementById('fm-transfers-list');
-    if(list) list.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Searching…</div>';
-    const transfers=await fmLoadTransfers(q||undefined);
-    _fmRenderTransferList(transfers);
-  },400);
+async function fmRetryConnect(){
+  _fmConnected=null;
+  fmRenderBrowser();
+}
+
+async function fmRunSync(){
+  const btn=document.getElementById('fm-modal-sync');
+  if(btn){btn.disabled=true;btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Syncing…';}
+  const result=await fmAutoSync();
+  if(typeof showDhToast==='function'){
+    showDhToast('Filemail synced',result.msg,'✓',result.matched>0?'var(--green)':'var(--muted)');
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Auto-Sync to Tracker';}
 }
 
 function _fmFormatSize(bytes){
@@ -212,7 +167,7 @@ function _fmRenderTransferList(transfers){
   }
   list.innerHTML=transfers.map((t,idx)=>{
     const date=t.created?new Date(t.created).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):'';
-    const expired=t.status==='STATUS_DELETED'||t.status==='STATUS_CANCELLED'||(t.expiredate&&t.expiredate<Date.now());
+    const expired=t.status==='STATUS_DELETED'||t.status==='STATUS_CANCELLED'||(t.expiredate&&new Date(t.expiredate)<new Date());
     const files=t.files||[];
     const totalSize=files.reduce((s,f)=>s+(f.filesize||0),0);
     const sizeStr=_fmFormatSize(totalSize);
@@ -223,7 +178,6 @@ function _fmRenderTransferList(transfers){
       ?`<button onclick="event.stopPropagation();fmLinkToProject('${t.id}','${(t.url||'').replace(/'/g,"\\'")}')" style="padding:4px 12px;border-radius:7px;border:1px solid rgba(34,217,122,.5);background:rgba(34,217,122,.1);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Link to Project</button>`
       :'';
 
-    // Build file rows for expanded view
     const fileRows=files.map(f=>{
       const fi=_fmFileIcon(f.filename);
       const fSize=_fmFormatSize(f.filesize);
@@ -282,7 +236,7 @@ function _fmLinkJob(mode, jobId, url){
   if(!ts.filemailLink) ts.filemailLink=url;
   stages[jobId]=ts;
   try{localStorage.setItem(key,JSON.stringify(stages));}catch(e){}
-  if(_fbToken()) fbSubSet('tracker_meta','stages_'+mode,stages).catch(()=>{});
+  if(typeof _fbToken==='function'&&_fbToken()) fbSubSet('tracker_meta','stages_'+mode,stages).catch(()=>{});
 }
 
 // ─── AUTO-MATCH: link Filemail transfers to tracker projects by address/client ─
@@ -299,10 +253,8 @@ function _fmMatchScore(transferText, projectAddr, clientName){
   const addr=_fmNormalize(projectAddr);
   const client=_fmNormalize(clientName);
 
-  // Exact address match (strongest signal)
   if(addr.length>=5 && t.includes(addr)) return 100;
 
-  // Street number + street name match (e.g. "123 Main St" in "Files for 123 Main Street shoot")
   if(addr.length>=5){
     const addrParts=addr.split(' ').filter(p=>p.length>=2);
     if(addrParts.length>=2){
@@ -312,10 +264,8 @@ function _fmMatchScore(transferText, projectAddr, clientName){
     }
   }
 
-  // Client name match
   if(client.length>=3 && t.includes(client)) return 60;
 
-  // Partial client name (first + last name tokens)
   if(client.length>=3){
     const nameParts=client.split(' ').filter(p=>p.length>=3);
     if(nameParts.length>=2){
@@ -328,7 +278,7 @@ function _fmMatchScore(transferText, projectAddr, clientName){
 }
 
 async function fmAutoSync(mode){
-  if(!await _fmEnsureToken()) return {matched:0, msg:'Not signed in to Filemail.'};
+  if(!await _fmEnsureConnected()) return {matched:0, msg:'Filemail not connected.'};
 
   const transfers=await fmLoadTransfers();
   if(!transfers||!transfers.length) return {matched:0, msg:'No Filemail transfers found.'};
@@ -338,7 +288,6 @@ async function fmAutoSync(mode){
   const stages=JSON.parse(localStorage.getItem(key)||'{}');
   const isPhoto=mode==='photo';
 
-  // Build list of tracker jobs
   const jobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>
     (j.status==='confirmed'||j.status==='completed')&&(isPhoto?j.isPhoto:!j.isPhoto)
   );
@@ -365,7 +314,7 @@ async function fmAutoSync(mode){
 
     transfers.forEach(t=>{
       if(t.status==='STATUS_DELETED'||t.status==='STATUS_CANCELLED') return;
-      if(t.expiredate && t.expiredate<Date.now()) return;
+      if(t.expiredate && new Date(t.expiredate)<new Date()) return;
       const url=t.url||'';
       if(!url) return;
       if(existingLinks.includes(url)) return;
@@ -387,31 +336,20 @@ async function fmAutoSync(mode){
 }
 
 async function fmSyncButton(){
-  const btn=document.getElementById('fm-sync-btn');
-  if(btn){btn.disabled=true;btn.textContent='Syncing…';}
-
-  if(!await _fmEnsureToken()){
+  if(!await _fmEnsureConnected()){
     fmOpenBrowser();
-    if(btn){btn.disabled=false;btn.textContent='Sync Filemail';}
     return;
   }
-
   const result=await fmAutoSync();
   if(typeof showDhToast==='function'){
-    if(result.matched>0){
-      showDhToast('Filemail synced',result.msg,'✓','var(--green)');
-    } else {
-      showDhToast('Filemail synced',result.msg,'✓','var(--muted)');
-    }
+    showDhToast('Filemail synced',result.msg,'✓',result.matched>0?'var(--green)':'var(--muted)');
   }
-  if(btn){btn.disabled=false;btn.textContent='Sync Filemail';}
 }
 
-// Auto-sync once per session when tracker loads (if already signed in)
 function fmTryAutoSync(){
   if(_fmAutoSynced) return;
   _fmAutoSynced=true;
-  _fmEnsureToken().then(ok=>{
+  _fmEnsureConnected().then(ok=>{
     if(ok) fmAutoSync().then(r=>{
       if(r.matched>0 && typeof showDhToast==='function'){
         showDhToast('Filemail auto-linked',r.msg,'✓','var(--green)');
