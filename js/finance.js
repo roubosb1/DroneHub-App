@@ -4428,9 +4428,8 @@ function addExpense(){
   const cat=document.getElementById('exp-cat').value;
   const amount=parseFloat(document.getElementById('exp-amount').value);
   const expMarket=document.getElementById('exp-market')?.value||'canada';
-  const expType=document.getElementById('exp-type')?.value||'expense';
   if(!date||!desc||!amount||amount<=0){alert('Please fill in all expense fields.');return;}
-  expenses.push({id:Date.now(),date,desc,cat,amount,market:expMarket,type:expType});
+  expenses.push({id:Date.now(),date,desc,cat,amount,market:expMarket});
   expenses.sort((a,b)=>b.date.localeCompare(a.date));
   saveExpenses();
   document.getElementById('exp-desc').value='';
@@ -4702,7 +4701,7 @@ const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sor
 const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
 
 function _getExpenseCats(market){
-  return market==='usa'?US_EXPENSE_CATS:CA_EXPENSE_CATS;
+  return market==='usa'?[...US_EXPENSE_CATS,...US_TRANSFER_CATS]:CA_EXPENSE_CATS;
 }
 function _getTransferCats(market){
   return market==='usa'?US_TRANSFER_CATS:[];
@@ -4712,11 +4711,10 @@ function _getIncomeCats(market){
 }
 function _updateExpCatDropdown(){
   const market=document.getElementById('exp-market')?.value||'canada';
-  const type=document.getElementById('exp-type')?.value||'expense';
   const sel=document.getElementById('exp-cat');
   if(!sel) return;
   const prev=sel.value;
-  const cats=type==='transfer'?_getTransferCats(market):_getExpenseCats(market);
+  const cats=_getExpenseCats(market);
   sel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   if(cats.includes(prev)) sel.value=prev;
 }
@@ -4804,7 +4802,6 @@ function _restoreImportMapperHTML(){
     <div style="font-size:12px;font-weight:500;color:#C8D0E8;margin-bottom:8px" id="import-file-name"></div>
     <div style="display:flex;gap:6px;margin-bottom:10px">
       <button id="import-type-expense" onclick="setImportType('expense')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer">Expenses</button>
-      <button id="import-type-transfer" onclick="setImportType('transfer')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Bank Transfers</button>
       <button id="import-type-income" onclick="setImportType('income')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Income / Invoices</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="import-col-map"></div>
@@ -4932,8 +4929,7 @@ function showImportMapper(){
     const market=document.getElementById('import-market')?.value||'us';
     let cats,def;
     if(isIncome){ cats=[...new Set([...US_INCOME_CATS,...CA_INCOME_CATS])]; def='Invoice Payment'; }
-    else if(isTransfer){ cats=_getTransferCats(market==='canada'?'canada':'usa'); def='Account Transfer'; }
-    else{ cats=ALL_EXPENSE_CATS; def='Miscellaneous'; }
+    else{ cats=ALL_CATS; def='Miscellaneous'; }
     defCatSel.innerHTML=cats.map(c=>`<option value="${c}"${c===def?' selected':''}>${c}</option>`).join('');
   }
 
@@ -5023,12 +5019,10 @@ function runImport(){
   if(!rows.length){alert('No valid rows to import.');return;}
   const defaultCat=document.getElementById('import-default-cat').value||'Other';
   const isIncome=_importType==='income';
-  const isTransfer=_importType==='transfer';
   let added=0;
   const market=document.getElementById('import-market')?.value||'us';
   rows.forEach(r=>{
     const entry={id:Date.now()+Math.random(),date:r.date,desc:r.desc,cat:r.cat||defaultCat,amount:r.amount,market};
-    if(isTransfer) entry.type='transfer';
     if(isIncome){
       incomeEntries.push(entry);
     }else{
