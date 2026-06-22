@@ -1825,6 +1825,10 @@
     <!-- Column mapping UI (hidden until file loaded) -->
     <div id="import-mapper" style="display:none">
       <div style="font-size:12px;font-weight:500;color:#C8D0E8;margin-bottom:8px" id="import-file-name"></div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button id="import-type-expense" onclick="setImportType('expense')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer">Expenses</button>
+        <button id="import-type-income" onclick="setImportType('income')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Income / Invoices</button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="import-col-map"></div>
       <div class="note" id="import-preview-note" style="margin-bottom:8px"></div>
       <div style="overflow-x:auto;margin-bottom:12px">
@@ -1837,7 +1841,7 @@
             <option value="Miscellaneous">Miscellaneous</option>
           </select>
         </div>
-        <button onclick="runImport()" style="padding:7px 20px;border-radius:16px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:12px;font-weight:500;cursor:pointer">Import expenses ✓</button>
+        <button onclick="runImport()" id="import-run-btn" style="padding:7px 20px;border-radius:16px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:12px;font-weight:500;cursor:pointer">Import expenses ✓</button>
         <button onclick="cancelImport()" style="padding:7px 14px;border-radius:16px;border:0.5px solid #ccc;background:#1C2333;color:#A8B4D0;font-size:12px;cursor:pointer">Cancel</button>
         <span id="import-status" style="font-size:12px;color:#22D97A"></span>
       </div>

@@ -4746,6 +4746,83 @@ function guessCategory(desc){
   return '';
 }
 
+let _importType='expense';
+let _importWorkbook=null;
+
+function _importSheetPicker(wb){
+  const mapper=document.getElementById('import-mapper');
+  mapper.style.display='block';
+  mapper.innerHTML=`
+    <div style="font-size:13px;font-weight:600;color:var(--offwhite);margin-bottom:10px">Select a sheet to import</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${wb.SheetNames.map((name,i)=>`
+        <button onclick="_importSelectSheet(${i})" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:500;cursor:pointer;text-align:left">${name}</button>
+      `).join('')}
+    </div>
+    <button onclick="cancelImport()" style="margin-top:10px;padding:7px 14px;border-radius:16px;border:0.5px solid #ccc;background:#1C2333;color:#A8B4D0;font-size:12px;cursor:pointer">Cancel</button>
+  `;
+}
+
+function _importSelectSheet(idx){
+  const wb=_importWorkbook;
+  if(!wb) return;
+  const ws=wb.Sheets[wb.SheetNames[idx]];
+  const data=XLSX.utils.sheet_to_csv(ws);
+  const parsed=parseCSV(data);
+  importHeaders=parsed.headers; importRows=parsed.rows;
+  const mapper=document.getElementById('import-mapper');
+  mapper.innerHTML='';mapper.style.display='none';
+  _restoreImportMapperHTML();
+  const lh=importHeaders.map(h=>h.toLowerCase());
+  if(lh.some(h=>h.includes('client')||h.includes('invoice'))) setImportType('income');
+  else setImportType('expense');
+  document.getElementById('import-file-name').textContent=`Sheet: ${wb.SheetNames[idx]} (${importRows.length} rows)`;
+  showImportMapper();
+}
+
+function _restoreImportMapperHTML(){
+  const mapper=document.getElementById('import-mapper');
+  mapper.innerHTML=`
+    <div style="font-size:12px;font-weight:500;color:#C8D0E8;margin-bottom:8px" id="import-file-name"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button id="import-type-expense" onclick="setImportType('expense')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer">Expenses</button>
+      <button id="import-type-income" onclick="setImportType('income')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Income / Invoices</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="import-col-map"></div>
+    <div class="note" id="import-preview-note" style="margin-bottom:8px"></div>
+    <div style="overflow-x:auto;margin-bottom:12px">
+      <table id="import-preview-table" style="width:100%;border-collapse:collapse;font-size:11px"></table>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="row" style="gap:8px;align-items:center">
+        <label style="font-size:12px">Default category for unmatched rows:</label>
+        <select id="import-default-cat" style="padding:4px 8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#242D42;color:#E8ECF8">
+          <option value="Miscellaneous">Miscellaneous</option>
+        </select>
+      </div>
+      <button onclick="runImport()" id="import-run-btn" style="padding:7px 20px;border-radius:16px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:12px;font-weight:500;cursor:pointer">Import expenses ✓</button>
+      <button onclick="cancelImport()" style="padding:7px 14px;border-radius:16px;border:0.5px solid #ccc;background:#1C2333;color:#A8B4D0;font-size:12px;cursor:pointer">Cancel</button>
+      <span id="import-status" style="font-size:12px;color:#22D97A"></span>
+    </div>
+  `;
+}
+function setImportType(type){
+  _importType=type;
+  const expBtn=document.getElementById('import-type-expense');
+  const incBtn=document.getElementById('import-type-income');
+  const runBtn=document.getElementById('import-run-btn');
+  if(type==='income'){
+    incBtn.style.border='1px solid var(--blue)';incBtn.style.background='rgba(91,141,239,.15)';incBtn.style.color='var(--blue-bright)';
+    expBtn.style.border='1px solid var(--border)';expBtn.style.background='transparent';expBtn.style.color='var(--muted)';
+    runBtn.textContent='Import income ✓';
+  }else{
+    expBtn.style.border='1px solid var(--blue)';expBtn.style.background='rgba(91,141,239,.15)';expBtn.style.color='var(--blue-bright)';
+    incBtn.style.border='1px solid var(--border)';incBtn.style.background='transparent';incBtn.style.color='var(--muted)';
+    runBtn.textContent='Import expenses ✓';
+  }
+  showImportMapper();
+}
+
 function parseCSV(text){
   const lines=text.trim().split(/\r?\n/);
   if(!lines.length) return{headers:[],rows:[]};
@@ -4768,14 +4845,20 @@ function parseCSV(text){
 }
 
 function guessColIndex(headers,type){
-  const h=headers.map(h=>h.toLowerCase());
-  const patterns={
+  const h=headers.map(x=>x.toLowerCase().trim());
+  const exact={
     date:['date','transaction date','trans date','posted','post date','day'],
-    desc:['description','desc','merchant','payee','memo','name','details','narrative','transaction'],
-    amount:['amount','debit','charge','cost','price','withdrawal','total','cad','usd','value'],
-    cat:['category','type','group','class'],
+    desc:['description','desc','merchant','payee','memo','name','details','narrative','client','transaction'],
+    amount:['amount','total','debit','charge','cost','price','withdrawal','cad','usd','value'],
+    cat:['category','transaction type','type','group','class'],
+    invoice:['invoice number','invoice','invoice #','inv #'],
+    status:['status','paid','state'],
   };
-  for(const p of patterns[type]){
+  for(const p of exact[type]||[]){
+    const idx=h.findIndex(h2=>h2===p);
+    if(idx>=0) return idx;
+  }
+  for(const p of exact[type]||[]){
     const idx=h.findIndex(h2=>h2.includes(p));
     if(idx>=0) return idx;
   }
@@ -4795,8 +4878,12 @@ function handleImportFile(files){
     try{
       if(isExcel){
         if(typeof XLSX==='undefined'){alert('Excel library not loaded yet. Try again in a moment.');return;}
-        const wb=XLSX.read(e.target.result,{type:'array'});
-        const ws=wb.Sheets[wb.SheetNames[0]];
+        _importWorkbook=XLSX.read(e.target.result,{type:'array'});
+        if(_importWorkbook.SheetNames.length>1){
+          _importSheetPicker(_importWorkbook);
+          return;
+        }
+        const ws=_importWorkbook.Sheets[_importWorkbook.SheetNames[0]];
         const data=XLSX.utils.sheet_to_csv(ws);
         const parsed=parseCSV(data);
         importHeaders=parsed.headers; importRows=parsed.rows;
@@ -4804,6 +4891,9 @@ function handleImportFile(files){
         const parsed=parseCSV(e.target.result);
         importHeaders=parsed.headers; importRows=parsed.rows;
       }
+      const lh=importHeaders.map(h=>h.toLowerCase());
+      if(lh.some(h=>h.includes('client')||h.includes('invoice'))) setImportType('income');
+      else setImportType('expense');
       showImportMapper();
     } catch(err){alert('Could not read file: '+err.message);}
   };
@@ -4815,19 +4905,26 @@ function showImportMapper(){
   const mapper=document.getElementById('import-mapper');
   mapper.style.display='block';
 
+  const isIncome=_importType==='income';
   const defCatSel=document.getElementById('import-default-cat');
   if(defCatSel){
-    defCatSel.innerHTML=ALL_CATS.map(c=>`<option value="${c}"${c==='Miscellaneous'?' selected':''}>${c}</option>`).join('');
+    const cats=isIncome?[...new Set([...US_INCOME_CATS,...CA_INCOME_CATS])]:ALL_CATS;
+    const def=isIncome?'Invoice Payment':'Miscellaneous';
+    defCatSel.innerHTML=cats.map(c=>`<option value="${c}"${c===def?' selected':''}>${c}</option>`).join('');
   }
 
   const dateIdx=guessColIndex(importHeaders,'date');
   const descIdx=guessColIndex(importHeaders,'desc');
   const amtIdx=guessColIndex(importHeaders,'amount');
-  const catIdx=guessColIndex(importHeaders,'cat');
+  const catIdx=isIncome?guessColIndex(importHeaders,'status'):guessColIndex(importHeaders,'cat');
+
+  const labels=isIncome
+    ?{dateCol:'Date',descCol:'Client / Description',amtCol:'Amount / Total',catCol:'Category (optional)'}
+    :{dateCol:'Date',descCol:'Description',amtCol:'Amount',catCol:'Category (optional)'};
 
   const makeSelect=(id,selected)=>`
     <div>
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#A8B4D0;margin-bottom:4px">${{dateCol:'Date',descCol:'Description',amtCol:'Amount',catCol:'Category (optional)'}[id]}</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#A8B4D0;margin-bottom:4px">${labels[id]}</div>
       <select id="${id}" onchange="updateImportPreview()" style="width:100%;padding:5px 6px;border:0.5px solid #ccc;border-radius:8px;font-size:11px;background:#242D42;color:#E8ECF8">
         <option value="-1">— skip —</option>
         ${importHeaders.map((h,i)=>`<option value="${i}"${i===selected?' selected':''}>${h||'(col '+(i+1)+')'}</option>`).join('')}
@@ -4901,14 +4998,27 @@ function runImport(){
   const rows=getImportMappedRows();
   if(!rows.length){alert('No valid rows to import.');return;}
   const defaultCat=document.getElementById('import-default-cat').value||'Other';
+  const isIncome=_importType==='income';
   let added=0;
+  const market=document.getElementById(isIncome?'inc-market':'exp-market')?.value||'us';
   rows.forEach(r=>{
-    expenses.push({id:Date.now()+Math.random(),date:r.date,desc:r.desc,cat:r.cat||defaultCat,amount:r.amount});
+    const entry={id:Date.now()+Math.random(),date:r.date,desc:r.desc,cat:r.cat||defaultCat,amount:r.amount,market};
+    if(isIncome){
+      incomeEntries.push(entry);
+    }else{
+      expenses.push(entry);
+    }
     added++;
   });
-  expenses.sort((a,b)=>b.date.localeCompare(a.date));
-  saveExpenses();
-  document.getElementById('import-status').textContent=`✓ ${added} expense${added!==1?'s':''} imported`;
+  if(isIncome){
+    incomeEntries.sort((a,b)=>b.date.localeCompare(a.date));
+    saveIncome();
+  }else{
+    expenses.sort((a,b)=>b.date.localeCompare(a.date));
+    saveExpenses();
+  }
+  const label=isIncome?'income entry':'expense';
+  document.getElementById('import-status').textContent=`✓ ${added} ${label}${added!==1?'s':''} imported`;
   setTimeout(()=>{
     cancelImport();
     renderFinance();
@@ -4916,9 +5026,9 @@ function runImport(){
 }
 
 function cancelImport(){
+  _restoreImportMapperHTML();
   document.getElementById('import-mapper').style.display='none';
   document.getElementById('import-file-input').value='';
-  document.getElementById('import-status').textContent='';
-  importRows=[]; importHeaders=[];
+  importRows=[]; importHeaders=[]; _importWorkbook=null;
 }
 
