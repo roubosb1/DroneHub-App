@@ -4155,39 +4155,6 @@ function setInitialStatus(s){
 
 let incomeEntries=JSON.parse(localStorage.getItem('dronehub_income')||'[]');
 
-async function import2025Data(){
-  const btn=document.getElementById('import-2025-btn');
-  if(btn){btn.disabled=true;btn.textContent='Importing…';}
-  try{
-    const [expRes,incRes]=await Promise.all([
-      fetch('/data/expenses_2025.json'),
-      fetch('/data/income_2025.json')
-    ]);
-    if(!expRes.ok||!incRes.ok) throw new Error('Could not load import files');
-    const expData=await expRes.json();
-    const incData=await incRes.json();
-    const existingExpIds=new Set(expenses.map(e=>e.id));
-    const existingIncIds=new Set(incomeEntries.map(e=>e.id));
-    let addedExp=0, addedInc=0;
-    expData.forEach(e=>{
-      if(!existingExpIds.has(e.id)){expenses.push(e);addedExp++;}
-    });
-    incData.forEach(e=>{
-      if(!existingIncIds.has(e.id)){incomeEntries.push(e);addedInc++;}
-    });
-    expenses.sort((a,b)=>b.date.localeCompare(a.date));
-    incomeEntries.sort((a,b)=>b.date.localeCompare(a.date));
-    saveExpenses();
-    saveIncome();
-    if(typeof renderFinance==='function') renderFinance();
-    try{if(typeof showDhToast==='function') showDhToast('2025 data imported',addedExp+' expenses + '+addedInc+' income entries loaded.','check','var(--green)');}catch(te){}
-    if(btn){btn.textContent='Imported ✓';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';}
-  }catch(e){
-    console.error('[import2025]',e);
-    try{if(typeof showDhToast==='function') showDhToast('Import failed',e.message,'alert-triangle','var(--red)');}catch(te){}
-    if(btn){btn.disabled=false;btn.textContent='Import 2025 Data';}
-  }
-}
 
 function saveIncome(){
   try{localStorage.setItem('dronehub_income',JSON.stringify(incomeEntries));}catch(e){}
@@ -4282,6 +4249,15 @@ async function receiptStorageCall(action,receiptId,image){
   });
   if(changed){try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(ex){}}
 })();
+function clearAllExpensesAndIncome(){
+  if(!confirm('Clear ALL expenses and income data? Payroll will be kept.')) return;
+  expenses=[];incomeEntries=[];
+  saveExpenses();saveIncome();
+  if(typeof renderFinance==='function') renderFinance();
+  if(typeof renderExpenseList==='function') renderExpenseList();
+  if(typeof renderIncomeList==='function') renderIncomeList();
+  try{showDhToast('Data cleared','All expenses and income removed. Payroll kept.','check','var(--green)');}catch(e){}
+}
 function saveExpenses(){
   try{localStorage.setItem('dronehub_expenses',JSON.stringify(expenses));}catch(e){}
   if(_fbToken()){
