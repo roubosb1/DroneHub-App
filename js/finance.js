@@ -5000,7 +5000,7 @@ function runImport(){
   const defaultCat=document.getElementById('import-default-cat').value||'Other';
   const isIncome=_importType==='income';
   let added=0;
-  const market=document.getElementById(isIncome?'inc-market':'exp-market')?.value||'us';
+  const market=document.getElementById('import-market')?.value||'us';
   rows.forEach(r=>{
     const entry={id:Date.now()+Math.random(),date:r.date,desc:r.desc,cat:r.cat||defaultCat,amount:r.amount,market};
     if(isIncome){
