@@ -4620,7 +4620,7 @@ function renderFinance(){
     'Internet/Phone':'#06B6D4','Phone':'#06B6D4',
     // Financial transfers
     'Account Transfer':'#94A3B8','CC CashBack':'#14B8A6','CC Payment':'#94A3B8','Cheque Deposit':'#94A3B8','Payments and Credits':'#94A3B8',
-    'Zelle Payment':'#7C3AED','DroneHub Canada':'#5B7FDB','Wise':'#64748B',
+    'Zelle Payment':'#7C3AED','DroneHub Canada':'#5B7FDB','Wise':'#64748B','Wise Fees':'#64748B',
     'Credited':'#14B8A6','Accounting Fees':'#475569',
     // Income
     'Invoice Payment':'#1D9E75','Zelle Debit':'#1D9E75','Zelle debit':'#1D9E75',
@@ -4683,12 +4683,12 @@ function renderFinance(){
 let importRows=[], importHeaders=[];
 
 // ── Market-specific categories ──────────────────────────────────────────────
-const US_EXPENSE_CATS=['Accounting Fees','Bank Fee','Business Insurance','Car Maintenance','Contract','Credited','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom Supplies','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursement','Rent','Repair','Software Subscription','Supplies','Travel','Wise','Zelle Payment'];
-const US_TRANSFER_CATS=['Account Transfer','CC CashBack','CC Payment','Cheque Deposit','Payments and Credits'];
-const US_INCOME_CATS=['Invoice Payment','Misc. Debit','Zelle Debit'];
+const US_EXPENSE_CATS=['Bank Fee','Business Insurance','Car Maintenance','Contract','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursements','Rent','Repair','Software Subscription','Supplies','Travel','Wise Fees','Zelle Payment'];
+const US_TRANSFER_CATS=['Account Transfer','CC Payment','Cheque Deposit'];
+const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
 
-const CA_EXPENSE_CATS=['Accounting','Accounting Fees','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
-const CA_INCOME_CATS=['Invoice Payment','Transfer From US to Canada'];
+const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
+const CA_INCOME_CATS=['Transfer From US to Canada'];
 
 const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
 
@@ -4734,8 +4734,13 @@ const CAT_KEYWORDS={
   Parking:['parking','meter','lot'],
   Contract:['contractor','freelance','subcontract','consultant'],
   Rent:['rent','lease','office space'],
-  'Bank Fee':['bank fee','service charge','monthly fee','nsf','overdraft','wire fee'],
+  'Bank Fee':['bank fee','service charge','monthly fee','nsf','overdraft'],
   Accounting:['accounting','bookkeeping','accountant','tax prep'],
+  'Wise Fees':['wise fee','wise transfer fee'],
+  'Reimbursements':['reimbursement','reimburse'],
+  'Zelle Payment':['zelle'],
+  'DroneHub Canada':['dronehub canada'],
+  'Car Maintenance':['car wash','car maintenance','oil change','tire'],
 };
 
 function guessCategory(desc){
