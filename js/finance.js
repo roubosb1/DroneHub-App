@@ -4428,8 +4428,9 @@ function addExpense(){
   const cat=document.getElementById('exp-cat').value;
   const amount=parseFloat(document.getElementById('exp-amount').value);
   const expMarket=document.getElementById('exp-market')?.value||'canada';
+  const expType=document.getElementById('exp-type')?.value||'expense';
   if(!date||!desc||!amount||amount<=0){alert('Please fill in all expense fields.');return;}
-  expenses.push({id:Date.now(),date,desc,cat,amount,market:expMarket});
+  expenses.push({id:Date.now(),date,desc,cat,amount,market:expMarket,type:expType});
   expenses.sort((a,b)=>b.date.localeCompare(a.date));
   saveExpenses();
   document.getElementById('exp-desc').value='';
@@ -4446,8 +4447,10 @@ function deleteExpense(id){
 function renderExpenseList(){
   const filterCat=document.getElementById('exp-filter-cat')?.value||'';
   const filterYear=document.getElementById('exp-filter-year')?.value||'';
+  const filterType=document.getElementById('exp-filter-type')?.value||'';
   const list=document.getElementById('expense-list');
   if(!list) return;
+  const _allTransferCats=new Set([...US_TRANSFER_CATS]);
   const yearSel=document.getElementById('exp-filter-year');
   if(yearSel){
     const years=[...new Set(expenses.filter(e=>e.date).map(e=>e.date.slice(0,4)))].sort().reverse();
@@ -4465,6 +4468,11 @@ function renderExpenseList(){
   const filtered=expenses.filter(e=>{
     if(filterCat&&e.cat!==filterCat) return false;
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
+    if(filterType){
+      const isTransfer=e.type==='transfer'||_allTransferCats.has(e.cat);
+      if(filterType==='transfer'&&!isTransfer) return false;
+      if(filterType==='expense'&&isTransfer) return false;
+    }
     return true;
   });
   if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found.</div>';return;}
@@ -4690,20 +4698,25 @@ const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
 const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
 const CA_INCOME_CATS=['Transfer From US to Canada'];
 
+const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sort();
 const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
 
 function _getExpenseCats(market){
-  return market==='usa'?[...US_EXPENSE_CATS,...US_TRANSFER_CATS]:CA_EXPENSE_CATS;
+  return market==='usa'?US_EXPENSE_CATS:CA_EXPENSE_CATS;
+}
+function _getTransferCats(market){
+  return market==='usa'?US_TRANSFER_CATS:[];
 }
 function _getIncomeCats(market){
   return market==='usa'?US_INCOME_CATS:CA_INCOME_CATS;
 }
 function _updateExpCatDropdown(){
   const market=document.getElementById('exp-market')?.value||'canada';
+  const type=document.getElementById('exp-type')?.value||'expense';
   const sel=document.getElementById('exp-cat');
   if(!sel) return;
   const prev=sel.value;
-  const cats=_getExpenseCats(market);
+  const cats=type==='transfer'?_getTransferCats(market):_getExpenseCats(market);
   sel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
   if(cats.includes(prev)) sel.value=prev;
 }
@@ -4791,6 +4804,7 @@ function _restoreImportMapperHTML(){
     <div style="font-size:12px;font-weight:500;color:#C8D0E8;margin-bottom:8px" id="import-file-name"></div>
     <div style="display:flex;gap:6px;margin-bottom:10px">
       <button id="import-type-expense" onclick="setImportType('expense')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer">Expenses</button>
+      <button id="import-type-transfer" onclick="setImportType('transfer')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Bank Transfers</button>
       <button id="import-type-income" onclick="setImportType('income')" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Income / Invoices</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="import-col-map"></div>
@@ -4813,18 +4827,19 @@ function _restoreImportMapperHTML(){
 }
 function setImportType(type){
   _importType=type;
-  const expBtn=document.getElementById('import-type-expense');
-  const incBtn=document.getElementById('import-type-income');
+  const btns={expense:'import-type-expense',transfer:'import-type-transfer',income:'import-type-income'};
   const runBtn=document.getElementById('import-run-btn');
-  if(type==='income'){
-    incBtn.style.border='1px solid var(--blue)';incBtn.style.background='rgba(91,141,239,.15)';incBtn.style.color='var(--blue-bright)';
-    expBtn.style.border='1px solid var(--border)';expBtn.style.background='transparent';expBtn.style.color='var(--muted)';
-    runBtn.textContent='Import income ✓';
-  }else{
-    expBtn.style.border='1px solid var(--blue)';expBtn.style.background='rgba(91,141,239,.15)';expBtn.style.color='var(--blue-bright)';
-    incBtn.style.border='1px solid var(--border)';incBtn.style.background='transparent';incBtn.style.color='var(--muted)';
-    runBtn.textContent='Import expenses ✓';
-  }
+  const labels={expense:'Import expenses ✓',transfer:'Import bank transfers ✓',income:'Import income ✓'};
+  runBtn.textContent=labels[type]||labels.expense;
+  Object.entries(btns).forEach(([t,id])=>{
+    const btn=document.getElementById(id);
+    if(!btn) return;
+    if(t===type){
+      btn.style.border='1px solid var(--blue)';btn.style.background='rgba(91,141,239,.15)';btn.style.color='var(--blue-bright)';
+    }else{
+      btn.style.border='1px solid var(--border)';btn.style.background='transparent';btn.style.color='var(--muted)';
+    }
+  });
   showImportMapper();
 }
 
@@ -4911,10 +4926,14 @@ function showImportMapper(){
   mapper.style.display='block';
 
   const isIncome=_importType==='income';
+  const isTransfer=_importType==='transfer';
   const defCatSel=document.getElementById('import-default-cat');
   if(defCatSel){
-    const cats=isIncome?[...new Set([...US_INCOME_CATS,...CA_INCOME_CATS])]:ALL_CATS;
-    const def=isIncome?'Invoice Payment':'Miscellaneous';
+    const market=document.getElementById('import-market')?.value||'us';
+    let cats,def;
+    if(isIncome){ cats=[...new Set([...US_INCOME_CATS,...CA_INCOME_CATS])]; def='Invoice Payment'; }
+    else if(isTransfer){ cats=_getTransferCats(market==='canada'?'canada':'usa'); def='Account Transfer'; }
+    else{ cats=ALL_EXPENSE_CATS; def='Miscellaneous'; }
     defCatSel.innerHTML=cats.map(c=>`<option value="${c}"${c===def?' selected':''}>${c}</option>`).join('');
   }
 
@@ -5004,10 +5023,12 @@ function runImport(){
   if(!rows.length){alert('No valid rows to import.');return;}
   const defaultCat=document.getElementById('import-default-cat').value||'Other';
   const isIncome=_importType==='income';
+  const isTransfer=_importType==='transfer';
   let added=0;
   const market=document.getElementById('import-market')?.value||'us';
   rows.forEach(r=>{
     const entry={id:Date.now()+Math.random(),date:r.date,desc:r.desc,cat:r.cat||defaultCat,amount:r.amount,market};
+    if(isTransfer) entry.type='transfer';
     if(isIncome){
       incomeEntries.push(entry);
     }else{
