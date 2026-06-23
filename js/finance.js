@@ -1,3 +1,13 @@
+// ── Market-specific categories ──────────────────────────────────────────────
+const US_EXPENSE_CATS=['Bank Fee','Business Insurance','Car Maintenance','Contract','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursements','Rent','Repair','Software Subscription','Supplies','Travel','Wise Fees','Zelle Payment'];
+const US_TRANSFER_CATS=['Account Transfer','CC Payment','Cheque Deposit'];
+const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
+const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS]);
+const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
+const CA_INCOME_CATS=['Transfer From US to Canada'];
+const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sort();
+const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
+
 // Overhead = 50% total: 21% profit + 5% CC/non-payment + 7% sales + 17% admin
 const MARGIN=0.50,DRIVE_RATE=0.75,SHOOTER_DRIVE_RATE=0.73;
 const ADMIN_RATE=0.17; // 17% admin — part of the 50% overhead, shown as a breakdown line
@@ -4710,18 +4720,6 @@ function renderFinance(){
 
 // ─── BULK EXPENSE IMPORT ─────────────────────────────────────────────────────
 let importRows=[], importHeaders=[];
-
-// ── Market-specific categories ──────────────────────────────────────────────
-const US_EXPENSE_CATS=['Bank Fee','Business Insurance','Car Maintenance','Contract','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursements','Rent','Repair','Software Subscription','Supplies','Travel','Wise Fees','Zelle Payment'];
-const US_TRANSFER_CATS=['Account Transfer','CC Payment','Cheque Deposit'];
-const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
-const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS]);
-
-const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
-const CA_INCOME_CATS=['Transfer From US to Canada'];
-
-const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sort();
-const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
 
 function _getExpenseCats(market){
   return market==='usa'?[...US_EXPENSE_CATS,...US_TRANSFER_CATS]:CA_EXPENSE_CATS;
