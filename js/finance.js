@@ -5057,6 +5057,9 @@ function runImport(){
   }else{
     expenses.sort((a,b)=>b.date.localeCompare(a.date));
     saveExpenses();
+    const nonExp=expenses.filter(e=>_NON_EXPENSE_CATS.has(e.cat));
+    const realExp=expenses.filter(e=>!_NON_EXPENSE_CATS.has(e.cat));
+    console.log('[Import] Total:',expenses.length,'Expenses:',realExp.length,'Filtered out:',nonExp.length,'Filtered cats:',[...new Set(nonExp.map(e=>e.cat))]);
   }
   const label=isIncome?'income entry':'expense';
   document.getElementById('import-status').textContent=`✓ ${added} ${label}${added!==1?'s':''} imported`;
