@@ -4449,7 +4449,6 @@ function renderExpenseList(){
   const filterYear=document.getElementById('exp-filter-year')?.value||'';
   const list=document.getElementById('expense-list');
   if(!list) return;
-  const _allTransferCats=new Set([...US_TRANSFER_CATS]);
   const yearSel=document.getElementById('exp-filter-year');
   if(yearSel){
     const years=[...new Set(expenses.filter(e=>e.date).map(e=>e.date.slice(0,4)))].sort().reverse();
@@ -4465,7 +4464,7 @@ function renderExpenseList(){
     if(prevCat) catFilterSel.value=prevCat;
   }
   const filtered=expenses.filter(e=>{
-    if(_allTransferCats.has(e.cat)) return false;
+    if(_NON_EXPENSE_CATS.has(e.cat)) return false;
     if(filterCat&&e.cat!==filterCat) return false;
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
     return true;
@@ -4506,8 +4505,8 @@ function renderTransferList(){
   const list=document.getElementById('transfer-list');
   const totalEl=document.getElementById('transfer-total');
   if(!list) return;
-  const _allTransferCats=new Set([...US_TRANSFER_CATS]);
-  const transfers=expenses.filter(e=>_allTransferCats.has(e.cat));
+  const _transferCats=new Set([...US_TRANSFER_CATS]);
+  const transfers=expenses.filter(e=>_transferCats.has(e.cat));
   if(!transfers.length){
     list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No bank transfers found.</div>';
     if(totalEl) totalEl.textContent='';
@@ -4672,7 +4671,7 @@ function renderFinance(){
   }
 
   const catTotals={};
-  expenses.filter(e=>e.date&&e.date.startsWith(year)).forEach(e=>{
+  expenses.filter(e=>e.date&&e.date.startsWith(year)&&!_NON_EXPENSE_CATS.has(e.cat)).forEach(e=>{
     catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;
   });
   const catKeys=Object.keys(catTotals);
@@ -4716,6 +4715,7 @@ let importRows=[], importHeaders=[];
 const US_EXPENSE_CATS=['Bank Fee','Business Insurance','Car Maintenance','Contract','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursements','Rent','Repair','Software Subscription','Supplies','Travel','Wise Fees','Zelle Payment'];
 const US_TRANSFER_CATS=['Account Transfer','CC Payment','Cheque Deposit'];
 const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
+const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS]);
 
 const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
 const CA_INCOME_CATS=['Transfer From US to Canada'];
