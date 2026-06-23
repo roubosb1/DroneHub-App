@@ -4479,7 +4479,8 @@ function renderExpenseList(){
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
     return true;
   });
-  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found.</div>';return;}
+  console.log('[renderExpenseList] total expenses:',expenses.length,'after filter:',filtered.length,'cats in data:',[...new Set(expenses.map(e=>e.cat))]);
+  if(!filtered.length){list.innerHTML=`<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found. (${expenses.length} total entries, all filtered out)</div>`;return;}
   const total=filtered.reduce((s,e)=>s+Number(e.amount||0),0);
   list.innerHTML=filtered.map(e=>{
     const flag=e.market==='usa'?'🇺🇸':'🇨🇦';
