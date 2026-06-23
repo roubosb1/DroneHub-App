@@ -88,7 +88,7 @@ function setFinanceSubTab(sub){
   try{localStorage.setItem('dronehub_finance_sub',sub);localStorage.setItem('dronehub_active_pane',sub==='overview'?'finance':sub==='payroll'?'payroll':'finance');}catch(e){}
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
-  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
+  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderTransferList && renderTransferList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
 }
 
@@ -4255,6 +4255,7 @@ function clearAllExpensesAndIncome(){
   saveExpenses();saveIncome();
   if(typeof renderFinance==='function') renderFinance();
   if(typeof renderExpenseList==='function') renderExpenseList();
+  if(typeof renderTransferList==='function') renderTransferList();
   if(typeof renderIncomeList==='function') renderIncomeList();
   try{showDhToast('Data cleared','All expenses and income removed. Payroll kept.','check','var(--green)');}catch(e){}
 }
@@ -4446,7 +4447,6 @@ function deleteExpense(id){
 function renderExpenseList(){
   const filterCat=document.getElementById('exp-filter-cat')?.value||'';
   const filterYear=document.getElementById('exp-filter-year')?.value||'';
-  const filterType=document.getElementById('exp-filter-type')?.value||'';
   const list=document.getElementById('expense-list');
   if(!list) return;
   const _allTransferCats=new Set([...US_TRANSFER_CATS]);
@@ -4465,13 +4465,9 @@ function renderExpenseList(){
     if(prevCat) catFilterSel.value=prevCat;
   }
   const filtered=expenses.filter(e=>{
+    if(_allTransferCats.has(e.cat)) return false;
     if(filterCat&&e.cat!==filterCat) return false;
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
-    if(filterType){
-      const isTransfer=e.type==='transfer'||_allTransferCats.has(e.cat);
-      if(filterType==='transfer'&&!isTransfer) return false;
-      if(filterType==='expense'&&isTransfer) return false;
-    }
     return true;
   });
   if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found.</div>';return;}
@@ -4504,6 +4500,33 @@ function viewReceipt(expId){
       } else { showDhToast('No receipt','Receipt image not found.','⚠️','var(--orange)'); }
     }).catch(()=>showDhToast('Error','Could not load receipt.','⚠️','var(--red)'));
   }
+}
+
+function renderTransferList(){
+  const list=document.getElementById('transfer-list');
+  const totalEl=document.getElementById('transfer-total');
+  if(!list) return;
+  const _allTransferCats=new Set([...US_TRANSFER_CATS]);
+  const transfers=expenses.filter(e=>_allTransferCats.has(e.cat));
+  if(!transfers.length){
+    list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No bank transfers found.</div>';
+    if(totalEl) totalEl.textContent='';
+    return;
+  }
+  const total=transfers.reduce((s,e)=>s+Number(e.amount||0),0);
+  if(totalEl) totalEl.textContent=`$${total.toFixed(2)} (${transfers.length})`;
+  list.innerHTML=transfers.map(e=>{
+    const flag=e.market==='usa'?'🇺🇸':'🇨🇦';
+    return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+      <span style="font-size:11px;flex-shrink:0">${flag}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.desc}</div>
+        <div style="font-size:10px;color:var(--muted)">${e.date} · <span style="color:var(--blue)">${e.cat}</span></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap">$${Number(e.amount).toFixed(2)}</div>
+      <button onclick="deleteExpense(${e.id})" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px;line-height:1" title="Delete">×</button>
+    </div>`;
+  }).join('');
 }
 
 function renderFinance(){

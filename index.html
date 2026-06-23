@@ -1792,11 +1792,6 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
         <div class="section-label" style="margin-bottom:0">Expenses</div>
         <div style="display:flex;gap:6px;align-items:center">
-          <select id="exp-filter-type" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
-            <option value="">All types</option>
-            <option value="expense">Expenses</option>
-            <option value="transfer">Bank Transfers</option>
-          </select>
           <select id="exp-filter-year" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
             <option value="">All years</option>
           </select>
@@ -1806,6 +1801,15 @@
         </div>
       </div>
       <div id="expense-list"></div>
+    </div>
+
+    <!-- Bank Transfers -->
+    <div class="card" style="max-height:300px;overflow-y:auto;margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="section-label" style="margin-bottom:0">Bank Transfers</div>
+        <div id="transfer-total" style="font-size:12px;font-weight:600;color:var(--muted)"></div>
+      </div>
+      <div id="transfer-list"></div>
     </div>
 
   </div>
