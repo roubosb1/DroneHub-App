@@ -2,7 +2,9 @@
 const US_EXPENSE_CATS=['Bank Fee','Business Insurance','Car Maintenance','Contract','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursements','Rent','Repair','Software Subscription','Supplies','Travel','Wise Fees','Zelle Payment'];
 const US_TRANSFER_CATS=['Account Transfer','CC Payment','Cheque Deposit'];
 const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
-const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS]);
+const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS].map(c=>c.toLowerCase()));
+function _isNonExpense(cat){return _NON_EXPENSE_CATS.has((cat||'').toLowerCase());}
+function _isTransfer(cat){return US_TRANSFER_CATS.some(t=>t.toLowerCase()===(cat||'').toLowerCase());}
 const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
 const CA_INCOME_CATS=['Transfer From US to Canada'];
 const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sort();
@@ -4474,7 +4476,7 @@ function renderExpenseList(){
     if(prevCat) catFilterSel.value=prevCat;
   }
   const filtered=expenses.filter(e=>{
-    if(_NON_EXPENSE_CATS.has(e.cat)) return false;
+    if(_isNonExpense(e.cat)) return false;
     if(filterCat&&e.cat!==filterCat) return false;
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
     return true;
@@ -4516,8 +4518,7 @@ function renderTransferList(){
   const list=document.getElementById('transfer-list');
   const totalEl=document.getElementById('transfer-total');
   if(!list) return;
-  const _transferCats=new Set([...US_TRANSFER_CATS]);
-  const transfers=expenses.filter(e=>_transferCats.has(e.cat));
+  const transfers=expenses.filter(e=>_isTransfer(e.cat));
   if(!transfers.length){
     list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No bank transfers found.</div>';
     if(totalEl) totalEl.textContent='';
@@ -4682,7 +4683,7 @@ function renderFinance(){
   }
 
   const catTotals={};
-  expenses.filter(e=>e.date&&e.date.startsWith(year)&&!_NON_EXPENSE_CATS.has(e.cat)).forEach(e=>{
+  expenses.filter(e=>e.date&&e.date.startsWith(year)&&!_isNonExpense(e.cat)).forEach(e=>{
     catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;
   });
   const catKeys=Object.keys(catTotals);
@@ -5068,8 +5069,8 @@ function runImport(){
   }else{
     expenses.sort((a,b)=>b.date.localeCompare(a.date));
     saveExpenses();
-    const nonExp=expenses.filter(e=>_NON_EXPENSE_CATS.has(e.cat));
-    const realExp=expenses.filter(e=>!_NON_EXPENSE_CATS.has(e.cat));
+    const nonExp=expenses.filter(e=>_isNonExpense(e.cat));
+    const realExp=expenses.filter(e=>!_isNonExpense(e.cat));
     console.log('[Import] Total:',expenses.length,'Expenses:',realExp.length,'Filtered out:',nonExp.length,'Filtered cats:',[...new Set(nonExp.map(e=>e.cat))]);
   }
   const label=isIncome?'income entry':'expense';
