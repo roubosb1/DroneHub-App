@@ -4877,8 +4877,18 @@ function parseCSV(text){
     cols.push(cur.trim());
     return cols;
   };
-  const headers=parseRow(lines[0]);
-  const rows=lines.slice(1).map(l=>parseRow(l)).filter(r=>r.some(c=>c));
+  const headerKeywords=['date','amount','description','transaction','total','category','type','client','invoice','status','debit','credit','merchant','memo','cost'];
+  let headerIdx=0;
+  for(let i=0;i<Math.min(lines.length,5);i++){
+    const cols=parseRow(lines[i]);
+    const lower=cols.map(c=>c.toLowerCase());
+    if(lower.filter(c=>headerKeywords.some(k=>c.includes(k))).length>=2){
+      headerIdx=i;
+      break;
+    }
+  }
+  const headers=parseRow(lines[headerIdx]);
+  const rows=lines.slice(headerIdx+1).map(l=>parseRow(l)).filter(r=>r.some(c=>c));
   return{headers,rows};
 }
 
