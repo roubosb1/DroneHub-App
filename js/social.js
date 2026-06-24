@@ -220,9 +220,10 @@ function openVdProfile(jobId, viewerMode){
     vdRenderProfile(vd);
   }
 
-  // If review links exist and no draft upload, load the first review link directly
-  if(reviewLinks.length && (!vd || !vd.drafts?.length)){
-    vdLoadReviewLink(reviewLinks[0]);
+  // If review links exist, always load the first one (drafts with videoUrl take priority inside vdRenderProfile)
+  if(reviewLinks.length){
+    const activeDraft = vd?.drafts?.find(d=>d.id===_vdActiveDraftId);
+    if(!activeDraft?.videoUrl) vdLoadReviewLink(reviewLinks[0]);
   }
 
   // Show/hide team vs client sections
@@ -232,7 +233,11 @@ function openVdProfile(jobId, viewerMode){
   if(approvalSec) approvalSec.style.display = _vdViewerMode==='client' ? '' : 'none';
 
   modal.style.display = 'flex';
-  videoDraftsSyncFirebase().then(()=>{ const v=videoDraftForJob(jobId); if(v) vdRenderProfile(v); });
+  videoDraftsSyncFirebase().then(()=>{
+    const v=videoDraftForJob(jobId);
+    if(v) vdRenderProfile(v);
+    else if(reviewLinks.length) vdLoadReviewLink(reviewLinks[0]);
+  });
 }
 
 // Render the video tab bar (one tab per review link)
@@ -357,7 +362,7 @@ function vdRenderProfile(vd){
     if(activeDraft.videoUrl !== _vdCurrentUrl){
       vdLoadVideo(activeDraft.videoUrl);
     }
-  } else {
+  } else if(!_vdCurrentUrl) {
     document.getElementById('vd-no-video').style.display = 'flex';
     document.getElementById('vd-iframe').style.display   = 'none';
     document.getElementById('vd-video-el').style.display = 'none';
