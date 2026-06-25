@@ -4552,9 +4552,9 @@ function renderFinance(){
   const marketJobs = savedJobs.filter(j=>
     isUSFinance ? (j.market && j.market!=='canada') : (!j.market || j.market==='canada')
   );
-  // Filter expenses by market (expenses tagged with market field, or default to canada)
+  // Filter expenses by market, excluding transfers and income categories
   const marketExpenses = expenses.filter(e=>
-    isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada')
+    !_isNonExpense(e.cat) && (isUSFinance ? (e.market && e.market!=='canada') : (!e.market || e.market==='canada'))
   );
   const currencyLabel = isUSFinance ? 'USD' : 'CAD';
   const marketIncome=incomeEntries.filter(e=>
