@@ -5,6 +5,9 @@ const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
 const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS].map(c=>c.toLowerCase()));
 function _isNonExpense(cat){return _NON_EXPENSE_CATS.has((cat||'').toLowerCase());}
 function _isTransfer(cat){return US_TRANSFER_CATS.some(t=>t.toLowerCase()===(cat||'').toLowerCase());}
+function _isIncomeCat(cat){return [...US_INCOME_CATS,...CA_INCOME_CATS].some(c=>c.toLowerCase()===(cat||'').toLowerCase());}
+const _ALL_KNOWN_CATS=[...US_EXPENSE_CATS,...US_TRANSFER_CATS,...US_INCOME_CATS,...CA_EXPENSE_CATS,...CA_INCOME_CATS];
+function _normalizeCat(raw){const match=_ALL_KNOWN_CATS.find(c=>c.toLowerCase()===(raw||'').toLowerCase());return match||raw;}
 const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
 const CA_INCOME_CATS=['Transfer From US to Canada'];
 const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sort();
@@ -4470,7 +4473,7 @@ function renderExpenseList(){
   }
   const catFilterSel=document.getElementById('exp-filter-cat');
   if(catFilterSel){
-    const usedCats=[...new Set(expenses.map(e=>e.cat).filter(Boolean))].sort();
+    const usedCats=[...new Set(expenses.map(e=>e.cat).filter(c=>c&&!_isNonExpense(c)))].sort();
     const prevCat=catFilterSel.value;
     catFilterSel.innerHTML='<option value="">All categories</option>'+usedCats.map(c=>`<option value="${c}"${c===prevCat?' selected':''}>${c}</option>`).join('');
     if(prevCat) catFilterSel.value=prevCat;
@@ -4481,8 +4484,7 @@ function renderExpenseList(){
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
     return true;
   });
-  console.log('[renderExpenseList] total expenses:',expenses.length,'after filter:',filtered.length,'cats in data:',[...new Set(expenses.map(e=>e.cat))]);
-  if(!filtered.length){list.innerHTML=`<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found. (${expenses.length} total entries, all filtered out)</div>`;return;}
+  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found.</div>';return;}
   const total=filtered.reduce((s,e)=>s+Number(e.amount||0),0);
   list.innerHTML=filtered.map(e=>{
     const flag=e.market==='usa'?'🇺🇸':'🇨🇦';
@@ -5024,7 +5026,7 @@ function getImportMappedRows(){
     date:di>=0?parseImportDate(r[di]):'',
     desc:ni>=0?(r[ni]||'').trim():'',
     amount:ai>=0?parseImportAmount(r[ai]):0,
-    cat:ci>=0&&r[ci]?r[ci].trim():guessCategory(ni>=0?r[ni]||'':''),
+    cat:ci>=0&&r[ci]?_normalizeCat(r[ci].trim()):guessCategory(ni>=0?r[ni]||'':''),
   })).filter(r=>r.amount>0&&r.date);
 }
 
@@ -5069,9 +5071,6 @@ function runImport(){
   }else{
     expenses.sort((a,b)=>b.date.localeCompare(a.date));
     saveExpenses();
-    const nonExp=expenses.filter(e=>_isNonExpense(e.cat));
-    const realExp=expenses.filter(e=>!_isNonExpense(e.cat));
-    console.log('[Import] Total:',expenses.length,'Expenses:',realExp.length,'Filtered out:',nonExp.length,'Filtered cats:',[...new Set(nonExp.map(e=>e.cat))]);
   }
   const label=isIncome?'income entry':'expense';
   document.getElementById('import-status').textContent=`✓ ${added} ${label}${added!==1?'s':''} imported`;
