@@ -2,14 +2,14 @@
 const US_EXPENSE_CATS=['Bank Fee','Business Insurance','Car Maintenance','Contract','DroneHub Canada','Equipment','Fuel/EV','Gift','Golf','Meals & Entertainment','Miscellaneous','Office/Bedroom','Parking','Payroll','Payroll Fee','Payroll Tax','Personal','Reimbursements','Rent','Repair','Software Subscription','Supplies','Travel','Wise Fees','Zelle Payment'];
 const US_TRANSFER_CATS=['Account Transfer','CC Payment','Cheque Deposit'];
 const US_INCOME_CATS=['Invoice Payment','Miscellaneous Debit','Zelle Debit'];
+const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
+const CA_INCOME_CATS=['Transfer From US to Canada'];
 const _NON_EXPENSE_CATS=new Set([...US_TRANSFER_CATS,...US_INCOME_CATS].map(c=>c.toLowerCase()));
 function _isNonExpense(cat){return _NON_EXPENSE_CATS.has((cat||'').toLowerCase());}
 function _isTransfer(cat){return US_TRANSFER_CATS.some(t=>t.toLowerCase()===(cat||'').toLowerCase());}
 function _isIncomeCat(cat){return [...US_INCOME_CATS,...CA_INCOME_CATS].some(c=>c.toLowerCase()===(cat||'').toLowerCase());}
 const _ALL_KNOWN_CATS=[...US_EXPENSE_CATS,...US_TRANSFER_CATS,...US_INCOME_CATS,...CA_EXPENSE_CATS,...CA_INCOME_CATS];
 function _normalizeCat(raw){const match=_ALL_KNOWN_CATS.find(c=>c.toLowerCase()===(raw||'').toLowerCase());return match||raw;}
-const CA_EXPENSE_CATS=['Accounting','Advertisement','Auto Loan','Bank Fee','Contract','Equipment Lease','Equipment Purchase','Equipment Repair','Fuel/EV','Gift','Golf','Internet/Phone','Meals & Entertainment','Miscellaneous','Payroll Tax','Personal','Rent','Student Loan','Subscriptions','Supplies','Travel','Vehicle Insurance','Vehicle Maintenance'];
-const CA_INCOME_CATS=['Transfer From US to Canada'];
 const ALL_EXPENSE_CATS=[...new Set([...US_EXPENSE_CATS,...CA_EXPENSE_CATS])].sort();
 const ALL_CATS=[...new Set([...US_EXPENSE_CATS,...US_TRANSFER_CATS,...CA_EXPENSE_CATS])].sort();
 
