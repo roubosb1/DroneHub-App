@@ -103,7 +103,7 @@ function setFinanceSubTab(sub){
   try{localStorage.setItem('dronehub_finance_sub',sub);localStorage.setItem('dronehub_active_pane',sub==='overview'?'finance':sub==='payroll'?'payroll':'finance');}catch(e){}
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
-  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderTransferList && renderTransferList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
+  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderTransferList && renderTransferList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); plaidLoadItems && plaidLoadItems(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
   if(sub === 'loans'){ renderLoans(); }
 }
@@ -5289,5 +5289,143 @@ function renderLoans(){
       ${loan.notes?`<div style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic">${loan.notes}</div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── PLAID BANK CONNECTION ───────────────────────────────────────────────────
+async function plaidConnect(country) {
+  try {
+    const resp = await fetch(_PROXY.replace('firebase-proxy','plaid-link'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_dhToken},
+      body: JSON.stringify({ action:'create_link_token', userId: ORG_ID, countryCodes: country==='CA'?['CA']:['US'] })
+    });
+    const data = await resp.json();
+    if(!data.link_token){ showDhToast('Failed to start bank connection','error'); return; }
+    const handler = Plaid.create({
+      token: data.link_token,
+      onSuccess: async (publicToken, metadata) => {
+        const label = metadata.institution?.name || (country+' Bank');
+        const exResp = await fetch(_PROXY.replace('firebase-proxy','plaid-link'), {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+_dhToken},
+          body: JSON.stringify({ action:'exchange_token', publicToken, orgId:ORG_ID, label, country })
+        });
+        const exData = await exResp.json();
+        if(exData.success){
+          showDhToast(label+' connected!','success');
+          plaidLoadItems();
+        } else {
+          showDhToast('Failed to save connection','error');
+        }
+      },
+      onExit: (err) => { if(err) console.warn('Plaid Link exit:', err); },
+    });
+    handler.open();
+  } catch(e) {
+    console.error('plaidConnect error:', e);
+    showDhToast('Bank connection error','error');
+  }
+}
+
+async function plaidLoadItems() {
+  const listEl = document.getElementById('plaid-connected-list');
+  const syncArea = document.getElementById('plaid-sync-area');
+  if(!listEl) return;
+  try {
+    const resp = await fetch(_PROXY.replace('firebase-proxy','plaid-link'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_dhToken},
+      body: JSON.stringify({ action:'list_items', orgId:ORG_ID })
+    });
+    const data = await resp.json();
+    const items = data.items || [];
+    if(!items.length){
+      listEl.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">No bank accounts connected yet.</div>';
+      if(syncArea) syncArea.style.display='none';
+      return;
+    }
+    if(syncArea) syncArea.style.display='block';
+    listEl.innerHTML = items.map(i=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--navy-lift);border-radius:10px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${i.country==='CA'?'var(--green)':'var(--blue-bright)'}"></div>
+        <span style="font-size:13px;font-weight:600;color:var(--offwhite)">${i.label}</span>
+        <span style="font-size:10px;color:var(--muted);background:var(--navy-mid);padding:2px 8px;border-radius:6px">${i.country}</span>
+      </div>
+      <button onclick="plaidRemoveItem('${i.item_id}','${i.label}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px" title="Disconnect">×</button>
+    </div>`).join('');
+  } catch(e) {
+    console.error('plaidLoadItems error:', e);
+    listEl.innerHTML='<div style="font-size:12px;color:var(--red)">Failed to load bank accounts.</div>';
+  }
+}
+
+async function plaidRemoveItem(itemId, label) {
+  if(!confirm('Disconnect '+label+'? This will stop syncing transactions from this account.')) return;
+  try {
+    await fetch(_PROXY.replace('firebase-proxy','plaid-link'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_dhToken},
+      body: JSON.stringify({ action:'remove_item', orgId:ORG_ID, itemId })
+    });
+    showDhToast(label+' disconnected','success');
+    plaidLoadItems();
+  } catch(e) {
+    showDhToast('Failed to disconnect','error');
+  }
+}
+
+async function plaidSyncTransactions() {
+  const statusEl = document.getElementById('plaid-sync-status');
+  if(statusEl) statusEl.textContent = 'Syncing...';
+  try {
+    const itemsResp = await fetch(_PROXY.replace('firebase-proxy','plaid-link'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_dhToken},
+      body: JSON.stringify({ action:'list_items', orgId:ORG_ID })
+    });
+    const itemsData = await itemsResp.json();
+    const items = itemsData.items || [];
+    if(!items.length){ if(statusEl) statusEl.textContent='No accounts connected'; return; }
+
+    let totalNew = 0;
+    for(const item of items) {
+      const resp = await fetch(_PROXY.replace('firebase-proxy','plaid-sync'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+_dhToken},
+        body: JSON.stringify({ orgId:ORG_ID, itemId:item.item_id })
+      });
+      const data = await resp.json();
+      if(data.transactions) {
+        const existingIds = new Set(expenses.map(e=>e.plaid_id).filter(Boolean));
+        const newTxs = data.transactions.filter(tx => !existingIds.has(tx.plaid_id) && !tx.pending);
+        for(const tx of newTxs) {
+          expenses.push({
+            id: Date.now() + Math.random(),
+            date: tx.date,
+            vendor: tx.vendor,
+            amount: Math.abs(tx.amount),
+            cat: tx.cat,
+            market: tx.country === 'CA' ? 'canada' : (localStorage.getItem('dh_fin_market') || 'us'),
+            plaid_id: tx.plaid_id,
+            source: 'plaid',
+          });
+        }
+        totalNew += newTxs.length;
+      }
+    }
+
+    localStorage.setItem('dronehub_expenses', JSON.stringify(expenses));
+    if(typeof fbSet==='function') fbSet(ORG_ID+':expenses', expenses);
+    if(statusEl) statusEl.textContent = totalNew > 0 ? totalNew+' new transactions imported' : 'All up to date';
+    if(totalNew > 0) {
+      renderExpenseList();
+      renderFinance();
+      showDhToast(totalNew+' transactions synced from bank','success');
+    }
+  } catch(e) {
+    console.error('plaidSync error:', e);
+    if(statusEl) statusEl.textContent = 'Sync failed';
+    showDhToast('Transaction sync failed','error');
+  }
 }
 
