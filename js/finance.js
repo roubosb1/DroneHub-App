@@ -4563,7 +4563,7 @@ function renderFinance(){
 
   // Update summary metrics label currency
   const badge=document.getElementById('fin-market-badge');
-  if(badge) badge.textContent=isUSFinance?'Showing United States (USD)':'Showing Canada (CAD)';
+  if(badge) badge.textContent='';
 
   // Populate year selector
   const yearSel=document.getElementById('finance-year-sel');
