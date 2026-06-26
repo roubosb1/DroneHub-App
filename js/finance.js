@@ -4455,9 +4455,66 @@ function addExpense(){
 }
 
 function deleteExpense(id){
+  if(!confirm('Delete this expense?')) return;
   expenses=expenses.filter(e=>e.id!==id);
   saveExpenses();
   renderFinance();
+}
+
+function deleteExpensesByYear(){
+  const year=document.getElementById('exp-filter-year')?.value;
+  if(!year) return;
+  const count=expenses.filter(e=>e.date&&e.date.startsWith(year)&&!_isNonExpense(e.cat)).length;
+  if(!count){showDhToast('No expenses found for '+year,'error');return;}
+  if(!confirm('Delete all '+count+' expenses from '+year+'? This cannot be undone.')) return;
+  expenses=expenses.filter(e=>!e.date||!e.date.startsWith(year)||_isNonExpense(e.cat));
+  saveExpenses();
+  renderExpenseList();
+  renderFinance();
+  showDhToast(count+' expenses from '+year+' deleted','success');
+}
+
+function openEditExpenseModal(id){
+  const e=expenses.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('edit-exp-id').value=id;
+  document.getElementById('edit-exp-date').value=e.date||'';
+  document.getElementById('edit-exp-desc').value=e.desc||e.vendor||'';
+  document.getElementById('edit-exp-market').value=e.market||'canada';
+  _updateEditExpCatDropdown();
+  document.getElementById('edit-exp-cat').value=e.cat||'';
+  document.getElementById('edit-exp-amount').value=e.amount||0;
+  document.getElementById('edit-expense-modal').style.display='flex';
+}
+
+function closeEditExpenseModal(){
+  document.getElementById('edit-expense-modal').style.display='none';
+}
+
+function _updateEditExpCatDropdown(){
+  const market=document.getElementById('edit-exp-market')?.value;
+  const sel=document.getElementById('edit-exp-cat');
+  if(!sel) return;
+  const prev=sel.value;
+  const cats=market==='usa'?US_EXPENSE_CATS:CA_EXPENSE_CATS;
+  sel.innerHTML=cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(prev) sel.value=prev;
+}
+
+function saveEditExpense(){
+  const id=Number(document.getElementById('edit-exp-id').value);
+  const e=expenses.find(x=>x.id===id);
+  if(!e) return;
+  e.date=document.getElementById('edit-exp-date').value;
+  e.desc=document.getElementById('edit-exp-desc').value;
+  e.cat=document.getElementById('edit-exp-cat').value;
+  e.market=document.getElementById('edit-exp-market').value;
+  e.amount=parseFloat(document.getElementById('edit-exp-amount').value)||0;
+  saveExpenses();
+  closeEditExpenseModal();
+  renderExpenseList();
+  renderFinance();
+  showDhToast('Expense updated','success');
 }
 
 function renderExpenseList(){
@@ -4485,6 +4542,8 @@ function renderExpenseList(){
     if(filterYear&&(!e.date||!e.date.startsWith(filterYear))) return false;
     return true;
   });
+  const delYearBtn=document.getElementById('exp-delete-year-btn');
+  if(delYearBtn) delYearBtn.style.display=filterYear?'':'none';
   if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No expenses found.</div>';return;}
   const total=filtered.reduce((s,e)=>s+Number(e.amount||0),0);
   list.innerHTML=filtered.map(e=>{
@@ -4493,11 +4552,12 @@ function renderExpenseList(){
     return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
       <span style="font-size:11px;flex-shrink:0">${flag}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.desc}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.desc||e.vendor||''}</div>
         <div style="font-size:10px;color:var(--muted)">${e.date} · <span style="color:var(--blue)">${e.cat}</span></div>
       </div>
       ${receiptIcon}
       <div style="font-size:13px;font-weight:600;color:#E85D3A;white-space:nowrap">$${Number(e.amount).toFixed(2)}</div>
+      <button onclick="openEditExpenseModal(${e.id})" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:11px;padding:0 2px" title="Edit">✎</button>
       <button onclick="deleteExpense(${e.id})" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px;line-height:1" title="Delete">×</button>
     </div>`;
   }).join('')+`<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12px;font-weight:700"><span style="color:var(--muted)">Total (${filtered.length} expenses)</span><span style="color:#E85D3A">$${total.toFixed(2)}</span></div>`;

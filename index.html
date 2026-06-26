@@ -1827,6 +1827,7 @@
           <select id="exp-filter-cat" onchange="renderExpenseList()" style="padding:4px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
             <option value="">All categories</option>
           </select>
+          <button id="exp-delete-year-btn" onclick="deleteExpensesByYear()" style="display:none;padding:4px 10px;border-radius:8px;border:1px solid var(--red);background:rgba(239,68,68,.08);color:var(--red);font-size:10px;font-weight:600;cursor:pointer">Delete Year</button>
         </div>
       </div>
       <div id="expense-list"></div>
@@ -1888,6 +1889,44 @@
         <button onclick="runImport()" id="import-run-btn" style="padding:7px 20px;border-radius:16px;border:0.5px solid #1D9E75;background:rgba(34,217,122,.1);color:#22D97A;font-size:12px;font-weight:500;cursor:pointer">Import expenses ✓</button>
         <button onclick="cancelImport()" style="padding:7px 14px;border-radius:16px;border:0.5px solid #ccc;background:#1C2333;color:#A8B4D0;font-size:12px;cursor:pointer">Cancel</button>
         <span id="import-status" style="font-size:12px;color:#22D97A"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Expense Modal -->
+  <div id="edit-expense-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+    <div style="background:var(--navy-mid);border-radius:16px;padding:24px;width:380px;max-width:92vw;border:1px solid var(--border-bright)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:700;color:var(--offwhite)">Edit Expense</div>
+        <button onclick="closeEditExpenseModal()" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <input type="hidden" id="edit-exp-id">
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Date</label>
+        <input type="date" id="edit-exp-date" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite)">
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Description</label>
+        <input type="text" id="edit-exp-desc" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite)">
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Category</label>
+        <select id="edit-exp-cat" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite)"></select>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="min-width:90px;font-size:12px">Country</label>
+        <select id="edit-exp-market" onchange="_updateEditExpCatDropdown()" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite)">
+          <option value="canada">🇨🇦 Canada (CAD)</option>
+          <option value="usa">🇺🇸 United States (USD)</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom:14px">
+        <label style="min-width:90px;font-size:12px">Amount ($)</label>
+        <input type="number" id="edit-exp-amount" min="0" step="0.01" style="flex:1;padding:5px 8px;border:0.5px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite)">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeEditExpenseModal()" style="padding:7px 18px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+        <button onclick="saveEditExpense()" style="padding:7px 20px;border-radius:16px;border:0.5px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer">Save</button>
       </div>
     </div>
   </div>
