@@ -7313,13 +7313,13 @@ const ADMIN_ACCOUNTS=[
 const GATE_SESSION_KEY='dronehub_gate_session';
 
 function gateGetSession(){
-  try{return JSON.parse(sessionStorage.getItem(GATE_SESSION_KEY)||'null');}catch(e){return null;}
+  try{return JSON.parse(localStorage.getItem(GATE_SESSION_KEY)||'null');}catch(e){return null;}
 }
 function gateSaveSession(session){
-  try{sessionStorage.setItem(GATE_SESSION_KEY,JSON.stringify(session));}catch(e){}
+  try{localStorage.setItem(GATE_SESSION_KEY,JSON.stringify(session));}catch(e){}
 }
 function gateClearSession(){
-  try{sessionStorage.removeItem(GATE_SESSION_KEY);}catch(e){}
+  try{localStorage.removeItem(GATE_SESSION_KEY);}catch(e){}
 }
 
 // Clears all login state (session, 2FA trust, passHash cache) so user can log in fresh.
@@ -7327,7 +7327,7 @@ function gateClearSession(){
 function gateClearAndReset(){
   if(!confirm('This will clear your cached login session and 2FA trust on this device so you can sign in fresh.\n\nYour app data (jobs, clients, posts, etc.) will NOT be deleted.\n\nContinue?')) return;
   // Clear session
-  try{sessionStorage.removeItem(GATE_SESSION_KEY);}catch(e){}
+  try{localStorage.removeItem(GATE_SESSION_KEY);}catch(e){}
   // Clear 2FA device trust for all known accounts
   ['roubosb1@gmail.com','admin@dronehubmedia.com','alex@dronehubmedia.com','mackenzie@dronehubmedia.com'].forEach(e=>{
     const k='dronehub_2fa_trusted_'+e.toLowerCase().replace(/[^a-z0-9]/g,'_');
@@ -7377,7 +7377,7 @@ function gateInit(){
     } else {
       // Check for a saved session (so refresh doesn't log the client out)
       try{
-        const savedCpSession=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
+        const savedCpSession=JSON.parse(localStorage.getItem('dronehub_cp_session')||'null');
         if(savedCpSession?.clientId){
           cpActiveClientId=savedCpSession.clientId;
           document.getElementById('cp-login').style.display='none';
@@ -7394,15 +7394,15 @@ function gateInit(){
   }
   const session=gateGetSession();
   if(session&&session.email){
-    // Restore Firebase proxy token from sessionStorage so sync works after a page refresh
-    const _storedTok=sessionStorage.getItem('dh_token');
+    // Restore Firebase proxy token so sync works after a page refresh
+    const _storedTok=localStorage.getItem('dh_token');
     if(_storedTok){
       _dhToken=_storedTok;_loadMsgKey().catch(()=>{});setTimeout(()=>lcCheckMentions().catch(()=>{}),3000);setTimeout(()=>syncGcalLinks().catch(()=>{}),4000);setTimeout(()=>gcalCheckOAuthReturn().catch(()=>{}),1000);
       gateEnterApp(session);
       return;
     }
     // Logged in per the app session, but no Firebase token in this tab (e.g. opened
-    // a new tab — sessionStorage doesn't carry over). Enter the app so the UI isn't
+    // a new tab without a token). Enter the app so the UI isn't
     // blank, but surface the sign-in prompt immediately rather than letting every
     // save fail silently later with no explanation.
     gateEnterApp(session);
@@ -7548,7 +7548,7 @@ async function gateClientLogin(){
   // Log in to client portal
   cpActiveClientId=account.clientId;
   const displayName=account.name||email.split('@')[0];
-  try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:account.clientId,email,name:displayName}));}catch(e){}
+  try{localStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:account.clientId,email,name:displayName}));}catch(e){}
   document.getElementById('site-login-gate').style.display='none';
   document.getElementById('client-portal-root').style.display='block';
   document.getElementById('cp-login').style.display='none';
@@ -7590,7 +7590,7 @@ async function gateClientSignup(){
   if(cIdx>=0&&!clients[cIdx].email){clients[cIdx].email=email;saveClientsToStorage();}
   // Log in
   cpActiveClientId=acct.clientId;
-  try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:acct.clientId,email,name}));}catch(e){}
+  try{localStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:acct.clientId,email,name}));}catch(e){}
   document.getElementById('site-login-gate').style.display='none';
   document.getElementById('client-portal-root').style.display='block';
   document.getElementById('cp-login').style.display='none';
@@ -7669,7 +7669,7 @@ async function gateLogin(){
         }
         if(_earlyAuth.ok){
           const {token}=await _earlyAuth.json();
-          if(token){_dhToken=token;try{sessionStorage.setItem('dh_token',token);}catch(e){}_earlyAuthOk=true;}
+          if(token){_dhToken=token;try{localStorage.setItem('dh_token',token);}catch(e){}_earlyAuthOk=true;}
         }
       }catch(e){/* offline or timeout — fall through to local fallbacks */}
     }
@@ -7776,17 +7776,17 @@ async function gateLogin(){
       const {token}=await _authR.json();
       if(token){
         _dhToken=token;
-        try{sessionStorage.setItem('dh_token',token);}catch(e){}
+        try{localStorage.setItem('dh_token',token);}catch(e){}
         _loadMsgKey().catch(()=>{}); // pre-load encryption key so chats decrypt immediately
         setTimeout(()=>lcCheckMentions().catch(()=>{}),2000); // check for @mention notifications
       }
     } else {
       // Auth endpoint returned an error (500, 503, etc.) — clear any stale token
-      _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+      _dhToken=null; try{localStorage.removeItem('dh_token');}catch(e){}
     }
   }catch(e){
     // Network/server error — log and continue in local-only mode
-    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(ex){}
+    _dhToken=null; try{localStorage.removeItem('dh_token');}catch(ex){}
     console.log('Firebase proxy token unavailable (offline?) — local-only mode');
   }
 
@@ -8774,7 +8774,7 @@ function gateLogout(){
   gateClearSession();
   // Clear Firebase proxy token so sync stops immediately
   _dhToken=null;
-  try{sessionStorage.removeItem('dh_token');}catch(e){}
+  try{localStorage.removeItem('dh_token');}catch(e){}
   // Reload page to show login gate fresh
   window.location.reload();
 }
@@ -8982,7 +8982,7 @@ async function tpSignup(){
 
 function tpLogout(){
   tpActiveMemberId=null;
-  try{sessionStorage.removeItem('dronehub_tp_session');}catch(e){}
+  try{localStorage.removeItem('dronehub_tp_session');}catch(e){}
   document.getElementById('tp-dashboard').style.display='none';
   document.getElementById('tp-login').style.display='flex';
   tpSwitchMode('login');
@@ -8996,7 +8996,7 @@ function tpOpenDashboard(member){
   const org=orgs.find(o=>o.id===member.orgId);
   document.getElementById('tp-org-badge').textContent=org?org.name:'';
   // Persist team session so portal-switcher can restore without re-login
-  try{sessionStorage.setItem('dronehub_tp_session',JSON.stringify({memberId:member.id}));}catch(e){}
+  try{localStorage.setItem('dronehub_tp_session',JSON.stringify({memberId:member.id}));}catch(e){}
   tpShowTab('overview');
 }
 
