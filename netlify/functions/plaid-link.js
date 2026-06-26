@@ -65,6 +65,16 @@ exports.handler = async (event) => {
   const action = body.action;
 
   try {
+    if (action === 'debug_env') {
+      return { statusCode: 200, headers: cors, body: JSON.stringify({
+        hasClientId: !!process.env.PLAID_CLIENT_ID,
+        hasSecret: !!process.env.PLAID_SECRET,
+        clientIdLen: (process.env.PLAID_CLIENT_ID||'').length,
+        secretLen: (process.env.PLAID_SECRET||'').length,
+        env: process.env.PLAID_ENV || 'not set',
+      })};
+    }
+
     if (action === 'create_link_token') {
       const data = await plaidPost('/link/token/create', {
         user: { client_user_id: body.userId || 'dh-user' },
