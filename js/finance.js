@@ -103,7 +103,7 @@ function setFinanceSubTab(sub){
   try{localStorage.setItem('dronehub_finance_sub',sub);localStorage.setItem('dronehub_active_pane',sub==='overview'?'finance':sub==='payroll'?'payroll':'finance');}catch(e){}
   if(sub === 'payroll'){ refreshPayrollPeriods(); renderPayroll(); renderEmployeePayroll(); renderRemittanceSummary(); renderT4Summary(); }
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
-  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderTransferList && renderTransferList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); plaidLoadItems && plaidLoadItems(); }
+  if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); if(typeof renderExpenseList==='function') renderExpenseList(); if(typeof renderTransferList==='function') renderTransferList(); if(typeof renderIncomeList==='function') renderIncomeList(); if(typeof renderFinance==='function') renderFinance(); if(typeof plaidLoadItems==='function') plaidLoadItems(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
   if(sub === 'loans'){ renderLoans(); }
 }
@@ -5300,7 +5300,7 @@ async function plaidConnect(country) {
       body: JSON.stringify({ action:'create_link_token', userId: ORG_ID, countryCodes: country==='CA'?['CA']:['US'] })
     });
     const data = await resp.json();
-    if(!data.link_token){ showDhToast('Failed to start bank connection','error'); return; }
+    if(!data.link_token){ showDhToast('Failed to start bank connection: '+(data.error||'unknown'),'error'); console.error('Plaid link error:', data); return; }
     const handler = Plaid.create({
       token: data.link_token,
       onSuccess: async (publicToken, metadata) => {

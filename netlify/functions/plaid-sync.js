@@ -1,3 +1,5 @@
+const https = require('https');
+
 let _db = null;
 function getDb() {
   if (!_db) {
@@ -12,23 +14,37 @@ function getDb() {
   return _db;
 }
 
-const PLAID_BASE = process.env.PLAID_ENV === 'production'
-  ? 'https://production.plaid.com'
-  : 'https://sandbox.plaid.com';
+const PLAID_HOST = process.env.PLAID_ENV === 'production'
+  ? 'production.plaid.com'
+  : 'sandbox.plaid.com';
 
-async function plaidPost(endpoint, body) {
-  const resp = await fetch(`${PLAID_BASE}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+function plaidPost(endpoint, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
       client_id: process.env.PLAID_CLIENT_ID,
       secret: process.env.PLAID_SECRET,
       ...body,
-    }),
+    });
+    const req = https.request({
+      hostname: PLAID_HOST,
+      path: endpoint,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode >= 400) reject(new Error(parsed.error_message || JSON.stringify(parsed)));
+          else resolve(parsed);
+        } catch (e) { reject(new Error('Invalid JSON from Plaid')); }
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
   });
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data.error_message || JSON.stringify(data));
-  return data;
 }
 
 const CAT_MAP = {
