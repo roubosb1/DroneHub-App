@@ -4545,6 +4545,7 @@ function renderTransferList(){
 
 function renderFinance(){
   if(!document.getElementById('pane-finance')) return;
+  if(typeof Chart==='undefined') return;
   _updateExpCatDropdown();
   _updateIncCatDropdown();
 
