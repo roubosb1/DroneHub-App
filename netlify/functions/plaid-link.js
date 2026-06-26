@@ -66,11 +66,16 @@ exports.handler = async (event) => {
 
   try {
     if (action === 'debug_env') {
+      const cid = process.env.PLAID_CLIENT_ID || '';
+      const sec = process.env.PLAID_SECRET || '';
       return { statusCode: 200, headers: cors, body: JSON.stringify({
-        hasClientId: !!process.env.PLAID_CLIENT_ID,
-        hasSecret: !!process.env.PLAID_SECRET,
-        clientIdLen: (process.env.PLAID_CLIENT_ID||'').length,
-        secretLen: (process.env.PLAID_SECRET||'').length,
+        hasClientId: !!cid,
+        hasSecret: !!sec,
+        clientIdLen: cid.length,
+        secretLen: sec.length,
+        clientIdStart: cid.slice(0, 4),
+        clientIdEnd: cid.slice(-4),
+        secretStart: sec.slice(0, 4),
         env: process.env.PLAID_ENV || 'not set',
       })};
     }
