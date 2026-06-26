@@ -1481,15 +1481,15 @@
   </div>
 
   <!-- Summary metrics row -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px" id="finance-metrics"></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px" id="finance-metrics"></div>
 
   <!-- Year selector -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;padding:10px 0 0">
     <div style="font-size:14px;font-weight:500">Revenue tracker</div>
     <select id="finance-year-sel" onchange="renderFinance()" style="padding:5px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8"></select>
     <div style="display:flex;gap:6px;margin-left:auto">
-      <button onclick="setFinanceView('bar')" id="btn-bar" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer">Bar</button>
-      <button onclick="setFinanceView('line')" id="btn-line" style="padding:5px 12px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer">Line</button>
+      <button onclick="setFinanceView('bar')" id="btn-bar" style="padding:7px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer;line-height:1">Bar</button>
+      <button onclick="setFinanceView('line')" id="btn-line" style="padding:7px 14px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#1C2333;cursor:pointer;line-height:1">Line</button>
     </div>
   </div>
 
