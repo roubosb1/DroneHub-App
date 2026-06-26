@@ -1462,6 +1462,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Expenses
     </button>
+    <button id="fin-sub-tab-loans" onclick="setFinanceSubTab('loans')" style="padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+      Loans
+    </button>
   </div>
 
   <!-- ── FINANCE OVERVIEW SUB-VIEW ── -->
@@ -1880,6 +1884,119 @@
   </div>
 
   </div><!-- end finance-sub-expenses -->
+
+  <!-- ── LOANS SUB-VIEW ── -->
+  <div id="finance-sub-loans" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--offwhite)">Loan Tracker</div>
+        <div style="font-size:12px;color:var(--muted)">Track balances, payments, and payoff progress</div>
+      </div>
+      <button onclick="openLoanModal()" style="padding:8px 20px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Loan</button>
+    </div>
+
+    <!-- Loan summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px" id="loan-summary-metrics"></div>
+
+    <!-- Loan list -->
+    <div id="loan-list"></div>
+  </div><!-- end finance-sub-loans -->
+
+  <!-- Add/Edit Loan Modal -->
+  <div id="loan-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
+    <div style="background:var(--navy);border:1px solid var(--border-bright);border-radius:16px;padding:24px;width:420px;max-width:90vw;max-height:85vh;overflow-y:auto">
+      <div style="font-size:16px;font-weight:700;color:var(--offwhite);margin-bottom:16px" id="loan-modal-title">Add Loan</div>
+      <input type="hidden" id="loan-edit-id">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Loan Type</label>
+          <select id="loan-type" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px">
+            <option value="Credit Card">Credit Card</option>
+            <option value="Line of Credit">Line of Credit</option>
+            <option value="Car Loan">Car Loan</option>
+            <option value="Private Loan">Private Loan</option>
+            <option value="Student Loan">Student Loan</option>
+            <option value="Mortgage">Mortgage</option>
+            <option value="Business Loan">Business Loan</option>
+            <option value="Equipment Loan">Equipment Loan</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Lender / Name</label>
+          <input type="text" id="loan-lender" placeholder="e.g. TD Visa, BMO LOC" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Original Amount</label>
+            <input type="number" id="loan-original" placeholder="0.00" step="0.01" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Current Balance</label>
+            <input type="number" id="loan-balance" placeholder="0.00" step="0.01" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Interest Rate (%)</label>
+            <input type="number" id="loan-rate" placeholder="0.00" step="0.01" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Min. Monthly Payment</label>
+            <input type="number" id="loan-min-payment" placeholder="0.00" step="0.01" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Market</label>
+            <select id="loan-market" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px">
+              <option value="usa">🇺🇸 United States (USD)</option>
+              <option value="canada">🇨🇦 Canada (CAD)</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Start Date</label>
+            <input type="date" id="loan-start-date" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Notes</label>
+          <input type="text" id="loan-notes" placeholder="Optional notes" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button onclick="closeLoanModal()" style="padding:9px 22px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+        <button onclick="saveLoan()" style="padding:9px 28px;border-radius:20px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Save Loan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Payment Modal -->
+  <div id="loan-payment-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.7);align-items:center;justify-content:center">
+    <div style="background:var(--navy);border:1px solid var(--border-bright);border-radius:16px;padding:24px;width:380px;max-width:90vw">
+      <div style="font-size:16px;font-weight:700;color:var(--offwhite);margin-bottom:16px">Record Payment</div>
+      <input type="hidden" id="loan-pay-id">
+      <div id="loan-pay-info" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Payment Amount</label>
+          <input type="number" id="loan-pay-amount" placeholder="0.00" step="0.01" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Date</label>
+          <input type="date" id="loan-pay-date" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Note</label>
+          <input type="text" id="loan-pay-note" placeholder="Optional" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--offwhite);margin-top:4px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button onclick="closeLoanPaymentModal()" style="padding:9px 22px;border-radius:20px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
+        <button onclick="saveLoanPayment()" style="padding:9px 28px;border-radius:20px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Record Payment</button>
+      </div>
+    </div>
+  </div>
 
 </div><!-- end pane-finance -->
 
@@ -6924,6 +7041,7 @@ async function restoreFromFirebase(forceAll=false){
     {fb:ORG_ID+':income',         ls:'dronehub_income',            apply:d=>{try{incomeEntries=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_income',d);}},
     {fb:ORG_ID+':contractor_pay_history', ls:'dronehub_contractor_pay_history', apply:d=>{try{contractorPayHistory=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_contractor_pay_history',d);}},
     {fb:ORG_ID+':employee_payroll', ls:'dronehub_employee_payroll', apply:d=>{try{employeePayroll=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_employee_payroll',d);}},
+    {fb:ORG_ID+':loans', ls:'dronehub_loans', apply:d=>{try{loans=JSON.parse(d);}catch(e){}localStorage.setItem('dronehub_loans',d);}},
     {fb:ORG_ID+':t4_employer', ls:lsKey('t4_employer'), apply:d=>{localStorage.setItem(lsKey('t4_employer'),d);}},
     {fb:ORG_ID+':extra_services', ls:'dronehub_extra_services',    apply:d=>{localStorage.setItem('dronehub_extra_services',d);}},
     {fb:ORG_ID+':orgs_data',      ls:'dronehub_orgs',              apply:d=>{

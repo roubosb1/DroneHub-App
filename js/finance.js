@@ -89,7 +89,7 @@ let usQuoteState={
 
 
 function setFinanceSubTab(sub){
-  const tabs = ['overview','invoices','payroll','contractors','expenses'];
+  const tabs = ['overview','invoices','payroll','contractors','expenses','loans'];
   tabs.forEach(t=>{
     const pane = document.getElementById('finance-sub-'+t);
     const btn  = document.getElementById('fin-sub-tab-'+t);
@@ -105,6 +105,7 @@ function setFinanceSubTab(sub){
   if(sub === 'invoices'){ renderInvoiceTracker && renderInvoiceTracker(); }
   if(sub === 'expenses'){ _updateExpCatDropdown(); _updateIncCatDropdown(); renderExpenseList && renderExpenseList(); renderTransferList && renderTransferList(); renderIncomeList && renderIncomeList(); renderExpenseCatChart && renderExpenseCatChart(); }
   if(sub === 'contractors'){ populateCpContractorSelect(); renderContractorBreakdown(); }
+  if(sub === 'loans'){ renderLoans(); }
 }
 
 // ── Historical contractor payments ───────────────────────────────────────────
@@ -5085,5 +5086,208 @@ function cancelImport(){
   document.getElementById('import-mapper').style.display='none';
   document.getElementById('import-file-input').value='';
   importRows=[]; importHeaders=[]; _importWorkbook=null;
+}
+
+// ── Loan Tracker ────────────────────────────────────────────────────────────
+let loans=JSON.parse(localStorage.getItem('dronehub_loans')||'[]');
+
+function saveLoans(){
+  try{localStorage.setItem('dronehub_loans',JSON.stringify(loans));}catch(e){}
+  if(_fbToken()){
+    fbSetStrict('orgs',ORG_ID+':loans',{data:JSON.stringify(loans),updatedAt:Date.now()}).catch(()=>{});
+  }
+}
+
+function openLoanModal(editId){
+  const modal=document.getElementById('loan-modal');
+  modal.style.display='flex';
+  document.getElementById('loan-modal-title').textContent=editId?'Edit Loan':'Add Loan';
+  if(editId){
+    const loan=loans.find(l=>l.id===editId);
+    if(!loan) return;
+    document.getElementById('loan-edit-id').value=editId;
+    document.getElementById('loan-type').value=loan.type||'Other';
+    document.getElementById('loan-lender').value=loan.lender||'';
+    document.getElementById('loan-original').value=loan.original||'';
+    document.getElementById('loan-balance').value=loan.balance||'';
+    document.getElementById('loan-rate').value=loan.rate||'';
+    document.getElementById('loan-min-payment').value=loan.minPayment||'';
+    document.getElementById('loan-market').value=loan.market||'usa';
+    document.getElementById('loan-start-date').value=loan.startDate||'';
+    document.getElementById('loan-notes').value=loan.notes||'';
+  } else {
+    document.getElementById('loan-edit-id').value='';
+    document.getElementById('loan-type').value='Credit Card';
+    document.getElementById('loan-lender').value='';
+    document.getElementById('loan-original').value='';
+    document.getElementById('loan-balance').value='';
+    document.getElementById('loan-rate').value='';
+    document.getElementById('loan-min-payment').value='';
+    document.getElementById('loan-market').value='usa';
+    document.getElementById('loan-start-date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('loan-notes').value='';
+  }
+}
+
+function closeLoanModal(){document.getElementById('loan-modal').style.display='none';}
+
+function saveLoan(){
+  const editId=document.getElementById('loan-edit-id').value;
+  const type=document.getElementById('loan-type').value;
+  const lender=document.getElementById('loan-lender').value.trim();
+  const original=parseFloat(document.getElementById('loan-original').value)||0;
+  const balance=parseFloat(document.getElementById('loan-balance').value)||0;
+  const rate=parseFloat(document.getElementById('loan-rate').value)||0;
+  const minPayment=parseFloat(document.getElementById('loan-min-payment').value)||0;
+  const market=document.getElementById('loan-market').value;
+  const startDate=document.getElementById('loan-start-date').value;
+  const notes=document.getElementById('loan-notes').value.trim();
+  if(!lender){alert('Enter a lender name.');return;}
+  if(!original&&!balance){alert('Enter an amount.');return;}
+  if(editId){
+    const loan=loans.find(l=>l.id===editId);
+    if(loan){Object.assign(loan,{type,lender,original,balance,rate,minPayment,market,startDate,notes,updatedAt:Date.now()});}
+  } else {
+    loans.push({id:Date.now()+Math.random(),type,lender,original:original||balance,balance,rate,minPayment,market,startDate,notes,payments:[],createdAt:Date.now()});
+  }
+  saveLoans();
+  closeLoanModal();
+  renderLoans();
+}
+
+function deleteLoan(id){
+  if(!confirm('Delete this loan and all its payment history?')) return;
+  loans=loans.filter(l=>l.id!==id);
+  saveLoans();
+  renderLoans();
+}
+
+function openLoanPaymentModal(loanId){
+  const loan=loans.find(l=>l.id===loanId);
+  if(!loan) return;
+  const modal=document.getElementById('loan-payment-modal');
+  modal.style.display='flex';
+  document.getElementById('loan-pay-id').value=loanId;
+  document.getElementById('loan-pay-info').textContent=`${loan.lender} — Current balance: $${loan.balance.toFixed(2)}`;
+  document.getElementById('loan-pay-amount').value='';
+  document.getElementById('loan-pay-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('loan-pay-note').value='';
+}
+
+function closeLoanPaymentModal(){document.getElementById('loan-payment-modal').style.display='none';}
+
+function saveLoanPayment(){
+  const loanId=document.getElementById('loan-pay-id').value;
+  const amount=parseFloat(document.getElementById('loan-pay-amount').value)||0;
+  const date=document.getElementById('loan-pay-date').value;
+  const note=document.getElementById('loan-pay-note').value.trim();
+  if(!amount){alert('Enter a payment amount.');return;}
+  const loan=loans.find(l=>String(l.id)===String(loanId));
+  if(!loan) return;
+  if(!loan.payments) loan.payments=[];
+  loan.payments.push({id:Date.now()+Math.random(),amount,date,note});
+  loan.payments.sort((a,b)=>b.date.localeCompare(a.date));
+  loan.balance=Math.max(0,loan.balance-amount);
+  saveLoans();
+  closeLoanPaymentModal();
+  renderLoans();
+  try{showDhToast('Payment recorded',`$${amount.toFixed(2)} applied to ${loan.lender}`,'check','var(--green)');}catch(e){}
+}
+
+function deleteLoanPayment(loanId,payId){
+  const loan=loans.find(l=>l.id===loanId);
+  if(!loan||!loan.payments) return;
+  const pay=loan.payments.find(p=>p.id===payId);
+  if(!pay) return;
+  loan.payments=loan.payments.filter(p=>p.id!==payId);
+  loan.balance+=pay.amount;
+  saveLoans();
+  renderLoans();
+}
+
+function _loanTypeIcon(type){
+  const t=(type||'').toLowerCase();
+  if(t.includes('credit card')) return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+  if(t.includes('line of credit')) return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>';
+  if(t.includes('car')) return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M5 17a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/></svg>';
+  if(t.includes('student')) return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B8DEF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>';
+  if(t.includes('mortgage')) return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E85D3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+}
+
+function renderLoans(){
+  const summary=document.getElementById('loan-summary-metrics');
+  const list=document.getElementById('loan-list');
+  if(!summary||!list) return;
+
+  const totalDebt=loans.reduce((s,l)=>s+l.balance,0);
+  const totalOriginal=loans.reduce((s,l)=>s+(l.original||l.balance),0);
+  const totalMinPayment=loans.reduce((s,l)=>s+(l.minPayment||0),0);
+  const totalPaid=totalOriginal-totalDebt;
+  const paidPct=totalOriginal>0?Math.round((totalPaid/totalOriginal)*100):0;
+
+  summary.innerHTML=`
+    <div class="metric"><div class="mlabel">Total Debt</div><div class="mval" style="color:#E85D3A">$${Math.round(totalDebt).toLocaleString('en-CA')}</div><div class="msub">${loans.length} active loan${loans.length!==1?'s':''}</div></div>
+    <div class="metric"><div class="mlabel">Total Paid</div><div class="mval" style="color:#1D9E75">$${Math.round(totalPaid).toLocaleString('en-CA')}</div><div class="msub">${paidPct}% of original</div></div>
+    <div class="metric"><div class="mlabel">Monthly Min.</div><div class="mval" style="color:var(--blue-bright)">$${Math.round(totalMinPayment).toLocaleString('en-CA')}</div><div class="msub">combined minimum</div></div>`;
+
+  if(!loans.length){
+    list.innerHTML='<div class="card" style="text-align:center;padding:40px 20px"><div style="font-size:14px;color:var(--muted);margin-bottom:8px">No loans added yet</div><div style="font-size:12px;color:var(--muted);opacity:.6">Click "+ Add Loan" to start tracking</div></div>';
+    return;
+  }
+
+  list.innerHTML=loans.map(loan=>{
+    const original=loan.original||loan.balance;
+    const paid=original-loan.balance;
+    const pct=original>0?Math.min(100,Math.round((paid/original)*100)):0;
+    const flag=loan.market==='canada'?'🇨🇦':'🇺🇸';
+    const currency=loan.market==='canada'?'CAD':'USD';
+    const barColor=pct>=100?'#1D9E75':pct>=50?'#5B8DEF':'#E85D3A';
+    const payments=loan.payments||[];
+    const recentPayments=payments.slice(0,3);
+
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+          ${_loanTypeIcon(loan.type)}
+          <div style="min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${loan.lender} <span style="font-size:11px;font-weight:500;color:var(--muted)">${flag}</span></div>
+            <div style="font-size:11px;color:var(--muted)">${loan.type}${loan.rate?' · '+loan.rate+'% APR':''}${loan.minPayment?' · $'+loan.minPayment.toFixed(2)+'/mo':''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="openLoanPaymentModal(${loan.id})" style="padding:5px 14px;border-radius:16px;border:1px solid var(--green);background:rgba(34,217,122,.08);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">+ Payment</button>
+          <button onclick="openLoanModal(${loan.id})" style="padding:5px 10px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Edit</button>
+          <button onclick="deleteLoan(${loan.id})" style="padding:5px 10px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">×</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:12px">
+        <div><span style="font-size:20px;font-weight:800;color:var(--offwhite)">$${loan.balance.toLocaleString('en-CA',{minimumFractionDigits:2})}</span><span style="font-size:11px;color:var(--muted);margin-left:6px">remaining</span></div>
+        <div style="font-size:11px;color:var(--muted)">of $${original.toLocaleString('en-CA',{minimumFractionDigits:2})}</div>
+      </div>
+
+      <div style="margin-top:8px;background:rgba(255,255,255,.06);border-radius:6px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:6px;transition:width .3s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--muted)">
+        <span>${pct}% paid off</span>
+        <span>$${paid.toLocaleString('en-CA',{minimumFractionDigits:2})} paid</span>
+      </div>
+
+      ${recentPayments.length?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:6px">Recent Payments</div>
+        ${recentPayments.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:11px">
+          <div style="color:var(--muted)">${p.date}${p.note?' · '+p.note:''}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="color:#1D9E75;font-weight:600">-$${p.amount.toFixed(2)}</span>
+            <button onclick="deleteLoanPayment(${loan.id},${p.id})" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px;line-height:1" title="Remove">×</button>
+          </div>
+        </div>`).join('')}
+        ${payments.length>3?`<div style="font-size:10px;color:var(--blue-bright);margin-top:4px;cursor:pointer" onclick="toggleLoanPayments(${loan.id})">Show all ${payments.length} payments</div>`:''}
+      </div>`:''}
+      ${loan.notes?`<div style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic">${loan.notes}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
