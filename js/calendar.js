@@ -688,7 +688,7 @@ function calQuickAddSave(){
   const invitedClients=_calGetInvitedClients('qca');
   const memberName=invitedTeam[0]||'';
   const evts=calEventsLoad();
-  evts.push({id:Date.now(),title,type,date:dateStr,endDate,startTime,endTime,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes});
+  evts.push({id:'cale_'+Date.now(),title,type,date:dateStr,endDate,startTime,endTime,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes});
   calEventsSave(evts);
   document.getElementById('cal-quick-add')?.remove();
   calViewRefresh();
@@ -828,13 +828,13 @@ function saveCalEvent(){
 
 function deleteCalEvent(id){
   if(!confirm('Delete this event?')) return;
-  calEventsSave(calEventsLoad().filter(e=>e.id!==id));
+  calEventsSave(calEventsLoad().filter(e=>String(e.id)!==String(id)));
   calViewRefresh();renderVacationTracker();
 }
 
 // ── Event detail pop-up ───────────────────────────────────────────────────────
 function showCalEventDetail(eventId){
-  const evt=calEventsLoad().find(e=>e.id===eventId);
+  const evt=calEventsLoad().find(e=>String(e.id)===String(eventId));
   if(!evt) return;
   const td=CAL_EVENT_TYPES.find(t=>t.id===evt.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
   const fmtD=d=>{const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});};
@@ -907,7 +907,7 @@ function showGcalEventDetail(name,creator,time){
 }
 
 function editCalEvent(eventId){
-  const evt=calEventsLoad().find(e=>e.id===eventId);
+  const evt=calEventsLoad().find(e=>String(e.id)===String(eventId));
   if(!evt) return;
   openCalEventModal(evt.date);
   setTimeout(()=>{
@@ -947,7 +947,7 @@ function updateCalEvent(eventId){
   if(!start){alert('Please select a start date.');return;}
   if(end<start){alert('End date cannot be before start date.');return;}
   if(startTime&&endTime&&start===end&&endTime<startTime){alert('End time cannot be before start time.');return;}
-  const arr=calEventsLoad();const idx=arr.findIndex(e=>e.id===eventId);if(idx===-1) return;
+  const arr=calEventsLoad();const idx=arr.findIndex(e=>String(e.id)===String(eventId));if(idx===-1) return;
   arr[idx]={...arr[idx],type,title,date:start,endDate:end,startTime,endTime,memberName:member,invitees:invitedTeam,clientInvitees:invitedClients,notes,updatedAt:new Date().toISOString()};
   calEventsSave(arr);
   document.getElementById('cal-event-modal')?.remove();
@@ -1964,7 +1964,7 @@ function mcShowEventDetail(type,idOrEvtId,dateStr){
     _mcOpenDetailSheet(j.name, body, col.border);
   } else {
     const evts=calEventsLoad();
-    const ev=evts.find(e=>e.id===idOrEvtId);
+    const ev=evts.find(e=>String(e.id)===String(idOrEvtId));
     if(!ev) return;
     const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
     const isMultiDay=ev.endDate&&ev.endDate!==ev.date;
