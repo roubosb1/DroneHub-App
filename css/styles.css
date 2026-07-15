@@ -351,32 +351,27 @@ button{font-family:var(--font);}
 }
 .mob-nav-btn{
   flex:1;display:flex;align-items:center;justify-content:center;
-  border:none;background:transparent;color:rgba(255,255,255,1);
+  border:none;background:transparent;color:rgba(255,255,255,.55);
   cursor:pointer;padding:0;
-  transition:color .18s;-webkit-tap-highlight-color:transparent;
-  position:relative;
+  transition:color .18s,background .18s;-webkit-tap-highlight-color:transparent;
+  position:relative;border-radius:16px;margin:6px 2px;
 }
-.mob-nav-btn svg{flex-shrink:0;transition:stroke .18s,opacity .18s;}
-/* Active: white icon + tiny dot below */
-.mob-nav-btn.active{color:rgba(255,255,255,.95);}
-.mob-nav-btn.active svg{stroke:rgba(255,255,255,.95);}
-.mob-nav-btn.active::after{
-  content:'';position:absolute;bottom:6px;left:50%;
-  transform:translateX(-50%);width:4px;height:4px;
-  border-radius:50%;background:rgba(255,255,255,.85);
-}
-/* No dot for + (it's an action, not a destination) */
-#mobnav-plus::after{display:none!important;}
+.mob-nav-btn svg{flex-shrink:0;transition:stroke .18s,opacity .18s,stroke-width .18s;}
+.mob-nav-btn:active{background:rgba(255,255,255,.08);}
+/* Active: lighter grey highlight behind icon */
+.mob-nav-btn.active{color:rgba(255,255,255,.95);background:rgba(255,255,255,.12);}
+.mob-nav-btn.active svg{stroke:rgba(255,255,255,.95);stroke-width:2;}
+.mob-nav-btn.active::after{display:none;}
 /* Center logo button */
 #mobnav-home{flex:1.2;}
 #mobnav-home img{
   height:20px;width:auto;
   filter:brightness(0) invert(1);
-  opacity:.45;
+  opacity:.55;
   transition:opacity .18s;
 }
 #mobnav-home.active img{opacity:.95;}
-#mobnav-home::after{display:none;}
+#mobnav-home.active::after{display:none;}
 /* Plus button styling */
 #mobnav-plus{color:rgba(255,255,255,.55);}
 #mobnav-plus svg{opacity:1;}
