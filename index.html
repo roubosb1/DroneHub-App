@@ -4814,12 +4814,12 @@ function mobShowProfile(){
   document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('mobnav-profile')?.classList.add('active');
 
-  // Render default tab
-  _mobPfTab = 'overview';
-  _mobPfSubTab = 'youtube';
+  // Render portfolio directly (no tabs)
+  _mobPfTab = 'portfolio';
+  _mobPfSubTab = 'reels';
   _mobPfDeleteMode = false;
   document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('mob-pftab-overview')?.classList.add('active');
+  document.getElementById('mob-pf-subtab-reels')?.classList.add('active');
   // Show + quick actions button (admin or own profile)
   const _addBtn = document.getElementById('mob-pf-portfolio-add-btn');
   if(_addBtn){
@@ -4831,7 +4831,7 @@ function mobShowProfile(){
   // Close quick actions menu
   const _qaMenu = document.getElementById('mob-pf-quick-actions');
   if(_qaMenu) _qaMenu.style.display = 'none';
-  mobPfRenderOverview(member);
+  mobPfRenderPortfolio(member);
 
   // Background Firebase refresh
   if(typeof tpProfileLoad_fb === 'function' && _fbToken && _fbToken()){
@@ -4846,6 +4846,8 @@ function mobHideProfile(){
   if(addBtn) addBtn.style.display='none';
   const qaMenu = document.getElementById('mob-pf-quick-actions');
   if(qaMenu) qaMenu.style.display='none';
+  const sheet = document.getElementById('mob-timeoff-sheet');
+  if(sheet) sheet.style.display='none';
   _mobPfDeleteMode = false;
   document.getElementById('mobnav-profile')?.classList.remove('active');
 }
@@ -4858,22 +4860,18 @@ function mobPfOpenSettings(){
 
 function mobPfSwitchTab(tab){
   _mobPfTab = tab;
-  document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('mob-pftab-'+tab)?.classList.add('active');
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  // Close quick actions if open
   const qaMenu = document.getElementById('mob-pf-quick-actions');
   if(qaMenu) qaMenu.style.display = 'none';
-  // Show + button on all tabs for users who can edit
-  const addBtn = document.getElementById('mob-pf-portfolio-add-btn');
-  if(addBtn){
-    const session = gateGetSession();
-    const isOwn = member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase();
-    const isAdmin = !session||session.type==='admin'||session.role==='admin';
-    addBtn.style.display = (isAdmin||isOwn) ? 'flex' : 'none';
-  }
   mobPfRenderCurrent(member);
+}
+function mobPfSwitchSubTab(sub){
+  _mobPfSubTab = sub === 'photos' ? 'photos' : 'reels';
+  document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mob-pf-subtab-'+_mobPfSubTab)?.classList.add('active');
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(member) mobPfRenderPortfolio(member);
 }
 
 function mobPfToggleQuickActions(){
@@ -4890,17 +4888,34 @@ function mobPfToggleQuickActions(){
 }
 function mobPfQuickAction(action){
   document.getElementById('mob-pf-quick-actions').style.display='none';
-  if(action==='timeoff') mobPfSwitchTab('timeoff');
+  if(action==='timeoff') mobOpenTimeOffSheet();
   else if(action==='addvideo'){
     if(_tpMemberId) openTeamMemberProfile(_tpMemberId);
     mobHideProfile();
   }
   else if(action==='removevideo'){
-    mobPfSwitchTab('portfolio');
     _mobPfDeleteMode = !_mobPfDeleteMode;
     const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
     if(member) mobPfRenderPortfolio(member);
   }
+}
+function mobOpenTimeOffSheet(){
+  const sheet = document.getElementById('mob-timeoff-sheet');
+  if(!sheet) return;
+  const today = new Date().toISOString().slice(0,10);
+  const startEl = document.getElementById('mob-toff-start');
+  const endEl = document.getElementById('mob-toff-end');
+  if(startEl) startEl.value = today;
+  if(endEl) endEl.value = today;
+  const noteEl = document.getElementById('mob-toff-note');
+  if(noteEl) noteEl.value = '';
+  const vacRadio = document.querySelector('input[name="mob-toff-type"][value="vacation"]');
+  if(vacRadio) vacRadio.checked = true;
+  sheet.style.display = 'flex';
+}
+function mobCloseTimeOffSheet(){
+  const sheet = document.getElementById('mob-timeoff-sheet');
+  if(sheet) sheet.style.display = 'none';
 }
 function mobPfPortfolioAdd(){
   if(_tpMemberId) openTeamMemberProfile(_tpMemberId);
@@ -4908,9 +4923,7 @@ function mobPfPortfolioAdd(){
 }
 
 function mobPfRenderCurrent(member){
-  if(_mobPfTab === 'overview')  mobPfRenderOverview(member);
-  else if(_mobPfTab === 'portfolio') mobPfRenderPortfolio(member);
-  else if(_mobPfTab === 'timeoff')   mobPfRenderTimeOff(member);
+  mobPfRenderPortfolio(member);
 }
 
 function mobPfRenderOverview(member){
@@ -4966,48 +4979,52 @@ function mobPfRenderOverview(member){
 function mobPfRenderPortfolio(member){
   const content = document.getElementById('mob-pf-content');
   if(!content) return;
-  const items = tpPortfolioLoad ? tpPortfolioLoad(member.id) : [];
+  const allItems = tpPortfolioLoad ? tpPortfolioLoad(member.id) : [];
   const session = gateGetSession();
   const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
                 (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
   const canEdit = isAdmin || isOwn;
 
+  const isReels = _mobPfSubTab !== 'photos';
+  const items = isReels
+    ? allItems.filter(i=>i.type==='video'||i.type==='reel')
+    : allItems.filter(i=>i.type==='photo'||i.type==='other');
+
   const tileHtml = (item) => {
     const thumb = item.thumb || tpGetAutoThumb(item.url);
-    const isVideo = item.type==='video';
     const deleteBtn = _mobPfDeleteMode && canEdit ? `<button onclick="event.stopPropagation();mobPfDeletePortfolioItem('${member.id}','${(item.url||'').replace(/'/g,"\\'")}')" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(240,82,82,.9);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>` : '';
-    if(isVideo){
+    if(isReels){
       return `
-      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="border-radius:10px;overflow:hidden;background:var(--navy-mid);position:relative">
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="position:relative;background:var(--navy-mid)">
         ${deleteBtn}
-        <div class="mob-pf-tile-inner ratio-169" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
-          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
-          <div class="mob-pf-tile-overlay"><svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        <div class="mob-pf-tile-inner ratio-916" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
+          <div class="mob-pf-tile-overlay"><svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
         </div>
-        ${item.title?`<div style="padding:8px 10px;font-size:12px;font-weight:700;color:var(--white);line-height:1.3">${item.title}</div>`:''}
       </div>`;
     } else {
       return `
-      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="position:relative" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',false)" style="position:relative" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
         ${deleteBtn}
         <div class="mob-pf-tile-inner">
-          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
           <div class="mob-pf-tile-overlay"><svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
         </div>
       </div>`;
     }
   };
 
+  const emptyLabel = isReels ? 'reels' : 'photos';
   content.innerHTML = `
   ${_mobPfDeleteMode ? `<div style="padding:10px 16px;background:rgba(240,82,82,.1);border-bottom:1px solid rgba(240,82,82,.3);display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;font-weight:700;color:var(--red)">Tap ✕ to remove a video</span>
+    <span style="font-size:12px;font-weight:700;color:var(--red)">Tap ✕ to remove</span>
     <button onclick="_mobPfDeleteMode=false;mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--offwhite);font-size:11px;font-weight:700;cursor:pointer">Done</button>
   </div>` : ''}
   ${items.length === 0 ? `
   <div style="padding:60px 20px;text-align:center;color:var(--muted)">
-    <div style="margin-bottom:8px;color:var(--muted)">${_icon('video',32)}</div>
-    <div style="font-size:13px">No portfolio items yet.</div>
+    <div style="margin-bottom:8px;color:var(--muted)">${isReels?_icon('video',32):_icon('camera',32)}</div>
+    <div style="font-size:13px">No ${emptyLabel} yet.</div>
   </div>` : `
   <div class="mob-pf-grid-3">
     ${items.map(tileHtml).join('')}
@@ -6064,6 +6081,13 @@ function tpResolveMemberId(id){
 }
 
 function openTeamMemberProfile(memberId){
+  // On mobile → always use the mobile profile pane
+  if(window.innerWidth<=768 && typeof mobShowProfile==='function'){
+    const resolvedId = tpResolveMemberId(memberId);
+    if(resolvedId) _tpMemberId = resolvedId;
+    mobShowProfile();
+    return;
+  }
   // "me" on desktop → full-page desktop profile pane
   if((memberId==='me'||memberId===gateGetSession()?.email)&&window.innerWidth>768){ dskShowMyProfile(); return; }
   const resolvedId = tpResolveMemberId(memberId);
@@ -10632,25 +10656,52 @@ function initGoogleMaps(){
       </div>
     </div>
 
-    <!-- Tab bar -->
-    <div style="display:flex;justify-content:center;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--navy-card);position:sticky;top:0;z-index:10">
-      <button id="mob-pftab-overview"  class="mob-pf-tab active"  onclick="mobPfSwitchTab('overview')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span>Overview</span>
+    <!-- Portfolio sub-tabs: Reels | Photos -->
+    <div style="display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--navy);position:sticky;top:0;z-index:10">
+      <button id="mob-pf-subtab-reels" class="mob-pf-tab active" onclick="mobPfSwitchSubTab('reels')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span>Reels</span>
       </button>
-      <button id="mob-pftab-portfolio" class="mob-pf-tab" onclick="mobPfSwitchTab('portfolio')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-        <span>Portfolio</span>
-      </button>
-      <button id="mob-pftab-timeoff"   class="mob-pf-tab" onclick="mobPfSwitchTab('timeoff')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
-        <span>Time Off</span>
+      <button id="mob-pf-subtab-photos" class="mob-pf-tab" onclick="mobPfSwitchSubTab('photos')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Photos</span>
       </button>
     </div>
 
-    <!-- Tab content -->
+    <!-- Portfolio content -->
     <div id="mob-pf-content"></div>
 
+  </div>
+
+  <!-- Time Off Request Sheet (slides up from +) -->
+  <div id="mob-timeoff-sheet" onclick="if(event.target===this)mobCloseTimeOffSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;align-items:flex-end;justify-content:center">
+    <div onclick="event.stopPropagation()" style="width:100%;max-width:500px;background:var(--navy-card);border-radius:20px 20px 0 0;border-top:1px solid var(--border-bright);padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright);margin:0 auto 16px"></div>
+      <div style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
+        Request Time Off
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Start Date</div>
+          <input type="date" id="mob-toff-start" style="width:100%;padding:10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;font-size:14px">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">End Date</div>
+          <input type="date" id="mob-toff-end" style="width:100%;padding:10px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;font-size:14px">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <label style="flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);font-size:13px;font-weight:700;color:var(--muted)" id="mob-toff-lbl-vac">
+          <input type="radio" name="mob-toff-type" value="vacation" checked onchange="document.getElementById('mob-toff-lbl-vac').style.borderColor=this.checked?'#A78BFA':'var(--border)';document.getElementById('mob-toff-lbl-sick').style.borderColor='var(--border)'"> Vacation
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;padding:10px 12px;border-radius:10px;border:2px solid var(--border);background:var(--navy-lift);font-size:13px;font-weight:700;color:var(--muted)" id="mob-toff-lbl-sick">
+          <input type="radio" name="mob-toff-type" value="sick" onchange="document.getElementById('mob-toff-lbl-sick').style.borderColor=this.checked?'var(--red)':'var(--border)';document.getElementById('mob-toff-lbl-vac').style.borderColor='var(--border)'"> Sick Day
+        </label>
+      </div>
+      <input id="mob-toff-note" type="text" placeholder="Optional note…" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;margin-bottom:12px;font-size:14px">
+      <button onclick="mobSubmitTimeOff();mobCloseTimeOffSheet()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.15);color:#A78BFA;font-size:14px;font-weight:700;cursor:pointer">Submit Request</button>
+    </div>
   </div>
 </div>
 
