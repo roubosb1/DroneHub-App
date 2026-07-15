@@ -3505,7 +3505,8 @@ function renderInvoiceTracker(){
   // Filter by financeMarket (canada = no market or market=canada; usa = any US market key)
   const isUSInv=financeMarket==='usa';
   const marketFilteredJobs=savedJobs.filter(j=>isUSInv?(j.market&&j.market!=='canada'):(!j.market||j.market==='canada'));
-  const invoiced=marketFilteredJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
+  // Exclude standalone tracker projects (no quote/invoice attached) — they have no dollar amounts
+  const invoiced=marketFilteredJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&!j.isStandalone&&j.grand!=null);
   const filtered=invoiced.filter(j=>{
     const st=getInvoiceStatus(j);
     if(invoiceFilter==='all') return true;
@@ -3564,7 +3565,7 @@ function renderInvoiceTracker(){
         <div style="font-size:11px;color:var(--muted)">${j.date||''}${client?' · '+client.name:j.clientName?' · '+j.clientName:''} · Due ${dueDateStr}</div>
         ${interestNote}
       </div>
-      <div style="text-align:right;flex-shrink:0">
+      <div style="text-align:right;min-width:0;max-width:100%">
         <div style="font-size:14px;font-weight:700;color:${st==='overdue'?'var(--red)':st==='paid'?'var(--green)':'var(--amber)'}">${fmtN(st==='overdue'?owed:j.grand)}</div>
         ${st==='overdue'?`<div style="font-size:10px;color:var(--muted)">orig. ${fmtN(j.grand)}</div>`:''}
         <div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end;flex-wrap:wrap">
