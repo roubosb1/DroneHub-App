@@ -423,8 +423,157 @@ function mobTrkBackToList(){
 }
 
 function mobTrkAdd(){
-  if(_trackerMode==='photo') openPhotoTrackerAddModal?.();
-  else openTrackerAddModal?.();
+  const _isPhoto = _trackerMode==='photo';
+  const id = _isPhoto ? 'photo_standalone_'+Date.now() : 'standalone_'+Date.now();
+
+  const titleEl = document.getElementById('mob-trk-add-title');
+  if(titleEl) titleEl.textContent = _isPhoto ? 'New Photo Project' : 'New Video Project';
+
+  const _statusOpts = _isPhoto
+    ? (typeof PHOTO_EDIT_STATUS_OPTS!=='undefined' ? PHOTO_EDIT_STATUS_OPTS : [])
+    : EDIT_STATUS_OPTS;
+  const _stageOpts = typeof TRACKER_STAGES!=='undefined' ? TRACKER_STAGES : [];
+  const contractorOptHtml = typeof buildEditorOptions==='function' ? buildEditorOptions('') : '';
+  const vidOptHtml = typeof buildVideographerOptions==='function' ? buildVideographerOptions('') : '';
+  const statusOptHtml = _statusOpts.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
+  const stageOptHtml = _stageOpts.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
+  const today = new Date().toISOString().slice(0,10);
+
+  const lbl = t => `<label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">${t}</label>`;
+  const inp = (id,ph,type='text') => `<input id="${id}" type="${type}" placeholder="${ph}" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;box-sizing:border-box">`;
+
+  const body = document.getElementById('mob-trk-add-body');
+  if(!body) return;
+
+  body.innerHTML = `
+    <div class="mtrk-section" style="margin-top:0">Project Info</div>
+
+    <div class="mtrk-field">
+      ${lbl(_isPhoto?'Property Address / Project':'Project Name')}
+      ${inp('mtrk-add-name',_isPhoto?'123 Main St – City, Province…':'Project name…')}
+    </div>
+
+    <div class="mtrk-field">
+      ${lbl('Client Name')}
+      ${inp('mtrk-add-client','Client name…')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="mtrk-field" style="margin-bottom:0">
+        ${lbl('Shoot Date')}
+        ${inp('mtrk-add-date','','date')}
+      </div>
+      <div class="mtrk-field" style="margin-bottom:0">
+        ${lbl('Due Date')}
+        ${inp('mtrk-add-due','','date')}
+      </div>
+    </div>
+
+    <div class="mtrk-section">Status</div>
+
+    <div class="mtrk-field">
+      ${lbl('Edit Status')}
+      <select id="mtrk-add-status" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${statusOptHtml}</select>
+    </div>
+
+    ${!_isPhoto?`<div class="mtrk-field">
+      ${lbl('Kanban Stage')}
+      <select id="mtrk-add-stage" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${stageOptHtml}</select>
+    </div>`:''}
+
+    <div class="mtrk-section">Assignment</div>
+
+    ${contractorOptHtml?`<div class="mtrk-field">
+      ${lbl('Editor')}
+      <select id="mtrk-add-editor" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${contractorOptHtml}</select>
+    </div>`:''}
+
+    ${vidOptHtml?`<div class="mtrk-field">
+      ${lbl(_isPhoto?'Photographer':'Videographer')}
+      <select id="mtrk-add-videographer" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${vidOptHtml}</select>
+    </div>`:''}
+
+    <div class="mtrk-section">Hours</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="mtrk-field" style="margin-bottom:0">
+        ${lbl(_isPhoto?'Shoot Hrs':'Film Hrs')}
+        <input id="mtrk-add-film-hrs" type="number" placeholder="e.g. 2" step="0.5" min="0" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;box-sizing:border-box">
+      </div>
+      <div class="mtrk-field" style="margin-bottom:0">
+        ${lbl('Edit Hrs')}
+        <input id="mtrk-add-edit-hrs" type="number" placeholder="e.g. 4" step="0.5" min="0" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <div class="mtrk-section">Notes</div>
+
+    <div class="mtrk-field">
+      <textarea id="mtrk-add-notes" rows="3" placeholder="Any notes…" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+
+    <button onclick="mobTrkAddSave('${id}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">${_isPhoto?'Create Photo Project':'Create Video Project'}</button>
+
+    <div style="height:calc(20px + env(safe-area-inset-bottom,0px))"></div>
+  `;
+
+  document.getElementById('mob-tracker-main')?.classList.add('mtrk-add-open');
+}
+
+function mobTrkAddBack(){
+  document.getElementById('mob-tracker-main')?.classList.remove('mtrk-add-open');
+}
+
+function mobTrkAddSave(id){
+  const _isPhoto = _trackerMode==='photo';
+  const name = document.getElementById('mtrk-add-name')?.value.trim()||'';
+  const client = document.getElementById('mtrk-add-client')?.value.trim()||'';
+  const date = document.getElementById('mtrk-add-date')?.value||'';
+  const due = document.getElementById('mtrk-add-due')?.value||'';
+  const status = document.getElementById('mtrk-add-status')?.value||(_isPhoto?'files_pending':'ready');
+  const stage = document.getElementById('mtrk-add-stage')?.value||'ready';
+  const editor = document.getElementById('mtrk-add-editor')?.value||'';
+  const videographer = document.getElementById('mtrk-add-videographer')?.value||'';
+  const filmHrs = document.getElementById('mtrk-add-film-hrs')?.value||'';
+  const editHrs = document.getElementById('mtrk-add-edit-hrs')?.value||'';
+  const notes = document.getElementById('mtrk-add-notes')?.value.trim()||'';
+
+  if(!name){
+    showDhToast('Missing','Please enter a project name','⚠','var(--amber)',2000);
+    return;
+  }
+
+  const fakeJob = {
+    id, name, date, address:name, clientId:null, clientName:client,
+    duration:'', payouts:{}, editors:{}, services:{}, status:'confirmed',
+    isStandalone:true,
+  };
+  if(_isPhoto) fakeJob.isPhoto = true;
+  savedJobs.push(fakeJob);
+  saveJobsToStorage();
+
+  const stageData = {
+    editStatus: status,
+    stage: _isPhoto ? 'ready' : stage,
+    claimedBy: editor,
+    notes,
+    completionDate: due,
+    approxFilmHours: filmHrs,
+    approxEditHours: editHrs,
+    filesReceived: false,
+    downloadLink:'', filemailLink:'', frameioLink:'', dropboxLink:'',
+  };
+  if(_isPhoto){
+    stageData.photographer = videographer;
+    setPhotoTrackerStage(id, stageData);
+  } else {
+    stageData.videographer = videographer;
+    setTrackerStage(id, stageData);
+  }
+
+  document.getElementById('mob-tracker-main')?.classList.remove('mtrk-add-open');
+  _mobTrkRenderCardsSafe();
+  showDhToast(_isPhoto?'Photo Project':'Video Project', 'Created ✓', _isPhoto?'📸':'🎬', _isPhoto?'#E879F9':'var(--blue-bright)', 2000);
 }
 
 function mobTrkOpenFullModal(){

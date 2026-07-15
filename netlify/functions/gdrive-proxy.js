@@ -124,10 +124,11 @@ exports.handler = async (event) => {
       if (!q) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'query required' }) };
       const params = {
         q: `name contains '${q.replace(/'/g, "\\'")}' and trashed = false`,
-        fields: 'files(id,name,mimeType,webViewLink,iconLink,modifiedTime,size,thumbnailLink,parents)',
+        fields: 'nextPageToken,files(id,name,mimeType,webViewLink,iconLink,modifiedTime,size,thumbnailLink,parents)',
         orderBy: 'modifiedTime desc',
-        pageSize: '30',
+        pageSize: '100',
       };
+      if (body.pageToken) params.pageToken = body.pageToken;
       const data = await driveApi(auth.token, 'files', params);
       return { statusCode: 200, headers: cors, body: JSON.stringify(data) };
     }

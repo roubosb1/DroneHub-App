@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=50">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -1336,6 +1336,18 @@
           <button id="mob-trk-dv-full-btn" onclick="mobTrkOpenFullModal()" title="Full editor">⋯</button>
         </div>
         <div id="mob-trk-dv-body"></div>
+      </div>
+      <!-- SCREEN 3: Add Project -->
+      <div id="mob-trk-add">
+        <div id="mob-trk-add-hdr">
+          <button id="mob-trk-add-back" onclick="mobTrkAddBack()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </button>
+          <div id="mob-trk-add-title">New Project</div>
+          <div style="width:40px"></div>
+        </div>
+        <div id="mob-trk-add-body"></div>
       </div>
     </div>
   </div>
@@ -4444,7 +4456,7 @@
 <script src="js/social.js"></script>
 <script src="js/sales.js"></script>
 <script src="js/louchat.js"></script>
-<script src="js/tracker.js"></script>
+<script src="js/tracker.js?v=50"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js"></script>
 <script src="js/calendar.js"></script>
@@ -4453,7 +4465,7 @@
 <script src="js/clients.js"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>
-<script src="js/files.js"></script>
+<script src="js/files.js?v=50"></script>
 <script>
 // ── DYNAMIC EDITOR/TEAM LISTS ─────────────────────────────────────────────
 // These replace the old hardcoded EDITOR_OPTIONS and EDITOR_NAMES
@@ -6731,7 +6743,8 @@ function tpPlayVideo(url, title, isReel){
   overlay.id = 'tp-video-overlay';
   overlay.style.cssText = [
     'position:fixed','inset:0','z-index:99999',
-    'background:rgba(0,0,0,.93)',
+    'background:rgba(10,15,26,.88)',
+    '-webkit-backdrop-filter:blur(14px)','backdrop-filter:blur(14px)',
     'display:flex','flex-direction:column',
     'align-items:center','justify-content:center',
     'padding:24px','box-sizing:border-box',
@@ -10650,12 +10663,12 @@ function initGoogleMaps(){
       <!-- Avatar -->
       <div id="mob-pf-avatar" style="width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;border:2px solid var(--border-bright);overflow:hidden">?</div>
       <!-- Name + role -->
-      <div style="flex:1;min-width:0">
+      <div style="flex-shrink:1;min-width:0">
         <div id="mob-pf-name" style="font-size:16px;font-weight:800;color:var(--white);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
         <div id="mob-pf-role" style="font-size:11px;color:var(--muted);font-weight:600;margin-top:1px"></div>
       </div>
-      <!-- Stats 2x2 grid -->
-      <div style="display:grid;grid-template-columns:auto auto;gap:6px 20px;flex-shrink:0">
+      <!-- Stats 2x2 grid — centered in the remaining space -->
+      <div style="flex:1;display:grid;grid-template-columns:auto auto;gap:12px 38px;justify-content:center">
         <div style="text-align:center">
           <div id="mob-pf-stat-active" style="font-size:15px;font-weight:800;color:var(--blue-bright);line-height:1.2">0</div>
           <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Active</div>

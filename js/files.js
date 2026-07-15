@@ -126,8 +126,11 @@ async function filesLoadFolder(folderId) {
 function _filesRenderList(files) {
   const list = document.getElementById('files-list');
   if (!list) return;
+  list.innerHTML = _filesRowsHtml(files);
+}
 
-  list.innerHTML = files.map(f => {
+function _filesRowsHtml(files) {
+  return files.map(f => {
     const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
     const icon = isFolder
       ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
@@ -238,6 +241,9 @@ function filesInsertLink(target) {
   try { showDhToast('Link ready', 'Open a project in the tracker to insert this link', 'check', 'var(--blue-bright)'); } catch (e) {}
 }
 
+let _filesSearchQuery = '';
+let _filesSearchPageToken = '';
+
 async function filesSearch() {
   const q = document.getElementById('files-search')?.value.trim();
   if (!q) { filesLoadFolder(_filesCurrentFolder); return; }
@@ -253,11 +259,44 @@ async function filesSearch() {
       list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No files found for "${q}"</div>`;
       return;
     }
+    _filesSearchQuery = q;
+    _filesSearchPageToken = data.nextPageToken || '';
     _filesBreadcrumb = [{ id: 'root', name: 'My Drive' }, { id: 'search', name: `Search: ${q}` }];
     filesRenderBreadcrumb();
     _filesRenderList(files);
+    _filesAppendLoadMore();
   } catch (err) {
     list.innerHTML = `<div style="padding:20px;color:var(--red);font-size:12px">Error: ${err.message}</div>`;
+  }
+}
+
+function _filesAppendLoadMore() {
+  const list = document.getElementById('files-list');
+  if (!list || !_filesSearchPageToken) return;
+  const btn = document.createElement('div');
+  btn.id = 'files-load-more';
+  btn.innerHTML = `<button onclick="filesSearchMore()" style="width:100%;padding:12px;border:none;background:transparent;color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">Load more results ↓</button>`;
+  list.appendChild(btn);
+}
+
+async function filesSearchMore() {
+  const list = document.getElementById('files-list');
+  const moreBtn = document.getElementById('files-load-more');
+  if (!list || !_filesSearchQuery || !_filesSearchPageToken) return;
+  if (moreBtn) moreBtn.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Loading…</div>';
+
+  try {
+    const data = await _filesApi('search', { query: _filesSearchQuery, pageToken: _filesSearchPageToken });
+    moreBtn?.remove();
+    if (data.error) return;
+    const files = data.files || [];
+    _filesSearchPageToken = data.nextPageToken || '';
+    const wrap = document.createElement('div');
+    wrap.innerHTML = _filesRowsHtml(files);
+    while (wrap.firstChild) list.appendChild(wrap.firstChild);
+    _filesAppendLoadMore();
+  } catch (err) {
+    moreBtn?.remove();
   }
 }
 
