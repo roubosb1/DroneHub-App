@@ -1056,8 +1056,10 @@ button{font-family:var(--font);}
 .sales-modal-body{padding:20px 22px;}
 .sales-modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
 @media(max-width:768px){
-  .sales-table th:nth-child(3),.sales-table td:nth-child(3){display:none;}
-  .sales-table th:nth-child(4),.sales-table td:nth-child(4){display:none;}
+  /* Hide Company column. NOTE: header has a hidden Type th (4th) that body rows
+     don't have — hide th 3+4 but only td 3, or body columns shift left by one. */
+  .sales-table th:nth-child(3),.sales-table th:nth-child(4),.sales-table td:nth-child(3){display:none;}
+  .sales-table{min-width:640px;}
   .sales-list-tab{font-size:11px;padding:6px 12px;}
 }
 /* ── Instagram phone mockup ── */
