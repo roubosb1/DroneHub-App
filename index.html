@@ -2481,10 +2481,6 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
           Time Off
         </button>
-        <button class="dsk-pf-tab" id="dsk-pf-tab-work" onclick="dskPfSwitchTab('work')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-          My Work
-        </button>
         <button class="dsk-pf-tab" id="dsk-pf-tab-calendar" onclick="dskPfSwitchTab('calendar')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Calendar
@@ -4746,6 +4742,7 @@ function closeMobTopDropdown(){
 // ── MOBILE PROFILE (Instagram-style) ──────────────────────────────────────────
 let _mobPfTab = 'overview';    // 'overview' | 'portfolio' | 'timeoff'
 let _mobPfSubTab = 'youtube';  // 'youtube' | 'reels' | 'photos'
+let _mobPfDeleteMode = false;
 
 function mobShowProfile(){
   // Resolve the current user's member record
@@ -4817,12 +4814,13 @@ function mobShowProfile(){
   document.querySelectorAll('.mob-nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('mobnav-profile')?.classList.add('active');
 
-  // Render default tab — Portfolio first
-  _mobPfTab = 'portfolio';
+  // Render default tab
+  _mobPfTab = 'overview';
   _mobPfSubTab = 'youtube';
+  _mobPfDeleteMode = false;
   document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('mob-pftab-portfolio')?.classList.add('active');
-  // Show + add button for portfolio (admin or own profile)
+  document.getElementById('mob-pftab-overview')?.classList.add('active');
+  // Show + quick actions button (admin or own profile)
   const _addBtn = document.getElementById('mob-pf-portfolio-add-btn');
   if(_addBtn){
     const _s = gateGetSession();
@@ -4830,7 +4828,10 @@ function mobShowProfile(){
     const _isAdmin = !_s||_s.type==='admin'||_s.role==='admin';
     _addBtn.style.display = (_isAdmin||_isOwn) ? 'flex' : 'none';
   }
-  mobPfRenderPortfolio(member);
+  // Close quick actions menu
+  const _qaMenu = document.getElementById('mob-pf-quick-actions');
+  if(_qaMenu) _qaMenu.style.display = 'none';
+  mobPfRenderOverview(member);
 
   // Background Firebase refresh
   if(typeof tpProfileLoad_fb === 'function' && _fbToken && _fbToken()){
@@ -4841,10 +4842,11 @@ function mobShowProfile(){
 function mobHideProfile(){
   const pane = document.getElementById('mob-profile-pane');
   if(pane) pane.style.display='none';
-  // Hide the portfolio + button
   const addBtn = document.getElementById('mob-pf-portfolio-add-btn');
   if(addBtn) addBtn.style.display='none';
-  // Restore last active pane nav state
+  const qaMenu = document.getElementById('mob-pf-quick-actions');
+  if(qaMenu) qaMenu.style.display='none';
+  _mobPfDeleteMode = false;
   document.getElementById('mobnav-profile')?.classList.remove('active');
 }
 
@@ -4860,19 +4862,47 @@ function mobPfSwitchTab(tab){
   document.getElementById('mob-pftab-'+tab)?.classList.add('active');
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
-  // Show + button only on Portfolio tab for users who can edit
+  // Close quick actions if open
+  const qaMenu = document.getElementById('mob-pf-quick-actions');
+  if(qaMenu) qaMenu.style.display = 'none';
+  // Show + button on all tabs for users who can edit
   const addBtn = document.getElementById('mob-pf-portfolio-add-btn');
   if(addBtn){
     const session = gateGetSession();
     const isOwn = member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase();
     const isAdmin = !session||session.type==='admin'||session.role==='admin';
-    addBtn.style.display = (tab==='portfolio'&&(isAdmin||isOwn)) ? 'flex' : 'none';
+    addBtn.style.display = (isAdmin||isOwn) ? 'flex' : 'none';
   }
   mobPfRenderCurrent(member);
 }
 
+function mobPfToggleQuickActions(){
+  const menu = document.getElementById('mob-pf-quick-actions');
+  if(!menu) return;
+  const show = menu.style.display === 'none';
+  menu.style.display = show ? 'block' : 'none';
+  if(show){
+    setTimeout(()=>{
+      const close = (e)=>{ if(!menu.contains(e.target)){ menu.style.display='none'; document.removeEventListener('click',close,true); }};
+      document.addEventListener('click',close,true);
+    },0);
+  }
+}
+function mobPfQuickAction(action){
+  document.getElementById('mob-pf-quick-actions').style.display='none';
+  if(action==='timeoff') mobPfSwitchTab('timeoff');
+  else if(action==='addvideo'){
+    if(_tpMemberId) openTeamMemberProfile(_tpMemberId);
+    mobHideProfile();
+  }
+  else if(action==='removevideo'){
+    mobPfSwitchTab('portfolio');
+    _mobPfDeleteMode = !_mobPfDeleteMode;
+    const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+    if(member) mobPfRenderPortfolio(member);
+  }
+}
 function mobPfPortfolioAdd(){
-  // Open full editor for this member, then hide mobile profile
   if(_tpMemberId) openTeamMemberProfile(_tpMemberId);
   mobHideProfile();
 }
@@ -4943,20 +4973,14 @@ function mobPfRenderPortfolio(member){
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
   const canEdit = isAdmin || isOwn;
 
-  const subCfg = {
-    youtube: { types:['video'], ratio:'ratio-169', label:'▶ YouTube', gridClass:'mob-pf-grid-yt', wrapper:'yt' },
-    reels:   { types:['reel'],  ratio:'ratio-916', label:'Reels',  gridClass:'mob-pf-grid-3',  wrapper:'3col' },
-    photos:  { types:['photo','other'], ratio:'', label:'Photos', gridClass:'mob-pf-grid-3',  wrapper:'3col' },
-  };
-  const cfg = subCfg[_mobPfSubTab] || subCfg.youtube;
-  const visItems = items.filter(i=>cfg.types.includes(i.type));
-
   const tileHtml = (item) => {
     const thumb = item.thumb || tpGetAutoThumb(item.url);
-    const isYT = _mobPfSubTab === 'youtube';
-    if(isYT){
+    const isVideo = item.type==='video';
+    const deleteBtn = _mobPfDeleteMode && canEdit ? `<button onclick="event.stopPropagation();mobPfDeletePortfolioItem('${member.id}','${(item.url||'').replace(/'/g,"\\'")}')" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(240,82,82,.9);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>` : '';
+    if(isVideo){
       return `
-      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="border-radius:10px;overflow:hidden;background:var(--navy-mid)">
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="border-radius:10px;overflow:hidden;background:var(--navy-mid);position:relative">
+        ${deleteBtn}
         <div class="mob-pf-tile-inner ratio-169" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
           ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
           <div class="mob-pf-tile-overlay"><svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
@@ -4965,8 +4989,9 @@ function mobPfRenderPortfolio(member){
       </div>`;
     } else {
       return `
-      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
-        <div class="mob-pf-tile-inner ${cfg.ratio||''}">
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="position:relative" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
+        ${deleteBtn}
+        <div class="mob-pf-tile-inner">
           ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
           <div class="mob-pf-tile-overlay"><svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
         </div>
@@ -4975,26 +5000,31 @@ function mobPfRenderPortfolio(member){
   };
 
   content.innerHTML = `
-  <!-- Portfolio sub-tab bar -->
-  <div class="mob-pf-subtab-bar">
-    <button class="mob-pf-subtab ${_mobPfSubTab==='youtube'?'active':''}" onclick="_mobPfSubTab='youtube';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">▶ YouTube</button>
-    <button class="mob-pf-subtab ${_mobPfSubTab==='reels'?'active':''}"   onclick="_mobPfSubTab='reels';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">${_icon('video',13)} Reels</button>
-    <button class="mob-pf-subtab ${_mobPfSubTab==='photos'?'active':''}"  onclick="_mobPfSubTab='photos';mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))">${_icon('camera',13)} Photos</button>
-  </div>
-
-  ${visItems.length === 0 ? `
+  ${_mobPfDeleteMode ? `<div style="padding:10px 16px;background:rgba(240,82,82,.1);border-bottom:1px solid rgba(240,82,82,.3);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;font-weight:700;color:var(--red)">Tap ✕ to remove a video</span>
+    <button onclick="_mobPfDeleteMode=false;mobPfRenderPortfolio(getAdminTeamMembers().find(m=>m.id===_tpMemberId))" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--offwhite);font-size:11px;font-weight:700;cursor:pointer">Done</button>
+  </div>` : ''}
+  ${items.length === 0 ? `
   <div style="padding:60px 20px;text-align:center;color:var(--muted)">
-    <div style="margin-bottom:8px;color:var(--muted)">${_mobPfSubTab==='youtube'?_icon('video',32):_mobPfSubTab==='reels'?_icon('video',32):_icon('camera',32)}</div>
-    <div style="font-size:13px">No ${cfg.label.replace(/^[^ ]+ /,'')} yet.</div>
+    <div style="margin-bottom:8px;color:var(--muted)">${_icon('video',32)}</div>
+    <div style="font-size:13px">No portfolio items yet.</div>
   </div>` : `
-  <div class="${cfg.gridClass}" style="${_mobPfSubTab==='youtube'?'padding:12px':''}">
-    ${visItems.map(tileHtml).join('')}
+  <div class="mob-pf-grid-3">
+    ${items.map(tileHtml).join('')}
   </div>`}`;
 
-  // Deferred og:image fetch for tiles without thumbnails
   requestAnimationFrame(()=>{
     if(typeof tpLoadDeferredThumbs === 'function') tpLoadDeferredThumbs(content);
   });
+}
+function mobPfDeletePortfolioItem(memberId, url){
+  if(!confirm('Remove this item from your portfolio?')) return;
+  const items = tpPortfolioLoad ? tpPortfolioLoad(memberId) : [];
+  const updated = items.filter(i=>i.url!==url);
+  if(typeof tpPortfolioSave==='function') tpPortfolioSave(memberId, updated);
+  const member = getAdminTeamMembers().find(m=>m.id===memberId);
+  if(member) mobPfRenderPortfolio(member);
+  showDhToast('Portfolio','Item removed.','✓','var(--green)',2000);
 }
 
 function mobPfRenderTimeOff(member){
@@ -10354,12 +10384,26 @@ function initGoogleMaps(){
 
   <!-- Header bar: + LEFT | DroneHub logo CENTER | bell + hamburger RIGHT -->
   <div id="mob-pf-header" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 12px;height:52px;background:var(--navy-card);border-bottom:1px solid var(--border);flex-shrink:0">
-    <!-- Left slot: portfolio add (+) -->
-    <div style="grid-column:1;justify-self:start;display:flex;align-items:center;">
-      <button id="mob-pf-portfolio-add-btn" onclick="mobPfPortfolioAdd()" aria-label="Add portfolio work"
+    <!-- Left slot: quick actions (+) -->
+    <div style="grid-column:1;justify-self:start;display:flex;align-items:center;position:relative">
+      <button id="mob-pf-portfolio-add-btn" onclick="mobPfToggleQuickActions()" aria-label="Quick actions"
         style="display:none;width:34px;height:34px;border:none;background:transparent;color:rgba(255,255,255,1);cursor:pointer;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
+      <div id="mob-pf-quick-actions" style="display:none;position:absolute;top:40px;left:0;min-width:200px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:20;overflow:hidden">
+        <button onclick="mobPfQuickAction('timeoff')" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:none;background:transparent;color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer;text-align:left;border-bottom:1px solid var(--border)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
+          Request Time Off
+        </button>
+        <button onclick="mobPfQuickAction('addvideo')" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:none;background:transparent;color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer;text-align:left;border-bottom:1px solid var(--border)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Add Video
+        </button>
+        <button onclick="mobPfQuickAction('removevideo')" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:none;background:transparent;color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer;text-align:left">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Remove Video
+        </button>
+      </div>
     </div>
     <!-- Centre slot: DroneHub logo -->
     <img id="mob-pf-logo" src="" alt="DroneHub" style="grid-column:2;justify-self:center;height:20px;object-fit:contain">
@@ -10410,8 +10454,8 @@ function initGoogleMaps(){
       </div>
     </div>
 
-    <!-- Tab bar — pulled up tight with minimal gap -->
-    <div style="display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--navy-card);position:sticky;top:0;z-index:10">
+    <!-- Tab bar -->
+    <div style="display:flex;justify-content:center;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--navy-card);position:sticky;top:0;z-index:10">
       <button id="mob-pftab-overview"  class="mob-pf-tab active"  onclick="mobPfSwitchTab('overview')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         <span>Overview</span>
@@ -10427,7 +10471,7 @@ function initGoogleMaps(){
     </div>
 
     <!-- Tab content -->
-    <div id="mob-pf-content" style="min-height:400px"></div>
+    <div id="mob-pf-content"></div>
 
   </div>
 </div>
