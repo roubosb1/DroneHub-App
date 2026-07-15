@@ -4741,7 +4741,7 @@ function closeMobTopDropdown(){
 
 // ── MOBILE PROFILE (Instagram-style) ──────────────────────────────────────────
 let _mobPfTab = 'overview';    // 'overview' | 'portfolio' | 'timeoff'
-let _mobPfSubTab = 'youtube';  // 'youtube' | 'reels' | 'photos'
+let _mobPfSubTab = 'cinema';  // 'cinema' | 'reels' | 'photos'
 let _mobPfDeleteMode = false;
 
 function mobShowProfile(){
@@ -4816,10 +4816,10 @@ function mobShowProfile(){
 
   // Render portfolio directly (no tabs)
   _mobPfTab = 'portfolio';
-  _mobPfSubTab = 'reels';
+  _mobPfSubTab = 'cinema';
   _mobPfDeleteMode = false;
   document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('mob-pf-subtab-reels')?.classList.add('active');
+  document.getElementById('mob-pf-subtab-cinema')?.classList.add('active');
   // Show + quick actions button (admin or own profile)
   const _addBtn = document.getElementById('mob-pf-portfolio-add-btn');
   if(_addBtn){
@@ -4867,7 +4867,7 @@ function mobPfSwitchTab(tab){
   mobPfRenderCurrent(member);
 }
 function mobPfSwitchSubTab(sub){
-  _mobPfSubTab = sub === 'photos' ? 'photos' : 'reels';
+  _mobPfSubTab = sub === 'photos' ? 'photos' : sub === 'reels' ? 'reels' : 'cinema';
   document.querySelectorAll('.mob-pf-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('mob-pf-subtab-'+_mobPfSubTab)?.classList.add('active');
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
@@ -4986,17 +4986,29 @@ function mobPfRenderPortfolio(member){
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
   const canEdit = isAdmin || isOwn;
 
-  const isReels = _mobPfSubTab !== 'photos';
-  const items = isReels
-    ? allItems.filter(i=>i.type==='video'||i.type==='reel')
+  const isCinema = _mobPfSubTab === 'cinema';
+  const isReels = _mobPfSubTab === 'reels';
+  const items = isCinema
+    ? allItems.filter(i=>i.type==='video')
+    : isReels
+    ? allItems.filter(i=>i.type==='reel')
     : allItems.filter(i=>i.type==='photo'||i.type==='other');
 
   const tileHtml = (item) => {
     const thumb = item.thumb || tpGetAutoThumb(item.url);
     const deleteBtn = _mobPfDeleteMode && canEdit ? `<button onclick="event.stopPropagation();mobPfDeletePortfolioItem('${member.id}','${(item.url||'').replace(/'/g,"\\'")}')" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(240,82,82,.9);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>` : '';
-    if(isReels){
+    if(isCinema){
       return `
-      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',${item.type==='reel'})" style="position:relative;background:var(--navy-mid)">
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',false)" style="position:relative;background:var(--navy-mid)">
+        ${deleteBtn}
+        <div class="mob-pf-tile-inner ratio-169" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
+          ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`}
+          <div class="mob-pf-tile-overlay"><svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,.9)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        </div>
+      </div>`;
+    } else if(isReels){
+      return `
+      <div class="mob-pf-tile" onclick="tpPlayVideo('${item.url.replace(/'/g,"\\'")}','${(item.title||'').replace(/'/g,"\\'")}',true)" style="position:relative;background:var(--navy-mid)">
         ${deleteBtn}
         <div class="mob-pf-tile-inner ratio-916" ${item.url&&!thumb?`data-og-url="${item.url.replace(/"/g,'&quot;')}"`:''}>
           ${thumb ? `<img src="${thumb}" alt="">` : `<div class="mob-pf-tile-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>`}
@@ -5015,7 +5027,7 @@ function mobPfRenderPortfolio(member){
     }
   };
 
-  const emptyLabel = isReels ? 'reels' : 'photos';
+  const emptyLabel = isCinema ? 'cinema videos' : isReels ? 'reels' : 'photos';
   content.innerHTML = `
   ${_mobPfDeleteMode ? `<div style="padding:10px 16px;background:rgba(240,82,82,.1);border-bottom:1px solid rgba(240,82,82,.3);display:flex;align-items:center;justify-content:space-between">
     <span style="font-size:12px;font-weight:700;color:var(--red)">Tap ✕ to remove</span>
@@ -5023,10 +5035,10 @@ function mobPfRenderPortfolio(member){
   </div>` : ''}
   ${items.length === 0 ? `
   <div style="padding:60px 20px;text-align:center;color:var(--muted)">
-    <div style="margin-bottom:8px;color:var(--muted)">${isReels?_icon('video',32):_icon('camera',32)}</div>
+    <div style="margin-bottom:8px;color:var(--muted)">${isCinema||isReels?_icon('video',32):_icon('camera',32)}</div>
     <div style="font-size:13px">No ${emptyLabel} yet.</div>
   </div>` : `
-  <div class="mob-pf-grid-3">
+  <div class="${isCinema?'mob-pf-grid-2':'mob-pf-grid-3'}">
     ${items.map(tileHtml).join('')}
   </div>`}`;
 
@@ -10656,9 +10668,13 @@ function initGoogleMaps(){
       </div>
     </div>
 
-    <!-- Portfolio sub-tabs: Reels | Photos -->
+    <!-- Portfolio sub-tabs: Cinema | Reels | Photos -->
     <div style="display:flex;border-bottom:1px solid var(--border);background:var(--navy);position:sticky;top:0;z-index:10">
-      <button id="mob-pf-subtab-reels" class="mob-pf-tab active" onclick="mobPfSwitchSubTab('reels')">
+      <button id="mob-pf-subtab-cinema" class="mob-pf-tab active" onclick="mobPfSwitchSubTab('cinema')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
+        <span>Cinema</span>
+      </button>
+      <button id="mob-pf-subtab-reels" class="mob-pf-tab" onclick="mobPfSwitchSubTab('reels')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         <span>Reels</span>
       </button>

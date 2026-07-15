@@ -920,6 +920,7 @@ button{font-family:var(--font);}
 .mob-pf-subtab.active{color:var(--white);border-bottom-color:var(--blue-bright);}
 
 /* IG 3-col grid */
+.mob-pf-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;}
 .mob-pf-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;}
 /* Full-width YouTube list */
 .mob-pf-grid-yt{display:flex;flex-direction:column;gap:10px;padding:12px;}
