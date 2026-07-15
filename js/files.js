@@ -185,25 +185,48 @@ function filesOpenFolder(folderId, name) {
   filesLoadFolder(folderId);
 }
 
-function filesDownload(fileId) {
-  try { showDhToast('Preparing download', 'Fetching file link…', '⬇', 'var(--blue-bright)', 2000); } catch (e) {}
-  _filesApi('link', { fileId }).then(data => {
-    // webContentLink is Drive's direct-download URL; fall back to the view page
-    const dl = data.webContentLink || data.webViewLink || '';
-    if (!dl) {
-      try { showDhToast('Download failed', 'No download link available for this file', '⚠', 'var(--orange)', 3000); } catch (e) {}
-      return;
+async function filesDownload(fileId) {
+  try { showDhToast('Downloading…', 'Preparing your file…', '⬇', 'var(--blue-bright)', 3000); } catch (e) {}
+  try {
+    const res = await fetch(_GDRIVE_PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'download', fileId }),
+    });
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      const data = await res.json();
+      if (data.tooLarge) {
+        // File too large for proxy — use hidden iframe so it still doesn't open a visible tab
+        const dl = data.webContentLink || '';
+        if (!dl) { try { showDhToast('Download failed', 'No download link for this file', '⚠', 'var(--orange)', 3000); } catch (e) {} return; }
+        try { showDhToast('Large file', 'Downloading via Google Drive…', '⬇', 'var(--blue-bright)', 3000); } catch (e) {}
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        iframe.src = dl;
+        setTimeout(() => iframe.remove(), 120000);
+        return;
+      }
+      if (data.error) { try { showDhToast('Download failed', data.error, '⚠', 'var(--orange)', 3000); } catch (e) {} return; }
     }
+    // Binary response — save as file
+    const blob = await res.blob();
+    const cd = res.headers.get('content-disposition') || '';
+    const nameMatch = cd.match(/filename="([^"]+)"/);
+    const name = nameMatch ? nameMatch[1] : 'download';
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = dl;
-    a.target = '_blank';
-    a.rel = 'noopener';
+    a.href = url;
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     a.remove();
-  }).catch(err => {
-    try { showDhToast('Download failed', err.message || 'Could not fetch file link', '⚠', 'var(--orange)', 3000); } catch (e) {}
-  });
+    URL.revokeObjectURL(url);
+    try { showDhToast('Downloaded', name, 'check', 'var(--green)', 2000); } catch (e) {}
+  } catch (err) {
+    try { showDhToast('Download failed', err.message || 'Could not download file', '⚠', 'var(--orange)', 3000); } catch (e) {}
+  }
 }
 
 function filesCopyLink(fileId, webViewLink) {

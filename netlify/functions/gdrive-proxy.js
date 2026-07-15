@@ -142,6 +142,32 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers: cors, body: JSON.stringify(data) };
     }
 
+    if (action === 'download') {
+      const fileId = body.fileId;
+      if (!fileId) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'fileId required' }) };
+      const meta = await driveApi(auth.token, `files/${fileId}`, {
+        fields: 'id,name,mimeType,size,webContentLink',
+      });
+      const fileSize = parseInt(meta.size || '0', 10);
+      // Netlify response limit ~6MB; base64 adds ~33% overhead
+      if (fileSize > 4500000) {
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ tooLarge: true, name: meta.name, webContentLink: meta.webContentLink || '' }) };
+      }
+      const dlUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+      const dlRes = await fetch(dlUrl, { headers: { Authorization: `Bearer ${auth.token}` } });
+      if (!dlRes.ok) {
+        const errText = await dlRes.text().catch(() => '');
+        throw new Error(`Download failed (${dlRes.status}): ${errText}`);
+      }
+      const buf = Buffer.from(await dlRes.arrayBuffer());
+      return {
+        statusCode: 200,
+        headers: { ...cors, 'Content-Type': meta.mimeType || 'application/octet-stream', 'Content-Disposition': `attachment; filename="${(meta.name || 'download').replace(/"/g, '_')}"` },
+        body: buf.toString('base64'),
+        isBase64Encoded: true,
+      };
+    }
+
     if (action === 'breadcrumb') {
       const fileId = body.fileId;
       if (!fileId || fileId === 'root') return { statusCode: 200, headers: cors, body: JSON.stringify({ path: [{ id: 'root', name: 'My Drive' }] }) };
