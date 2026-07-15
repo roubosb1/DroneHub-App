@@ -733,7 +733,7 @@ button{font-family:var(--font);}
   #pane-tracker.active{display:flex!important;}
   /* Hide all desktop content, show only mobile shell */
   #pane-tracker > *:not(#mob-tracker-main){display:none!important;}
-  #mob-tracker-main{display:flex!important;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+  #mob-tracker-main{display:flex!important;flex-direction:column;flex:1;overflow:hidden;min-height:0;background:var(--navy);}
 
   /* Two-screen slide container */
   #mob-trk-wrap{flex:1;overflow:hidden;position:relative;display:flex;min-height:0;}
