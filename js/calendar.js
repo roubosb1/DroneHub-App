@@ -908,7 +908,7 @@ function showGcalEventDetail(name,creator,time){
 
 function editCalEvent(eventId){
   const evt=calEventsLoad().find(e=>String(e.id)===String(eventId));
-  if(!evt) return;
+  if(!evt){showDhToast('Edit failed','Event not found (id: '+eventId+', total: '+calEventsLoad().length+')','⚠','var(--orange)',5000);return;}
   openCalEventModal(evt.date);
   setTimeout(()=>{
     const t=document.getElementById('cae-title');
@@ -947,12 +947,13 @@ function updateCalEvent(eventId){
   if(!start){alert('Please select a start date.');return;}
   if(end<start){alert('End date cannot be before start date.');return;}
   if(startTime&&endTime&&start===end&&endTime<startTime){alert('End time cannot be before start time.');return;}
-  const arr=calEventsLoad();const idx=arr.findIndex(e=>String(e.id)===String(eventId));if(idx===-1) return;
+  const arr=calEventsLoad();const idx=arr.findIndex(e=>String(e.id)===String(eventId));
+  if(idx===-1){showDhToast('Update failed','Event not found (id: '+eventId+')','⚠','var(--orange)',5000);return;}
   arr[idx]={...arr[idx],type,title,date:start,endDate:end,startTime,endTime,memberName:member,invitees:invitedTeam,clientInvitees:invitedClients,notes,updatedAt:new Date().toISOString()};
   calEventsSave(arr);
   document.getElementById('cal-event-modal')?.remove();
   calViewRefresh();renderVacationTracker();
-  showDhToast('Event updated','','✅','var(--green)',3000);
+  showDhToast('Event updated',startTime?(startTime+(endTime?' – '+endTime:'')):'All day','✅','var(--green)',3000);
 }
 
 // Vacation tracker panel
