@@ -1,6 +1,40 @@
 // ─── CALENDAR ────────────────────────────────────────────────────────────────
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 
+function _calTimePicker(prefix,defH,defM){
+  defH=defH||9;defM=defM||0;
+  const h12=defH===0?12:defH>12?defH-12:defH;
+  const ap=defH>=12?'PM':'AM';
+  const ss='style="padding:6px 4px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);flex:1;text-align:center;min-width:0"';
+  let hOpts='';for(let i=1;i<=12;i++) hOpts+=`<option value="${i}"${i===h12?' selected':''}>${i}</option>`;
+  let mOpts='';for(let i=0;i<60;i+=5) mOpts+=`<option value="${i}"${i===defM?' selected':''}>:${String(i).padStart(2,'0')}</option>`;
+  return `<div style="display:flex;gap:4px;align-items:center">
+<select id="${prefix}-h" ${ss}>${hOpts}</select>
+<select id="${prefix}-m" ${ss}>${mOpts}</select>
+<select id="${prefix}-ap" ${ss}><option value="AM"${ap==='AM'?' selected':''}>AM</option><option value="PM"${ap==='PM'?' selected':''}>PM</option></select>
+</div>`;
+}
+function _calTimeVal(prefix){
+  const hEl=document.getElementById(prefix+'-h');
+  const mEl=document.getElementById(prefix+'-m');
+  const apEl=document.getElementById(prefix+'-ap');
+  if(!hEl||!mEl||!apEl) return '';
+  let h=parseInt(hEl.value);const m=parseInt(mEl.value);const ap=apEl.value;
+  if(ap==='AM'&&h===12) h=0; else if(ap==='PM'&&h!==12) h+=12;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function _calTimeSet(prefix,val){
+  if(!val) return;
+  const parts=val.split(':');let h=parseInt(parts[0]);const m=parseInt(parts[1])||0;
+  const ap=h>=12?'PM':'AM';
+  const h12=h===0?12:h>12?h-12:h;
+  const roundM=Math.round(m/5)*5;
+  const hEl=document.getElementById(prefix+'-h');
+  const mEl=document.getElementById(prefix+'-m');
+  const apEl=document.getElementById(prefix+'-ap');
+  if(hEl) hEl.value=h12;if(mEl) mEl.value=roundM>=60?55:roundM;if(apEl) apEl.value=ap;
+}
+
 let _mcNavDir=0; // direction hint for mobile slide animation (set before renderCalendar)
 let _mobCalSelDate=new Date().toISOString().slice(0,10);
 
@@ -620,9 +654,9 @@ function calQuickAdd(dateStr, hour, evt){
       <!-- Times -->
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <input id="qca-start-time" type="time" value="${startTime}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+        ${_calTimePicker('qca-start-time',startH,0)}
         <span style="font-size:11px;color:var(--muted)">to</span>
-        <input id="qca-end-time" type="time" value="${endTime}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--navy-lift);color:var(--white)">
+        ${_calTimePicker('qca-end-time',endH,0)}
       </div>
       <!-- End date (for multi-day) -->
       <div style="display:flex;align-items:center;gap:8px">
@@ -681,8 +715,8 @@ function calQuickAddSave(){
   const type=document.getElementById('qca-type')?.value||'other';
   const dateStr=document.getElementById('qca-date')?.value||new Date().toISOString().slice(0,10);
   const endDate=document.getElementById('qca-end-date')?.value||dateStr;
-  const startTime=document.getElementById('qca-start-time')?.value||'';
-  const endTime=document.getElementById('qca-end-time')?.value||'';
+  const startTime=_calTimeVal('qca-start-time');
+  const endTime=_calTimeVal('qca-end-time');
   const notes=(document.getElementById('qca-notes')?.value||'').trim();
   const invitedTeam=_calGetInvitedTeam('qca');
   const invitedClients=_calGetInvitedClients('qca');
@@ -732,11 +766,11 @@ function openCalEventModal(prefillDate){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Start time</label>
-          <input id="cae-start-time" type="time" value="09:00" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          ${_calTimePicker('cae-start-time',9,0)}
         </div>
         <div>
           <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">End time</label>
-          <input id="cae-end-time" type="time" value="10:00" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          ${_calTimePicker('cae-end-time',10,0)}
         </div>
       </div>
       <div>
@@ -808,8 +842,8 @@ function saveCalEvent(){
   const type=document.getElementById('cae-type')?.value;
   const start=document.getElementById('cae-start')?.value;
   const end=document.getElementById('cae-end')?.value||start;
-  const startTime=document.getElementById('cae-start-time')?.value||'';
-  const endTime=document.getElementById('cae-end-time')?.value||'';
+  const startTime=_calTimeVal('cae-start-time');
+  const endTime=_calTimeVal('cae-end-time');
   const invitedTeam=_calGetInvitedTeam('cae');
   const invitedClients=_calGetInvitedClients('cae');
   const member=invitedTeam[0]||'';
@@ -913,11 +947,11 @@ function editCalEvent(eventId){
   setTimeout(()=>{
     const t=document.getElementById('cae-title');
     const s=document.getElementById('cae-start');const en=document.getElementById('cae-end');
-    const st=document.getElementById('cae-start-time');const et=document.getElementById('cae-end-time');
     const n=document.getElementById('cae-notes');
     if(t) t.value=evt.title;
     if(s) s.value=evt.date;if(en) en.value=evt.endDate||evt.date;
-    if(st) st.value=evt.startTime||'';if(et) et.value=evt.endTime||'';
+    if(evt.startTime) _calTimeSet('cae-start-time',evt.startTime);
+    if(evt.endTime) _calTimeSet('cae-end-time',evt.endTime);
     if(n) n.value=evt.notes||'';
     if(evt.type) _calTypeSelect('cae-type',evt.type);
     (evt.invitees||[evt.memberName].filter(Boolean)).forEach(name=>{
@@ -937,8 +971,8 @@ function updateCalEvent(eventId){
   const type=document.getElementById('cae-type')?.value;
   const start=document.getElementById('cae-start')?.value;
   const end=document.getElementById('cae-end')?.value||start;
-  const startTime=document.getElementById('cae-start-time')?.value||'';
-  const endTime=document.getElementById('cae-end-time')?.value||'';
+  const startTime=_calTimeVal('cae-start-time');
+  const endTime=_calTimeVal('cae-end-time');
   const invitedTeam=_calGetInvitedTeam('cae');
   const invitedClients=_calGetInvitedClients('cae');
   const member=invitedTeam[0]||'';
