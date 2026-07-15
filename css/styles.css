@@ -756,33 +756,21 @@ button{font-family:var(--font);}
   #mob-tracker-main.mtrk-detail-open #mob-trk-list{transform:translateX(-100%);}
   #mob-tracker-main.mtrk-detail-open #mob-trk-detail{transform:translateX(0);}
 
-  /* ── List screen header ── */
-  #mob-trk-hdr{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
-    height:54px;box-sizing:border-box;
-  }
-  #mob-trk-hdr-title{font-size:17px;font-weight:800;color:var(--white);}
-  #mob-trk-add-btn{
-    width:34px;height:34px;border-radius:50%;border:none;
-    background:rgba(91,141,239,.15);color:var(--blue-bright);
-    font-size:22px;font-weight:300;line-height:1;
-    display:flex;align-items:center;justify-content:center;
-    cursor:pointer;-webkit-tap-highlight-color:transparent;
-  }
-
-  /* My Projects / All Projects toggle */
+  /* My Projects / All Projects — underline tabs (finance-style) */
   #mob-trk-toggle{
-    display:flex;gap:0;margin:10px 16px 0;
-    background:var(--navy-mid);border:1px solid var(--border);
-    border-radius:10px;overflow:hidden;flex-shrink:0;
+    display:flex;gap:0;flex-shrink:0;
+    border-bottom:1px solid var(--border);
+    overflow-x:auto;
   }
   .mob-trk-tog-btn{
-    flex:1;padding:8px 0;border:none;font-size:12px;font-weight:700;
+    padding:10px 20px;border:none;border-bottom:2px solid transparent;
+    font-size:13px;font-weight:700;
     cursor:pointer;transition:all .15s;color:var(--muted);
     background:transparent;-webkit-tap-highlight-color:transparent;
+    white-space:nowrap;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:5px;
   }
-  .mob-trk-tog-btn.active{background:var(--blue);color:#fff;}
+  .mob-trk-tog-btn.active{color:var(--blue-bright);border-bottom-color:var(--blue-bright);}
 
   /* Status tabs — underline style matching finance */
   #mob-trk-tabs{

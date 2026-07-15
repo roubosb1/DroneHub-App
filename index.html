@@ -1302,13 +1302,15 @@
     <div id="mob-trk-wrap">
       <!-- SCREEN 1: List -->
       <div id="mob-trk-list">
-        <div id="mob-trk-hdr">
-          <span id="mob-trk-hdr-title">Projects</span>
-        </div>
-        <div id="mob-trk-toggle">
-          <button id="mob-trk-mine-btn" class="mob-trk-tog-btn active" onclick="mobTrkSetMine(true)" style="display:inline-flex;align-items:center;gap:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21v-1a6 6 0 0112 0v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> My Projects</button>
+        <!-- Top tab bar: My Projects | All Projects (finance-style underline) -->
+        <div id="mob-trk-toggle" class="no-scrollbar">
+          <button id="mob-trk-mine-btn" class="mob-trk-tog-btn active" onclick="mobTrkSetMine(true)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21v-1a6 6 0 0112 0v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            My Projects
+          </button>
           <button id="mob-trk-all-btn" class="mob-trk-tog-btn" onclick="mobTrkSetMine(false)">All Projects</button>
         </div>
+        <!-- Status tabs: Upcoming | Active | Done -->
         <div id="mob-trk-tabs">
           <button id="mob-trk-tab-upcoming" class="mob-trk-tab active-upcoming" onclick="mobTrkSetTab('upcoming')">Upcoming</button>
           <button id="mob-trk-tab-active" class="mob-trk-tab" onclick="mobTrkSetTab('active')">Active</button>
