@@ -911,14 +911,20 @@ function editCalEvent(eventId){
   if(!evt) return;
   openCalEventModal(evt.date);
   setTimeout(()=>{
-    const t=document.getElementById('cae-title');const ty=document.getElementById('cae-type');
+    const t=document.getElementById('cae-title');
     const s=document.getElementById('cae-start');const en=document.getElementById('cae-end');
     const st=document.getElementById('cae-start-time');const et=document.getElementById('cae-end-time');
-    const m=document.getElementById('cae-member');const n=document.getElementById('cae-notes');
-    if(t) t.value=evt.title;if(ty) ty.value=evt.type;
+    const n=document.getElementById('cae-notes');
+    if(t) t.value=evt.title;
     if(s) s.value=evt.date;if(en) en.value=evt.endDate||evt.date;
     if(st) st.value=evt.startTime||'';if(et) et.value=evt.endTime||'';
-    if(m) m.value=evt.memberName||'';if(n) n.value=evt.notes||'';
+    if(n) n.value=evt.notes||'';
+    if(evt.type) _calTypeSelect('cae-type',evt.type);
+    (evt.invitees||[evt.memberName].filter(Boolean)).forEach(name=>{
+      const sel=document.getElementById('cae-team-sel');
+      if(sel){sel.value=name;_calInviteAddTeam('cae');}
+    });
+    (evt.clientInvitees||[]).forEach(name=>_calInviteAddClient('cae',name));
     const hdr=document.querySelector('#cal-event-modal div[style*="Add Calendar Event"]');
     if(hdr) hdr.textContent='Edit Event';
     const sBtn=document.querySelector('#cal-event-modal button[onclick="saveCalEvent()"]');
@@ -933,14 +939,16 @@ function updateCalEvent(eventId){
   const end=document.getElementById('cae-end')?.value||start;
   const startTime=document.getElementById('cae-start-time')?.value||'';
   const endTime=document.getElementById('cae-end-time')?.value||'';
-  const member=document.getElementById('cae-member')?.value||'';
+  const invitedTeam=_calGetInvitedTeam('cae');
+  const invitedClients=_calGetInvitedClients('cae');
+  const member=invitedTeam[0]||'';
   const notes=document.getElementById('cae-notes')?.value.trim()||'';
   if(!title){alert('Please enter a title.');return;}
   if(!start){alert('Please select a start date.');return;}
   if(end<start){alert('End date cannot be before start date.');return;}
   if(startTime&&endTime&&start===end&&endTime<startTime){alert('End time cannot be before start time.');return;}
   const arr=calEventsLoad();const idx=arr.findIndex(e=>e.id===eventId);if(idx===-1) return;
-  arr[idx]={...arr[idx],type,title,date:start,endDate:end,startTime,endTime,memberName:member,notes,updatedAt:new Date().toISOString()};
+  arr[idx]={...arr[idx],type,title,date:start,endDate:end,startTime,endTime,memberName:member,invitees:invitedTeam,clientInvitees:invitedClients,notes,updatedAt:new Date().toISOString()};
   calEventsSave(arr);
   document.getElementById('cal-event-modal')?.remove();
   calViewRefresh();renderVacationTracker();
