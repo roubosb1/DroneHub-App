@@ -148,6 +148,7 @@ function _filesRowsHtml(files) {
         <div style="font-size:10px;color:var(--muted)">${date}${size ? ' · ' + size : ''}</div>
       </div>
       <div style="flex:none;display:flex;gap:4px">
+        ${!isFolder ? `<button onclick="event.stopPropagation();filesDownload('${f.id}')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.06);color:var(--blue-bright);font-size:10px;cursor:pointer;white-space:nowrap" title="Download file"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>` : ''}
         ${!isFolder ? `<button onclick="event.stopPropagation();filesCopyLink('${f.id}','${(f.webViewLink || '').replace(/'/g, "\\'")}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;white-space:nowrap" title="Copy link">Copy Link</button>` : ''}
         ${!isFolder ? `<button onclick="event.stopPropagation();filesUseAsLink('${(f.webViewLink || '').replace(/'/g, "\\'")}')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:10px;cursor:pointer;white-space:nowrap" title="Use in tracker">Use Link</button>` : ''}
       </div>
@@ -182,6 +183,27 @@ function filesOpenFolder(folderId, name) {
   _filesBreadcrumb.push({ id: folderId, name });
   filesRenderBreadcrumb();
   filesLoadFolder(folderId);
+}
+
+function filesDownload(fileId) {
+  try { showDhToast('Preparing download', 'Fetching file link…', '⬇', 'var(--blue-bright)', 2000); } catch (e) {}
+  _filesApi('link', { fileId }).then(data => {
+    // webContentLink is Drive's direct-download URL; fall back to the view page
+    const dl = data.webContentLink || data.webViewLink || '';
+    if (!dl) {
+      try { showDhToast('Download failed', 'No download link available for this file', '⚠', 'var(--orange)', 3000); } catch (e) {}
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = dl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }).catch(err => {
+    try { showDhToast('Download failed', err.message || 'Could not fetch file link', '⚠', 'var(--orange)', 3000); } catch (e) {}
+  });
 }
 
 function filesCopyLink(fileId, webViewLink) {

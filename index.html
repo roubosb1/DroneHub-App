@@ -4459,13 +4459,13 @@
 <script src="js/tracker.js?v=50"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js"></script>
-<script src="js/calendar.js"></script>
+<script src="js/calendar.js?v=51"></script>
 <script src="js/team.js"></script>
 <script src="js/jobs.js"></script>
 <script src="js/clients.js?v=50"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>
-<script src="js/files.js?v=50"></script>
+<script src="js/files.js?v=51"></script>
 <script>
 // ── DYNAMIC EDITOR/TEAM LISTS ─────────────────────────────────────────────
 // These replace the old hardcoded EDITOR_OPTIONS and EDITOR_NAMES
@@ -10494,7 +10494,7 @@ var _toastIconMap={'⚠️':'warn','⚠':'warn','✅':'check','✓':'check','�
 function showDhToast(title, text, icon='🔔', accentColor='var(--blue-bright)', durationMs=6000){
   const stack=document.getElementById('dh-toast-stack');
   if(!stack) return;
-  var svgKey=_toastIconMap[icon];
+  var svgKey=(typeof _toastIconMap!=='undefined'?_toastIconMap:{})[icon];
   var renderedIcon=svgKey?_icon(svgKey,18):icon;
   const id='toast_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
   const toast=document.createElement('div');
