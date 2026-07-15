@@ -340,7 +340,9 @@ function mobTrkRenderCards(){
     return;
   }
 
-  el.innerHTML = jobs.map(j=>{
+  const _pid = _isPhoto ? (typeof ensurePhotoProjectId==='function'?ensurePhotoProjectId:null) : null;
+
+  el.innerHTML = jobs.map((j,idx)=>{
     const ts = _getStage(j.id);
     const editStatus = ts.editStatus||(_isPhoto?'files_pending':'ready');
     const ss = getStatusStyle(editStatus);
@@ -350,12 +352,24 @@ function mobTrkRenderCards(){
     const isDhOrEmpty = !editor||editor==='DroneHub'||editor==='dronehub';
     const isRush = ts.rush||false;
     const isOverdue = ts.completionDate && ts.completionDate < new Date().toISOString().slice(0,10);
-    const accentColor = isRush ? '#ef4444' : isOverdue ? '#f97316' : ss.color;
+    const pid = _isPhoto
+      ? (ts.projectId||(_pid?_pid(j.id,ts):''))
+      : (ts.projectId||(typeof getProjectId==='function'?getProjectId(j):''));
+
+    const numColor = isRush ? '#ef4444' : isOverdue ? '#f97316' : (_mobTrkTab==='completed'?'var(--green)':_mobTrkTab==='active'?'var(--blue-bright)':'var(--amber)');
+    const numContent = _mobTrkTab==='completed'
+      ? `<span style="font-size:12px;color:var(--green)">✓</span>`
+      : `<span style="font-size:18px;font-weight:900;color:${numColor};line-height:1">${idx+1}</span>`;
+    const numLabel = _mobTrkTab==='completed' ? 'Done' : _mobTrkTab==='active' ? 'Active' : 'Queue';
+
     return `<div class="mob-trk-card" onclick="mobTrkOpenProject('${j.id}')">
-      <div class="mob-trk-card-accent" style="background:${accentColor}"></div>
+      <div class="mob-trk-card-num">
+        ${numContent}
+        <span class="mob-trk-card-num-label">${numLabel}</span>
+      </div>
       <div class="mob-trk-card-body">
         <div class="mob-trk-card-name">${isRush?'🚨 ':isOverdue?'⚠ ':''}${j.name||j.address||'Unnamed'}</div>
-        <div class="mob-trk-card-meta">${[clientName,j.date].filter(Boolean).join(' · ')}</div>
+        <div class="mob-trk-card-meta">${[clientName,j.date,pid].filter(Boolean).join(' · ')}</div>
         <span class="mob-trk-card-status" style="background:${ss.bg};color:${ss.color}">${ss.label}</span>
         ${isDhOrEmpty?'<span style="margin-left:6px;font-size:10px;color:#ef4444;font-weight:700">⚠ Unassigned</span>':''}
       </div>
