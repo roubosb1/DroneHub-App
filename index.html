@@ -5036,6 +5036,11 @@ function mobPfRenderTimeOff(member){
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
   const canEdit = isAdmin || isOwn;
 
+  const allReqs = timeoffRequestsLoad();
+  const myPending = allReqs.filter(r=>r.memberName===member.name && r.status==='pending');
+  const myDenied = allReqs.filter(r=>r.memberName===member.name && r.status==='denied');
+  const pendingForApproval = isAdmin ? allReqs.filter(r=>r.status==='pending') : [];
+
   const evts = typeof calEventsLoad === 'function' ? calEventsLoad().filter(e=>
     (e.type==='vacation'||e.type==='sick') && e.memberName===member.name
   ).sort((a,b)=>(a.start||a.date||'').localeCompare(b.start||b.date||'')) : [];
@@ -5072,7 +5077,57 @@ function mobPfRenderTimeOff(member){
     <button onclick="mobSubmitTimeOff()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.15);color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer">Submit Request</button>
   </div>`:''}
 
-  <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:10px">Upcoming (${upcoming.length})</div>
+  ${pendingForApproval.length?`
+  <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Pending Approval (${pendingForApproval.length})
+  </div>
+  ${pendingForApproval.map(r=>`
+  <div style="padding:12px 14px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.25);border-radius:12px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--white)">${r.memberName}</div>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${r.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${r.type==='vacation'?'#A78BFA':'var(--red)'}">${r.type==='vacation'?'Vacation':'Sick'}</span>
+        <div style="font-size:12px;color:var(--offwhite);margin-top:4px">${r.start} → ${r.end}</div>
+        ${r.note?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${r.note}</div>`:''}
+      </div>
+      <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(245,166,35,.15);color:var(--amber)">PENDING</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="timeoffApprove('${r.id}');mobPfRenderTimeOff(getAdminTeamMembers().find(m=>m.id===_tpMemberId))" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Approve</button>
+      <button onclick="timeoffDeny('${r.id}');mobPfRenderTimeOff(getAdminTeamMembers().find(m=>m.id===_tpMemberId))" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(240,82,82,.4);background:rgba(240,82,82,.1);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Deny</button>
+    </div>
+  </div>`).join('')}
+  `:''}
+
+  ${myPending.length?`
+  <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:10px">Awaiting Approval (${myPending.length})</div>
+  ${myPending.map(r=>`
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid rgba(245,166,35,.25);border-radius:12px;margin-bottom:8px">
+    <div>
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${r.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${r.type==='vacation'?'#A78BFA':'var(--red)'}">${r.type==='vacation'?'Vacation':'Sick'}</span>
+      <div style="font-size:12px;color:var(--white);margin-top:4px">${r.start} → ${r.end}</div>
+      ${r.note?`<div style="font-size:11px;color:var(--muted)">${r.note}</div>`:''}
+      <span style="font-size:9px;font-weight:600;color:var(--amber);margin-top:4px;display:inline-block">Pending admin approval</span>
+    </div>
+    <button onclick="mobCancelTimeOffRequest('${r.id}')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Cancel</button>
+  </div>`).join('')}
+  `:''}
+
+  ${myDenied.length?`
+  <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:10px">Denied (${myDenied.length})</div>
+  ${myDenied.map(r=>`
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid rgba(240,82,82,.2);border-radius:12px;margin-bottom:8px;opacity:.7">
+    <div>
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(240,82,82,.18);color:var(--red)">${r.type==='vacation'?'Vacation':'Sick'} — Denied</span>
+      <div style="font-size:12px;color:var(--offwhite);margin-top:4px">${r.start} → ${r.end}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">Denied by ${r.reviewedBy||'Admin'}</div>
+    </div>
+    <button onclick="mobCancelTimeOffRequest('${r.id}')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Dismiss</button>
+  </div>`).join('')}
+  `:''}
+
+  <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:10px">Approved — Upcoming (${upcoming.length})</div>
   ${upcoming.length ? upcoming.map(e=>`
   <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;margin-bottom:8px">
     <div>
@@ -5093,6 +5148,107 @@ function mobPfRenderTimeOff(member){
   </div>`;
 }
 
+// ── Time-Off Request Approval System ──
+function timeoffRequestsLoad(){
+  try{ return JSON.parse(localStorage.getItem('dh_timeoff_requests')||'[]'); }catch(e){ return []; }
+}
+function timeoffRequestsSave(arr){
+  localStorage.setItem('dh_timeoff_requests',JSON.stringify(arr));
+  if(_fbToken()) fbSet('orgs',ORG_ID+':timeoff_requests',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+}
+function _isSessionAdmin(){
+  const s=gateGetSession();
+  return s && (s.type==='admin'||s.role==='admin');
+}
+function _submitTimeOffRequest(member, start, end, type, note){
+  if(!start){ showDhToast('Time Off','Please enter a start date.','⚠️','var(--amber)',3000); return false; }
+  if(end < start){ showDhToast('Time Off','End date must be on or after start date.','⚠️','var(--amber)',3000); return false; }
+  const overlaps = typeof vacationOverlapCheck==='function' ? vacationOverlapCheck(start,end,member.name) : [];
+  const req = {
+    id:'toff_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    memberId: member.id,
+    memberName: member.name,
+    memberEmail: member.email||'',
+    type, start, end,
+    note: note || '',
+    status: 'pending',
+    requestedAt: new Date().toISOString(),
+  };
+  const reqs = timeoffRequestsLoad();
+  reqs.push(req);
+  timeoffRequestsSave(reqs);
+  const label = type==='vacation' ? 'Vacation' : 'Sick Day';
+  const notifs = notificationsLoad();
+  notifs.unshift({
+    id:'n_'+Date.now(),
+    text: member.name+' requested '+label+' ('+start+' to '+end+')'+(note?' — '+note:''),
+    type:'timeoff_request',
+    requestId: req.id,
+    at: new Date().toISOString(),
+    read: false,
+  });
+  notificationsSave(notifs);
+  if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
+  showDhToast('Time Off','Request submitted — awaiting admin approval.','✅','var(--green)',3000);
+  if(overlaps.length) showDhToast('Overlap Warning',overlaps.join(', ')+' also off during this period','⚠️','var(--amber)',5000);
+  return true;
+}
+function timeoffApprove(requestId){
+  const reqs = timeoffRequestsLoad();
+  const req = reqs.find(r=>r.id===requestId);
+  if(!req||req.status!=='pending') return;
+  const session = gateGetSession();
+  req.status = 'approved';
+  req.reviewedBy = session?.name||session?.email||'Admin';
+  req.reviewedAt = new Date().toISOString();
+  timeoffRequestsSave(reqs);
+  const evt = {
+    id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    type: req.type,
+    memberName: req.memberName,
+    start: req.start,
+    end: req.end,
+    title: req.note || (req.type==='vacation' ? req.memberName+' – Vacation' : req.memberName+' – Sick'),
+    color: req.type==='vacation' ? '#A78BFA' : '#FF7070',
+    allDay: true,
+  };
+  const evts = calEventsLoad();
+  evts.push(evt);
+  calEventsSave(evts);
+  const notifs = notificationsLoad();
+  notifs.unshift({
+    id:'n_'+Date.now(),
+    text: req.memberName+'\'s '+( req.type==='vacation'?'vacation':'sick day')+' ('+req.start+' to '+req.end+') was approved by '+(session?.name||'Admin'),
+    type:'approval',
+    at: new Date().toISOString(),
+    read: false,
+  });
+  notificationsSave(notifs);
+  if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
+  showDhToast('Approved',req.memberName+'\'s time off has been approved and added to the calendar.','✅','var(--green)',3000);
+}
+function timeoffDeny(requestId){
+  const reqs = timeoffRequestsLoad();
+  const req = reqs.find(r=>r.id===requestId);
+  if(!req||req.status!=='pending') return;
+  const session = gateGetSession();
+  req.status = 'denied';
+  req.reviewedBy = session?.name||session?.email||'Admin';
+  req.reviewedAt = new Date().toISOString();
+  timeoffRequestsSave(reqs);
+  const notifs = notificationsLoad();
+  notifs.unshift({
+    id:'n_'+Date.now(),
+    text: req.memberName+'\'s '+( req.type==='vacation'?'vacation':'sick day')+' request ('+req.start+' to '+req.end+') was denied by '+(session?.name||'Admin'),
+    type:'revision',
+    at: new Date().toISOString(),
+    read: false,
+  });
+  notificationsSave(notifs);
+  if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
+  showDhToast('Denied',req.memberName+'\'s time off request has been denied.','⚠️','var(--amber)',3000);
+}
+
 function mobSubmitTimeOff(){
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
@@ -5100,29 +5256,22 @@ function mobSubmitTimeOff(){
   const end   = document.getElementById('mob-toff-end')?.value || start;
   const type  = document.querySelector('input[name="mob-toff-type"]:checked')?.value || 'vacation';
   const note  = document.getElementById('mob-toff-note')?.value.trim()||'';
-  if(!start){ showDhToast('Time Off','Please enter a start date.','⚠️','var(--amber)',3000); return; }
-  if(end < start){ showDhToast('Time Off','End date must be on or after start date.','⚠️','var(--amber)',3000); return; }
-  const overlaps = typeof vacationOverlapCheck==='function' ? vacationOverlapCheck(start,end,member.name) : [];
-  const evt = {
-    id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
-    type, memberName:member.name,
-    start, end,
-    title: note || (type==='vacation'?member.name+' – Vacation':member.name+' – Sick'),
-    color: type==='vacation'?'#A78BFA':'#FF7070',
-    allDay:true,
-  };
-  const evts = calEventsLoad();
-  evts.push(evt);
-  calEventsSave(evts);
-  showDhToast('Time Off','Request submitted ✓','✅','var(--green)',3000);
-  if(overlaps.length) showDhToast('Overlap Warning',overlaps.join(', ')+' also off during this period','⚠️','var(--amber)',5000);
-  mobPfRenderTimeOff(member);
+  if(_submitTimeOffRequest(member, start, end, type, note)){
+    mobPfRenderTimeOff(member);
+  }
 }
 
 function mobDeleteTimeOff(evtId){
   if(!confirm('Cancel this time off request?')) return;
   const evts = calEventsLoad().filter(e=>e.id!==evtId);
   calEventsSave(evts);
+  const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
+  if(member) mobPfRenderTimeOff(member);
+}
+function mobCancelTimeOffRequest(requestId){
+  if(!confirm('Cancel this time off request?')) return;
+  const reqs = timeoffRequestsLoad().filter(r=>r.id!==requestId);
+  timeoffRequestsSave(reqs);
   const member = getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(member) mobPfRenderTimeOff(member);
 }
@@ -6141,13 +6290,18 @@ function tpRenderTimeOff(){
                 (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
   const canEdit = isAdmin || isOwn;
 
-  // Existing time off events
+  const allReqs = timeoffRequestsLoad();
+  const myPending = allReqs.filter(r=>r.memberName===member.name && r.status==='pending');
+  const myDenied = allReqs.filter(r=>r.memberName===member.name && r.status==='denied');
+  const pendingForApproval = isAdmin ? allReqs.filter(r=>r.status==='pending') : [];
+
   const evts = calEventsLoad().filter(e=>
     (e.type==='vacation'||e.type==='sick') &&
     e.memberName===member.name
   ).sort((a,b)=>(a.start||a.date||'').localeCompare(b.start||b.date||''));
-  const upcoming = evts.filter(e=>(e.end||e.start||e.date||'')>=new Date().toISOString().slice(0,10));
-  const past = evts.filter(e=>(e.end||e.start||e.date||'')<new Date().toISOString().slice(0,10));
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = evts.filter(e=>(e.end||e.start||e.date||'')>=today);
+  const past = evts.filter(e=>(e.end||e.start||e.date||'')<today);
 
   content.innerHTML = `
     ${canEdit?`
@@ -6156,31 +6310,67 @@ function tpRenderTimeOff(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">Start Date</div>
-          <input type="date" id="tp-toff-start" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+          <input type="date" id="tp-toff-start" value="${today}" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
         </div>
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;text-transform:uppercase">End Date</div>
-          <input type="date" id="tp-toff-end" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
+          <input type="date" id="tp-toff-end" value="${today}" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box">
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:var(--navy-lift);font-size:12px;font-weight:700;color:var(--muted)" id="tp-toff-lbl-vac">
-          <input type="radio" name="tp-toff-type" value="vacation" checked onchange="document.getElementById('tp-toff-lbl-vac').style.borderColor=this.checked?'#A78BFA':'var(--border)';document.getElementById('tp-toff-lbl-sick').style.borderColor='var(--border)'"> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg> Vacation
+          <input type="radio" name="tp-toff-type" value="vacation" checked onchange="document.getElementById('tp-toff-lbl-vac').style.borderColor=this.checked?'#A78BFA':'var(--border)';document.getElementById('tp-toff-lbl-sick').style.borderColor='var(--border)'"> Vacation
         </label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:var(--navy-lift);font-size:12px;font-weight:700;color:var(--muted)" id="tp-toff-lbl-sick">
-          <input type="radio" name="tp-toff-type" value="sick" onchange="document.getElementById('tp-toff-lbl-sick').style.borderColor=this.checked?'var(--red)':'var(--border)';document.getElementById('tp-toff-lbl-vac').style.borderColor='var(--border)'"> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Sick Day
+          <input type="radio" name="tp-toff-type" value="sick" onchange="document.getElementById('tp-toff-lbl-sick').style.borderColor=this.checked?'var(--red)':'var(--border)';document.getElementById('tp-toff-lbl-vac').style.borderColor='var(--border)'"> Sick Day
         </label>
       </div>
       <input id="tp-toff-note" type="text" placeholder="Optional note (e.g. Family trip, Doctor appointment…)" style="width:100%;padding:8px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;background:var(--navy-lift);color:var(--white);box-sizing:border-box;margin-bottom:12px">
       <button onclick="tpSubmitTimeOff()" style="padding:8px 22px;border-radius:10px;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.15);color:#A78BFA;font-size:13px;font-weight:700;cursor:pointer">Submit Request</button>
     </div>`:''}
-    <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px;display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Upcoming (${upcoming.length})</div>
+
+    ${pendingForApproval.length?`
+    <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:12px;display:flex;align-items:center;gap:7px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Pending Approval (${pendingForApproval.length})
+    </div>
+    ${pendingForApproval.map(r=>`
+      <div style="padding:14px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.25);border-radius:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--white)">${r.memberName}</div>
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${r.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${r.type==='vacation'?'#A78BFA':'var(--red)'}">${r.type==='vacation'?'Vacation':'Sick'}</span>
+            <span style="font-size:12px;color:var(--white);margin-left:8px">${r.start} → ${r.end}</span>
+            ${r.note?`<div style="font-size:11px;color:var(--muted);margin-top:4px">${r.note}</div>`:''}
+          </div>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(245,166,35,.15);color:var(--amber)">PENDING</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="timeoffApprove('${r.id}');tpRender();tpSwitchTab('timeoff')" style="padding:7px 20px;border-radius:8px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Approve</button>
+          <button onclick="timeoffDeny('${r.id}');tpRender();tpSwitchTab('timeoff')" style="padding:7px 20px;border-radius:8px;border:1px solid rgba(240,82,82,.4);background:rgba(240,82,82,.1);color:var(--red);font-size:12px;font-weight:700;cursor:pointer">Deny</button>
+        </div>
+      </div>`).join('')}
+    `:''}
+
+    ${myPending.length?`
+    <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:10px">Awaiting Approval (${myPending.length})</div>
+    ${myPending.map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid rgba(245,166,35,.25);border-radius:10px;margin-bottom:6px">
+        <div>
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${r.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${r.type==='vacation'?'#A78BFA':'var(--red)'}">${r.type==='vacation'?'Vacation':'Sick'}</span>
+          <span style="font-size:12px;color:var(--white);margin-left:8px">${r.start} → ${r.end}</span>
+          ${r.note?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${r.note}</div>`:''}
+          <div style="font-size:10px;color:var(--amber);margin-top:4px">Pending admin approval</div>
+        </div>
+        <button onclick="if(confirm('Cancel this request?')){const rqs=timeoffRequestsLoad().filter(x=>x.id!=='${r.id}');timeoffRequestsSave(rqs);tpRender();tpSwitchTab('timeoff')}" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Cancel</button>
+      </div>`).join('')}
+    `:''}
+
+    <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px;display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Approved — Upcoming (${upcoming.length})</div>
     ${upcoming.length?upcoming.map(e=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
         <div>
-          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${e.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${e.type==='vacation'?'#A78BFA':'var(--red)'}">
-            ${e.type==='vacation'?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>Vacation':'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Sick'}
-          </span>
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${e.type==='vacation'?'rgba(139,92,246,.18)':'rgba(240,82,82,.18)'};color:${e.type==='vacation'?'#A78BFA':'var(--red)'}">${e.type==='vacation'?'Vacation':'Sick'}</span>
           <span style="font-size:12px;color:var(--white);margin-left:8px">${e.start||e.date||''} → ${e.end||e.start||e.date||''}</span>
           ${e.title?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${e.title}</div>`:''}
         </div>
@@ -6190,7 +6380,7 @@ function tpRenderTimeOff(){
     <div style="font-size:13px;font-weight:700;color:var(--white);margin-top:20px;margin-bottom:10px">Past (${past.length})</div>
     ${past.slice(-5).reverse().map(e=>`
       <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;opacity:.7">
-        <span style="display:flex;align-items:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted)">${e.type==='vacation'?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>':'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'}</span>
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted)">${e.type==='vacation'?'Vacation':'Sick'}</span>
         <span style="font-size:12px;color:var(--offwhite)">${e.start||e.date||''} → ${e.end||e.start||e.date||''}</span>
       </div>`).join('')}`:''}`;
 }
@@ -6202,25 +6392,10 @@ function tpSubmitTimeOff(){
   const end   = document.getElementById('tp-toff-end')?.value || start;
   const type  = document.querySelector('input[name="tp-toff-type"]:checked')?.value || 'vacation';
   const note  = document.getElementById('tp-toff-note')?.value.trim()||'';
-  if(!start){ showDhToast('Time Off','Please enter a start date.','⚠️','var(--amber)',3000); return; }
-  if(end < start){ showDhToast('Time Off','End date must be on or after start date.','⚠️','var(--amber)',3000); return; }
-  // Check overlap
-  const overlaps = vacationOverlapCheck(start, end, member.name);
-  const evt = {
-    id: 'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
-    type, memberName: member.name,
-    start, end,
-    title: (note || (type==='vacation'?member.name+' – Vacation':member.name+' – Sick')),
-    color: type==='vacation'?'#A78BFA':'#FF7070',
-    allDay: true,
-  };
-  const evts = calEventsLoad();
-  evts.push(evt);
-  calEventsSave(evts);
-  showDhToast('Time Off','Request submitted ✓','✅','var(--green)',3000);
-  if(overlaps.length) showDhToast('Overlap Warning',overlaps.join(', ')+' also off during this period','⚠️','var(--amber)',5000);
-  tpRender(); // refresh header stats
-  tpSwitchTab('timeoff');
+  if(_submitTimeOffRequest(member, start, end, type, note)){
+    tpRender();
+    tpSwitchTab('timeoff');
+  }
 }
 
 function tpDeleteTimeOff(evtId){
@@ -7201,6 +7376,9 @@ async function restoreFromFirebase(forceAll=false){
     },
     { fb: ORG_ID+':social_notifs', ls: 'dh_social_notifs',
       apply: d=>{ try{ localStorage.setItem('dh_social_notifs', d); }catch(e){} }
+    },
+    { fb: ORG_ID+':timeoff_requests', ls: 'dh_timeoff_requests',
+      apply: d=>{ try{ localStorage.setItem('dh_timeoff_requests', d); }catch(e){} }
     },
     // LouChat messages — one doc per channel; restore all channels on login
     // so messages are available immediately without opening each channel first

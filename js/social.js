@@ -1081,11 +1081,24 @@ function vdCreateShell(jobId){
 function refreshNotificationBadge(){
   const notifCount=notificationsLoad().filter(n=>!n.read).length;
   const requestedCount=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested').length;
-  const count=notifCount+requestedCount;
+  const pendingTimeoff=(typeof _isSessionAdmin==='function'&&_isSessionAdmin()&&typeof timeoffRequestsLoad==='function') ? timeoffRequestsLoad().filter(r=>r.status==='pending').length : 0;
+  const count=notifCount+requestedCount+pendingTimeoff;
   const badge=document.getElementById('notif-badge');
   const btn=document.getElementById('notif-bell-btn');
   if(badge){ badge.textContent=count>9?'9+':String(count); badge.style.display=count>0?'flex':'none'; }
   if(btn) btn.style.color = count>0?'var(--blue-bright)':'var(--muted)';
+  const mobPfBadge=document.getElementById('mob-pf-notif-badge');
+  if(mobPfBadge){ mobPfBadge.textContent=count>9?'9+':String(count); mobPfBadge.style.display=count>0?'flex':'none'; }
+  let mobNavBadge=document.getElementById('mob-nav-notif-badge');
+  const mobNavProfile=document.getElementById('mobnav-profile');
+  if(mobNavProfile&&!mobNavBadge){
+    mobNavBadge=document.createElement('span');
+    mobNavBadge.id='mob-nav-notif-badge';
+    mobNavBadge.style.cssText='display:none;position:absolute;top:2px;right:4px;min-width:14px;height:14px;border-radius:7px;background:var(--red);color:#fff;font-size:8px;font-weight:700;align-items:center;justify-content:center;padding:0 2px;border:2px solid var(--navy-card)';
+    mobNavProfile.style.position='relative';
+    mobNavProfile.appendChild(mobNavBadge);
+  }
+  if(mobNavBadge){ mobNavBadge.textContent=count>9?'9+':String(count); mobNavBadge.style.display=count>0?'flex':'none'; }
 }
 function toggleNotificationPanel(){
   const panel=document.getElementById('notif-panel');
@@ -1115,7 +1128,8 @@ function renderNotificationPanel(){
     revision:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',bg:'rgba(251,146,60,.08)',accent:'rgba(251,146,60,.25)',label:'Revision'},
     message:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',bg:'rgba(91,141,239,.08)',accent:'rgba(91,141,239,.25)',label:'Message'},
     date_change:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',bg:'rgba(167,139,250,.08)',accent:'rgba(167,139,250,.25)',label:'Date changed'},
-    tax_update:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',bg:'rgba(245,200,66,.08)',accent:'rgba(245,200,66,.25)',label:'Tax update'}
+    tax_update:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',bg:'rgba(245,200,66,.08)',accent:'rgba(245,200,66,.25)',label:'Tax update'},
+    timeoff_request:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>',bg:'rgba(167,139,250,.08)',accent:'rgba(167,139,250,.25)',label:'Time Off Request'}
   };
   const defaultType={icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',bg:'rgba(255,255,255,.04)',accent:'var(--border)',label:'Update'};
   const requestedJobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested');
@@ -1140,7 +1154,7 @@ function renderNotificationPanel(){
   }).join('');
   const notifRows=notifs.map(n=>{
     const cfg=typeConfig[n.type]||defaultType;
-    const navAction=n.type==='tax_update'?"showPane('finance')":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
+    const navAction=n.type==='tax_update'?"showPane('finance')":n.type==='timeoff_request'||n.type==='approval'&&n.text?.includes('time off')?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
     return `<div onclick="document.getElementById('notif-panel').style.display='none';${navAction}" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="width:32px;height:32px;border-radius:10px;background:${cfg.bg};border:1px solid ${cfg.accent};display:flex;align-items:center;justify-content:center;flex-shrink:0">${cfg.icon}</div>
