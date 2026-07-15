@@ -241,9 +241,32 @@ function mobTrkSetTab(tab){
 
 function mobTrkSetMine(mine){
   _mobTrkMineOnly = mine;
-  document.getElementById('mob-trk-mine-btn')?.classList.toggle('active', mine);
-  document.getElementById('mob-trk-all-btn')?.classList.toggle('active', !mine);
+  _trackerMode = 'video';
+  trackerSetMode('video');
+  _mobTrkUpdateTopTabs('mine');
   _mobTrkRenderCardsSafe();
+}
+
+function mobTrkSetVideo(){
+  _mobTrkMineOnly = false;
+  _trackerMode = 'video';
+  trackerSetMode('video');
+  _mobTrkUpdateTopTabs('video');
+  _mobTrkRenderCardsSafe();
+}
+
+function mobTrkSetMode(mode){
+  _mobTrkMineOnly = false;
+  _trackerMode = mode;
+  trackerSetMode(mode);
+  _mobTrkUpdateTopTabs(mode==='photo'?'photo':'video');
+  _mobTrkRenderCardsSafe();
+}
+
+function _mobTrkUpdateTopTabs(active){
+  document.getElementById('mob-trk-mine-btn')?.classList.toggle('active', active==='mine');
+  document.getElementById('mob-trk-all-btn')?.classList.toggle('active', active==='video');
+  document.getElementById('mob-trk-photo-btn')?.classList.toggle('active', active==='photo');
 }
 
 function mobTrkRenderCards(){
