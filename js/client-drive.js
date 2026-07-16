@@ -9,11 +9,12 @@ function _cdClient(clientId) {
 }
 
 // "8002 East Vista Bonita Drive - Scottsdale, AZ - Katrina Barrett" → address only
+// Also handles suffixes after the name, e.g. "… - Katrina Barrett.PRV" → "….PRV"
 function _cdParseAddress(folderName, clientName) {
   let addr = folderName || '';
   if (clientName) {
-    const re = new RegExp('\\s*[-–—]\\s*' + clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i');
-    addr = addr.replace(re, '');
+    const esc = clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    addr = addr.replace(new RegExp('\\s*[-–—]\\s*' + esc, 'i'), '');
   }
   return addr.trim();
 }
@@ -25,9 +26,16 @@ async function cdScanDrive(clientId) {
   try { showDhToast('Scanning Drive…', 'Looking for folders matching "' + c.name + '"', '⟳', 'var(--blue-bright)', 3000); } catch (e) {}
   let folders = [];
   try {
-    const data = await _filesApi('search', { query: c.name });
-    if (data.error) throw new Error(data.error);
-    folders = (data.files || []).filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+    // Folders only, paginated — file names also contain the client's name
+    // and would otherwise crowd folders out of the first page
+    let pageToken = '';
+    for (let page = 0; page < 10; page++) {
+      const data = await _filesApi('search', { query: c.name, foldersOnly: true, ...(pageToken ? { pageToken } : {}) });
+      if (data.error) throw new Error(data.error);
+      folders.push(...(data.files || []).filter(f => f.mimeType === 'application/vnd.google-apps.folder'));
+      pageToken = data.nextPageToken || '';
+      if (!pageToken) break;
+    }
   } catch (err) {
     try { showDhToast('Scan failed', err.message || 'Could not search Drive', '⚠', 'var(--orange)', 5000); } catch (e) {}
     return;

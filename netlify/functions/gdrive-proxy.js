@@ -148,8 +148,10 @@ exports.handler = async (event) => {
     if (action === 'search') {
       const q = body.query || '';
       if (!q) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'query required' }) };
+      let query = `name contains '${q.replace(/'/g, "\\'")}' and trashed = false`;
+      if (body.foldersOnly) query += ` and mimeType = 'application/vnd.google-apps.folder'`;
       const params = {
-        q: `name contains '${q.replace(/'/g, "\\'")}' and trashed = false`,
+        q: query,
         fields: 'nextPageToken,files(id,name,mimeType,webViewLink,iconLink,modifiedTime,size,thumbnailLink,parents)',
         orderBy: 'modifiedTime desc',
         pageSize: '100',
