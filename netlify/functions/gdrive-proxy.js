@@ -169,6 +169,49 @@ exports.handler = async (event) => {
       };
     }
 
+    if (action === 'createFolder') {
+      const { name, parentId } = body;
+      if (!name) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'name required' }) };
+      const res = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [parentId || 'root'],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Create folder failed (${res.status})`);
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, id: data.id, name: data.name }) };
+    }
+
+    if (action === 'rename') {
+      const { fileId, name } = body;
+      if (!fileId || !name) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'fileId and name required' }) };
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Rename failed (${res.status})`);
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === 'trash') {
+      const { fileId } = body;
+      if (!fileId) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'fileId required' }) };
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trashed: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Trash failed (${res.status})`);
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
     if (action === 'uploadInit') {
       const { name, mimeType, folderId, size } = body;
       if (!name) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'name required' }) };

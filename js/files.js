@@ -80,6 +80,10 @@ async function renderFiles() {
           <input type="text" id="files-search" placeholder="Search files…" onkeydown="if(event.key==='Enter')filesSearch()" style="padding:6px 30px 6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite);width:200px">
           <svg onclick="filesSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
+        <button onclick="filesNewFolder()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid rgba(245,200,66,.4);background:rgba(245,200,66,.06);color:#F5C842;font-size:11px;font-weight:700;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          New Folder
+        </button>
         <button onclick="filesUpload()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           Upload
@@ -156,6 +160,8 @@ function _filesRowsHtml(files) {
         ${!isFolder ? `<button onclick="event.stopPropagation();filesDownload('${f.id}')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.06);color:var(--blue-bright);font-size:10px;cursor:pointer;white-space:nowrap" title="Download file"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>` : ''}
         ${!isFolder ? `<button onclick="event.stopPropagation();filesCopyLink('${f.id}','${(f.webViewLink || '').replace(/'/g, "\\'")}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;white-space:nowrap" title="Copy link">Copy Link</button>` : ''}
         ${!isFolder ? `<button onclick="event.stopPropagation();filesUseAsLink('${(f.webViewLink || '').replace(/'/g, "\\'")}')" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:10px;cursor:pointer;white-space:nowrap" title="Use in tracker">Use Link</button>` : ''}
+        <button onclick="event.stopPropagation();filesRename('${f.id}','${(f.name || '').replace(/'/g, "\\'")}')" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;white-space:nowrap" title="Rename"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+        <button onclick="event.stopPropagation();filesTrash('${f.id}','${(f.name || '').replace(/'/g, "\\'")}')" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(232,93,93,.35);background:transparent;color:#E85D5D;font-size:10px;cursor:pointer;white-space:nowrap" title="Move to trash"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -231,6 +237,45 @@ async function filesDownload(fileId) {
     try { showDhToast('Downloaded', name, 'check', 'var(--green)', 2000); } catch (e) {}
   } catch (err) {
     try { showDhToast('Download failed', err.message || 'Could not download file', '⚠', 'var(--orange)', 3000); } catch (e) {}
+  }
+}
+
+// ── Folder / file management ─────────────────────────────────────────────────
+async function filesNewFolder() {
+  const name = prompt('New folder name:');
+  if (!name || !name.trim()) return;
+  try {
+    const res = await _filesApi('createFolder', { name: name.trim(), parentId: _filesCurrentFolder });
+    if (res.error) throw new Error(res.error);
+    try { showDhToast('Folder created', res.name || name.trim(), 'check', 'var(--green)', 2500); } catch (e) {}
+    filesLoadFolder(_filesCurrentFolder);
+  } catch (err) {
+    try { showDhToast('Create failed', err.message || 'Could not create folder', '⚠', 'var(--orange)', 4000); } catch (e) {}
+  }
+}
+
+async function filesRename(fileId, currentName) {
+  const name = prompt('Rename to:', currentName || '');
+  if (!name || !name.trim() || name.trim() === currentName) return;
+  try {
+    const res = await _filesApi('rename', { fileId, name: name.trim() });
+    if (res.error) throw new Error(res.error);
+    try { showDhToast('Renamed', name.trim(), 'check', 'var(--green)', 2500); } catch (e) {}
+    filesLoadFolder(_filesCurrentFolder);
+  } catch (err) {
+    try { showDhToast('Rename failed', err.message || 'Could not rename', '⚠', 'var(--orange)', 4000); } catch (e) {}
+  }
+}
+
+async function filesTrash(fileId, name) {
+  if (!confirm('Move "' + (name || 'this item') + '" to the Google Drive trash?\n\nYou can restore it from drive.google.com → Trash within 30 days.')) return;
+  try {
+    const res = await _filesApi('trash', { fileId });
+    if (res.error) throw new Error(res.error);
+    try { showDhToast('Moved to trash', name || '', 'check', 'var(--green)', 2500); } catch (e) {}
+    filesLoadFolder(_filesCurrentFolder);
+  } catch (err) {
+    try { showDhToast('Trash failed', err.message || 'Could not move to trash', '⚠', 'var(--orange)', 4000); } catch (e) {}
   }
 }
 
