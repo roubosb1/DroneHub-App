@@ -102,6 +102,31 @@ exports.handler = async (event) => {
       }
     }
 
+    if (action === 'disconnect') {
+      const orgId = process.env.ORG_ID || 'dronehub_main';
+      const db = getDb();
+      const doc = await db.doc(`dh_secure/${orgId}_gdrive`).get();
+      const refreshToken = doc.exists ? doc.data()?.gdriveRefreshToken : null;
+      // Best-effort revoke at Google, then clear stored tokens
+      if (refreshToken) {
+        try {
+          await fetch('https://oauth2.googleapis.com/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ token: refreshToken }),
+          });
+        } catch (e) { /* revoke is best-effort */ }
+      }
+      await db.doc(`dh_secure/${orgId}_gdrive`).set({
+        gdriveRefreshToken: null,
+        gdriveAccessToken: null,
+        gdriveTokenExpiresAt: 0,
+        gdriveEmail: '',
+        updatedAt: Date.now(),
+      }, { merge: true });
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
     const auth = await getAccessToken();
     if (!auth) return { statusCode: 401, headers: cors, body: JSON.stringify({ error: 'Google Drive not connected' }) };
 

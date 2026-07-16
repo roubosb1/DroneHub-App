@@ -555,10 +555,27 @@ function filesConnectDropbox() {
 }
 
 function filesDisconnect() {
-  if (!confirm('Disconnect Google Drive? You can reconnect anytime.')) return;
-  _filesConnected = false;
-  _filesEmail = '';
-  _filesCurrentFolder = 'root';
-  _filesBreadcrumb = [{ id: 'root', name: 'My Drive' }];
-  renderFiles();
+  _filesModal({
+    title: 'Disconnect Google Drive',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>',
+    iconColor: '#E85D5D',
+    message: 'This disconnects Google Drive for the <strong style="color:var(--offwhite)">whole team</strong> — everyone loses file access until it\'s reconnected. You can reconnect anytime.',
+    confirmText: 'Disconnect',
+    danger: true,
+    onConfirm: async () => {
+      try {
+        const res = await _filesApi('disconnect');
+        if (res.error) throw new Error(res.error);
+      } catch (err) {
+        try { showDhToast('Disconnect failed', err.message || 'Try again', '⚠', 'var(--orange)', 4000); } catch (e) {}
+        return;
+      }
+      _filesConnected = false;
+      _filesEmail = '';
+      _filesCurrentFolder = 'root';
+      _filesBreadcrumb = [{ id: 'root', name: 'My Drive' }];
+      try { showDhToast('Google Drive disconnected', 'Reconnect anytime from the Files tab', 'check', 'var(--green)', 3000); } catch (e) {}
+      renderFiles();
+    },
+  });
 }
