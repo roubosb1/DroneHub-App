@@ -26,7 +26,7 @@ exports.handler = async (event) => {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
-  const { platform, handle } = body;
+  const { platform, handle, action } = body;
   if (!platform || !handle) return { statusCode: 400, headers, body: JSON.stringify({ error: 'platform and handle required' }) };
 
   try {
@@ -39,7 +39,7 @@ exports.handler = async (event) => {
       const urlMatch = raw.match(/youtube\.com\/(?:@([\w.-]+)|channel\/(UC[\w-]+)|c\/([\w.-]+)|user\/([\w.-]+))/i);
       if (urlMatch) raw = urlMatch[1] ? '@' + urlMatch[1] : (urlMatch[2] || urlMatch[3] || urlMatch[4]);
 
-      const params = new URLSearchParams({ part: 'snippet,statistics', key });
+      const params = new URLSearchParams({ part: 'snippet,statistics,contentDetails', key });
       if (/^UC[\w-]{20,}$/.test(raw)) params.set('id', raw);
       else params.set('forHandle', raw.startsWith('@') ? raw : '@' + raw);
 
@@ -50,6 +50,32 @@ exports.handler = async (event) => {
       if (!ch) return { statusCode: 200, headers, body: JSON.stringify({ error: 'Channel not found — check the handle or URL' }) };
 
       const st = ch.statistics || {};
+
+      // Detail mode: recent uploads with per-video stats
+      if (action === 'videos') {
+        const uploadsId = ch.contentDetails?.relatedPlaylists?.uploads;
+        let videos = [];
+        if (uploadsId) {
+          const plRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?${new URLSearchParams({ part: 'contentDetails', playlistId: uploadsId, maxResults: '12', key })}`);
+          const pl = await plRes.json();
+          const ids = (pl.items || []).map(i => i.contentDetails?.videoId).filter(Boolean);
+          if (ids.length) {
+            const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'snippet,statistics', id: ids.join(','), key })}`);
+            const vData = await vRes.json();
+            videos = (vData.items || []).map(v => ({
+              id: v.id,
+              title: v.snippet?.title || '',
+              publishedAt: (v.snippet?.publishedAt || '').slice(0, 10),
+              thumb: v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url || '',
+              views: parseInt(v.statistics?.viewCount || '0', 10),
+              likes: parseInt(v.statistics?.likeCount || '0', 10),
+              comments: parseInt(v.statistics?.commentCount || '0', 10),
+            }));
+          }
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true, videos }) };
+      }
+
       return {
         statusCode: 200,
         headers,
