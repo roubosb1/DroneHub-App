@@ -369,6 +369,38 @@ function cdToggleDupFilter(clientId) {
   if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
 }
 
+// Signature of a duplicate group — dismissals invalidate automatically when
+// the group's membership changes (e.g. a new folder with that number appears)
+function _cdDupSig(no, list) {
+  return no + ':' + list.map(_cdProjKey).sort().join(',');
+}
+function cdDismissDupGroup(clientId, no) {
+  const c = _cdClient(clientId);
+  if (!c) return;
+  const groups = new Map();
+  (c.driveProjects || []).forEach(p => {
+    const n = _cdHouseNo(p.address);
+    if (!n) return;
+    if (!groups.has(n)) groups.set(n, []);
+    groups.get(n).push(p);
+  });
+  const list = groups.get(no) || [];
+  if (list.length < 2) return;
+  c.driveDupDismissed = c.driveDupDismissed || [];
+  const sig = _cdDupSig(no, list);
+  if (!c.driveDupDismissed.includes(sig)) c.driveDupDismissed.push(sig);
+  saveClientsToStorage();
+  try { showDhToast('Marked as separate properties', '№ ' + no + ' won\'t show as a possible duplicate again', 'check', 'var(--green)', 3000); } catch (e) {}
+  if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
+}
+function cdRestoreDupGroups(clientId) {
+  const c = _cdClient(clientId);
+  if (!c) return;
+  c.driveDupDismissed = [];
+  saveClientsToStorage();
+  if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
+}
+
 // ── Shared section HTML (admin assets tab + client portal files tab) ─────────
 function cdProjectsSectionHtml(clientId, isClientView) {
   const c = _cdClient(clientId);
@@ -377,6 +409,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
   // Admin: possible-duplicates mode — only projects sharing a house number,
   // grouped side by side so they're easy to merge
   let dupGroups = new Map();
+  const dismissed = new Set(c?.driveDupDismissed || []);
   if (!isClientView && projects.length) {
     projects.forEach(p => {
       const no = _cdHouseNo(p.address);
@@ -384,7 +417,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
       if (!dupGroups.has(no)) dupGroups.set(no, []);
       dupGroups.get(no).push(p);
     });
-    dupGroups = new Map([...dupGroups].filter(([, list]) => list.length > 1));
+    dupGroups = new Map([...dupGroups].filter(([no, list]) => list.length > 1 && !dismissed.has(_cdDupSig(no, list))));
   }
   const dupCount = dupGroups.size;
   const dupMode = !isClientView && window._cdShowDups[clientId] && dupCount > 0;
@@ -417,7 +450,8 @@ function cdProjectsSectionHtml(clientId, isClientView) {
     ${projects.length ? `
     <input type="text" id="cd-proj-search-${clientId}" placeholder="Search by address…" oninput="cdFilterProjects('${clientId}')"
       style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:12px">
-    ${dupMode ? `<div style="font-size:11px;color:#F5C842;margin-bottom:10px;line-height:1.6">Showing only properties that share a house number — likely the same project spelled differently. Tick two or more and hit <b>Merge selected</b>; folders and files are kept.</div>` : ''}
+    ${dupMode ? `<div style="font-size:11px;color:#F5C842;margin-bottom:10px;line-height:1.6">Showing only properties that share a house number — likely the same project spelled differently. Tick two or more and hit <b>Merge selected</b>; use <b>Not duplicates</b> to clear a group that's actually separate properties.${dismissed.size ? ` <button onclick="cdRestoreDupGroups('${clientId}')" style="border:none;background:none;color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline">Restore ${dismissed.size} dismissed</button>` : ''}</div>` : ''}
+    ${!isClientView && !dupMode && dismissed.size && !dupCount ? `<div style="font-size:10px;color:var(--muted);margin-bottom:10px">All possible duplicates reviewed · <button onclick="cdRestoreDupGroups('${clientId}')" style="border:none;background:none;color:var(--blue-bright);font-size:10px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline">restore ${dismissed.size} dismissed group${dismissed.size === 1 ? '' : 's'}</button></div>` : ''}
     ${!isClientView ? `<div id="cd-merge-bar-${clientId}" style="display:none;align-items:center;gap:10px;padding:9px 12px;background:rgba(91,141,239,.1);border:1px solid var(--blue);border-radius:10px;margin-bottom:10px">
       <span style="font-size:11px;color:var(--blue-bright);flex:1">These selected rows are the same property</span>
       <button onclick="cdMergeSelected('${clientId}')" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Merge selected</button>
@@ -430,7 +464,13 @@ function cdProjectsSectionHtml(clientId, isClientView) {
         let groupHdr = '';
         if (dupMode) {
           const no = _cdHouseNo(p.address);
-          if (no !== _lastNo) { groupHdr = `<div style="font-size:10px;font-weight:700;color:#F5C842;text-transform:uppercase;letter-spacing:.06em;margin:${_lastNo === null ? '0' : '14px'} 0 6px">№ ${no}</div>`; _lastNo = no; }
+          if (no !== _lastNo) {
+            groupHdr = `<div style="display:flex;align-items:center;gap:10px;margin:${_lastNo === null ? '0' : '14px'} 0 6px">
+              <span style="font-size:10px;font-weight:700;color:#F5C842;text-transform:uppercase;letter-spacing:.06em">№ ${no}</span>
+              <button onclick="cdDismissDupGroup('${clientId}','${no}')" title="These share a number but are different properties — remove this group from the duplicates view" style="padding:2px 10px;border-radius:8px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:10px;font-weight:600;cursor:pointer">Not duplicates</button>
+            </div>`;
+            _lastNo = no;
+          }
         }
         return groupHdr + `
       <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
