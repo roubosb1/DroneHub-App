@@ -481,24 +481,24 @@ function cdProjectsSectionHtml(clientId, isClientView) {
       </div>
       <input type="text" id="cd-proj-search-${clientId}" placeholder="Search by address…" oninput="cdFilterProjects('${clientId}')"
         style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:14px">
-      <div id="cd-proj-list-${clientId}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start">
+      <div id="cd-proj-list-${clientId}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px">
         ${projects.map(p => {
           const pf = _cdProjFolders(p);
           const key = _cdProjKey(p);
           const job = jobByAddr[(p.address || '').toLowerCase()];
           const dateLbl = job?.date ? fmtDate(job.date) : '';
           return `
-        <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,transform .15s" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor='var(--border)'">
-          <div style="padding:14px 16px 12px">
+        <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,transform .15s;display:flex;flex-direction:column" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor='var(--border)'">
+          <div style="padding:14px 16px 12px;flex:1">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-              <div style="font-size:13px;font-weight:700;color:var(--white);line-height:1.4" title="${p.address}">${p.address}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em" title="${p.address}">${p.address}</div>
               <span class="status-badge status-completed" style="flex-shrink:0">Completed</span>
             </div>
             <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
               ${dateLbl ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${dateLbl} · ` : ''}${pf.length} folder${pf.length === 1 ? '' : 's'}
             </div>
           </div>
-          <div style="padding:0 16px 14px">
+          <div style="padding:0 16px 14px;margin-top:auto">
             <button onclick="cdToggleBrowse('${clientId}','${key}')" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               Browse Files
