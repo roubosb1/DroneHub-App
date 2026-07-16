@@ -466,6 +466,52 @@ function cdProjectsSectionHtml(clientId, isClientView) {
 
   if (!projects.length && isClientView) return '';
 
+  // Client portal: tracker-style card grid
+  if (isClientView) {
+    const jobByAddr = {};
+    if (typeof savedJobs !== 'undefined') {
+      savedJobs.forEach(j => { if (String(j.clientId) === String(clientId) && j.address) jobByAddr[j.address.toLowerCase()] = j; });
+    }
+    const fmtDate = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return d; } };
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <svg width="18" height="16" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
+        <div class="section-label" style="margin-bottom:0">Your Projects</div>
+        <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(34,217,122,.12);color:var(--green)">${projects.length}</span>
+      </div>
+      <input type="text" id="cd-proj-search-${clientId}" placeholder="Search by address…" oninput="cdFilterProjects('${clientId}')"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:14px">
+      <div id="cd-proj-list-${clientId}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start">
+        ${projects.map(p => {
+          const pf = _cdProjFolders(p);
+          const key = _cdProjKey(p);
+          const job = jobByAddr[(p.address || '').toLowerCase()];
+          const dateLbl = job?.date ? fmtDate(job.date) : '';
+          return `
+        <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,transform .15s" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor='var(--border)'">
+          <div style="padding:14px 16px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+              <div style="font-size:13px;font-weight:700;color:var(--white);line-height:1.4" title="${p.address}">${p.address}</div>
+              <span class="status-badge status-completed" style="flex-shrink:0">Completed</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+              ${dateLbl ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${dateLbl} · ` : ''}${pf.length} folder${pf.length === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div style="padding:0 16px 14px">
+            <button onclick="cdToggleBrowse('${clientId}','${key}')" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Browse Files
+            </button>
+          </div>
+          <div id="cd-browse-${key}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;background:var(--navy-mid)"></div>
+        </div>`;
+        }).join('')}
+      </div>
+      <div id="cd-proj-none-${clientId}" style="display:none;text-align:center;padding:14px;color:var(--muted);font-size:12px">No projects match your search</div>
+    </div>`;
+  }
+
   return `<div class="card" style="margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
       <div style="display:flex;align-items:center;gap:8px">
