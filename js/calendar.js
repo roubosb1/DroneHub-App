@@ -220,10 +220,13 @@ function calGetDayEvents(dateStr){
     });
   });
   // Custom events (vacation etc.) — include if date falls within range
+  const _me=typeof _calMe==='function'?_calMe():'';
   calEventsLoad().forEach(e=>{
     const s=e.date,en=e.endDate||e.date;
     if(dateStr<s||dateStr>en) return;
     if(filterCreator&&e.memberName!==filterCreator) return;
+    // Hide events I declined from my own calendar (creator always sees them)
+    if(_me&&e.createdBy!==_me&&e.rsvp?.[_me]?.status==='declined') return;
     const td=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
     evts.push({_src:'custom',_creator:e.memberName,_time:e.startTime||null,_endTime:e.endTime||null,name:e.title,_typeDef:td,_eventId:e.id,_col:{bg:td.bg,border:td.color,text:td.color}});
   });
@@ -743,7 +746,7 @@ function calQuickAddSave(){
   const invitedClients=_calGetInvitedClients('qca');
   const memberName=invitedTeam[0]||'';
   const evts=calEventsLoad();
-  const evt={id:'cale_'+Date.now(),title,type,date:dateStr,endDate,startTime,endTime,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes};
+  const evt={id:'cale_'+Date.now(),title,type,date:dateStr,endDate,startTime,endTime,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes,createdBy:_calMe(),rsvp:{}};
   evts.push(evt);
   calEventsSave(evts);
   document.getElementById('cal-quick-add')?.remove();
@@ -860,6 +863,55 @@ function calEventCheckOverlap(){
   }
 }
 
+// ── RSVP (accept / decline invites) ──────────────────────────────────────────
+function _calMe(){return gateGetSession()?.name||'';}
+
+// Append to the org notification feed without the responder-side toast
+function _calAddNotif(text,type){
+  try{
+    const notifs=notificationsLoad();
+    notifs.unshift({id:'n_'+Date.now(),postId:null,text,type:type||'message',at:new Date().toISOString(),read:false});
+    if(notifs.length>50) notifs.splice(50);
+    notificationsSave(notifs);
+    if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
+  }catch(e){}
+}
+
+function calEventRsvp(eventId,status){
+  const arr=calEventsLoad();
+  const evt=arr.find(e=>String(e.id)===String(eventId));
+  if(!evt) return;
+  const me=_calMe();
+  if(!me){showDhToast('Not signed in','Sign in to respond to invites','⚠','var(--orange)',3000);return;}
+  evt.rsvp=evt.rsvp||{};
+  evt.rsvp[me]={status,at:new Date().toISOString()};
+  calEventsSave(arr);
+  document.getElementById('cal-detail-modal')?.remove();
+  if(typeof mcCloseEventDetail==='function') mcCloseEventDetail();
+  calViewRefresh();
+  if(status==='accepted') showDhToast('You\'re going','"'+evt.title+'" is confirmed on your calendar','✅','var(--green)',3000);
+  else showDhToast('Invite declined','"'+evt.title+'" was removed from your calendar','✕','var(--orange)',3000);
+  if(evt.createdBy&&evt.createdBy!==me){
+    _calAddNotif(me+(status==='accepted'?' accepted':' declined')+' your event "'+evt.title+'"'+(evt.date?' on '+evt.date:''),status==='accepted'?'rsvp_accept':'rsvp_decline');
+  }
+}
+
+function _calRsvpStatus(evt,name){return evt.rsvp?.[name]?.status||'pending';}
+// Events minus the ones I declined (creator always keeps their events visible)
+function _calVisibleEvents(){
+  const me=_calMe();
+  return calEventsLoad().filter(e=>!(me&&e.createdBy!==me&&e.rsvp?.[me]?.status==='declined'));
+}
+function _calRsvpChipHtml(evt,name){
+  const s=_calRsvpStatus(evt,name);
+  if(s==='accepted') return '<span style="font-size:10px;font-weight:700;color:var(--green)">✓ Going</span>';
+  if(s==='declined') return '<span style="font-size:10px;font-weight:700;color:#E85D5D">✕ Declined</span>';
+  return '<span style="font-size:10px;color:var(--muted)">Pending</span>';
+}
+function _calEventInvitees(evt){
+  return (evt.invitees&&evt.invitees.length?evt.invitees:(evt.memberName?[evt.memberName]:[]));
+}
+
 function _gcalMemberId(){
   const session=gateGetSession();
   if(!session?.email) return null;
@@ -911,7 +963,7 @@ function saveCalEvent(){
   if(!start){alert('Please select a start date.');return;}
   if(end<start){alert('End date cannot be before start date.');return;}
   if(startTime&&endTime&&start===end&&endTime<startTime){alert('End time cannot be before start time.');return;}
-  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,startTime,endTime,memberName:member,invitees:invitedTeam,clientInvitees:invitedClients,notes,createdAt:new Date().toISOString()};
+  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,startTime,endTime,memberName:member,invitees:invitedTeam,clientInvitees:invitedClients,notes,createdBy:_calMe(),rsvp:{},createdAt:new Date().toISOString()};
   const arr=calEventsLoad();arr.push(evt);calEventsSave(arr);
   document.getElementById('cal-event-modal').remove();
   calViewRefresh();renderVacationTracker();
@@ -955,14 +1007,34 @@ function showCalEventDetail(eventId){
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span style="font-size:13px;color:var(--offwhite)">${dateLabel}${evt.startTime?' · '+evt.startTime+(evt.endTime?' – '+evt.endTime:''):''}</span>
       </div>
-      ${evt.memberName?`<div style="display:flex;align-items:center;gap:10px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span style="font-size:13px;color:var(--offwhite)">${evt.memberName}</span>
-      </div>`:''}
+      ${(()=>{
+        const inv=_calEventInvitees(evt);
+        if(!inv.length) return '';
+        return `<div style="display:flex;align-items:flex-start;gap:10px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            ${inv.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--offwhite)">${n}</span>${_calRsvpChipHtml(evt,n)}</div>`).join('')}
+          </div>
+        </div>`;
+      })()}
+      ${evt.createdBy?`<div style="font-size:11px;color:var(--muted);margin-left:25px">Invited by ${evt.createdBy}</div>`:''}
       ${evt.notes?`<div style="display:flex;align-items:flex-start;gap:10px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         <span style="font-size:13px;color:var(--muted);white-space:pre-wrap">${evt.notes}</span>
       </div>`:''}
+      ${(()=>{
+        const me=_calMe();
+        const inv=_calEventInvitees(evt);
+        if(!me||!inv.includes(me)||evt.createdBy===me) return '';
+        const my=_calRsvpStatus(evt,me);
+        return `<div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Your response</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="calEventRsvp('${eventId}','accepted')" style="flex:1;padding:9px;border-radius:10px;border:1px solid var(--green);background:${my==='accepted'?'rgba(34,217,122,.25)':'rgba(34,217,122,.08)'};color:var(--green);font-size:13px;font-weight:700;cursor:pointer">✓ Accept${my==='accepted'?'ed':''}</button>
+            <button onclick="calEventRsvp('${eventId}','declined')" style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(232,93,93,.5);background:${my==='declined'?'rgba(232,93,93,.25)':'rgba(232,93,93,.08)'};color:#E85D5D;font-size:13px;font-weight:700;cursor:pointer">✕ Decline${my==='declined'?'d':''}</button>
+          </div>
+        </div>`;
+      })()}
       <div style="display:flex;gap:8px;margin-top:4px">
         <button onclick="document.getElementById('cal-detail-modal').remove();editCalEvent('${eventId}')" style="flex:1;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>
         <button onclick="document.getElementById('cal-detail-modal').remove();deleteCalEvent('${eventId}')" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#EF4444;font-size:13px;font-weight:600;cursor:pointer">Delete</button>
@@ -1646,7 +1718,7 @@ function renderCalendar(){
   }
 
   // Overlay custom events (vacation, sick, etc.)
-  const customEvts=calEventsLoad();
+  const customEvts=_calVisibleEvents();
   customEvts.forEach(e=>{
     if(_calTypeFilters!==null&&!_calTypeFilters.has(e.type)) return;
     if(filterCreator&&e.memberName!==filterCreator) return;
@@ -1716,7 +1788,7 @@ function renderCalendar(){
 function showCalDay(dateStr,e){
   if(e) e.stopPropagation();
   const dayJobs=savedJobs.filter(j=>j.date===dateStr);
-  const dayCustomEvts=calEventsLoad().filter(ev=>{
+  const dayCustomEvts=_calVisibleEvents().filter(ev=>{
     const s=ev.date, end=ev.endDate||ev.date;
     return dateStr>=s&&dateStr<=end;
   });
@@ -1815,7 +1887,7 @@ function _mcBuildJobsByDate(){
       });
     });
   }
-  calEventsLoad().forEach(e=>{
+  _calVisibleEvents().forEach(e=>{
     if(_calTypeFilters!==null&&!_calTypeFilters.has(e.type)) return;
     const typeDef=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
     const start=new Date(e.date+'T12:00:00');
@@ -1991,7 +2063,7 @@ function _mcRenderDayEvents(dateStr){
   if(!body) return;
   const dayJobs=savedJobs.filter(j=>j.date===dateStr)
     .sort((a,b)=>(a.shootTime||'').localeCompare(b.shootTime||''));
-  const dayEvts=calEventsLoad().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date));
+  const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date));
   let html='';
   // All-day custom events first
   dayEvts.forEach(ev=>{
@@ -2069,11 +2141,22 @@ function mcShowEventDetail(type,idOrEvtId,dateStr){
     if(!ev) return;
     const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
     const isMultiDay=ev.endDate&&ev.endDate!==ev.date;
+    const _mcInv=_calEventInvitees(ev);
+    const _mcMe=_calMe();
+    const _mcCanRsvp=_mcMe&&_mcInv.includes(_mcMe)&&ev.createdBy!==_mcMe;
+    const _mcMy=_calRsvpStatus(ev,_mcMe);
     const body=`<div style="padding:4px 0">
       <div style="font-size:17px;font-weight:800;color:var(--white);margin-bottom:14px">${td.icon} ${ev.title}</div>
       ${isMultiDay?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${ev.date} → ${ev.endDate}</div>`:''}
-      ${ev.memberName?`<div style="font-size:13px;font-weight:600;color:${td.color};margin-bottom:8px">${ev.memberName}</div>`:''}
+      ${_mcInv.length?`<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px">
+        ${_mcInv.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:600;color:${td.color}">${n}</span>${_calRsvpChipHtml(ev,n)}</div>`).join('')}
+      </div>`:''}
+      ${ev.createdBy?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Invited by ${ev.createdBy}</div>`:''}
       ${ev.notes?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px">${ev.notes}</div>`:''}
+      ${_mcCanRsvp?`<div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="calEventRsvp('${ev.id}','accepted');mobCalSwitchDay('${dateStr}')" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--green);background:${_mcMy==='accepted'?'rgba(34,217,122,.25)':'rgba(34,217,122,.08)'};color:var(--green);font-size:13px;font-weight:700;cursor:pointer">✓ Accept${_mcMy==='accepted'?'ed':''}</button>
+        <button onclick="calEventRsvp('${ev.id}','declined');mobCalSwitchDay('${dateStr}')" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(232,93,93,.5);background:${_mcMy==='declined'?'rgba(232,93,93,.25)':'rgba(232,93,93,.08)'};color:#E85D5D;font-size:13px;font-weight:700;cursor:pointer">✕ Decline${_mcMy==='declined'?'d':''}</button>
+      </div>`:''}
       <div style="display:flex;gap:8px;margin-top:14px">
         <button onclick="deleteCalEvent('${ev.id}');mcCloseEventDetail();mobCalSwitchDay('${dateStr}')" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--red,#E85D5D);background:rgba(232,93,93,.1);color:var(--red,#E85D5D);font-size:13px;font-weight:700;cursor:pointer">Delete</button>
         <button onclick="mcCloseEventDetail()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer">Close</button>
