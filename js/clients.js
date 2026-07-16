@@ -2173,6 +2173,13 @@ async function cpShowTab(tab){
     t.classList.toggle('active', t.dataset.tab===tab);
   });
   cpRenderSidebar(tab);
+  // LouChat is a full-bleed page like the ops app — every other tab keeps
+  // the centered content column
+  const _cpContentEl=document.getElementById('cp-content');
+  if(_cpContentEl){
+    if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
+    else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
+  }
   setTimeout(cpUpdateNotifBadge,100);
   // Fall back to portal account data if no matching client record exists
   const cpAcctFallback=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
@@ -2545,14 +2552,13 @@ async function cpShowTab(tab){
       </div>`;
     }
 
-    html=`<div class="card" style="margin-bottom:0;padding:0;overflow:hidden">
-      <div style="display:flex;min-height:540px;max-height:calc(100vh - 200px)">
+    html=`<div style="display:flex;height:calc(100vh - 58px);overflow:hidden">
 
         <!-- Conversation list -->
-        <div style="width:290px;flex-shrink:0;border-right:1px solid var(--border);background:var(--navy-mid);display:flex;flex-direction:column">
-          <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-            <div style="font-size:14px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:7px">${_icon('chat',15)} LouChat</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">DroneHub Media</div>
+        <div style="width:380px;flex-shrink:0;border-right:1px solid var(--border);background:var(--navy-card);display:flex;flex-direction:column">
+          <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+            <div style="font-size:16px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:8px">${_icon('chat',16)} LouChat</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">DroneHub Media</div>
           </div>
           <div style="flex:1;overflow-y:auto">
             ${sectionHdr(_icon('chat',12),'Team')}
@@ -2563,17 +2569,17 @@ async function cpShowTab(tab){
         </div>
 
         <!-- Thread -->
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--navy-card)">
-          <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--navy)">
+          <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--navy)">
             ${convoAvatar(activeConvo,34)}
             <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:800;color:var(--white)">${activeConvo.key==='team'?'# dronehub-media':activeConvo.name}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--white)">${activeConvo.key==='team'?'# dronehub-media':activeConvo.name}</div>
               <div style="font-size:11px;color:var(--muted)">${activeConvo.key==='team'?'Visible to the whole DroneHub team':'Direct message'}</div>
             </div>
             <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)" title="Online"></div>
           </div>
-          <div id="cp-messages-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:12px 18px">${threadHtml}</div>
-          <div style="padding:10px 16px 12px;border-top:1px solid var(--border);background:var(--navy-card)">
+          <div id="cp-messages-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:12px 20px">${threadHtml}</div>
+          <div style="padding:10px 16px 12px;border-top:1px solid var(--border)">
             <div style="display:flex;align-items:flex-end;gap:8px;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:14px;padding:6px 8px 6px 14px">
               <textarea id="cp-msg-input" placeholder="Message ${activeConvo.key==='team'?'#dronehub-media':activeConvo.name.split(' ')[0]}…" rows="1"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpSendMessage();}"
@@ -2585,7 +2591,6 @@ async function cpShowTab(tab){
             </div>
           </div>
         </div>
-      </div>
     </div>`;
     // Scroll to bottom of messages after render
     setTimeout(()=>{const b=document.getElementById('cp-messages-body');if(b)b.scrollTop=b.scrollHeight;const i=document.getElementById('cp-msg-input');if(i)i.focus();},50);
