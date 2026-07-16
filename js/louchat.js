@@ -1248,9 +1248,11 @@ async function lcSendMessage(){
   }
 
   // If replying in a client DM channel → mirror back to portal_msgs
-  // so the client sees the reply in their portal LouChat tab
+  // so the client sees the reply in the matching portal conversation,
+  // signed with the replying admin's name
   if(ch.type==='client_dm' && ch.clientId){
-    savePortalMessage(ch.clientId,'team',text); // fire-and-forget, no await needed
+    const _replyBy=gateGetSession()?.name||'DroneHub Media';
+    savePortalMessage(ch.clientId,'team',text,{to:ch.adminName||'team',by:_replyBy}); // fire-and-forget
   }
 
   if(input){input.value='';input.style.height='auto';}

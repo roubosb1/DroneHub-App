@@ -1709,11 +1709,13 @@ function getPortalMessages(clientId){
   const all=JSON.parse(localStorage.getItem('dronehub_portal_msgs')||'{}');
   return all[clientId]||[];
 }
-async function savePortalMessage(clientId, from, text){
+async function savePortalMessage(clientId, from, text, opts){
   const all=JSON.parse(localStorage.getItem('dronehub_portal_msgs')||'{}');
   if(!all[clientId]) all[clientId]=[];
   const encText=text?await dhEncrypt(text):text;
-  all[clientId].push({from, text:encText, ts:new Date().toISOString()});
+  // to: 'team' or an admin's name — which conversation this belongs to
+  // by: display name of the sender (admin name for team-side messages)
+  all[clientId].push({from, text:encText, ts:new Date().toISOString(), to:opts?.to||'team', by:opts?.by||''});
   try{localStorage.setItem('dronehub_portal_msgs',JSON.stringify(all));}catch(e){}
   fbSet('orgs',ORG_ID+':portal_msgs',{data:JSON.stringify(all),updatedAt:Date.now()});
 }
@@ -2456,34 +2458,88 @@ async function cpShowTab(tab){
     `;
   }
   else if(tab==='messages'){
-    const msgs=await dhDecryptMsgs(getPortalMessages(c.id));
-    html=`<div class="card" style="margin-bottom:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="section-label" style="margin-bottom:0;display:flex;align-items:center;gap:6px">${_icon('chat',14)} LouChat — DroneHub Media</div>
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)" title="Online"></div>
+    if(!window._cpChatTo) window._cpChatTo='team';
+    const allMsgs=await dhDecryptMsgs(getPortalMessages(c.id));
+    const admins=getAdminTeamMembers().filter(m=>m.name);
+    const activeTo=window._cpChatTo;
+    // Conversation list: Team channel + one DM per admin
+    const convos=[{key:'team',name:'DroneHub Media',sub:'The whole team',email:''}]
+      .concat(admins.map(m=>({key:m.name,name:m.name,sub:m.role||m.title||'DroneHub Media',email:m.email||''})));
+    const lastMsgFor=key=>{
+      const list=allMsgs.filter(m=>m.from!=='seen'&&(m.to||'team')===key);
+      return list.length?list[list.length-1]:null;
+    };
+    const threadMsgs=allMsgs.filter(m=>(m.to||'team')===(activeTo));
+    const activeConvo=convos.find(cv=>cv.key===activeTo)||convos[0];
+    const fmtT=ts=>new Date(ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const teamIcon=`<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dim));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800;color:#fff">DH</div>`;
+
+    html=`<div class="card" style="margin-bottom:0;padding:0;overflow:hidden">
+      <div style="display:flex;min-height:520px;max-height:calc(100vh - 220px)">
+
+        <!-- Conversation list -->
+        <div style="width:250px;flex-shrink:0;border-right:1px solid var(--border);background:var(--navy-mid);display:flex;flex-direction:column">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:6px">${_icon('chat',14)} LouChat</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">Message the team or someone directly</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:8px">
+            ${convos.map(cv=>{
+              const last=lastMsgFor(cv.key);
+              const on=cv.key===activeTo;
+              return `<div onclick="window._cpChatTo='${cv.key.replace(/'/g,"\\'")}';cpShowTab('messages')" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;margin-bottom:4px;background:${on?'rgba(91,141,239,.14)':'transparent'};border:1px solid ${on?'var(--blue)':'transparent'};transition:background .15s">
+                ${cv.key==='team'?teamIcon:(typeof getAvatarHtml==='function'?getAvatarHtml(cv.name,cv.email,38,13):'')}
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:700;color:${on?'var(--blue-bright)':'var(--white)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cv.name}</div>
+                  <div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last?(last.from==='client'?'You: ':'')+last.text:cv.sub}</div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Thread -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--navy-mid)">
+            ${activeConvo.key==='team'?teamIcon:(typeof getAvatarHtml==='function'?getAvatarHtml(activeConvo.name,activeConvo.email,34,12):'')}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;color:var(--white)">${activeConvo.name}</div>
+              <div style="font-size:10px;color:var(--muted)">${activeConvo.key==='team'?'Visible to the whole DroneHub team':'Direct message'}</div>
+            </div>
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)" title="Online"></div>
+          </div>
+          <div id="cp-messages-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:16px 18px">
+            ${threadMsgs.length?threadMsgs.map(m=>{
+              if(m.from==='seen') return `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;color:var(--muted);padding-right:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Seen ${fmtT(m.ts)}</div>`;
+              const mine=m.from==='client';
+              const author=mine?'':(m.by||activeConvo.name||'DroneHub Media');
+              return `<div style="display:flex;gap:8px;${mine?'flex-direction:row-reverse':''};align-items:flex-end">
+                ${mine?'':(typeof getAvatarHtml==='function'?getAvatarHtml(author,(admins.find(a=>a.name===author)||{}).email||'',26,10):'')}
+                <div style="max-width:70%;display:flex;flex-direction:column;${mine?'align-items:flex-end':'align-items:flex-start'}">
+                  ${!mine?`<div style="font-size:10px;font-weight:700;color:var(--blue-bright);margin-bottom:3px;padding-left:4px">${author}</div>`:''}
+                  <div style="padding:10px 14px;border-radius:${mine?'14px 14px 4px 14px':'14px 14px 14px 4px'};background:${mine?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};color:${mine?'#fff':'var(--offwhite)'};border:1px solid ${mine?'transparent':'var(--border)'}">
+                    <div style="font-size:13px;line-height:1.55;word-break:break-word">${m.text}</div>
+                  </div>
+                  <div style="font-size:9px;color:var(--muted);margin-top:3px;padding:0 4px">${fmtT(m.ts)}</div>
+                </div>
+              </div>`;
+            }).join('')
+            :`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:8px">
+                <div style="opacity:.4">${_icon('chat',30)}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--offwhite)">${activeConvo.key==='team'?'Message the DroneHub team':'Start a conversation with '+activeConvo.name.split(' ')[0]}</div>
+                <div style="font-size:11px">We usually reply within the business day.</div>
+              </div>`}
+          </div>
+          <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding:12px 16px;background:var(--navy-mid)">
+            <input type="text" id="cp-msg-input" placeholder="Message ${activeConvo.key==='team'?'the team':activeConvo.name.split(' ')[0]}…" onkeydown="if(event.key==='Enter')cpSendMessage()"
+              style="flex:1;padding:11px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:13px;background:var(--navy-lift);color:var(--white);outline:none" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border-bright)'">
+            <button onclick="cpSendMessage()" style="padding:11px 20px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Send</button>
+          </div>
+        </div>
       </div>
-      <div id="cp-messages-body" style="min-height:280px;max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0;margin-bottom:14px">
-        ${msgs.length?msgs.map(m=>m.from==='seen'
-          ?`<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;color:var(--muted);padding-right:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Seen ${new Date(m.ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>`
-          :`<div class="cp-msg cp-msg-from-${m.from==='client'?'client':'team'}" style="padding:10px 14px;border-radius:12px;max-width:78%;background:${m.from==='client'?'var(--navy-lift)':'linear-gradient(135deg,var(--blue),var(--blue-dim))'};color:${m.from==='client'?'var(--offwhite)':'#fff'};${m.from==='client'?'align-self:flex-start':'align-self:flex-end'}">
-            <div style="font-size:12px;line-height:1.5">${m.text}</div>
-            <div style="font-size:10px;opacity:.6;margin-top:4px">${new Date(m.ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
-          </div>`
-        ).join('')
-        :`<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px">
-            <div style="margin-bottom:8px;color:var(--muted)">${_icon('chat',24)}</div>
-            No messages yet. Send us a message and we'll get back to you shortly.
-          </div>`}
-      </div>
-      <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:12px">
-        <input type="text" id="cp-msg-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')cpSendMessage()"
-          style="flex:1;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
-        <button onclick="cpSendMessage()" style="padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Send</button>
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:8px">LouChat messages are stored locally. When the mobile app launches, this will be a live chat synced across your team.</div>
     </div>`;
     // Scroll to bottom of messages after render
-    setTimeout(()=>{const b=document.getElementById('cp-messages-body');if(b)b.scrollTop=b.scrollHeight;},50);
+    setTimeout(()=>{const b=document.getElementById('cp-messages-body');if(b)b.scrollTop=b.scrollHeight;const i=document.getElementById('cp-msg-input');if(i)i.focus();},50);
   }
   else if(tab==='social'){
     const socialPosts=socialPostsLoad();
@@ -3459,24 +3515,31 @@ async function cpSendMessage(){
   const text=input?.value.trim();
   if(!text||!cpActiveClientId) return;
 
-  // 1. Save to portal_msgs (client-side thread the client can read)
-  savePortalMessage(cpActiveClientId,'client',text);
-
-  // 2. Mirror into ops-side LouChat so the team sees it immediately
+  const chatTo=window._cpChatTo||'team';
   const cpSess=(() => { try{return JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');}catch(e){return null;} })();
   const _cpClientRec=(typeof clients!=='undefined'?clients:[]).find(c=>String(c.id)===String(cpActiveClientId));
   const clientDisplayName=cpSess?.name||_cpClientRec?.name||'Client';
-  const lcChannelId='lc_client_'+cpActiveClientId;
+
+  // 1. Save to portal_msgs (client-side thread the client can read)
+  savePortalMessage(cpActiveClientId,'client',text,{to:chatTo,by:clientDisplayName});
+
+  // 2. Mirror into ops-side LouChat so the team sees it immediately.
+  // Team messages go to the shared client channel; DMs to an admin get
+  // their own channel so that person knows it's addressed to them.
+  const isDm=chatTo!=='team';
+  const dmSlug=isDm?chatTo.toLowerCase().replace(/[^a-z0-9]+/g,'_'):'';
+  const lcChannelId=isDm?('lc_client_'+cpActiveClientId+'_dm_'+dmSlug):('lc_client_'+cpActiveClientId);
   let channels=getLcChannels();
   const existingCh=channels.find(c=>c.id===lcChannelId);
   if(!existingCh){
     channels.push({
       id:lcChannelId,
-      name:clientDisplayName.split(' ')[0].toLowerCase(),
+      name:isDm?(clientDisplayName.split(' ')[0]+' → '+chatTo.split(' ')[0]).toLowerCase():clientDisplayName.split(' ')[0].toLowerCase(),
       type:'client_dm',
-      topic:'Direct messages from '+clientDisplayName,
+      topic:isDm?('Private — '+clientDisplayName+' ↔ '+chatTo):('Direct messages from '+clientDisplayName),
       clientId:cpActiveClientId,
       clientName:clientDisplayName,
+      adminName:isDm?chatTo:'',
       createdAt:new Date().toISOString().slice(0,10),
       members:[],
     });
