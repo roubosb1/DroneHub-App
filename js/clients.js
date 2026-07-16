@@ -922,6 +922,12 @@ async function renderClientPortal(id, activeTab){
   const c=clients.find(cl=>cl.id===id);
   if(!c) return;
 
+  // Keep imported Drive-tracker jobs in sync with the linked project list
+  if(typeof _cdReconcileImportedJobs==='function'&&(c.driveProjects||[]).length){
+    const _rmv=_cdReconcileImportedJobs(c);
+    if(_rmv){try{showDhToast('Tracker cleaned up',_rmv+' duplicate imported project'+(_rmv===1?'':'s')+' removed','check','var(--green)',3500);}catch(e){}}
+  }
+
   const cJobs=savedJobs.filter(j=>j.clientId===id).sort((a,b)=>b.date.localeCompare(a.date));
   const completed=cJobs.filter(j=>j.status==='completed');
   const outstanding=cJobs.filter(j=>j.status==='confirmed'||j.status==='quoted');
