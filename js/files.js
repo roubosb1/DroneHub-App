@@ -241,42 +241,114 @@ async function filesDownload(fileId) {
 }
 
 // ── Folder / file management ─────────────────────────────────────────────────
-async function filesNewFolder() {
-  const name = prompt('New folder name:');
-  if (!name || !name.trim()) return;
-  try {
-    const res = await _filesApi('createFolder', { name: name.trim(), parentId: _filesCurrentFolder });
-    if (res.error) throw new Error(res.error);
-    try { showDhToast('Folder created', res.name || name.trim(), 'check', 'var(--green)', 2500); } catch (e) {}
-    filesLoadFolder(_filesCurrentFolder);
-  } catch (err) {
-    try { showDhToast('Create failed', err.message || 'Could not create folder', '⚠', 'var(--orange)', 4000); } catch (e) {}
+
+// Styled modal replacing native prompt()/confirm().
+// opts: {title, message, icon, iconColor, input, inputValue, placeholder, confirmText, danger, onConfirm(value)}
+function _filesModal(opts) {
+  document.getElementById('files-modal')?.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'files-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)';
+  const okColor = opts.danger
+    ? 'border:1px solid rgba(232,93,93,.5);background:rgba(232,93,93,.12);color:#E85D5D'
+    : 'border:1px solid var(--green);background:var(--green-bg);color:var(--green)';
+  wrap.innerHTML = `
+    <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;max-width:400px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.55)">
+      <div style="background:var(--navy-mid);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="color:${opts.iconColor || 'var(--blue-bright)'};display:flex">${opts.icon || ''}</span>
+        <span style="font-size:14px;font-weight:700;color:var(--white)">${opts.title}</span>
+      </div>
+      <div style="padding:20px">
+        ${opts.message ? `<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:${opts.input ? '14px' : '0'}">${opts.message}</div>` : ''}
+        ${opts.input ? `<input id="files-modal-input" type="text" placeholder="${opts.placeholder || ''}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);outline:none" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border-bright)'">` : ''}
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+          <button id="files-modal-cancel" style="padding:9px 18px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Cancel</button>
+          <button id="files-modal-ok" style="padding:9px 20px;border-radius:10px;${okColor};font-size:12px;font-weight:700;cursor:pointer">${opts.confirmText || 'OK'}</button>
+        </div>
+      </div>
+    </div>`;
+  wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+  document.body.appendChild(wrap);
+  const input = document.getElementById('files-modal-input');
+  const ok = () => {
+    const v = input ? input.value.trim() : null;
+    if (input && !v) { input.style.borderColor = '#E85D5D'; input.focus(); return; }
+    wrap.remove();
+    opts.onConfirm(v);
+  };
+  if (input) {
+    if (opts.inputValue) input.value = opts.inputValue;
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+    input.onkeydown = (e) => { if (e.key === 'Enter') ok(); if (e.key === 'Escape') wrap.remove(); };
   }
+  document.getElementById('files-modal-ok').onclick = ok;
+  document.getElementById('files-modal-cancel').onclick = () => wrap.remove();
 }
 
-async function filesRename(fileId, currentName) {
-  const name = prompt('Rename to:', currentName || '');
-  if (!name || !name.trim() || name.trim() === currentName) return;
-  try {
-    const res = await _filesApi('rename', { fileId, name: name.trim() });
-    if (res.error) throw new Error(res.error);
-    try { showDhToast('Renamed', name.trim(), 'check', 'var(--green)', 2500); } catch (e) {}
-    filesLoadFolder(_filesCurrentFolder);
-  } catch (err) {
-    try { showDhToast('Rename failed', err.message || 'Could not rename', '⚠', 'var(--orange)', 4000); } catch (e) {}
-  }
+function filesNewFolder() {
+  _filesModal({
+    title: 'New Folder',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>',
+    iconColor: '#F5C842',
+    message: 'Creates a folder inside <strong style="color:var(--offwhite)">' + (_filesBreadcrumb[_filesBreadcrumb.length - 1]?.name || 'My Drive') + '</strong>.',
+    input: true,
+    placeholder: 'Folder name…',
+    confirmText: 'Create Folder',
+    onConfirm: async (name) => {
+      try {
+        const res = await _filesApi('createFolder', { name, parentId: _filesCurrentFolder });
+        if (res.error) throw new Error(res.error);
+        try { showDhToast('Folder created', res.name || name, 'check', 'var(--green)', 2500); } catch (e) {}
+        filesLoadFolder(_filesCurrentFolder);
+      } catch (err) {
+        try { showDhToast('Create failed', err.message || 'Could not create folder', '⚠', 'var(--orange)', 4000); } catch (e) {}
+      }
+    },
+  });
 }
 
-async function filesTrash(fileId, name) {
-  if (!confirm('Move "' + (name || 'this item') + '" to the Google Drive trash?\n\nYou can restore it from drive.google.com → Trash within 30 days.')) return;
-  try {
-    const res = await _filesApi('trash', { fileId });
-    if (res.error) throw new Error(res.error);
-    try { showDhToast('Moved to trash', name || '', 'check', 'var(--green)', 2500); } catch (e) {}
-    filesLoadFolder(_filesCurrentFolder);
-  } catch (err) {
-    try { showDhToast('Trash failed', err.message || 'Could not move to trash', '⚠', 'var(--orange)', 4000); } catch (e) {}
-  }
+function filesRename(fileId, currentName) {
+  _filesModal({
+    title: 'Rename',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>',
+    iconColor: 'var(--blue-bright)',
+    input: true,
+    inputValue: currentName || '',
+    placeholder: 'New name…',
+    confirmText: 'Rename',
+    onConfirm: async (name) => {
+      if (name === currentName) return;
+      try {
+        const res = await _filesApi('rename', { fileId, name });
+        if (res.error) throw new Error(res.error);
+        try { showDhToast('Renamed', name, 'check', 'var(--green)', 2500); } catch (e) {}
+        filesLoadFolder(_filesCurrentFolder);
+      } catch (err) {
+        try { showDhToast('Rename failed', err.message || 'Could not rename', '⚠', 'var(--orange)', 4000); } catch (e) {}
+      }
+    },
+  });
+}
+
+function filesTrash(fileId, name) {
+  _filesModal({
+    title: 'Move to Trash',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    iconColor: '#E85D5D',
+    message: 'Move <strong style="color:var(--offwhite)">' + (name || 'this item') + '</strong> to the Google Drive trash?<br><br>You can restore it from drive.google.com → Trash within 30 days.',
+    confirmText: 'Move to Trash',
+    danger: true,
+    onConfirm: async () => {
+      try {
+        const res = await _filesApi('trash', { fileId });
+        if (res.error) throw new Error(res.error);
+        try { showDhToast('Moved to trash', name || '', 'check', 'var(--green)', 2500); } catch (e) {}
+        filesLoadFolder(_filesCurrentFolder);
+      } catch (err) {
+        try { showDhToast('Trash failed', err.message || 'Could not move to trash', '⚠', 'var(--orange)', 4000); } catch (e) {}
+      }
+    },
+  });
 }
 
 // ── Upload ───────────────────────────────────────────────────────────────────
