@@ -208,7 +208,7 @@ async function cdLinkSelected(clientId) {
   }
 }
 
-// Core merge: move source's folders into target, drop source + its imported job
+// Core merge: move source's folders into target, drop source project
 function _cdMergeInto(c, sourceKey, targetKey) {
   const source = (c.driveProjects || []).find(p => _cdProjKey(p) === sourceKey);
   const target = (c.driveProjects || []).find(p => _cdProjKey(p) === targetKey);
@@ -218,11 +218,25 @@ function _cdMergeInto(c, sourceKey, targetKey) {
   target.folders = tf.concat(_cdProjFolders(source).filter(f => !have.has(f.folderId)));
   delete target.folderId;
   c.driveProjects = c.driveProjects.filter(p => _cdProjKey(p) !== sourceKey);
-  if (typeof savedJobs !== 'undefined') {
-    const idx = savedJobs.findIndex(j => j._importedFromDrive && String(j.clientId) === String(c.id) && (j.address || '').toLowerCase() === (source.address || '').toLowerCase());
-    if (idx >= 0) { savedJobs.splice(idx, 1); if (typeof saveJobsToStorage === 'function') saveJobsToStorage(); }
-  }
   return true;
+}
+
+// Imported tracker jobs mirror the project list 1:1 — after merges/unlinks,
+// drop imported jobs whose address no longer matches a project, and dedupe.
+function _cdReconcileImportedJobs(c) {
+  if (typeof savedJobs === 'undefined' || !c) return 0;
+  const addrs = new Set((c.driveProjects || []).map(p => (p.address || '').toLowerCase()));
+  const seen = new Set();
+  let removed = 0;
+  for (let i = savedJobs.length - 1; i >= 0; i--) {
+    const j = savedJobs[i];
+    if (!j._importedFromDrive || String(j.clientId) !== String(c.id)) continue;
+    const a = (j.address || '').toLowerCase();
+    if (!addrs.has(a) || seen.has(a)) { savedJobs.splice(i, 1); removed++; continue; }
+    seen.add(a);
+  }
+  if (removed && typeof saveJobsToStorage === 'function') saveJobsToStorage();
+  return removed;
 }
 
 // ── Multi-select merge ────────────────────────────────────────────────────────
@@ -286,6 +300,7 @@ function cdMergeSelectedConfirm(clientId, keys) {
   let merged = 0;
   keys.filter(k => k !== targetKey).forEach(k => { if (_cdMergeInto(c, k, targetKey)) merged++; });
   saveClientsToStorage();
+  _cdReconcileImportedJobs(c);
   document.getElementById('cd-merge-modal')?.remove();
   try { showDhToast('Merged', merged + ' project' + (merged === 1 ? '' : 's') + ' combined into ' + (target?.address || ''), 'check', 'var(--green)', 3500); } catch (e) {}
   if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
@@ -333,6 +348,7 @@ function cdMergeConfirm(clientId, sourceKey) {
   if (!source || !target) return;
   _cdMergeInto(c, sourceKey, targetKey);
   saveClientsToStorage();
+  _cdReconcileImportedJobs(c);
   document.getElementById('cd-merge-modal')?.remove();
   try { showDhToast('Merged', source.address + ' → ' + target.address, 'check', 'var(--green)', 3500); } catch (e) {}
   if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
@@ -352,6 +368,7 @@ function cdUnlinkProject(clientId, projKey) {
     onConfirm: () => {
       c.driveProjects = (c.driveProjects || []).filter(p => _cdProjKey(p) !== projKey);
       saveClientsToStorage();
+      _cdReconcileImportedJobs(c);
       try { showDhToast('Unlinked', proj?.address || '', 'check', 'var(--green)', 2500); } catch (e) {}
       if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
     },
@@ -405,6 +422,12 @@ function cdRestoreDupGroups(clientId) {
 function cdProjectsSectionHtml(clientId, isClientView) {
   const c = _cdClient(clientId);
   let projects = c?.driveProjects || [];
+
+  // Self-heal: drop imported tracker jobs orphaned by earlier merges/unlinks
+  if (!isClientView && c && projects.length) {
+    const removed = _cdReconcileImportedJobs(c);
+    if (removed) { try { showDhToast('Tracker cleaned up', removed + ' duplicate imported project' + (removed === 1 ? '' : 's') + ' removed', 'check', 'var(--green)', 3500); } catch (e) {} }
+  }
 
   // Admin: possible-duplicates mode — only projects sharing a house number,
   // grouped side by side so they're easy to merge
