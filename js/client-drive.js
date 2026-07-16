@@ -284,11 +284,46 @@ function cdUnlinkProject(clientId, projKey) {
   });
 }
 
+// House number heuristic for spotting likely duplicate properties
+function _cdHouseNo(address) {
+  const m = (address || '').match(/(\d{2,6})/);
+  return m ? m[1] : '';
+}
+window._cdShowDups = window._cdShowDups || {};
+function cdToggleDupFilter(clientId) {
+  window._cdShowDups[clientId] = !window._cdShowDups[clientId];
+  if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
+}
+
 // ── Shared section HTML (admin assets tab + client portal files tab) ─────────
 function cdProjectsSectionHtml(clientId, isClientView) {
   const c = _cdClient(clientId);
-  const projects = c?.driveProjects || [];
+  let projects = c?.driveProjects || [];
+
+  // Admin: possible-duplicates mode — only projects sharing a house number,
+  // grouped side by side so they're easy to merge
+  let dupGroups = new Map();
+  if (!isClientView && projects.length) {
+    projects.forEach(p => {
+      const no = _cdHouseNo(p.address);
+      if (!no) return;
+      if (!dupGroups.has(no)) dupGroups.set(no, []);
+      dupGroups.get(no).push(p);
+    });
+    dupGroups = new Map([...dupGroups].filter(([, list]) => list.length > 1));
+  }
+  const dupCount = dupGroups.size;
+  const dupMode = !isClientView && window._cdShowDups[clientId] && dupCount > 0;
+  if (dupMode) {
+    projects = [...dupGroups.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
+      .flatMap(([, list]) => list);
+  }
   const scanBtn = !isClientView ? `
+    ${dupCount ? `<button onclick="cdToggleDupFilter('${clientId}')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid ${dupMode ? '#F5C842' : 'var(--border-bright)'};background:${dupMode ? 'rgba(245,200,66,.12)' : 'transparent'};color:${dupMode ? '#F5C842' : 'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+      ${dupMode ? 'Show all projects' : 'Possible duplicates (' + dupCount + ')'}
+    </button>` : ''}
     <button onclick="cdScanDrive('${clientId}')" style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Scan Drive for projects
@@ -308,12 +343,18 @@ function cdProjectsSectionHtml(clientId, isClientView) {
     ${projects.length ? `
     <input type="text" id="cd-proj-search-${clientId}" placeholder="Search by address…" oninput="cdFilterProjects('${clientId}')"
       style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:12px">
+    ${dupMode ? `<div style="font-size:11px;color:#F5C842;margin-bottom:10px;line-height:1.6">Showing only properties that share a house number — likely the same project spelled differently. Use <b>Merge</b> to combine them; folders and files are kept.</div>` : ''}
     <div id="cd-proj-list-${clientId}">
-      ${projects.map(p => {
+      ${(() => { let _lastNo = null; return projects.map(p => {
         const pf = _cdProjFolders(p);
         const key = _cdProjKey(p);
         const allShared = pf.every(f => f.shared);
-        return `
+        let groupHdr = '';
+        if (dupMode) {
+          const no = _cdHouseNo(p.address);
+          if (no !== _lastNo) { groupHdr = `<div style="font-size:10px;font-weight:700;color:#F5C842;text-transform:uppercase;letter-spacing:.06em;margin:${_lastNo === null ? '0' : '14px'} 0 6px">№ ${no}</div>`; _lastNo = no; }
+        }
+        return groupHdr + `
       <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;gap:10px;flex-wrap:wrap">
           <div style="flex:1;min-width:0;cursor:pointer" onclick="cdToggleBrowse('${clientId}','${key}')">
@@ -329,7 +370,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
         </div>
         <div id="cd-browse-${key}" style="display:none;border-top:1px solid var(--border);padding:10px 14px"></div>
       </div>`;
-      }).join('')}
+      }).join(''); })()}
     </div>
     <div id="cd-proj-none-${clientId}" style="display:none;text-align:center;padding:14px;color:var(--muted);font-size:12px">No projects match your search</div>
     ` : `<div style="text-align:center;padding:18px;color:var(--muted);font-size:12px;line-height:1.7">
