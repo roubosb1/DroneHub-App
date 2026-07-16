@@ -208,6 +208,62 @@ async function cdLinkSelected(clientId) {
   }
 }
 
+// ── Merge two projects (same property, differently spelled folders) ─────────
+function cdMergeProject(clientId, projKey) {
+  const c = _cdClient(clientId);
+  if (!c) return;
+  const source = (c.driveProjects || []).find(p => _cdProjKey(p) === projKey);
+  if (!source) return;
+  const others = (c.driveProjects || []).filter(p => _cdProjKey(p) !== projKey);
+  if (!others.length) { try { showDhToast('Nothing to merge with', 'This client has no other projects', '⚠', 'var(--orange)', 3000); } catch (e) {} return; }
+  document.getElementById('cd-merge-modal')?.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'cd-merge-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)';
+  wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+  wrap.innerHTML = `
+    <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.55)">
+      <div style="background:var(--navy-mid);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:700;color:var(--white)">Merge Project</span>
+        <button onclick="document.getElementById('cd-merge-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div style="padding:20px">
+        <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">Move the ${_cdProjFolders(source).length} folder${_cdProjFolders(source).length === 1 ? '' : 's'} from <strong style="color:var(--offwhite)">${source.address}</strong> into another project. The merged project keeps the other project's address.</div>
+        <select id="cd-merge-target" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:16px">
+          ${others.map(p => `<option value="${_cdProjKey(p)}">${p.address} (${_cdProjFolders(p).length} folder${_cdProjFolders(p).length === 1 ? '' : 's'})</option>`).join('')}
+        </select>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="document.getElementById('cd-merge-modal').remove()" style="padding:9px 18px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer">Cancel</button>
+          <button onclick="cdMergeConfirm('${clientId}','${projKey}')" style="padding:9px 20px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Merge</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+}
+
+function cdMergeConfirm(clientId, sourceKey) {
+  const c = _cdClient(clientId);
+  const targetKey = document.getElementById('cd-merge-target')?.value;
+  if (!c || !targetKey) return;
+  const source = (c.driveProjects || []).find(p => _cdProjKey(p) === sourceKey);
+  const target = (c.driveProjects || []).find(p => _cdProjKey(p) === targetKey);
+  if (!source || !target) return;
+  const tf = _cdProjFolders(target);
+  const have = new Set(tf.map(f => f.folderId));
+  target.folders = tf.concat(_cdProjFolders(source).filter(f => !have.has(f.folderId)));
+  delete target.folderId;
+  c.driveProjects = c.driveProjects.filter(p => _cdProjKey(p) !== sourceKey);
+  saveClientsToStorage();
+  // Drop the imported tracker job for the source address (target's job covers it)
+  if (typeof savedJobs !== 'undefined') {
+    const idx = savedJobs.findIndex(j => j._importedFromDrive && String(j.clientId) === String(c.id) && (j.address || '').toLowerCase() === (source.address || '').toLowerCase());
+    if (idx >= 0) { savedJobs.splice(idx, 1); if (typeof saveJobsToStorage === 'function') saveJobsToStorage(); }
+  }
+  document.getElementById('cd-merge-modal')?.remove();
+  try { showDhToast('Merged', source.address + ' → ' + target.address, 'check', 'var(--green)', 3500); } catch (e) {}
+  if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
+}
+
 function cdUnlinkProject(clientId, projKey) {
   const c = _cdClient(clientId);
   if (!c) return;
@@ -267,6 +323,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
             <button onclick="cdToggleBrowse('${clientId}','${key}')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Browse Files</button>
             ${!isClientView && !allShared ? `<button onclick="cdShareProject('${clientId}','${key}')" title="Allow the client to download large files" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">Enable downloads</button>` : ''}
+            ${!isClientView ? `<button onclick="cdMergeProject('${clientId}','${key}')" title="Merge into another project (same property, different folder spelling)" style="padding:6px 10px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer">Merge</button>` : ''}
             ${!isClientView ? `<button onclick="cdUnlinkProject('${clientId}','${key}')" title="Unlink" style="border:none;background:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px">✕</button>` : ''}
           </div>
         </div>
