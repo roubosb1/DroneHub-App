@@ -2095,6 +2095,70 @@ async function cpLogin(){
   cpShowTab('overview');
 }
 
+// ── Client portal sidebar (ops-style) ────────────────────────────────────────
+const CP_NAV=[
+  {tab:'overview',  label:'Overview',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'},
+  {tab:'production',label:'My Videos',   icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
+  {tab:'projects',  label:'All Jobs',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'},
+  {tab:'invoices',  label:'Invoices',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'},
+  {tab:'spending',  label:'Spending',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'},
+  {tab:'files',     label:'Files',       icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'},
+  {tab:'messages',  label:'LouChat',     icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'},
+  {tab:'social',    label:'Social',      icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>'},
+  {tab:'booking',   label:'Book a Shoot',icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
+  {tab:'profile',   label:'My Profile',  icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'},
+];
+
+function cpRenderSidebar(activeTab){
+  const profEl=document.getElementById('cp-side-profile');
+  const navEl=document.getElementById('cp-side-nav');
+  if(!profEl||!navEl) return;
+  const acct=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
+  const c=clients.find(cl=>cl.id===cpActiveClientId)||{};
+  const name=c.name||acct.name||'Client';
+  const email=c.email||acct.email||'';
+  profEl.innerHTML=`
+    <div onclick="cpShowTab('profile')" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 8px 16px;border-bottom:1px solid var(--border);margin-bottom:12px;cursor:pointer">
+      ${typeof getAvatarHtml==='function'?getAvatarHtml(name,email,56,18):''}
+      <div style="text-align:center;min-width:0;width:100%">
+        <div style="font-size:14px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+        ${c.company?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.company}</div>`:''}
+      </div>
+    </div>`;
+  navEl.innerHTML=CP_NAV.map(n=>`
+    <button onclick="cpShowTab('${n.tab}')" class="cp-side-item${n.tab===activeTab?' active':''}">${n.icon} ${n.label}</button>`).join('');
+}
+
+function cpProfilePhotoSelected(input){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  const c=clients.find(cl=>cl.id===cpActiveClientId);
+  const email=c?.email;
+  if(!email){try{showDhToast('No email on file','Ask DroneHub to add your email first','⚠','var(--orange)',4000);}catch(e){}return;}
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    try{
+      await saveProfilePhoto(email,reader.result);
+      try{showDhToast('Photo updated','','check','var(--green)',2500);}catch(e){}
+      cpShowTab('profile');
+    }catch(err){
+      try{showDhToast('Upload failed',err.message||'Try a smaller image','⚠','var(--orange)',4000);}catch(e){}
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function cpSaveClientProfile(){
+  const c=clients.find(cl=>cl.id===cpActiveClientId);
+  if(!c){try{showDhToast('Profile not found','Ask DroneHub to link your account','⚠','var(--orange)',4000);}catch(e){}return;}
+  c.company=document.getElementById('cp-pf-company')?.value.trim()||c.company||'';
+  c.phone=document.getElementById('cp-pf-phone')?.value.trim()||'';
+  c.address=document.getElementById('cp-pf-address')?.value.trim()||'';
+  saveClientsToStorage();
+  try{showDhToast('Profile saved','','check','var(--green)',2500);}catch(e){}
+  cpRenderSidebar('profile');
+}
+
 function cpLogout(){
   cpActiveClientId=null;
   try{sessionStorage.removeItem('dronehub_cp_session');}catch(e){}
@@ -2108,6 +2172,7 @@ async function cpShowTab(tab){
   document.querySelectorAll('#cp-dashboard .cp-tab').forEach(t=>{
     t.classList.toggle('active', t.dataset.tab===tab);
   });
+  cpRenderSidebar(tab);
   setTimeout(cpUpdateNotifBadge,100);
   // Fall back to portal account data if no matching client record exists
   const cpAcctFallback=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
@@ -2605,6 +2670,56 @@ async function cpShowTab(tab){
         }).join('')}
       </div>`;
     }
+  }
+  else if(tab==='profile'){
+    const acct=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
+    const pfName=c.name||acct.name||'Client';
+    const pfEmail=c.email||acct.email||'';
+    html=`
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="position:relative">
+            ${typeof getAvatarHtml==='function'?getAvatarHtml(pfName,pfEmail,84,26):''}
+          </div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:20px;font-weight:800;color:var(--white)">${pfName}</div>
+            ${c.company?`<div style="font-size:13px;color:var(--muted);margin-top:2px">${c.company}</div>`:''}
+            <label style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Change photo
+              <input type="file" accept="image/*" onchange="cpProfilePhotoSelected(this)" style="display:none">
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-label" style="margin-bottom:14px">Contact Information</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:16px">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Name</label>
+            <input value="${pfName}" disabled style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-mid);color:var(--muted)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Email (login)</label>
+            <input value="${pfEmail}" disabled style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--navy-mid);color:var(--muted)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Company / Brokerage</label>
+            <input id="cp-pf-company" value="${c.company||''}" placeholder="Your company…" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Phone</label>
+            <input id="cp-pf-phone" value="${c.phone||''}" placeholder="(555) 555-5555" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Office Address</label>
+            <input id="cp-pf-address" value="${c.address||''}" placeholder="Street, city, state…" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button onclick="cpSaveClientProfile()" style="padding:10px 24px;border-radius:12px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save changes</button>
+        </div>
+      </div>`;
   }
   else if(tab==='booking'){
     const myBookings=savedJobs.filter(j=>j.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));

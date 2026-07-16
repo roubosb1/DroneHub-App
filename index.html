@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=52">
+<link rel="stylesheet" href="css/styles.css?v=53">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -281,8 +281,23 @@
       </div>
     </div>
 
-    <!-- Dashboard tabs -->
-    <div style="background:var(--navy-mid);border-bottom:1px solid var(--border);padding:0 20px">
+    <!-- Dashboard body: sidebar (desktop) + content -->
+    <div style="display:flex;align-items:stretch">
+
+      <!-- Client sidebar (desktop) -->
+      <div id="cp-sidebar" class="cp-sidebar">
+        <div id="cp-side-profile"></div>
+        <div id="cp-side-nav" style="display:flex;flex-direction:column;gap:2px;flex:1"></div>
+        <button onclick="cpLogout()" class="cp-side-item" style="margin-top:10px;color:var(--muted)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </button>
+      </div>
+
+      <div style="flex:1;min-width:0">
+
+    <!-- Dashboard tabs (mobile fallback) -->
+    <div class="cp-tabs-bar" style="background:var(--navy-mid);border-bottom:1px solid var(--border);padding:0 20px">
       <div style="display:flex;gap:0;overflow-x:auto" id="cp-tabs">
         <button onclick="cpShowTab('overview')" class="cp-tab active" data-tab="overview" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Overview</button>
         <button onclick="cpShowTab('production')" class="cp-tab" data-tab="production" style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> My Videos</button>
@@ -297,7 +312,10 @@
     </div>
 
     <!-- Dashboard content -->
-    <div style="max-width:800px;margin:0 auto;padding:24px 20px 60px" id="cp-content"></div>
+    <div style="max-width:900px;margin:0 auto;padding:24px 20px 60px" id="cp-content"></div>
+
+      </div><!-- /content column -->
+    </div><!-- /dashboard body flex -->
 
     <!-- Social post detail overlay -->
     <div id="cp-post-overlay" style="display:none;position:fixed;inset:0;z-index:10001;background:var(--navy);overflow:hidden;flex-direction:column">
@@ -4469,7 +4487,7 @@
 <script src="js/calendar.js?v=60"></script>
 <script src="js/team.js"></script>
 <script src="js/jobs.js"></script>
-<script src="js/clients.js?v=57"></script>
+<script src="js/clients.js?v=58"></script>
 <script src="js/client-drive.js?v=10"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>

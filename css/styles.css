@@ -1281,3 +1281,11 @@ button{font-family:var(--font);}
 .cp-msg{padding:12px 14px;border-radius:10px;max-width:78%;line-height:1.5;font-size:13px}
 .cp-msg-from-client{background:var(--navy-lift);color:var(--offwhite);align-self:flex-start}
 .cp-msg-from-team{background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;align-self:flex-end}
+/* ── Client portal sidebar (desktop) ─────────────────────────────────────── */
+.cp-sidebar{width:228px;flex-shrink:0;background:var(--navy-mid);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;box-sizing:border-box}
+.cp-side-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:background .15s,color .15s;font-family:var(--font);box-sizing:border-box}
+.cp-side-item:hover{background:rgba(255,255,255,.05);color:var(--offwhite)}
+.cp-side-item.active{background:rgba(91,141,239,.14);color:var(--blue-bright)}
+.cp-side-item svg{flex-shrink:0}
+@media(max-width:768px){.cp-sidebar{display:none}}
+@media(min-width:769px){.cp-tabs-bar{display:none}}
