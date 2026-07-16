@@ -187,6 +187,8 @@ async function cdLinkSelected(clientId) {
           grand: 0, driveCost: 0,
           services: {}, hours: {}, payouts: {}, editors: {}, extraServices: [],
           commissionPct: 0, commissionAmt: 0,
+          markedPaid: true,
+          paidAt: (main.modifiedTime || new Date().toISOString()).slice(0, 10),
           notes: 'Imported from Google Drive',
           _importedFromDrive: true,
         });
@@ -223,19 +225,22 @@ function _cdMergeInto(c, sourceKey, targetKey) {
 
 // Imported tracker jobs mirror the project list 1:1 — after merges/unlinks,
 // drop imported jobs whose address no longer matches a project, and dedupe.
+// Historical imports are delivered work: keep them marked as paid so they
+// never surface as outstanding/overdue invoices.
 function _cdReconcileImportedJobs(c) {
   if (typeof savedJobs === 'undefined' || !c) return 0;
   const addrs = new Set((c.driveProjects || []).map(p => (p.address || '').toLowerCase()));
   const seen = new Set();
-  let removed = 0;
+  let removed = 0, changed = false;
   for (let i = savedJobs.length - 1; i >= 0; i--) {
     const j = savedJobs[i];
     if (!j._importedFromDrive || String(j.clientId) !== String(c.id)) continue;
     const a = (j.address || '').toLowerCase();
     if (!addrs.has(a) || seen.has(a)) { savedJobs.splice(i, 1); removed++; continue; }
     seen.add(a);
+    if (!j.markedPaid) { j.markedPaid = true; j.paidAt = j.date || new Date().toISOString().slice(0, 10); changed = true; }
   }
-  if (removed && typeof saveJobsToStorage === 'function') saveJobsToStorage();
+  if ((removed || changed) && typeof saveJobsToStorage === 'function') saveJobsToStorage();
   return removed;
 }
 
