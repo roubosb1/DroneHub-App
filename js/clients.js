@@ -2463,78 +2463,126 @@ async function cpShowTab(tab){
     // Clients can only DM company admins — not contractors/creators
     const admins=getAdminTeamMembers().filter(m=>m.name&&m.role==='admin');
     const activeTo=window._cpChatTo;
+    const cpMyName=c.name||'You';
+    const cpMyEmail=c.email||'';
     // Conversation list: Team channel + one DM per admin
-    const convos=[{key:'team',name:'DroneHub Media',sub:'The whole team',email:''}]
-      .concat(admins.map(m=>({key:m.name,name:m.name,sub:m.role||m.title||'DroneHub Media',email:m.email||''})));
+    const convos=[{key:'team',name:'DroneHub Media',sub:'The whole team',email:'',section:'team'}]
+      .concat(admins.map(m=>({key:m.name,name:m.name,sub:m.title||m.role||'Admin',email:m.email||'',section:'dm'})));
     const lastMsgFor=key=>{
       const list=allMsgs.filter(m=>m.from!=='seen'&&(m.to||'team')===key);
       return list.length?list[list.length-1]:null;
     };
-    const threadMsgs=allMsgs.filter(m=>(m.to||'team')===(activeTo));
+    const threadMsgs=allMsgs.filter(m=>m.from!=='seen'&&(m.to||'team')===(activeTo));
     const activeConvo=convos.find(cv=>cv.key===activeTo)||convos[0];
-    const fmtT=ts=>new Date(ts).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    const teamIcon=`<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dim));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800;color:#fff">DH</div>`;
+    const teamIcon=(s)=>`<div style="width:${s}px;height:${s}px;border-radius:50%;background:rgba(91,141,239,.2);border:1.5px solid rgba(91,141,239,.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:${Math.round(s*0.34)}px;font-weight:800;color:var(--blue-bright)">DH</div>`;
+    const convoAvatar=(cv,s)=>cv.key==='team'?teamIcon(s):(typeof getAvatarHtml==='function'?getAvatarHtml(cv.name,cv.email,s,Math.round(s*0.33)):'');
+    const authorEmail=name=>name===cpMyName?cpMyEmail:((admins.find(a=>a.name===name)||{}).email||'');
+
+    // ── Sidebar rows — same look as the ops channel list ──
+    const convoRow=cv=>{
+      const last=lastMsgFor(cv.key);
+      const on=cv.key===activeTo;
+      const preview=last?((last.from==='client'?'You: ':'')+(last.text||'').replace(/<[^>]+>/g,'').slice(0,55)):cv.sub;
+      const lastTime=last?new Date(last.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+      return `<div onclick="window._cpChatTo='${cv.key.replace(/'/g,"\\'")}';cpShowTab('messages')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;background:${on?'rgba(91,141,239,.1)':'transparent'};border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s;-webkit-tap-highlight-color:transparent" onmouseover="if(!${on})this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background='${on?'rgba(91,141,239,.1)':'transparent'}'">
+        <div style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${convoAvatar(cv,46)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">
+            <span style="font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cv.name}</span>
+            ${lastTime?`<span style="font-size:10px;color:var(--muted);flex-shrink:0">${lastTime}</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${preview}</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`;
+    };
+    const sectionHdr=(icon,label)=>`<div style="padding:10px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:5px"><span style="display:flex;align-items:center;color:var(--muted)">${icon}</span> ${label}</div>`;
+
+    // ── Thread messages — flat rows with day dividers, exactly like ops ──
+    let threadHtml='';
+    if(threadMsgs.length){
+      let prevAuthor='',prevTime=0;
+      threadMsgs.forEach((m,i)=>{
+        const author=m.from==='client'?cpMyName:(m.by||activeConvo.name||'DroneHub Media');
+        const d=new Date(m.ts);
+        const timeStr=d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'});
+        const dateStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+        const isToday=new Date().toDateString()===d.toDateString();
+        const collapsed=(author===prevAuthor)&&(d.getTime()-prevTime<5*60*1000)&&(i>0);
+        if(i===0||(new Date(threadMsgs[i-1].ts).toDateString()!==d.toDateString())){
+          threadHtml+=`<div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px">
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+            <div style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">${isToday?'Today':dateStr}</div>
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+          </div>`;
+        }
+        if(!collapsed){
+          threadHtml+=`<div style="display:flex;gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.cp-ts').style.opacity=1" onmouseout="this.querySelector('.cp-ts').style.opacity=0">
+            ${typeof getAvatarHtml==='function'?getAvatarHtml(author,authorEmail(author),36,12):''}
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+                <span style="font-size:13px;font-weight:700;color:var(--white)">${author}</span>
+                <span class="cp-ts" style="font-size:10px;color:var(--muted);opacity:0;transition:opacity .15s">${isToday?timeStr:dateStr+' '+timeStr}</span>
+              </div>
+              <div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${m.text}</div>
+            </div>
+          </div>`;
+        } else {
+          threadHtml+=`<div style="padding:1px 0 1px 46px;display:flex;align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.cp-ts2').style.opacity=1" onmouseout="this.querySelector('.cp-ts2').style.opacity=0">
+            <span class="cp-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right;position:absolute;left:0">${timeStr}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${m.text}</div>
+            </div>
+          </div>`;
+        }
+        prevAuthor=author;prevTime=d.getTime();
+      });
+    } else {
+      threadHtml=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
+        <div style="margin-bottom:12px;color:var(--blue-bright);display:flex;justify-content:center;opacity:.5">${_icon('chat',28)}</div>
+        <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:6px">${activeConvo.key==='team'?'Welcome to #dronehub-media':'Message '+activeConvo.name}</div>
+        <div style="font-size:13px;color:var(--muted)">${activeConvo.key==='team'?'This conversation reaches the whole team.':'Direct line to '+activeConvo.name.split(' ')[0]+' — we usually reply within the business day.'}</div>
+      </div>`;
+    }
 
     html=`<div class="card" style="margin-bottom:0;padding:0;overflow:hidden">
-      <div style="display:flex;min-height:520px;max-height:calc(100vh - 220px)">
+      <div style="display:flex;min-height:540px;max-height:calc(100vh - 200px)">
 
         <!-- Conversation list -->
-        <div style="width:250px;flex-shrink:0;border-right:1px solid var(--border);background:var(--navy-mid);display:flex;flex-direction:column">
+        <div style="width:290px;flex-shrink:0;border-right:1px solid var(--border);background:var(--navy-mid);display:flex;flex-direction:column">
           <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-            <div style="font-size:13px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:6px">${_icon('chat',14)} LouChat</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px">Message the team or someone directly</div>
+            <div style="font-size:14px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:7px">${_icon('chat',15)} LouChat</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">DroneHub Media</div>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:8px">
-            ${convos.map(cv=>{
-              const last=lastMsgFor(cv.key);
-              const on=cv.key===activeTo;
-              return `<div onclick="window._cpChatTo='${cv.key.replace(/'/g,"\\'")}';cpShowTab('messages')" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;margin-bottom:4px;background:${on?'rgba(91,141,239,.14)':'transparent'};border:1px solid ${on?'var(--blue)':'transparent'};transition:background .15s">
-                ${cv.key==='team'?teamIcon:(typeof getAvatarHtml==='function'?getAvatarHtml(cv.name,cv.email,38,13):'')}
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:12px;font-weight:700;color:${on?'var(--blue-bright)':'var(--white)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cv.name}</div>
-                  <div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last?(last.from==='client'?'You: ':'')+last.text:cv.sub}</div>
-                </div>
-              </div>`;
-            }).join('')}
+          <div style="flex:1;overflow-y:auto">
+            ${sectionHdr(_icon('chat',12),'Team')}
+            ${convos.filter(cv=>cv.section==='team').map(convoRow).join('')}
+            ${convos.some(cv=>cv.section==='dm')?sectionHdr('<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>','Direct Messages'):''}
+            ${convos.filter(cv=>cv.section==='dm').map(convoRow).join('')}
           </div>
         </div>
 
         <!-- Thread -->
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
-          <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--navy-mid)">
-            ${activeConvo.key==='team'?teamIcon:(typeof getAvatarHtml==='function'?getAvatarHtml(activeConvo.name,activeConvo.email,34,12):'')}
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--navy-card)">
+          <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            ${convoAvatar(activeConvo,34)}
             <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:800;color:var(--white)">${activeConvo.name}</div>
-              <div style="font-size:10px;color:var(--muted)">${activeConvo.key==='team'?'Visible to the whole DroneHub team':'Direct message'}</div>
+              <div style="font-size:14px;font-weight:800;color:var(--white)">${activeConvo.key==='team'?'# dronehub-media':activeConvo.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${activeConvo.key==='team'?'Visible to the whole DroneHub team':'Direct message'}</div>
             </div>
             <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)" title="Online"></div>
           </div>
-          <div id="cp-messages-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:16px 18px">
-            ${threadMsgs.length?threadMsgs.map(m=>{
-              if(m.from==='seen') return `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10px;color:var(--muted);padding-right:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Seen ${fmtT(m.ts)}</div>`;
-              const mine=m.from==='client';
-              const author=mine?'':(m.by||activeConvo.name||'DroneHub Media');
-              return `<div style="display:flex;gap:8px;${mine?'flex-direction:row-reverse':''};align-items:flex-end">
-                ${mine?'':(typeof getAvatarHtml==='function'?getAvatarHtml(author,(admins.find(a=>a.name===author)||{}).email||'',26,10):'')}
-                <div style="max-width:70%;display:flex;flex-direction:column;${mine?'align-items:flex-end':'align-items:flex-start'}">
-                  ${!mine?`<div style="font-size:10px;font-weight:700;color:var(--blue-bright);margin-bottom:3px;padding-left:4px">${author}</div>`:''}
-                  <div style="padding:10px 14px;border-radius:${mine?'14px 14px 4px 14px':'14px 14px 14px 4px'};background:${mine?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};color:${mine?'#fff':'var(--offwhite)'};border:1px solid ${mine?'transparent':'var(--border)'}">
-                    <div style="font-size:13px;line-height:1.55;word-break:break-word">${m.text}</div>
-                  </div>
-                  <div style="font-size:9px;color:var(--muted);margin-top:3px;padding:0 4px">${fmtT(m.ts)}</div>
-                </div>
-              </div>`;
-            }).join('')
-            :`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:8px">
-                <div style="opacity:.4">${_icon('chat',30)}</div>
-                <div style="font-size:13px;font-weight:600;color:var(--offwhite)">${activeConvo.key==='team'?'Message the DroneHub team':'Start a conversation with '+activeConvo.name.split(' ')[0]}</div>
-                <div style="font-size:11px">We usually reply within the business day.</div>
-              </div>`}
-          </div>
-          <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding:12px 16px;background:var(--navy-mid)">
-            <input type="text" id="cp-msg-input" placeholder="Message ${activeConvo.key==='team'?'the team':activeConvo.name.split(' ')[0]}…" onkeydown="if(event.key==='Enter')cpSendMessage()"
-              style="flex:1;padding:11px 14px;border:1px solid var(--border-bright);border-radius:12px;font-size:13px;background:var(--navy-lift);color:var(--white);outline:none" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border-bright)'">
-            <button onclick="cpSendMessage()" style="padding:11px 20px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer">Send</button>
+          <div id="cp-messages-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:12px 18px">${threadHtml}</div>
+          <div style="padding:10px 16px 12px;border-top:1px solid var(--border);background:var(--navy-card)">
+            <div style="display:flex;align-items:flex-end;gap:8px;background:var(--navy-lift);border:1px solid var(--border-bright);border-radius:14px;padding:6px 8px 6px 14px">
+              <textarea id="cp-msg-input" placeholder="Message ${activeConvo.key==='team'?'#dronehub-media':activeConvo.name.split(' ')[0]}…" rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cpSendMessage();}"
+                oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';const _sb=document.getElementById('cp-send-btn');if(_sb)_sb.style.display=this.value.trim()?'flex':'none';"
+                style="flex:1;background:transparent;border:none;color:var(--white);font-size:14px;font-family:var(--font);resize:none;outline:none;line-height:1.5;max-height:120px;padding:6px 0"></textarea>
+              <button id="cp-send-btn" onclick="cpSendMessage()" title="Send" style="display:none;width:34px;height:34px;border-radius:50%;border:none;background:var(--blue);color:#fff;cursor:pointer;flex-shrink:0;align-items:center;justify-content:center;margin-bottom:1px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
