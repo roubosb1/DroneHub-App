@@ -1373,6 +1373,7 @@ async function renderClientPortal(id, activeTab){
       return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${map[s]||'#666'}22;color:${map[s]||'#666'};border:1px solid ${map[s]||'#666'}44">${lbl[s]||s}</span>`;
     };
     tabContent=`<div>
+      ${typeof socialAnalyticsClientCardsHtml==='function'?socialAnalyticsClientCardsHtml(id,false):''}
       <!-- Linked workspace card -->
       <div class="card" style="margin-bottom:12px">
         <div class="section-label" style="margin-bottom:14px;display:flex;align-items:center;gap:6px">
@@ -2432,7 +2433,7 @@ async function cpShowTab(tab){
       </div>
     </div>`:'';
 
-    const viewToggle=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    const viewToggle=`${typeof socialAnalyticsClientCardsHtml==='function'?socialAnalyticsClientCardsHtml(cpActiveClientId,true):''}<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div style="font-size:18px;font-weight:700;color:var(--white)">Content Calendar</div>
       <div style="display:flex;background:var(--navy-lift);border-radius:10px;border:1px solid var(--border);overflow:hidden">
         <button onclick="window._cpSocialView='list';cpShowTab('social')" style="padding:7px 16px;border:none;background:${window._cpSocialView==='list'?'rgba(91,141,239,.2)':'transparent'};color:${window._cpSocialView==='list'?'var(--blue-bright)':'var(--muted)'};font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>List</button>

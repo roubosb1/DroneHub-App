@@ -1423,7 +1423,7 @@ function refreshSocialApprovalBadge(){
 
 function setSocialSubTab(sub){
   _socialSubTab=sub;
-  ['workspaces','calendar','approvals','music'].forEach(s=>{
+  ['workspaces','calendar','approvals','music','analytics'].forEach(s=>{
     const el  = document.getElementById('social-sub-'+s);
     const btn = document.getElementById('social-stab-'+s);
     if(el)  el.style.display  = s===sub ? '' : 'none';
@@ -1436,6 +1436,7 @@ function setSocialSubTab(sub){
   else if(sub==='calendar') renderSocialCalendar();
   else if(sub==='approvals') renderSocialApprovals();
   else if(sub==='music') renderSocialMusicTracker();
+  else if(sub==='analytics') renderSocialAnalytics();
 }
 
 // ── Workspaces ────────────────────────────────────────────────────────────────────────────
