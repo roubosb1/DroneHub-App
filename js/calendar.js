@@ -208,7 +208,7 @@ function calGetDayEvents(dateStr){
     if(!names.size) names.add(primary);
     if(filterCreator&&!names.has(filterCreator)) return;
     const creator=names.has(filterCreator)&&filterCreator?filterCreator:primary;
-    evts.push({_src:'shoot',_creator:creator,_time:j.shootTime||null,name:j.name,_job:j,_col:getCreatorColor(creator)});
+    evts.push({_src:'shoot',_creator:creator,_time:j.shootTime||null,_endTime:j.shootEndTime||null,name:j.name,_job:j,_col:getCreatorColor(creator)});
   });
   // GCal events
   getGcalLinks().forEach(link=>{
@@ -216,7 +216,7 @@ function calGetDayEvents(dateStr){
     (link.events||[]).forEach(ev=>{
       if(ev.date!==dateStr) return;
       if(filterCreator&&link.creatorName!==filterCreator) return;
-      evts.push({_src:'gcal',_creator:link.creatorName,_time:ev.time||null,name:ev.title||'GCal event',_col:getCreatorColor(link.creatorName)});
+      evts.push({_src:'gcal',_creator:link.creatorName,_time:ev.time||null,_endTime:ev.endTime||null,name:ev.title||'GCal event',_col:getCreatorColor(link.creatorName)});
     });
   });
   // Custom events (vacation etc.) — include if date falls within range
@@ -225,7 +225,7 @@ function calGetDayEvents(dateStr){
     if(dateStr<s||dateStr>en) return;
     if(filterCreator&&e.memberName!==filterCreator) return;
     const td=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
-    evts.push({_src:'custom',_creator:e.memberName,_time:e.startTime||null,name:e.title,_typeDef:td,_eventId:e.id,_col:{bg:td.bg,border:td.color,text:td.color}});
+    evts.push({_src:'custom',_creator:e.memberName,_time:e.startTime||null,_endTime:e.endTime||null,name:e.title,_typeDef:td,_eventId:e.id,_col:{bg:td.bg,border:td.color,text:td.color}});
   });
   return evts;
 }
@@ -270,7 +270,7 @@ function renderCalDayView(dateStr){
       const pct=(nowMin/60)*100;
       rowsHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"><span style="position:absolute;left:-6px;top:-4px;width:10px;height:10px;background:var(--blue-bright);border-radius:50%;display:block"></span></div>`;
     }
-    hEvts.forEach(e=>{rowsHtml+=calDayEventPill(e,dateStr);});
+    hEvts.forEach((e,ei)=>{rowsHtml+=calDayEventPill(e,dateStr,ei);});
     rowsHtml+='</div>';
   }
   const timelineHtml=`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden"><div id="cal-day-scroll" style="overflow-y:auto;max-height:calc(100vh - 240px)"><div style="display:grid;grid-template-columns:52px 1fr">${rowsHtml}</div></div></div>`;
@@ -286,18 +286,20 @@ function renderCalDayView(dateStr){
     setTimeout(()=>{const sc=document.getElementById('cal-day-scroll');if(sc)sc.scrollTop=7*52;},50);
   }
 }
-function calDayEventPill(e,dateStr){
+function calDayEventPill(e,dateStr,ei){
   const c=e._col;
+  const pos=_calBlockPos(e,ei);
+  const timeLbl=_calTimeRange(e);
   if(e._src==='custom'){
     const td=e._typeDef;
-    return `<div onclick="showCalEventDetail('${e._eventId}')" title="${e.name}" style="padding:5px 10px;border-radius:7px;background:${td.bg};border-left:3px solid ${td.color};color:${td.color};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">${td.svg||td.icon} ${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
+    return `<div onclick="showCalEventDetail('${e._eventId}')" title="${timeLbl} ${e.name}" style="padding:5px 10px;border-radius:7px;background:${td.bg};border-left:3px solid ${td.color};color:${td.color};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px;overflow:hidden;${pos}">${td.svg||td.icon} ${timeLbl?`<span style="font-size:10px;opacity:.75;margin-right:5px">${timeLbl}</span>`:''}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
   }
-  const time=e._time?`<span style="font-size:10px;opacity:.75;margin-right:5px">${e._time.slice(0,5)}</span>`:'';
+  const time=timeLbl?`<span style="font-size:10px;opacity:.75;margin-right:5px">${timeLbl}</span>`:'';
   if(e._src==='gcal'){
     const safeN=e.name.replace(/'/g,"\\'");const safeC=(e._creator||'').replace(/'/g,"\\'");const safeT=(e._time||'').replace(/'/g,"\\'");
-    return `<div onclick="showGcalEventDetail('${safeN}','${safeC}','${safeT}')" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">${time}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
+    return `<div onclick="showGcalEventDetail('${safeN}','${safeC}','${safeT}')" title="${e._creator?e._creator+': ':''}${timeLbl} ${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px;overflow:hidden;${pos}">${time}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
   }
-  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:${e._job?'pointer':'default'};margin-bottom:4px">${time}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
+  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${timeLbl} ${e.name}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:${e._job?'pointer':'default'};margin-bottom:4px;overflow:hidden;${pos}">${time}${e.name}${e._creator?` <span style="font-size:10px;opacity:.7">— ${e._creator}</span>`:''}</div>`;
 }
 
 // ── Shared filter pill bar (All / Shoots / event types) ──────────────────────
@@ -421,7 +423,7 @@ function renderCalWeekView(dateStr){
       const isNowHour=isToday&&h===nowHour;
       hoursHtml+=`<div ondblclick="calQuickAdd('${ds}',${h},event)" style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
       if(isNowHour){const pct=(nowMin/60)*100;hoursHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
-      hEvts.forEach(e=>{hoursHtml+=calWeekEventChip(e);});
+      hEvts.forEach((e,ei)=>{hoursHtml+=calWeekEventChip(e,ei);});
       hoursHtml+='</div>';
     });
   }
@@ -434,17 +436,36 @@ function renderCalWeekView(dateStr){
     setTimeout(()=>{const sc=document.getElementById('cal-week-scroll');if(sc)sc.scrollTop=7*52;},50);
   }
 }
-function calWeekEventChip(e){
+// Duration-based absolute positioning for timed events (rows are 52px per hour).
+// Returns '' when there's no usable end time — chip stays inline in its hour cell.
+function _calBlockPos(e,idx){
+  if(!e._time||!e._endTime) return '';
+  const [sh,sm]=e._time.split(':').map(n=>parseInt(n,10));
+  const [eh,em]=e._endTime.split(':').map(n=>parseInt(n,10));
+  if(isNaN(sh)||isNaN(eh)) return '';
+  const dur=(eh*60+em)-(sh*60+sm);
+  if(dur<=0) return '';
+  const top=(sm/60)*52;
+  const hgt=Math.max((dur/60)*52-3,16);
+  const off=2+(idx||0)*14;
+  return `position:absolute;top:${top}px;left:${off}px;right:2px;height:${hgt}px;z-index:${3+(idx||0)};box-sizing:border-box;white-space:normal;`;
+}
+function _calTimeRange(e){
+  if(!e._time) return '';
+  return e._time.slice(0,5)+(e._endTime?' – '+e._endTime.slice(0,5):'');
+}
+function calWeekEventChip(e,ei){
   const c=e._col;
+  const pos=_calBlockPos(e,ei);
   if(e._src==='custom'){
     const td=e._typeDef;
-    return `<div onclick="showCalEventDetail('${e._eventId}')" title="${e.name}" style="padding:2px 5px;border-radius:4px;background:${td.bg};border-left:2px solid ${td.color};color:${td.color};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer">${td.svg||td.icon} ${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
+    return `<div onclick="showCalEventDetail('${e._eventId}')" title="${_calTimeRange(e)} ${e.name}" style="padding:2px 5px;border-radius:4px;background:${td.bg};border-left:2px solid ${td.color};color:${td.color};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer;${pos}">${td.svg||td.icon} ${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
   }
   if(e._src==='gcal'){
     const safeN=e.name.replace(/'/g,"\\'");const safeC=(e._creator||'').replace(/'/g,"\\'");const safeT=(e._time||'').replace(/'/g,"\\'");
-    return `<div onclick="showGcalEventDetail('${safeN}','${safeC}','${safeT}')" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer">${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
+    return `<div onclick="showGcalEventDetail('${safeN}','${safeC}','${safeT}')" title="${e._creator?e._creator+': ':''}${_calTimeRange(e)} ${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer;${pos}">${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
   }
-  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:${e._job?'pointer':'default'}">${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
+  return `<div onclick="${e._job?'openJobModal('+e._job.id+')':''}" title="${e._creator?e._creator+': ':''}${_calTimeRange(e)} ${e.name}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:${e._job?'pointer':'default'};${pos}">${e._time?e._time.slice(0,5)+' ':''}${e.name}</div>`;
 }
 
 // ── CUSTOM EVENT TYPES ────────────────────────────────────────────────────────
