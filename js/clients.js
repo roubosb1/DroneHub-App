@@ -2460,7 +2460,8 @@ async function cpShowTab(tab){
   else if(tab==='messages'){
     if(!window._cpChatTo) window._cpChatTo='team';
     const allMsgs=await dhDecryptMsgs(getPortalMessages(c.id));
-    const admins=getAdminTeamMembers().filter(m=>m.name);
+    // Clients can only DM company admins — not contractors/creators
+    const admins=getAdminTeamMembers().filter(m=>m.name&&m.role==='admin');
     const activeTo=window._cpChatTo;
     // Conversation list: Team channel + one DM per admin
     const convos=[{key:'team',name:'DroneHub Media',sub:'The whole team',email:''}]
