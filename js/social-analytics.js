@@ -231,6 +231,42 @@ function socialAcctConnectYt(acctId) {
   window.location.href = '/.netlify/functions/youtube-auth?step=init&acctId=' + encodeURIComponent(acctId);
 }
 
+// Selected analytics range, shared by channel and video views
+let _saRange = '28';
+const SA_RANGES = [
+  { id: '7', label: '7d' },
+  { id: '28', label: '28d' },
+  { id: '90', label: '90d' },
+  { id: '365', label: '1y' },
+  { id: 'all', label: 'All' },
+];
+function _saRangeLabel() { return { '7': 'last 7 days', '28': 'last 28 days', '90': 'last 90 days', '365': 'last year', 'all': 'all time' }[_saRange] || ''; }
+function _saRangePills(rerenderJs) {
+  return `<div style="display:flex;gap:4px">
+    ${SA_RANGES.map(r => `<button onclick="_saRange='${r.id}';${rerenderJs}" style="padding:4px 10px;border-radius:8px;border:1px solid ${_saRange === r.id ? 'var(--blue)' : 'var(--border)'};background:${_saRange === r.id ? 'rgba(91,141,239,.15)' : 'transparent'};color:${_saRange === r.id ? 'var(--blue-bright)' : 'var(--muted)'};font-size:10px;font-weight:700;cursor:pointer">${r.label}</button>`).join('')}
+  </div>`;
+}
+function _saFmtDur(sec) {
+  sec = Math.round(sec || 0);
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+const SA_SRC_LABELS = { YT_SEARCH: 'YouTube search', SUBSCRIBER: 'Subscribers feed', EXT_URL: 'External links', RELATED_VIDEO: 'Suggested videos', NO_LINK_OTHER: 'Direct / other', PLAYLIST: 'Playlists', YT_CHANNEL: 'Channel pages', NOTIFICATION: 'Notifications', SHORTS: 'Shorts feed', YT_OTHER_PAGE: 'Other YouTube', ADVERTISING: 'Ads', END_SCREEN: 'End screens', HASHTAGS: 'Hashtags', SOUND_PAGE: 'Sound pages' };
+function _saSourceBars(sources) {
+  const top = (sources || []).slice(0, 6);
+  if (!top.length) return '';
+  const maxSrc = Math.max(...top.map(s => s.views), 1);
+  return `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px">Where views came from</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${top.map(s => `
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:130px;font-size:11px;color:var(--offwhite);flex-shrink:0">${SA_SRC_LABELS[s.type] || s.type}</span>
+          <div style="flex:1;height:14px;border-radius:7px;background:var(--navy-mid);overflow:hidden"><div style="height:100%;width:${Math.round(s.views / maxSrc * 100)}%;background:var(--blue);border-radius:7px"></div></div>
+          <span style="width:52px;font-size:10px;color:var(--muted);text-align:right">${_saFmt(s.views)}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
 async function _saRenderInsights(acct) {
   const el = document.getElementById('sa-detail-insights');
   if (!el) return;
@@ -253,7 +289,7 @@ async function _saRenderInsights(acct) {
     const res = await fetch(SOCIAL_METRICS_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'youtube', handle: acct.handle, action: 'insights', acctId: acct.id }),
+      body: JSON.stringify({ platform: 'youtube', handle: acct.handle, action: 'insights', acctId: acct.id, range: _saRange }),
     });
     const data = await res.json();
     if (data.notConnected) {
@@ -268,43 +304,32 @@ async function _saRenderInsights(acct) {
     const totViews = days.reduce((s, d) => s + d.views, 0);
     const watchHrs = Math.round(days.reduce((s, d) => s + d.watchMin, 0) / 60 * 10) / 10;
     const subsNet = days.reduce((s, d) => s + d.subsGained - d.subsLost, 0);
-    const srcLabels = { YT_SEARCH: 'YouTube search', SUBSCRIBER: 'Subscribers feed', EXT_URL: 'External links', RELATED_VIDEO: 'Suggested videos', NO_LINK_OTHER: 'Direct / other', PLAYLIST: 'Playlists', YT_CHANNEL: 'Channel pages', NOTIFICATION: 'Notifications', SHORTS: 'Shorts feed', YT_OTHER_PAGE: 'Other YouTube', ADVERTISING: 'Ads', END_SCREEN: 'End screens', HASHTAGS: 'Hashtags', SOUND_PAGE: 'Sound pages' };
-    const sources = (data.sources || []).slice(0, 6);
-    const maxSrc = Math.max(...sources.map(s => s.views), 1);
     const el2 = document.getElementById('sa-detail-insights');
     if (!el2) return;
+    const rerender = `_saRenderInsights(socialAcctsLoad().find(a=>a.id==='${acct.id}'))`;
     el2.innerHTML = `
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Channel analytics · last 28 days</div>
-          <span style="font-size:9px;color:var(--green);font-weight:700">● Connected</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Channel analytics · ${_saRangeLabel()} <span style="color:var(--green);margin-left:6px">● Connected</span></div>
+          ${_saRangePills(rerender)}
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">
           <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
             <div style="font-size:20px;font-weight:800;color:var(--white)">${_saFmt(totViews)}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Views · 28d</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Views</div>
           </div>
           <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
             <div style="font-size:20px;font-weight:800;color:var(--white)">${watchHrs.toLocaleString()}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Watch hours · 28d</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Watch hours</div>
           </div>
           <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
             <div style="font-size:20px;font-weight:800;color:${subsNet >= 0 ? 'var(--green)' : '#E85D5D'}">${subsNet >= 0 ? '+' : ''}${subsNet}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Subscribers · 28d</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Subscribers</div>
           </div>
         </div>
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Daily views</div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${data.granularity === 'month' ? 'Monthly' : 'Daily'} views</div>
         ${_saSparkline(days.map(d => ({ date: d.date, v: d.views })), 'v', p.color || '#FF0000')}
-        ${sources.length ? `
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px">Where views came from</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          ${sources.map(s => `
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="width:130px;font-size:11px;color:var(--offwhite);flex-shrink:0">${srcLabels[s.type] || s.type}</span>
-              <div style="flex:1;height:14px;border-radius:7px;background:var(--navy-mid);overflow:hidden"><div style="height:100%;width:${Math.round(s.views / maxSrc * 100)}%;background:var(--blue);border-radius:7px"></div></div>
-              <span style="width:52px;font-size:10px;color:var(--muted);text-align:right">${_saFmt(s.views)}</span>
-            </div>`).join('')}
-        </div>` : ''}
+        ${_saSourceBars(data.sources)}
       </div>`;
   } catch (err) {
     const el2 = document.getElementById('sa-detail-insights');
@@ -328,6 +353,8 @@ async function _saRenderVideos(acct) {
         <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">${data.error || 'No videos found'}</div></div>`;
       return;
     }
+    window._saVideosCache = window._saVideosCache || {};
+    window._saVideosCache[acct.id] = vids;
     const avgViews = Math.round(vids.reduce((s, v) => s + v.views, 0) / vids.length);
     const likeRate = (vids.reduce((s, v) => s + v.likes, 0) / Math.max(vids.reduce((s, v) => s + v.views, 0), 1) * 100).toFixed(1);
     vc.innerHTML = `<div class="card">
@@ -341,21 +368,116 @@ async function _saRenderVideos(acct) {
           <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Like rate</div>
         </div>
       </div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent uploads</div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent uploads — click one for its analytics</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${vids.map(v => `
-          <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" style="display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;background:var(--navy-mid);text-decoration:none;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='var(--navy-mid)'">
+          <div onclick="socialVideoDetail('${acct.id}','${v.id}')" style="display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;background:var(--navy-mid);cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='var(--navy-mid)'">
             ${v.thumb ? `<img src="${v.thumb}" style="width:80px;height:45px;border-radius:6px;object-fit:cover;flex-shrink:0">` : ''}
             <div style="flex:1;min-width:0">
               <div style="font-size:12px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.title}</div>
               <div style="font-size:10px;color:var(--muted);margin-top:3px">${v.publishedAt} · ${_saFmt(v.views)} views · ${_saFmt(v.likes)} likes · ${_saFmt(v.comments)} comments</div>
             </div>
-          </a>`).join('')}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>`).join('')}
       </div>
     </div>`;
   } catch (err) {
     const vc = document.getElementById('sa-detail-videos');
     if (vc) vc.innerHTML = `<div class="card"><div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Could not load videos: ${err.message}</div></div>`;
+  }
+}
+
+// ── Per-video analytics page ──────────────────────────────────────────────────
+async function socialVideoDetail(acctId, videoId) {
+  const acct = socialAcctsLoad().find(a => a.id === acctId);
+  const cont = document.getElementById('social-sub-analytics');
+  if (!acct || !cont) return;
+  const vid = (window._saVideosCache?.[acctId] || []).find(v => v.id === videoId);
+  if (!vid) { socialAcctDetail(acctId); return; }
+
+  cont.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <button onclick="socialAcctDetail('${acctId}')" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> ${acct.name || 'Channel'}
+      </button>
+    </div>
+    <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap">
+      ${vid.thumb ? `<img src="${vid.thumb}" style="width:200px;max-width:100%;border-radius:12px">` : ''}
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:17px;font-weight:800;color:var(--white);line-height:1.4;margin-bottom:6px">${vid.title}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Published ${vid.publishedAt}</div>
+        <a href="https://www.youtube.com/watch?v=${vid.id}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;text-decoration:none">Watch on YouTube ↗</a>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px">
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--white)">${_saFmt(vid.views)}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Views · lifetime</div>
+      </div>
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--white)">${_saFmt(vid.likes)}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Likes</div>
+      </div>
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--white)">${_saFmt(vid.comments)}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Comments</div>
+      </div>
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--white)">${(vid.likes / Math.max(vid.views, 1) * 100).toFixed(1)}%</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Like rate</div>
+      </div>
+    </div>
+    <div id="sa-video-insights"></div>`;
+
+  const el = document.getElementById('sa-video-insights');
+  if (!acct.ytConnected) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Connect channel analytics on the channel page to see this video's watch time, daily views, and traffic sources.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card"><div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Loading video analytics…</div></div>`;
+  try {
+    const res = await fetch(SOCIAL_METRICS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'youtube', handle: acct.handle, action: 'videoInsights', acctId: acct.id, videoId, range: _saRange }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (data.notConnected) { el.innerHTML = ''; return; }
+    const days = data.days || [];
+    const t = data.totals || { views: days.reduce((s, d) => s + d.views, 0), watchMin: days.reduce((s, d) => s + d.watchMin, 0), avgViewSec: 0, subsGained: days.reduce((s, d) => s + d.subsGained, 0) };
+    const p = _saPlatform(acct.platform);
+    const rerender = `socialVideoDetail('${acctId}','${videoId}')`;
+    el.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Video analytics · ${_saRangeLabel()} <span style="color:var(--green);margin-left:6px">● Connected</span></div>
+          ${_saRangePills(rerender)}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:var(--white)">${_saFmt(t.views)}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Views</div>
+          </div>
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:var(--white)">${(Math.round((t.watchMin || 0) / 60 * 10) / 10).toLocaleString()}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Watch hours</div>
+          </div>
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:var(--white)">${_saFmtDur(t.avgViewSec)}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Avg view duration</div>
+          </div>
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:${(t.subsGained || 0) >= 0 ? 'var(--green)' : '#E85D5D'}">+${t.subsGained || 0}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Subs gained</div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${data.granularity === 'month' ? 'Monthly' : 'Daily'} views</div>
+        ${_saSparkline(days.map(d => ({ date: d.date, v: d.views })), 'v', p.color || '#FF0000')}
+        ${_saSourceBars(data.sources)}
+      </div>`;
+  } catch (err) {
+    if (el) el.innerHTML = `<div class="card"><div style="padding:14px;text-align:center;color:#E85D5D;font-size:12px">Video analytics: ${err.message}</div></div>`;
   }
 }
 

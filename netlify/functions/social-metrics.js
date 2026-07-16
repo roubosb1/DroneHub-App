@@ -90,8 +90,8 @@ exports.handler = async (event) => {
 
       const st = ch.statistics || {};
 
-      // Private channel analytics — needs owner OAuth via youtube-auth
-      if (action === 'insights') {
+      // Private channel / video analytics — needs owner OAuth via youtube-auth
+      if (action === 'insights' || action === 'videoInsights') {
         const acctId = body.acctId;
         if (!acctId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'acctId required' }) };
         let token;
@@ -99,28 +99,51 @@ exports.handler = async (event) => {
         catch (e) { return { statusCode: 200, headers, body: JSON.stringify({ error: 'Channel connection expired — reconnect with Google. (' + e.message + ')' }) }; }
         if (!token) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true }) };
 
+        // Range: number of days, or 'all' for lifetime
+        const range = body.range || '28';
         const end = new Date().toISOString().slice(0, 10);
-        const start = new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
+        const start = range === 'all'
+          ? '2005-04-23' // YouTube launch — Analytics clamps to channel creation
+          : new Date(Date.now() - parseInt(range, 10) * 86400000).toISOString().slice(0, 10);
+        // Month buckets for long ranges keep charts readable and payloads small
+        const granularity = (range === 'all' || parseInt(range, 10) > 120) ? 'month' : 'day';
         const base = 'https://youtubeanalytics.googleapis.com/v2/reports';
         const authHdr = { Authorization: `Bearer ${token}` };
+        const videoFilter = action === 'videoInsights' && body.videoId ? { filters: `video==${body.videoId}` } : {};
 
-        const dailyRes = await fetch(`${base}?${new URLSearchParams({
+        const seriesRes = await fetch(`${base}?${new URLSearchParams({
           ids: 'channel==MINE', startDate: start, endDate: end,
           metrics: 'views,estimatedMinutesWatched,subscribersGained,subscribersLost',
-          dimensions: 'day', sort: 'day',
+          dimensions: granularity, sort: granularity,
+          ...videoFilter,
         })}`, { headers: authHdr });
-        const daily = await dailyRes.json();
-        if (!dailyRes.ok) throw new Error(daily.error?.message || `Analytics API ${dailyRes.status}`);
+        const series = await seriesRes.json();
+        if (!seriesRes.ok) throw new Error(series.error?.message || `Analytics API ${seriesRes.status}`);
 
         const trafficRes = await fetch(`${base}?${new URLSearchParams({
           ids: 'channel==MINE', startDate: start, endDate: end,
           metrics: 'views', dimensions: 'insightTrafficSourceType', sort: '-views',
+          ...videoFilter,
         })}`, { headers: authHdr });
         const traffic = await trafficRes.json();
 
-        const days = (daily.rows || []).map(r => ({ date: r[0], views: r[1], watchMin: r[2], subsGained: r[3], subsLost: r[4] }));
+        const days = (series.rows || []).map(r => ({ date: r[0], views: r[1], watchMin: r[2], subsGained: r[3], subsLost: r[4] }));
         const sources = trafficRes.ok ? (traffic.rows || []).map(r => ({ type: r[0], views: r[1] })) : [];
-        return { statusCode: 200, headers, body: JSON.stringify({ ok: true, days, sources }) };
+
+        // Per-video extra: totals row with average view duration
+        let totals = null;
+        if (action === 'videoInsights' && body.videoId) {
+          const totRes = await fetch(`${base}?${new URLSearchParams({
+            ids: 'channel==MINE', startDate: start, endDate: end,
+            metrics: 'views,estimatedMinutesWatched,averageViewDuration,subscribersGained',
+            filters: `video==${body.videoId}`,
+          })}`, { headers: authHdr });
+          const tot = await totRes.json();
+          if (totRes.ok && tot.rows && tot.rows[0]) {
+            totals = { views: tot.rows[0][0], watchMin: tot.rows[0][1], avgViewSec: tot.rows[0][2], subsGained: tot.rows[0][3] };
+          }
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true, days, sources, totals, granularity }) };
       }
 
       // Detail mode: recent uploads with per-video stats
