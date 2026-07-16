@@ -951,7 +951,7 @@ async function renderClientPortal(id, activeTab){
 
   const tabHtml=tabs.map(t=>`
     <button onclick="renderClientPortal('${id}','${t}')"
-      style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:9px;border:none;font-size:12px;font-family:var(--font);font-weight:700;cursor:pointer;transition:all .15s;
+      style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:9px;border:none;font-size:12px;font-family:var(--font);font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;
         background:${t===activeTab?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'transparent'};
         color:${t===activeTab?'#fff':'var(--muted)'};
         box-shadow:${t===activeTab?'0 2px 12px rgba(91,141,239,.35)':'none'}"
@@ -1484,10 +1484,9 @@ async function renderClientPortal(id, activeTab){
           ${c.company?`<div style="font-size:13px;color:var(--muted);margin-top:3px">${c.company}</div>`:''}
         </div>
       </div>
-      <div style="display:flex;gap:4px;background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:16px">
+      <div style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:16px">
         ${tabHtml}
       </div>
-    </div>
     ${tabContent}`;
 }
 
