@@ -1417,6 +1417,15 @@ async function renderClientPortal(id, activeTab){
     const portalAccts=getPortalAccounts();
     const acct=portalAccts.find(a=>a.clientId===id);
     const biz=bizSettings||{};
+    // Make sure an invite code exists so it can be shown on the page
+    let _inviteCode=acct?.inviteCode;
+    if(!_inviteCode){
+      _inviteCode=cpGenerateInviteCode();
+      if(acct){acct.inviteCode=_inviteCode;}
+      else{portalAccts.push({clientId:id,inviteCode:_inviteCode,createdAt:new Date().toISOString().slice(0,10),status:'invited'});}
+      savePortalAccounts(portalAccts);
+    }
+    const _inviteLink=window.location.origin+window.location.pathname+'?portal=client&invite='+_inviteCode+'&cid='+id;
 
     tabContent=`<div class="card">
       <div class="section-label" style="margin-bottom:14px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Client Portal Access</div>
@@ -1442,6 +1451,17 @@ async function renderClientPortal(id, activeTab){
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <button id="cp-invite-btn-${c.id}" onclick="cpCopyInviteLink('${c.id}')" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Invite Link</button>
           <button onclick="cpEmailInvite('${c.id}',this)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Send Email Invite</button>
+        </div>
+        <div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Invite code</span>
+            <input readonly value="${_inviteCode}" onclick="this.select()" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:13px;font-weight:700;background:var(--navy-mid);color:var(--white);font-family:monospace;letter-spacing:.05em">
+            <button onclick="navigator.clipboard.writeText('${_inviteCode}');this.textContent='✓';setTimeout(()=>this.textContent='Copy',1500)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-bright);background:transparent;color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Copy</button>
+            <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Invite link</span>
+            <input readonly value="${_inviteLink}" onclick="this.select()" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:11px;background:var(--navy-mid);color:var(--offwhite)">
+            <button onclick="navigator.clipboard.writeText('${_inviteLink}');this.textContent='✓';setTimeout(()=>this.textContent='Copy',1500)" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border-bright);background:transparent;color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Copy</button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6">Paste the <b style="color:var(--offwhite)">code</b> into the signup form's Invite Code field, or open the <b style="color:var(--offwhite)">link</b> to get the form pre-filled. Nothing is emailed until you use the email buttons.</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
