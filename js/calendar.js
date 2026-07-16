@@ -853,9 +853,10 @@ function _gcalIsConnected(){
   return !!profile?.googleCalConnected;
 }
 async function _gcalPush(action,evt){
-  if(!_gcalIsConnected()||!_fbToken()) return;
   const mid=_gcalMemberId();
-  if(!mid) return;
+  if(!mid){showDhToast('Google sync skipped','Your login email doesn\'t match a team member profile','⚠','var(--orange)',4000);return;}
+  if(!_gcalIsConnected()){showDhToast('Google sync skipped','Google Calendar not connected on your profile','⚠','var(--orange)',4000);return;}
+  if(!_fbToken()){showDhToast('Google sync skipped','Not signed in','⚠','var(--orange)',4000);return;}
   try{
     const res=await gcalApiCall(action,mid,{
       title:evt.title,date:evt.date,endDate:evt.endDate,
@@ -867,8 +868,10 @@ async function _gcalPush(action,evt){
       const idx=arr.findIndex(e=>String(e.id)===String(evt.id));
       if(idx!==-1){arr[idx].gcalEventId=res.gcalEventId;calEventsSave(arr);}
     }
+    showDhToast('Synced to Google Calendar',evt.title||'','✅','var(--green)',2500);
   }catch(e){
     console.warn('[gcal push]',action,e.message);
+    showDhToast('Google sync failed',e.message||'Unknown error','⚠','var(--orange)',6000);
   }
 }
 
