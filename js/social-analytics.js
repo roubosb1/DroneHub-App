@@ -176,7 +176,7 @@ async function socialAcctDetail(acctId) {
   };
   const owner = acct.ownerType === 'client'
     ? ((typeof clients !== 'undefined' ? clients : []).find(c => String(c.id) === String(acct.clientId))?.name || 'Client')
-    : 'DroneHub Media';
+    : 'DroneHub Media Company';
 
   cont.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
@@ -570,7 +570,7 @@ async function renderSocialAnalytics() {
       <button onclick="socialAcctAddModal()" style="margin-top:6px;padding:10px 22px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">+ Add First Account</button>
     </div>`;
   } else {
-    if (company.length) html += section('DroneHub Media', 'var(--blue-bright)', company.map(a => socialAcctCardHtml(a, false)).join(''));
+    if (company.length) html += section('DroneHub Media Company', 'var(--blue-bright)', company.map(a => socialAcctCardHtml(a, false)).join(''));
     Object.entries(byClient).forEach(([cid, list]) => {
       const client = (typeof clients !== 'undefined' ? clients : []).find(c => String(c.id) === String(cid));
       html += section(client?.name || 'Client', 'var(--green)', list.map(a => socialAcctCardHtml(a, false)).join(''));
