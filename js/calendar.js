@@ -722,13 +722,15 @@ function calQuickAddSave(){
   const invitedClients=_calGetInvitedClients('qca');
   const memberName=invitedTeam[0]||'';
   const evts=calEventsLoad();
-  evts.push({id:'cale_'+Date.now(),title,type,date:dateStr,endDate,startTime,endTime,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes});
+  const evt={id:'cale_'+Date.now(),title,type,date:dateStr,endDate,startTime,endTime,memberName,invitees:invitedTeam,clientInvitees:invitedClients,notes};
+  evts.push(evt);
   calEventsSave(evts);
   document.getElementById('cal-quick-add')?.remove();
   calViewRefresh();
   if(type==='vacation') renderVacationTracker();
   const totalInv=invitedTeam.length+invitedClients.length;
   showDhToast('Event created',title+(totalInv>1?' — '+totalInv+' people invited':' added to calendar'),'','var(--green)',3000);
+  _gcalPush('create',evt);
 }
 
 // Open add-event modal
@@ -837,6 +839,39 @@ function calEventCheckOverlap(){
   }
 }
 
+function _gcalMemberId(){
+  const session=gateGetSession();
+  if(!session?.email) return null;
+  const members=getAdminTeamMembers();
+  const m=members.find(m=>(m.email||'').toLowerCase()===session.email.toLowerCase());
+  return m?.id||null;
+}
+function _gcalIsConnected(){
+  const mid=_gcalMemberId();
+  if(!mid) return false;
+  const profile=tpProfileLoad(mid);
+  return !!profile?.googleCalConnected;
+}
+async function _gcalPush(action,evt){
+  if(!_gcalIsConnected()||!_fbToken()) return;
+  const mid=_gcalMemberId();
+  if(!mid) return;
+  try{
+    const res=await gcalApiCall(action,mid,{
+      title:evt.title,date:evt.date,endDate:evt.endDate,
+      startTime:evt.startTime,endTime:evt.endTime,
+      description:evt.notes||'',gcalEventId:evt.gcalEventId,
+    });
+    if(action==='create'&&res.gcalEventId){
+      const arr=calEventsLoad();
+      const idx=arr.findIndex(e=>String(e.id)===String(evt.id));
+      if(idx!==-1){arr[idx].gcalEventId=res.gcalEventId;calEventsSave(arr);}
+    }
+  }catch(e){
+    console.warn('[gcal push]',action,e.message);
+  }
+}
+
 function saveCalEvent(){
   const title=document.getElementById('cae-title')?.value.trim();
   const type=document.getElementById('cae-type')?.value;
@@ -858,12 +893,16 @@ function saveCalEvent(){
   calViewRefresh();renderVacationTracker();
   const totalInv=invitedTeam.length+invitedClients.length;
   showDhToast('Event added',totalInv>1?totalInv+' people invited':'','','var(--green)',3000);
+  _gcalPush('create',evt);
 }
 
 function deleteCalEvent(id){
   if(!confirm('Delete this event?')) return;
-  calEventsSave(calEventsLoad().filter(e=>String(e.id)!==String(id)));
+  const arr=calEventsLoad();
+  const evt=arr.find(e=>String(e.id)===String(id));
+  calEventsSave(arr.filter(e=>String(e.id)!==String(id)));
   calViewRefresh();renderVacationTracker();
+  if(evt?.gcalEventId) _gcalPush('delete',evt);
 }
 
 // ── Event detail pop-up ───────────────────────────────────────────────────────
@@ -988,6 +1027,9 @@ function updateCalEvent(eventId){
   document.getElementById('cal-event-modal')?.remove();
   calViewRefresh();renderVacationTracker();
   showDhToast('Event updated',startTime?(startTime+(endTime?' – '+endTime:'')):'All day','✅','var(--green)',3000);
+  const updated=arr[idx];
+  if(updated.gcalEventId) _gcalPush('update',updated);
+  else _gcalPush('create',updated);
 }
 
 // Vacation tracker panel

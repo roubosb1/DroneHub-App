@@ -211,7 +211,78 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ events: allEvents, count: allEvents.length }) };
     }
 
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action. Use: list | sync | disconnect' }) };
+    // ── Create event ─────────────────────────────────────────────────────────
+    if (action === 'create') {
+      const { title, date, endDate, startTime, endTime, description } = body;
+      if (!title || !date) return { statusCode: 400, headers, body: JSON.stringify({ error: 'title and date required' }) };
+      const calId = body.calendarId || 'primary';
+      const eventBody = { summary: title };
+      if (description) eventBody.description = description;
+      if (startTime) {
+        eventBody.start = { dateTime: `${date}T${startTime}:00`, timeZone: body.timeZone || 'America/Toronto' };
+        eventBody.end   = { dateTime: `${endDate || date}T${endTime || startTime}:00`, timeZone: body.timeZone || 'America/Toronto' };
+      } else {
+        eventBody.start = { date };
+        const ed = endDate || date;
+        const next = new Date(ed + 'T12:00:00');
+        next.setDate(next.getDate() + 1);
+        eventBody.end = { date: next.toISOString().slice(0, 10) };
+      }
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,
+        { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(eventBody) }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Create failed (${res.status})`);
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, gcalEventId: data.id }) };
+    }
+
+    // ── Update event ─────────────────────────────────────────────────────────
+    if (action === 'update') {
+      const { gcalEventId, title, date, endDate, startTime, endTime, description } = body;
+      if (!gcalEventId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'gcalEventId required' }) };
+      const calId = body.calendarId || 'primary';
+      const eventBody = {};
+      if (title) eventBody.summary = title;
+      if (description !== undefined) eventBody.description = description;
+      if (date) {
+        if (startTime) {
+          eventBody.start = { dateTime: `${date}T${startTime}:00`, timeZone: body.timeZone || 'America/Toronto' };
+          eventBody.end   = { dateTime: `${endDate || date}T${endTime || startTime}:00`, timeZone: body.timeZone || 'America/Toronto' };
+        } else {
+          eventBody.start = { date };
+          const ed = endDate || date;
+          const next = new Date(ed + 'T12:00:00');
+          next.setDate(next.getDate() + 1);
+          eventBody.end = { date: next.toISOString().slice(0, 10) };
+        }
+      }
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalEventId)}`,
+        { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(eventBody) }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Update failed (${res.status})`);
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    }
+
+    // ── Delete event ─────────────────────────────────────────────────────────
+    if (action === 'delete') {
+      const { gcalEventId } = body;
+      if (!gcalEventId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'gcalEventId required' }) };
+      const calId = body.calendarId || 'primary';
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalEventId)}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (!res.ok && res.status !== 404) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error?.message || `Delete failed (${res.status})`);
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    }
+
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action. Use: list | sync | create | update | delete | disconnect' }) };
 
   } catch (err) {
     console.error('[google-cal] error:', err.message);
