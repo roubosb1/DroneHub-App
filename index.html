@@ -4491,7 +4491,7 @@
 <script src="js/calendar.js?v=60"></script>
 <script src="js/team.js"></script>
 <script src="js/jobs.js"></script>
-<script src="js/clients.js?v=59"></script>
+<script src="js/clients.js?v=60"></script>
 <script src="js/client-drive.js?v=10"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>
@@ -7855,7 +7855,7 @@ function gateInit(){
           cpActiveClientId=savedCpSession.clientId;
           document.getElementById('cp-login').style.display='none';
           document.getElementById('cp-dashboard').style.display='block';
-          document.getElementById('cp-welcome-name').textContent=(savedCpSession.name||'').split(' ')[0];
+          document.getElementById('cp-welcome-name').textContent=savedCpSession.name||'';
           // Load fresh Firebase data then render — ensures social/invoice data is current
           restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
           return;
@@ -8026,7 +8026,7 @@ async function gateClientLogin(){
   document.getElementById('client-portal-root').style.display='block';
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
-  document.getElementById('cp-welcome-name').textContent=displayName.split(' ')[0];
+  document.getElementById('cp-welcome-name').textContent=displayName;
   restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
 }
 
@@ -8068,7 +8068,7 @@ async function gateClientSignup(){
   document.getElementById('client-portal-root').style.display='block';
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
-  document.getElementById('cp-welcome-name').textContent=name.split(' ')[0];
+  document.getElementById('cp-welcome-name').textContent=name;
   restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
 }
 
@@ -8563,7 +8563,7 @@ async function gateEnterApp(session){
     if(session.clientId){
       cpActiveClientId=session.clientId;
       document.getElementById('client-portal-root').style.display='block';
-      const displayName=(session.name||session.email||'Client').split(' ')[0];
+      const displayName=session.name||session.email||'Client';
       const nameEl=document.getElementById('cp-welcome-name');
       if(nameEl) nameEl.textContent=displayName;
       document.getElementById('cp-login').style.display='none';

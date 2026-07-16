@@ -1736,7 +1736,7 @@ function _cpTryAutoLogin(){
     const saved=JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');
     if(saved?.clientId){
       cpActiveClientId=saved.clientId;
-      document.getElementById('cp-welcome-name').textContent=(saved.name||'').split(' ')[0];
+      document.getElementById('cp-welcome-name').textContent=saved.name||'';
       document.getElementById('cp-login').style.display='none';
       document.getElementById('cp-dashboard').style.display='block';
       restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
@@ -1755,7 +1755,7 @@ function _cpTryAutoLogin(){
       cpActiveClientId=acct.clientId;
       const displayName=acct.name||gateSession?.name||gateEmail.split('@')[0];
       try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:acct.clientId,email:gateEmail,name:displayName}));}catch(e){}
-      document.getElementById('cp-welcome-name').textContent=displayName.split(' ')[0];
+      document.getElementById('cp-welcome-name').textContent=displayName;
       document.getElementById('cp-login').style.display='none';
       document.getElementById('cp-dashboard').style.display='block';
       restoreFromFirebase().then(()=>cpShowTab('overview')).catch(()=>cpShowTab('overview'));
@@ -1968,7 +1968,7 @@ async function cpSignup(){
   try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:resolvedClientId,email,name}));}catch(e){}
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
-  document.getElementById('cp-welcome-name').textContent=name.split(' ')[0];
+  document.getElementById('cp-welcome-name').textContent=name;
   cpShowTab('overview');
 }
 
@@ -2089,7 +2089,7 @@ async function cpLogin(){
   const displayName=account.name||email.split('@')[0];
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
-  document.getElementById('cp-welcome-name').textContent=displayName.split(' ')[0];
+  document.getElementById('cp-welcome-name').textContent=displayName;
   // Persist session so page refresh doesn't log client out
   try{sessionStorage.setItem('dronehub_cp_session',JSON.stringify({clientId:account.clientId,email,name:displayName}));}catch(e){}
   cpShowTab('overview');
@@ -3572,7 +3572,7 @@ function previewPortalAs(clientId){
   document.getElementById('client-portal-root').style.display='block';
   document.getElementById('cp-login').style.display='none';
   document.getElementById('cp-dashboard').style.display='block';
-  document.getElementById('cp-welcome-name').textContent=(c?.name||'Client').split(' ')[0];
+  document.getElementById('cp-welcome-name').textContent=c?.name||'Client';
   // Show preview banner
   const banner=document.getElementById('preview-banner');
   const bannerName=document.getElementById('preview-banner-name');
