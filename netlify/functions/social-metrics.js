@@ -101,12 +101,19 @@ exports.handler = async (event) => {
 
         // Range: number of days, or 'all' for lifetime
         const range = body.range || '28';
-        const end = new Date().toISOString().slice(0, 10);
-        const start = range === 'all'
-          ? '2005-04-23' // YouTube launch — Analytics clamps to channel creation
-          : new Date(Date.now() - parseInt(range, 10) * 86400000).toISOString().slice(0, 10);
         // Month buckets for long ranges keep charts readable and payloads small
         const granularity = (range === 'all' || parseInt(range, 10) > 120) ? 'month' : 'day';
+        let start, end;
+        if (granularity === 'month') {
+          // The month dimension requires start-date and end-date on the 1st of a month
+          const firstOfMonth = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+          const s = range === 'all' ? new Date(2005, 4, 1) : new Date(Date.now() - parseInt(range, 10) * 86400000);
+          start = firstOfMonth(s);
+          end = firstOfMonth(new Date());
+        } else {
+          end = new Date().toISOString().slice(0, 10);
+          start = new Date(Date.now() - parseInt(range, 10) * 86400000).toISOString().slice(0, 10);
+        }
         const base = 'https://youtubeanalytics.googleapis.com/v2/reports';
         const authHdr = { Authorization: `Bearer ${token}` };
         const videoFilter = action === 'videoInsights' && body.videoId ? { filters: `video==${body.videoId}` } : {};
