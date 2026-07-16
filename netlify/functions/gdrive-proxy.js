@@ -80,6 +80,7 @@ exports.handler = async (event) => {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Content-Type': 'application/json',
   };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: 'POST only' };
