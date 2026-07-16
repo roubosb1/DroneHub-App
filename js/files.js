@@ -80,6 +80,11 @@ async function renderFiles() {
           <input type="text" id="files-search" placeholder="Search files…" onkeydown="if(event.key==='Enter')filesSearch()" style="padding:6px 30px 6px 10px;border:1px solid var(--border-bright);border-radius:8px;font-size:12px;background:var(--navy-lift);color:var(--offwhite);width:200px">
           <svg onclick="filesSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
+        <button onclick="filesUpload()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
+        <input type="file" id="files-upload-input" multiple style="display:none" onchange="filesUploadSelected(this)">
         <button onclick="filesDisconnect()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Disconnect</button>
       </div>
     </div>`;
@@ -227,6 +232,83 @@ async function filesDownload(fileId) {
   } catch (err) {
     try { showDhToast('Download failed', err.message || 'Could not download file', '⚠', 'var(--orange)', 3000); } catch (e) {}
   }
+}
+
+// ── Upload ───────────────────────────────────────────────────────────────────
+function filesUpload() {
+  document.getElementById('files-upload-input')?.click();
+}
+
+async function filesUploadSelected(input) {
+  const files = [...(input.files || [])];
+  input.value = '';
+  if (!files.length) return;
+  for (const file of files) {
+    await _filesUploadOne(file);
+  }
+  _filesUploadBarRemove();
+  filesLoadFolder(_filesCurrentFolder);
+}
+
+function _filesUploadBar(name, pct) {
+  let bar = document.getElementById('files-upload-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'files-upload-bar';
+    bar.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9000;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:12px;padding:12px 16px;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.5)';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `
+    <div style="font-size:12px;font-weight:600;color:var(--offwhite);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px">Uploading ${name}</div>
+    <div style="height:6px;border-radius:3px;background:var(--navy-lift);overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:var(--blue-bright);border-radius:3px;transition:width .2s"></div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:5px">${pct}%</div>`;
+}
+
+function _filesUploadBarRemove() {
+  document.getElementById('files-upload-bar')?.remove();
+}
+
+function _filesUploadOne(file) {
+  return new Promise(async (resolve) => {
+    try {
+      _filesUploadBar(file.name, 0);
+      const init = await _filesApi('uploadInit', {
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        folderId: _filesCurrentFolder,
+        size: file.size,
+      });
+      if (init.error || !init.uploadUrl) {
+        try { showDhToast('Upload failed', init.error || 'Could not start upload', '⚠', 'var(--orange)', 5000); } catch (e) {}
+        resolve(); return;
+      }
+      // Browser streams the bytes straight to Google's upload session URL
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', init.uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) _filesUploadBar(file.name, Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { showDhToast('Uploaded', file.name, 'check', 'var(--green)', 3000); } catch (e) {}
+        } else {
+          try { showDhToast('Upload failed', file.name + ' (HTTP ' + xhr.status + ')', '⚠', 'var(--orange)', 5000); } catch (e) {}
+        }
+        resolve();
+      };
+      xhr.onerror = () => {
+        try { showDhToast('Upload failed', 'Network error uploading ' + file.name, '⚠', 'var(--orange)', 5000); } catch (e) {}
+        resolve();
+      };
+      xhr.send(file);
+    } catch (err) {
+      try { showDhToast('Upload failed', err.message || 'Unknown error', '⚠', 'var(--orange)', 5000); } catch (e) {}
+      resolve();
+    }
+  });
 }
 
 function filesCopyLink(fileId, webViewLink) {

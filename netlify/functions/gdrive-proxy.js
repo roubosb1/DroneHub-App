@@ -169,6 +169,35 @@ exports.handler = async (event) => {
       };
     }
 
+    if (action === 'uploadInit') {
+      const { name, mimeType, folderId, size } = body;
+      if (!name) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'name required' }) };
+      const metadata = { name };
+      if (folderId) metadata.parents = [folderId];
+      // Google binds the session URL's CORS to the Origin sent here,
+      // letting the browser PUT the bytes directly to Google.
+      const origin = event.headers.origin || event.headers.Origin || '';
+      const initHeaders = {
+        Authorization: `Bearer ${auth.token}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': mimeType || 'application/octet-stream',
+      };
+      if (size) initHeaders['X-Upload-Content-Length'] = String(size);
+      if (origin) initHeaders['Origin'] = origin;
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+        method: 'POST',
+        headers: initHeaders,
+        body: JSON.stringify(metadata),
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Upload init failed (${res.status}): ${errText}`);
+      }
+      const uploadUrl = res.headers.get('location');
+      if (!uploadUrl) throw new Error('Google did not return an upload session URL');
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ uploadUrl }) };
+    }
+
     if (action === 'breadcrumb') {
       const fileId = body.fileId;
       if (!fileId || fileId === 'root') return { statusCode: 200, headers: cors, body: JSON.stringify({ path: [{ id: 'root', name: 'My Drive' }] }) };
