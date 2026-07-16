@@ -194,6 +194,21 @@ exports.handler = async (event) => {
       };
     }
 
+    if (action === 'shareFolder') {
+      // Anyone-with-link reader on a folder, so client portal downloads work
+      // for large files that must come straight from Google. Admin-triggered.
+      const { fileId } = body;
+      if (!fileId) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'fileId required' }) };
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || `Share failed (${res.status})`);
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
     if (action === 'createFolder') {
       const { name, parentId } = body;
       if (!name) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'name required' }) };
