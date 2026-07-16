@@ -2418,9 +2418,12 @@ async function cpShowTab(tab){
     const driveJobsCP=cJobs.filter(j=>j.driveLink).sort((a,b)=>b.date.localeCompare(a.date));
     const SVC_ICONS_CP={video:'',photo:'',tvideo:'',tphoto:'',reel:'',extphoto:'',extvideo:'',floorplan:''};
     const jobTagsCP=j=>Object.entries(j.services||{}).filter(([k,v])=>v&&SVC_ICONS_CP[k]).map(([k])=>SVC_ICONS_CP[k]).join(' ');
+    // The linked-projects grid supersedes the legacy driveLink list — only
+    // show the old card when there are no linked projects
+    const _cpHasProjects=((c.driveProjects||[]).length)>0;
     html=`
       ${typeof cdProjectsSectionHtml==='function'?cdProjectsSectionHtml(cpActiveClientId,true):''}
-      <div class="card" style="margin-bottom:14px">
+      ${_cpHasProjects?'':`<div class="card" style="margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
           <svg width="20" height="18" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
           <div>
@@ -2451,7 +2454,7 @@ async function cpShowTab(tab){
           Your deliverables will appear here as each project is completed.<br>
           <span style="font-size:12px">We'll send you a message in LouChat when files are ready.</span>
         </div>`}
-      </div>
+      </div>`}
       ${assets.length?`<div class="card">
         <div class="section-label" style="margin-bottom:12px">Additional files</div>
         ${assets.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:10px">

@@ -473,7 +473,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
       savedJobs.forEach(j => { if (String(j.clientId) === String(clientId) && j.address) jobByAddr[j.address.toLowerCase()] = j; });
     }
     const fmtDate = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return d; } };
-    return `<div class="card" style="margin-bottom:14px">
+    return `<div style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
         <svg width="18" height="16" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/><path d="M43.65 25L57.4 0H13.9c-1.55 0-3.1.4-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H27.5L13.75 76.8h49.8z" fill="#2684fc"/><path d="M73.4 26.5c-.8-1.4-1.95-2.5-3.3-3.3L56.3 0H43.65l16.15 28z" fill="#ffba00"/></svg>
         <div class="section-label" style="margin-bottom:0">Your Projects</div>
@@ -488,7 +488,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
           const job = jobByAddr[(p.address || '').toLowerCase()];
           const dateLbl = job?.date ? fmtDate(job.date) : '';
           return `
-        <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,transform .15s" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor='var(--border)'">
+        <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,transform .15s" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor='var(--border)'">
           <div style="padding:14px 16px 12px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
               <div style="font-size:13px;font-weight:700;color:var(--white);line-height:1.4" title="${p.address}">${p.address}</div>
