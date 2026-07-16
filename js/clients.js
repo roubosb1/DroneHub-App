@@ -2110,23 +2110,21 @@ const CP_NAV=[
 ];
 
 function cpRenderSidebar(activeTab){
-  const profEl=document.getElementById('cp-side-profile');
-  const navEl=document.getElementById('cp-side-nav');
-  if(!profEl||!navEl) return;
+  const navEl=document.getElementById('cp-gnav-items');
+  if(!navEl) return;
   const acct=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
   const c=clients.find(cl=>cl.id===cpActiveClientId)||{};
   const name=c.name||acct.name||'Client';
   const email=c.email||acct.email||'';
-  profEl.innerHTML=`
-    <div onclick="cpShowTab('profile')" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 8px 16px;border-bottom:1px solid var(--border);margin-bottom:12px;cursor:pointer">
-      ${typeof getAvatarHtml==='function'?getAvatarHtml(name,email,56,18):''}
-      <div style="text-align:center;min-width:0;width:100%">
-        <div style="font-size:14px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-        ${c.company?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.company}</div>`:''}
-      </div>
-    </div>`;
-  navEl.innerHTML=CP_NAV.map(n=>`
-    <button onclick="cpShowTab('${n.tab}')" class="cp-side-item${n.tab===activeTab?' active':''}">${n.icon} ${n.label}</button>`).join('');
+  const aw=document.getElementById('cp-gnav-avatar-wrap');
+  if(aw) aw.innerHTML=typeof getAvatarHtml==='function'?getAvatarHtml(name,email,36,12):'';
+  const un=document.getElementById('cp-gnav-username');
+  if(un) un.textContent=name;
+  const ut=document.getElementById('cp-gnav-usertitle');
+  if(ut) ut.textContent=c.company||'Client Portal';
+  // Profile lives on the avatar button (like the ops app) — not in the item list
+  navEl.innerHTML=CP_NAV.filter(n=>n.tab!=='profile').map(n=>`
+    <button onclick="cpShowTab('${n.tab}')" class="app-gnav-item${n.tab===activeTab?' active':''}">${n.icon}<span class="app-gnav-label">${n.label}</span></button>`).join('');
 }
 
 function cpProfilePhotoSelected(input){

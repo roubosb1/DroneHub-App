@@ -1289,3 +1289,13 @@ button{font-family:var(--font);}
 .cp-side-item svg{flex-shrink:0}
 @media(max-width:768px){.cp-sidebar{display:none}}
 @media(min-width:769px){.cp-tabs-bar{display:none}}
+
+/* ── Client portal global nav — exact mirror of #app-global-nav ──────────── */
+#cp-global-nav{display:none;position:fixed;left:0;top:0;bottom:0;width:72px;background:#0D1117;border-right:1px solid var(--border);flex-direction:column;z-index:201;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);}
+#cp-global-nav:hover{width:240px;}
+#cp-global-nav:hover .app-gnav-label{opacity:1;}
+@media(min-width:769px){
+  #cp-global-nav{display:flex;}
+  #cp-header{padding-left:92px!important;}
+  #cp-main-col{margin-left:72px;}
+}
