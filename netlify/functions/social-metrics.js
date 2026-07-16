@@ -1,17 +1,56 @@
 /**
  * Social media metrics proxy
  *
- * POST body: { platform, handle }
+ * POST body: { platform, handle, action?, acctId? }
  *
  * Platforms:
  *   youtube   — public channel stats via YouTube Data API v3 (needs YOUTUBE_API_KEY)
- *   instagram — requires Meta Graph API app (META_ACCESS_TOKEN) — not yet configured
+ *               action 'videos'   → recent uploads with per-video stats (public)
+ *               action 'insights' → private channel analytics (watch time, daily
+ *               views, sub changes, traffic sources) — requires the channel owner
+ *               to have connected via youtube-auth (token in dh_secure)
+ *   instagram — requires Meta Graph API app — not yet configured
  *   facebook  — same Meta app
  *   tiktok    — requires TikTok developer app — not yet configured
  *
  * Required Netlify env vars:
  *   YOUTUBE_API_KEY — Google Cloud Console → enable "YouTube Data API v3" → create API key
+ *   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / FIREBASE_SERVICE_ACCOUNT — for insights
  */
+
+let _db = null;
+function getDb() {
+  if (!_db) {
+    const admin = require('firebase-admin');
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+      });
+    }
+    _db = admin.firestore();
+  }
+  return _db;
+}
+
+async function ytAccessToken(acctId) {
+  const orgId = process.env.ORG_ID || 'dronehub_main';
+  const doc = await getDb().doc(`dh_secure/${orgId}_yt_${acctId}`).get();
+  const refreshToken = doc.exists ? doc.data()?.ytRefreshToken : null;
+  if (!refreshToken) return null;
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      refresh_token: refreshToken,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error_description || data.error || 'YouTube token refresh failed');
+  return data.access_token;
+}
 
 exports.handler = async (event) => {
   const headers = {
@@ -50,6 +89,39 @@ exports.handler = async (event) => {
       if (!ch) return { statusCode: 200, headers, body: JSON.stringify({ error: 'Channel not found — check the handle or URL' }) };
 
       const st = ch.statistics || {};
+
+      // Private channel analytics — needs owner OAuth via youtube-auth
+      if (action === 'insights') {
+        const acctId = body.acctId;
+        if (!acctId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'acctId required' }) };
+        let token;
+        try { token = await ytAccessToken(acctId); }
+        catch (e) { return { statusCode: 200, headers, body: JSON.stringify({ error: 'Channel connection expired — reconnect with Google. (' + e.message + ')' }) }; }
+        if (!token) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true }) };
+
+        const end = new Date().toISOString().slice(0, 10);
+        const start = new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
+        const base = 'https://youtubeanalytics.googleapis.com/v2/reports';
+        const authHdr = { Authorization: `Bearer ${token}` };
+
+        const dailyRes = await fetch(`${base}?${new URLSearchParams({
+          ids: 'channel==MINE', startDate: start, endDate: end,
+          metrics: 'views,estimatedMinutesWatched,subscribersGained,subscribersLost',
+          dimensions: 'day', sort: 'day',
+        })}`, { headers: authHdr });
+        const daily = await dailyRes.json();
+        if (!dailyRes.ok) throw new Error(daily.error?.message || `Analytics API ${dailyRes.status}`);
+
+        const trafficRes = await fetch(`${base}?${new URLSearchParams({
+          ids: 'channel==MINE', startDate: start, endDate: end,
+          metrics: 'views', dimensions: 'insightTrafficSourceType', sort: '-views',
+        })}`, { headers: authHdr });
+        const traffic = await trafficRes.json();
+
+        const days = (daily.rows || []).map(r => ({ date: r[0], views: r[1], watchMin: r[2], subsGained: r[3], subsLost: r[4] }));
+        const sources = trafficRes.ok ? (traffic.rows || []).map(r => ({ type: r[0], views: r[1] })) : [];
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true, days, sources }) };
+      }
 
       // Detail mode: recent uploads with per-video stats
       if (action === 'videos') {

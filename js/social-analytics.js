@@ -108,7 +108,7 @@ async function socialAcctsRefreshAll() {
 function socialAcctCardHtml(acct, readOnly) {
   const p = _saPlatform(acct.platform);
   const synced = acct.lastSync ? new Date(acct.lastSync).toLocaleDateString('en-CA') : 'never';
-  return `<div class="card" onclick="socialAcctDetail('${acct.id}')" style="padding:16px;min-width:0;cursor:pointer;transition:border-color .15s" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor=''">
+  return `<div class="card" ${!readOnly ? `onclick="socialAcctDetail('${acct.id}')"` : ''} style="padding:16px;min-width:0;${!readOnly ? 'cursor:pointer;' : ''}transition:border-color .15s" onmouseenter="this.style.borderColor='var(--border-bright)'" onmouseleave="this.style.borderColor=''">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       ${acct.avatar
         ? `<img src="${acct.avatar}" style="width:36px;height:36px;border-radius:50%;flex-shrink:0" onerror="this.style.display='none'">`
@@ -158,15 +158,13 @@ function _saSparkline(history, field, color) {
   </svg>`;
 }
 
+// Full-page detail rendered inside the Analytics sub-tab
 async function socialAcctDetail(acctId) {
   const acct = socialAcctsLoad().find(a => a.id === acctId);
   if (!acct) return;
+  const cont = document.getElementById('social-sub-analytics');
+  if (!cont) return;
   const p = _saPlatform(acct.platform);
-  document.getElementById('sa-detail-modal')?.remove();
-  const wrap = document.createElement('div');
-  wrap.id = 'sa-detail-modal';
-  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)';
-  wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
   const hist = acct.history || [];
   const first = hist[0], last = hist[hist.length - 1];
   const growth = (field) => first && last && hist.length > 1 ? (last[field] || 0) - (first[field] || 0) : null;
@@ -176,51 +174,145 @@ async function socialAcctDetail(acctId) {
     const up = g >= 0;
     return `<span style="font-size:10px;font-weight:700;color:${up ? 'var(--green)' : '#E85D5D'}">${up ? '▲' : '▼'} ${_saFmt(Math.abs(g))} in ${hist.length} days</span>`;
   };
-  wrap.innerHTML = `
-    <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 20px 60px rgba(0,0,0,.55)" onclick="event.stopPropagation()">
-      <div style="background:var(--navy-mid);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2">
-        ${acct.avatar ? `<img src="${acct.avatar}" style="width:44px;height:44px;border-radius:50%">` : `<span style="width:44px;height:44px;border-radius:50%;background:${p.color}22;color:${p.color};display:inline-flex;align-items:center;justify-content:center">${p.icon}</span>`}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:16px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${acct.name || acct.handle}</div>
-          <div style="font-size:11px;color:${p.color};font-weight:600;display:flex;align-items:center;gap:4px">${p.icon} ${p.label}${acct.url ? ` · <a href="${acct.url}" target="_blank" style="color:var(--blue-bright);text-decoration:none">Open channel ↗</a>` : ''}</div>
-        </div>
-        <button onclick="document.getElementById('sa-detail-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px">✕</button>
+  const owner = acct.ownerType === 'client'
+    ? ((typeof clients !== 'undefined' ? clients : []).find(c => String(c.id) === String(acct.clientId))?.name || 'Client')
+    : 'DroneHub Media';
+
+  cont.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <button onclick="renderSocialAnalytics()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> All accounts
+      </button>
+      ${acct.avatar ? `<img src="${acct.avatar}" style="width:44px;height:44px;border-radius:50%">` : `<span style="width:44px;height:44px;border-radius:50%;background:${p.color}22;color:${p.color};display:inline-flex;align-items:center;justify-content:center">${p.icon}</span>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:18px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${acct.name || acct.handle}</div>
+        <div style="font-size:11px;color:${p.color};font-weight:600;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${p.icon} ${p.label} · <span style="color:var(--muted)">${owner}</span>${acct.url ? ` · <a href="${acct.url}" target="_blank" style="color:var(--blue-bright);text-decoration:none">Open channel ↗</a>` : ''}</div>
       </div>
-      <div style="padding:20px;display:flex;flex-direction:column;gap:18px">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--white)">${_saFmt(acct.followers)}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px">${acct.platform === 'youtube' ? 'Subscribers' : 'Followers'}</div>
-            <div style="margin-top:3px">${growthChip('followers')}</div>
-          </div>
-          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--white)">${_saFmt(acct.views)}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px">Total Views</div>
-            <div style="margin-top:3px">${growthChip('views')}</div>
-          </div>
-          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:var(--white)">${_saFmt(acct.posts)}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px">${acct.platform === 'youtube' ? 'Videos' : 'Posts'}</div>
-            <div style="margin-top:3px">${growthChip('posts')}</div>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${acct.platform === 'youtube' ? 'Subscriber' : 'Follower'} growth</div>
-          ${_saSparkline(hist, 'followers', p.color)}
-        </div>
-        <div id="sa-detail-videos">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent uploads</div>
-          <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Loading recent videos…</div>
-        </div>
+      <button onclick="socialAcctRefresh('${acct.id}').then(()=>socialAcctDetail('${acct.id}'))" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">⟳ Refresh</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:24px;font-weight:800;color:var(--white)">${_saFmt(acct.followers)}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px">${acct.platform === 'youtube' ? 'Subscribers' : 'Followers'}</div>
+        <div style="margin-top:3px">${growthChip('followers')}</div>
       </div>
-    </div>`;
-  document.body.appendChild(wrap);
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:24px;font-weight:800;color:var(--white)">${_saFmt(acct.views)}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px">Total Views</div>
+        <div style="margin-top:3px">${growthChip('views')}</div>
+      </div>
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:24px;font-weight:800;color:var(--white)">${_saFmt(acct.posts)}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px">${acct.platform === 'youtube' ? 'Videos' : 'Posts'}</div>
+        <div style="margin-top:3px">${growthChip('posts')}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${acct.platform === 'youtube' ? 'Subscriber' : 'Follower'} growth</div>
+      ${_saSparkline(hist, 'followers', p.color)}
+    </div>
+
+    <div id="sa-detail-insights" style="margin-bottom:18px"></div>
+    <div id="sa-detail-videos"><div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Loading recent videos…</div></div>`;
 
   if (acct.platform !== 'youtube') {
-    const vc = document.getElementById('sa-detail-videos');
-    if (vc) vc.innerHTML = '';
+    document.getElementById('sa-detail-videos').innerHTML = '';
     return;
   }
+
+  _saRenderInsights(acct);
+  _saRenderVideos(acct);
+}
+
+// ── Private channel analytics (watch time, daily views, traffic sources) ─────
+function socialAcctConnectYt(acctId) {
+  window.location.href = '/.netlify/functions/youtube-auth?step=init&acctId=' + encodeURIComponent(acctId);
+}
+
+async function _saRenderInsights(acct) {
+  const el = document.getElementById('sa-detail-insights');
+  if (!el) return;
+  const p = _saPlatform(acct.platform);
+  if (!acct.ytConnected) {
+    el.innerHTML = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">Unlock full channel analytics</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">Watch time, daily views, subscriber changes, and traffic sources — the same numbers as YouTube Studio. The channel owner signs in with Google once to grant read-only access.</div>
+      </div>
+      <button onclick="socialAcctConnectYt('${acct.id}')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:12px;border:1px solid rgba(66,133,244,.5);background:rgba(66,133,244,.1);color:#4285F4;font-size:12px;font-weight:700;cursor:pointer">
+        <svg width="15" height="15" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 7.9 2.9l5.9-5.9C34.3 3.4 29.4 1.5 24 1.5 14.9 1.5 7.1 7 3.4 14.9l6.9 5.4C12.2 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5C43.5 37 46.5 31.2 46.5 24.5z"/><path fill="#FBBC05" d="M10.3 28.7c-.6-1.7-.9-3.5-.9-5.4 0-1.9.3-3.7.9-5.4l-6.9-5.4C1.8 15.7 1 19.7 1 24s.8 8.3 2.4 11.7l6.9-5.3z"/><path fill="#34A853" d="M24 46.5c5.4 0 9.9-1.8 13.2-4.8l-7.1-5.5c-1.8 1.2-4.1 1.9-6.1 1.9-6.4 0-11.8-4-13.7-9.5l-6.9 5.3C7.1 41 14.9 46.5 24 46.5z"/></svg>
+        Connect channel analytics
+      </button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card"><div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Loading channel analytics…</div></div>`;
+  try {
+    const res = await fetch(SOCIAL_METRICS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'youtube', handle: acct.handle, action: 'insights', acctId: acct.id }),
+    });
+    const data = await res.json();
+    if (data.notConnected) {
+      const arr = socialAcctsLoad();
+      const a = arr.find(x => x.id === acct.id);
+      if (a) { a.ytConnected = false; socialAcctsSave(arr); }
+      _saRenderInsights({ ...acct, ytConnected: false });
+      return;
+    }
+    if (data.error) throw new Error(data.error);
+    const days = data.days || [];
+    const totViews = days.reduce((s, d) => s + d.views, 0);
+    const watchHrs = Math.round(days.reduce((s, d) => s + d.watchMin, 0) / 60 * 10) / 10;
+    const subsNet = days.reduce((s, d) => s + d.subsGained - d.subsLost, 0);
+    const srcLabels = { YT_SEARCH: 'YouTube search', SUBSCRIBER: 'Subscribers feed', EXT_URL: 'External links', RELATED_VIDEO: 'Suggested videos', NO_LINK_OTHER: 'Direct / other', PLAYLIST: 'Playlists', YT_CHANNEL: 'Channel pages', NOTIFICATION: 'Notifications', SHORTS: 'Shorts feed', YT_OTHER_PAGE: 'Other YouTube', ADVERTISING: 'Ads', END_SCREEN: 'End screens', HASHTAGS: 'Hashtags', SOUND_PAGE: 'Sound pages' };
+    const sources = (data.sources || []).slice(0, 6);
+    const maxSrc = Math.max(...sources.map(s => s.views), 1);
+    const el2 = document.getElementById('sa-detail-insights');
+    if (!el2) return;
+    el2.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Channel analytics · last 28 days</div>
+          <span style="font-size:9px;color:var(--green);font-weight:700">● Connected</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:var(--white)">${_saFmt(totViews)}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Views · 28d</div>
+          </div>
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:var(--white)">${watchHrs.toLocaleString()}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Watch hours · 28d</div>
+          </div>
+          <div style="background:var(--navy-mid);border-radius:12px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:800;color:${subsNet >= 0 ? 'var(--green)' : '#E85D5D'}">${subsNet >= 0 ? '+' : ''}${subsNet}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px">Subscribers · 28d</div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Daily views</div>
+        ${_saSparkline(days.map(d => ({ date: d.date, v: d.views })), 'v', p.color || '#FF0000')}
+        ${sources.length ? `
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px">Where views came from</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${sources.map(s => `
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:130px;font-size:11px;color:var(--offwhite);flex-shrink:0">${srcLabels[s.type] || s.type}</span>
+              <div style="flex:1;height:14px;border-radius:7px;background:var(--navy-mid);overflow:hidden"><div style="height:100%;width:${Math.round(s.views / maxSrc * 100)}%;background:var(--blue);border-radius:7px"></div></div>
+              <span style="width:52px;font-size:10px;color:var(--muted);text-align:right">${_saFmt(s.views)}</span>
+            </div>`).join('')}
+        </div>` : ''}
+      </div>`;
+  } catch (err) {
+    const el2 = document.getElementById('sa-detail-insights');
+    if (el2) el2.innerHTML = `<div class="card"><div style="padding:14px;text-align:center;color:#E85D5D;font-size:12px">Channel analytics: ${err.message}</div></div>`;
+  }
+}
+
+async function _saRenderVideos(acct) {
   try {
     const res = await fetch(SOCIAL_METRICS_API, {
       method: 'POST',
@@ -232,13 +324,13 @@ async function socialAcctDetail(acctId) {
     if (!vc) return;
     const vids = data.videos || [];
     if (data.error || !vids.length) {
-      vc.innerHTML = `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent uploads</div>
-        <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">${data.error || 'No videos found'}</div>`;
+      vc.innerHTML = `<div class="card"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent uploads</div>
+        <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">${data.error || 'No videos found'}</div></div>`;
       return;
     }
     const avgViews = Math.round(vids.reduce((s, v) => s + v.views, 0) / vids.length);
     const likeRate = (vids.reduce((s, v) => s + v.likes, 0) / Math.max(vids.reduce((s, v) => s + v.views, 0), 1) * 100).toFixed(1);
-    vc.innerHTML = `
+    vc.innerHTML = `<div class="card">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <div style="background:var(--navy-mid);border-radius:12px;padding:12px;text-align:center">
           <div style="font-size:18px;font-weight:800;color:var(--white)">${_saFmt(avgViews)}</div>
@@ -259,12 +351,38 @@ async function socialAcctDetail(acctId) {
               <div style="font-size:10px;color:var(--muted);margin-top:3px">${v.publishedAt} · ${_saFmt(v.views)} views · ${_saFmt(v.likes)} likes · ${_saFmt(v.comments)} comments</div>
             </div>
           </a>`).join('')}
-      </div>`;
+      </div>
+    </div>`;
   } catch (err) {
     const vc = document.getElementById('sa-detail-videos');
-    if (vc) vc.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Could not load videos: ${err.message}</div>`;
+    if (vc) vc.innerHTML = `<div class="card"><div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Could not load videos: ${err.message}</div></div>`;
   }
 }
+
+// Handle return from YouTube OAuth (#yt-connected=acctId)
+(function _saCheckYtOAuthReturn() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  if (hash.startsWith('#yt-connected=')) {
+    const acctId = decodeURIComponent(hash.replace('#yt-connected=', ''));
+    window.location.hash = '';
+    const arr = socialAcctsLoad();
+    const a = arr.find(x => x.id === acctId);
+    if (a) { a.ytConnected = true; socialAcctsSave(arr); }
+    setTimeout(() => {
+      try {
+        showDhToast('Channel analytics connected', a?.name || '', '✅', 'var(--green)', 4000);
+        showPane('social');
+        setSocialSubTab('analytics');
+        socialAcctDetail(acctId);
+      } catch (e) {}
+    }, 600);
+  } else if (hash.startsWith('#yt-error=') || hash === '#yt-denied') {
+    const msg = hash === '#yt-denied' ? 'Access denied' : decodeURIComponent(hash.replace('#yt-error=', ''));
+    window.location.hash = '';
+    setTimeout(() => { try { showDhToast('YouTube connection failed', msg, '⚠', 'var(--orange)', 6000); } catch (e) {} }, 600);
+  }
+})();
 
 // Cards for one client — used inside the client portal social tab
 function socialAnalyticsClientCardsHtml(clientId, readOnly) {
