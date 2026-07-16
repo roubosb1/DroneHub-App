@@ -2178,6 +2178,7 @@ async function cpShowTab(tab){
   const _cpContentEl=document.getElementById('cp-content');
   if(_cpContentEl){
     if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
+    else if(tab==='files'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
     else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
   }
   setTimeout(cpUpdateNotifBadge,100);

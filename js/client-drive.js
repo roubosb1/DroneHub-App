@@ -481,7 +481,7 @@ function cdProjectsSectionHtml(clientId, isClientView) {
       </div>
       <input type="text" id="cd-proj-search-${clientId}" placeholder="Search by address…" oninput="cdFilterProjects('${clientId}')"
         style="width:100%;box-sizing:border-box;padding:10px 14px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:14px">
-      <div id="cd-proj-list-${clientId}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:start">
+      <div id="cd-proj-list-${clientId}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start">
         ${projects.map(p => {
           const pf = _cdProjFolders(p);
           const key = _cdProjKey(p);
