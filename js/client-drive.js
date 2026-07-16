@@ -1,15 +1,16 @@
 // ── CLIENT DRIVE PROJECTS ────────────────────────────────────────────────────
-// Links Google Drive folders to a client as "projects by address" so the
-// client can browse and download their files from their portal.
-// Stored on the client record: c.driveProjects = [{folderId, name, address,
-// shared, linkedAt}]
+// Links Google Drive folders to a client as "projects by address". Multiple
+// Drive folders for the same property (duplicates, .PRV/RAW variants) group
+// into ONE project. Client browses/downloads from their portal.
+// Stored on the client record:
+//   c.driveProjects = [{address, folders:[{folderId,name,label,webViewLink,shared}], linkedAt}]
+// (Legacy single-folder entries {folderId,name,address,shared,...} still work.)
 
 function _cdClient(clientId) {
   return (typeof clients !== 'undefined' ? clients : []).find(c => String(c.id) === String(clientId));
 }
 
 // "8002 East Vista Bonita Drive - Scottsdale, AZ - Katrina Barrett" → address only
-// Also handles suffixes after the name, e.g. "… - Katrina Barrett.PRV" → "….PRV"
 function _cdParseAddress(folderName, clientName) {
   let addr = folderName || '';
   if (clientName) {
@@ -17,6 +18,24 @@ function _cdParseAddress(folderName, clientName) {
     addr = addr.replace(new RegExp('\\s*[-–—]\\s*' + esc, 'i'), '');
   }
   return addr.trim();
+}
+
+// Base address for grouping: strip trailing variant suffixes like ".PRV"
+function _cdBaseAddress(address) {
+  return (address || '').replace(/\.(prv|raw|previews?)\s*$/i, '').trim();
+}
+
+// Normalize a project entry (handles legacy single-folder shape)
+function _cdProjFolders(p) {
+  if (p.folders && p.folders.length) return p.folders;
+  return [{ folderId: p.folderId, name: p.name, label: '', webViewLink: p.webViewLink || '', shared: !!p.shared }];
+}
+function _cdProjKey(p) { return _cdProjFolders(p)[0].folderId; }
+
+function _cdFolderLabel(folderName, clientName, address) {
+  const parsed = _cdParseAddress(folderName, clientName);
+  if (/\.(prv|raw|previews?)\s*$/i.test(parsed)) return 'PRV / RAW files';
+  return 'Deliverables';
 }
 
 // ── Admin: scan Drive for a client's project folders ─────────────────────────
@@ -27,7 +46,6 @@ async function cdScanDrive(clientId) {
   let folders = [];
   try {
     // Folders only, paginated — file names also contain the client's name
-    // and would otherwise crowd folders out of the first page
     let pageToken = '';
     for (let page = 0; page < 10; page++) {
       const data = await _filesApi('search', { query: c.name, foldersOnly: true, ...(pageToken ? { pageToken } : {}) });
@@ -40,34 +58,57 @@ async function cdScanDrive(clientId) {
     try { showDhToast('Scan failed', err.message || 'Could not search Drive', '⚠', 'var(--orange)', 5000); } catch (e) {}
     return;
   }
-  const linked = new Set((c.driveProjects || []).map(p => p.folderId));
-  const candidates = folders.filter(f => !linked.has(f.id));
-  if (!candidates.length) {
-    try { showDhToast('Nothing new found', folders.length ? 'All ' + folders.length + ' matching folders are already linked' : 'No Drive folders contain "' + c.name + '"', 'check', 'var(--blue-bright)', 5000); } catch (e) {}
+  // Dedupe by folder id, drop already-linked folders
+  const seen = new Set();
+  folders = folders.filter(f => { if (seen.has(f.id)) return false; seen.add(f.id); return true; });
+  const linked = new Set();
+  (c.driveProjects || []).forEach(p => _cdProjFolders(p).forEach(f => linked.add(f.folderId)));
+  const fresh = folders.filter(f => !linked.has(f.id));
+  if (!fresh.length) {
+    try { showDhToast('Nothing new found', folders.length ? 'All matching folders are already linked' : 'No Drive folders contain "' + c.name + '"', 'check', 'var(--blue-bright)', 5000); } catch (e) {}
     return;
   }
+
+  // Group folders by base address → one project per property
+  const groups = new Map();
+  fresh.forEach(f => {
+    const address = _cdParseAddress(f.name, c.name);
+    const base = _cdBaseAddress(address);
+    const key = base.toLowerCase();
+    if (!groups.has(key)) groups.set(key, { address: base, folders: [] });
+    groups.get(key).folders.push({
+      folderId: f.id,
+      name: f.name,
+      label: _cdFolderLabel(f.name, c.name, base),
+      webViewLink: f.webViewLink || '',
+      modifiedTime: f.modifiedTime || '',
+      shared: false,
+    });
+  });
+  const candidates = [...groups.values()].sort((a, b) => a.address.localeCompare(b.address));
 
   document.getElementById('cd-scan-modal')?.remove();
   const wrap = document.createElement('div');
   wrap.id = 'cd-scan-modal';
   wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)';
   wrap.onclick = (e) => { if (e.target === wrap) wrap.remove(); };
+  const totalFolders = fresh.length;
   wrap.innerHTML = `
-    <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.55)">
+    <div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;max-width:600px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.55)">
       <div style="background:var(--navy-mid);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--white)">Found ${candidates.length} project folder${candidates.length === 1 ? '' : 's'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Drive folders matching "${c.name}" — untick any you don't want linked</div>
+          <div style="font-size:14px;font-weight:700;color:var(--white)">Found ${candidates.length} propert${candidates.length === 1 ? 'y' : 'ies'} (${totalFolders} folders)</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Folders for the same address are grouped into one project — untick any you don't want</div>
         </div>
         <button onclick="document.getElementById('cd-scan-modal').remove()" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
       </div>
       <div style="padding:14px 20px;overflow-y:auto;flex:1">
-        ${candidates.map((f, i) => `
-          <label style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:var(--navy-mid);margin-bottom:6px;cursor:pointer">
-            <input type="checkbox" checked data-cd-idx="${i}" style="accent-color:var(--blue);width:15px;height:15px;flex-shrink:0">
+        ${candidates.map((g, i) => `
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:10px;background:var(--navy-mid);margin-bottom:6px;cursor:pointer">
+            <input type="checkbox" checked data-cd-idx="${i}" style="accent-color:var(--blue);width:15px;height:15px;flex-shrink:0;margin-top:2px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_cdParseAddress(f.name, c.name)}</div>
-              <div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.address}</div>
+              <div style="font-size:10px;color:var(--muted)">${g.folders.length} folder${g.folders.length === 1 ? '' : 's'}${g.folders.length > 1 ? ' — ' + g.folders.map(f => f.label).join(', ') : ''}</div>
             </div>
           </label>`).join('')}
       </div>
@@ -94,49 +135,54 @@ async function cdLinkSelected(clientId) {
   const doShare = document.getElementById('cd-scan-share')?.checked;
   if (!checked.length) { document.getElementById('cd-scan-modal').remove(); return; }
   const btn = document.getElementById('cd-scan-link-btn');
-  if (btn) { btn.textContent = 'Linking…'; btn.disabled = true; }
+  if (btn) { btn.disabled = true; }
 
   c.driveProjects = c.driveProjects || [];
-  let shareFails = 0, jobsCreated = 0, jobsLinked = 0;
+  let shareFails = 0, jobsCreated = 0, jobsLinked = 0, done = 0;
   let nextJobId = Date.now();
-  for (const f of checked) {
-    const address = _cdParseAddress(f.name, c.name);
-    const proj = {
-      folderId: f.id,
-      name: f.name,
-      address,
-      webViewLink: f.webViewLink || '',
-      shared: false,
-      linkedAt: new Date().toISOString(),
-    };
+  for (const g of checked) {
+    if (btn) btn.textContent = 'Linking ' + (++done) + '/' + checked.length + '…';
+    // Share every folder in the group
     if (doShare) {
-      try {
-        const res = await _filesApi('shareFolder', { fileId: f.id });
-        if (res.error) throw new Error(res.error);
-        proj.shared = true;
-      } catch (e) { shareFails++; }
+      for (const f of g.folders) {
+        try {
+          const res = await _filesApi('shareFolder', { fileId: f.folderId });
+          if (res.error) throw new Error(res.error);
+          f.shared = true;
+        } catch (e) { shareFails++; }
+      }
     }
-    c.driveProjects.push(proj);
+    // Merge into an existing project for the same address, or create one
+    const addrLc = g.address.toLowerCase();
+    const existingProj = c.driveProjects.find(p => _cdBaseAddress(p.address || '').toLowerCase() === addrLc);
+    if (existingProj) {
+      const pf = _cdProjFolders(existingProj);
+      const have = new Set(pf.map(f => f.folderId));
+      existingProj.folders = pf.concat(g.folders.filter(f => !have.has(f.folderId)));
+      delete existingProj.folderId;
+      existingProj.address = _cdBaseAddress(existingProj.address);
+    } else {
+      c.driveProjects.push({ address: g.address, folders: g.folders, linkedAt: new Date().toISOString() });
+    }
 
-    // Create (or link) a Finished project in the tracker so it shows in the
-    // client's Projects/Files tabs. $0 financials — no payroll/revenue impact.
+    // One Finished tracker project per property. $0 financials.
     if (typeof savedJobs !== 'undefined') {
-      const addrLc = address.toLowerCase();
+      const main = g.folders.find(f => f.label === 'Deliverables') || g.folders[0];
       const existing = savedJobs.find(j =>
-        (j.driveLink && f.id && j.driveLink.includes(f.id)) ||
+        (j.driveLink && g.folders.some(f => f.folderId && j.driveLink.includes(f.folderId))) ||
         (String(j.clientId) === String(c.id) && ((j.address || '').toLowerCase() === addrLc || (j.name || '').toLowerCase() === addrLc)));
       if (existing) {
-        if (!existing.driveLink && f.webViewLink) { existing.driveLink = f.webViewLink; jobsLinked++; }
+        if (!existing.driveLink && main.webViewLink) { existing.driveLink = main.webViewLink; jobsLinked++; }
       } else {
         savedJobs.push({
           id: nextJobId++,
-          name: address,
-          date: (f.modifiedTime || proj.linkedAt).slice(0, 10),
+          name: g.address,
+          date: (main.modifiedTime || new Date().toISOString()).slice(0, 10),
           status: 'completed',
           clientId: c.id,
           clientName: c.name,
-          address,
-          driveLink: f.webViewLink || '',
+          address: g.address,
+          driveLink: main.webViewLink || '',
           market: 'canada',
           grand: 0, driveCost: 0,
           services: {}, hours: {}, payouts: {}, editors: {}, extraServices: [],
@@ -148,33 +194,33 @@ async function cdLinkSelected(clientId) {
       }
     }
   }
-  c.driveProjects.sort((a, b) => a.address.localeCompare(b.address));
+  c.driveProjects.sort((a, b) => (a.address || '').localeCompare(b.address || ''));
   saveClientsToStorage();
   if ((jobsCreated || jobsLinked) && typeof saveJobsToStorage === 'function') saveJobsToStorage();
   document.getElementById('cd-scan-modal')?.remove();
-  const bits = [checked.length + ' folder' + (checked.length === 1 ? '' : 's') + ' linked'];
+  const bits = [checked.length + ' propert' + (checked.length === 1 ? 'y' : 'ies') + ' linked'];
   if (jobsCreated) bits.push(jobsCreated + ' finished project' + (jobsCreated === 1 ? '' : 's') + ' created');
-  if (jobsLinked) bits.push(jobsLinked + ' existing project' + (jobsLinked === 1 ? '' : 's') + ' updated');
-  if (shareFails) bits.push(shareFails + ' could not be shared');
+  if (jobsLinked) bits.push(jobsLinked + ' existing updated');
+  if (shareFails) bits.push(shareFails + ' folder' + (shareFails === 1 ? '' : 's') + ' could not be shared');
   try { showDhToast('Drive import complete', bits.join(' · '), 'check', 'var(--green)', 5000); } catch (e) {}
   if (typeof renderClientPortal === 'function' && typeof currentPortalClientId !== 'undefined' && currentPortalClientId) {
     renderClientPortal(clientId, 'assets');
   }
 }
 
-function cdUnlinkProject(clientId, folderId) {
+function cdUnlinkProject(clientId, projKey) {
   const c = _cdClient(clientId);
   if (!c) return;
-  const proj = (c.driveProjects || []).find(p => p.folderId === folderId);
+  const proj = (c.driveProjects || []).find(p => _cdProjKey(p) === projKey);
   _filesModal({
     title: 'Unlink Project',
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>',
     iconColor: '#E85D5D',
-    message: 'Remove <strong style="color:var(--offwhite)">' + (proj?.address || 'this project') + '</strong> from ' + c.name + '\'s portal? The Drive folder itself is not affected.',
+    message: 'Remove <strong style="color:var(--offwhite)">' + (proj?.address || 'this project') + '</strong> from ' + c.name + '\'s portal? The Drive folders themselves are not affected.',
     confirmText: 'Unlink',
     danger: true,
     onConfirm: () => {
-      c.driveProjects = (c.driveProjects || []).filter(p => p.folderId !== folderId);
+      c.driveProjects = (c.driveProjects || []).filter(p => _cdProjKey(p) !== projKey);
       saveClientsToStorage();
       try { showDhToast('Unlinked', proj?.address || '', 'check', 'var(--green)', 2500); } catch (e) {}
       if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
@@ -207,21 +253,26 @@ function cdProjectsSectionHtml(clientId, isClientView) {
     <input type="text" id="cd-proj-search-${clientId}" placeholder="Search by address…" oninput="cdFilterProjects('${clientId}')"
       style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);margin-bottom:12px">
     <div id="cd-proj-list-${clientId}">
-      ${projects.map(p => `
+      ${projects.map(p => {
+        const pf = _cdProjFolders(p);
+        const key = _cdProjKey(p);
+        const allShared = pf.every(f => f.shared);
+        return `
       <div class="cd-proj-row" data-addr="${(p.address || '').toLowerCase()}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;gap:10px;flex-wrap:wrap">
-          <div style="flex:1;min-width:0;cursor:pointer" onclick="cdToggleBrowse('${clientId}','${p.folderId}')">
-            <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.name}">${p.address}</div>
-            <div style="font-size:10px;color:var(--muted)">${isClientView ? 'Click to browse files' : 'Linked ' + (p.linkedAt || '').slice(0, 10) + (p.shared ? ' · <span style="color:var(--green)">downloads enabled</span>' : ' · <span style="color:#F5C842">downloads not enabled</span>')}</div>
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="cdToggleBrowse('${clientId}','${key}')">
+            <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.address}">${p.address}</div>
+            <div style="font-size:10px;color:var(--muted)">${pf.length > 1 ? pf.length + ' folders · ' : ''}${isClientView ? 'Click to browse files' : 'Linked ' + (p.linkedAt || '').slice(0, 10) + (allShared ? ' · <span style="color:var(--green)">downloads enabled</span>' : ' · <span style="color:#F5C842">downloads not enabled</span>')}</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-            <button onclick="cdToggleBrowse('${clientId}','${p.folderId}')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Browse Files</button>
-            ${!isClientView && !p.shared ? `<button onclick="cdShareProject('${clientId}','${p.folderId}')" title="Allow the client to download large files" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">Enable downloads</button>` : ''}
-            ${!isClientView ? `<button onclick="cdUnlinkProject('${clientId}','${p.folderId}')" title="Unlink" style="border:none;background:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px">✕</button>` : ''}
+            <button onclick="cdToggleBrowse('${clientId}','${key}')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Browse Files</button>
+            ${!isClientView && !allShared ? `<button onclick="cdShareProject('${clientId}','${key}')" title="Allow the client to download large files" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.06);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">Enable downloads</button>` : ''}
+            ${!isClientView ? `<button onclick="cdUnlinkProject('${clientId}','${key}')" title="Unlink" style="border:none;background:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px">✕</button>` : ''}
           </div>
         </div>
-        <div id="cd-browse-${p.folderId}" style="display:none;border-top:1px solid var(--border);padding:10px 14px"></div>
-      </div>`).join('')}
+        <div id="cd-browse-${key}" style="display:none;border-top:1px solid var(--border);padding:10px 14px"></div>
+      </div>`;
+      }).join('')}
     </div>
     <div id="cd-proj-none-${clientId}" style="display:none;text-align:center;padding:14px;color:var(--muted);font-size:12px">No projects match your search</div>
     ` : `<div style="text-align:center;padding:18px;color:var(--muted);font-size:12px;line-height:1.7">
@@ -243,49 +294,78 @@ function cdFilterProjects(clientId) {
   if (none) none.style.display = visible ? 'none' : '';
 }
 
-async function cdShareProject(clientId, folderId) {
+async function cdShareProject(clientId, projKey) {
   const c = _cdClient(clientId);
-  const proj = (c?.driveProjects || []).find(p => p.folderId === folderId);
+  const proj = (c?.driveProjects || []).find(p => _cdProjKey(p) === projKey);
   if (!proj) return;
-  try {
-    const res = await _filesApi('shareFolder', { fileId: folderId });
-    if (res.error) throw new Error(res.error);
-    proj.shared = true;
-    saveClientsToStorage();
-    try { showDhToast('Downloads enabled', proj.address, 'check', 'var(--green)', 3000); } catch (e) {}
-    if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
-  } catch (err) {
-    try { showDhToast('Share failed', err.message || 'Could not share folder', '⚠', 'var(--orange)', 5000); } catch (e) {}
+  const pf = _cdProjFolders(proj);
+  let fails = 0;
+  for (const f of pf) {
+    if (f.shared) continue;
+    try {
+      const res = await _filesApi('shareFolder', { fileId: f.folderId });
+      if (res.error) throw new Error(res.error);
+      f.shared = true;
+    } catch (err) { fails++; }
   }
+  if (!proj.folders) { proj.folders = pf; delete proj.folderId; }
+  saveClientsToStorage();
+  if (fails) { try { showDhToast('Partially shared', fails + ' folder(s) could not be shared', '⚠', 'var(--orange)', 5000); } catch (e) {} }
+  else { try { showDhToast('Downloads enabled', proj.address, 'check', 'var(--green)', 3000); } catch (e) {} }
+  if (typeof renderClientPortal === 'function') renderClientPortal(clientId, 'assets');
 }
 
-// ── Browse a project folder inline (works in admin + client portal) ──────────
-// Navigation stack per project root: window._cdNav[rootId] = [{id,name},…]
+// ── Browse a project inline (works in admin + client portal) ─────────────────
+// Navigation stack per project: window._cdNav[projKey] = [{id,name},…]
 window._cdNav = window._cdNav || {};
+window._cdRootProjects = window._cdRootProjects || {};
 
-async function cdToggleBrowse(clientId, folderId) {
-  const el = document.getElementById('cd-browse-' + folderId);
+function cdToggleBrowse(clientId, projKey) {
+  const el = document.getElementById('cd-browse-' + projKey);
   if (!el) return;
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
   el.style.display = '';
-  window._cdNav[folderId] = [];
-  cdRenderFolder(folderId);
+  const c = _cdClient(clientId);
+  const proj = (c?.driveProjects || []).find(p => _cdProjKey(p) === projKey);
+  window._cdRootProjects[projKey] = proj ? _cdProjFolders(proj) : [];
+  window._cdNav[projKey] = [];
+  cdRenderFolder(projKey);
 }
 
-function cdNavInto(rootId, id, name) {
-  window._cdNav[rootId] = [...(window._cdNav[rootId] || []), { id, name }];
-  cdRenderFolder(rootId);
+function cdNavInto(projKey, id, name) {
+  window._cdNav[projKey] = [...(window._cdNav[projKey] || []), { id, name }];
+  cdRenderFolder(projKey);
 }
-function cdNavBack(rootId) {
-  window._cdNav[rootId] = (window._cdNav[rootId] || []).slice(0, -1);
-  cdRenderFolder(rootId);
+function cdNavBack(projKey) {
+  window._cdNav[projKey] = (window._cdNav[projKey] || []).slice(0, -1);
+  cdRenderFolder(projKey);
 }
 
-async function cdRenderFolder(rootId) {
-  const el = document.getElementById('cd-browse-' + rootId);
+function _cdFolderRowHtml(projKey, id, name, sub) {
+  const safeName = (name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  return `<div onclick="cdNavInto('${projKey}','${id}','${safeName}')" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='var(--navy-mid)'" onmouseleave="this.style.background='transparent'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      ${sub ? `<div style="font-size:9px;color:var(--muted)">${sub}</div>` : ''}
+    </div>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>`;
+}
+
+async function cdRenderFolder(projKey) {
+  const el = document.getElementById('cd-browse-' + projKey);
   if (!el) return;
-  const stack = window._cdNav[rootId] || [];
-  const currentId = stack.length ? stack[stack.length - 1].id : rootId;
+  const stack = window._cdNav[projKey] || [];
+  const roots = window._cdRootProjects[projKey] || [];
+
+  // Multi-folder project at the top level: list the folders themselves
+  if (!stack.length && roots.length > 1) {
+    el.innerHTML = roots.map(f => _cdFolderRowHtml(projKey, f.folderId, f.label || f.name, f.name)).join('');
+    return;
+  }
+
+  const currentId = stack.length ? stack[stack.length - 1].id : (roots[0] ? roots[0].folderId : projKey);
   el.innerHTML = '<div style="padding:10px;text-align:center;color:var(--muted);font-size:12px">Loading files…</div>';
   try {
     const data = await _filesApi('list', { folderId: currentId });
@@ -293,7 +373,7 @@ async function cdRenderFolder(rootId) {
     const files = data.files || [];
     const crumbHtml = stack.length
       ? `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <button onclick="cdNavBack('${rootId}')" style="border:none;background:var(--navy-mid);border-radius:8px;color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;padding:4px 12px">← Back</button>
+          <button onclick="cdNavBack('${projKey}')" style="border:none;background:var(--navy-mid);border-radius:8px;color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;padding:4px 12px">← Back</button>
           <span style="font-size:11px;color:var(--muted)">${stack.map(s => s.name).join(' / ')}</span>
         </div>`
       : '';
@@ -303,15 +383,8 @@ async function cdRenderFolder(rootId) {
     }
     el.innerHTML = crumbHtml + files.map(f => {
       const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+      if (isFolder) return _cdFolderRowHtml(projKey, f.id, f.name, '');
       const size = f.size ? _filesFormatSize(f.size) : '';
-      const safeName = (f.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      if (isFolder) {
-        return `<div onclick="cdNavInto('${rootId}','${f.id}','${safeName}')" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='var(--navy-mid)'" onmouseleave="this.style.background='transparent'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          <span style="flex:1;font-size:12px;font-weight:600;color:var(--offwhite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</span>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>`;
-      }
       return `<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px">
         ${typeof _filesGetIcon === 'function' ? `<span style="flex-shrink:0;display:inline-flex">${_filesGetIcon(f.mimeType, f.name)}</span>` : ''}
         <div style="flex:1;min-width:0">
