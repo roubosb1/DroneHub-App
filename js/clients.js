@@ -3345,10 +3345,12 @@ async function cpSendMessage(){
 
   // 2. Mirror into ops-side LouChat so the team sees it immediately
   const cpSess=(() => { try{return JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null');}catch(e){return null;} })();
-  const clientDisplayName=cpSess?.name||'Client';
+  const _cpClientRec=(typeof clients!=='undefined'?clients:[]).find(c=>String(c.id)===String(cpActiveClientId));
+  const clientDisplayName=cpSess?.name||_cpClientRec?.name||'Client';
   const lcChannelId='lc_client_'+cpActiveClientId;
   let channels=getLcChannels();
-  if(!channels.find(c=>c.id===lcChannelId)){
+  const existingCh=channels.find(c=>c.id===lcChannelId);
+  if(!existingCh){
     channels.push({
       id:lcChannelId,
       name:clientDisplayName.split(' ')[0].toLowerCase(),
@@ -3359,6 +3361,12 @@ async function cpSendMessage(){
       createdAt:new Date().toISOString().slice(0,10),
       members:[],
     });
+    saveLcChannels(channels);
+  } else if((existingCh.name==='client'||existingCh.clientName==='Client')&&clientDisplayName!=='Client'){
+    // Repair channels created before the client name was known
+    existingCh.name=clientDisplayName.split(' ')[0].toLowerCase();
+    existingCh.clientName=clientDisplayName;
+    existingCh.topic='Direct messages from '+clientDisplayName;
     saveLcChannels(channels);
   }
   saveLcMessage(lcChannelId,{
