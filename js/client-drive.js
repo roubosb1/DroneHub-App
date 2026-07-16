@@ -89,12 +89,14 @@ async function cdLinkSelected(clientId) {
   if (btn) { btn.textContent = 'Linking…'; btn.disabled = true; }
 
   c.driveProjects = c.driveProjects || [];
-  let shareFails = 0;
+  let shareFails = 0, jobsCreated = 0, jobsLinked = 0;
+  let nextJobId = Date.now();
   for (const f of checked) {
+    const address = _cdParseAddress(f.name, c.name);
     const proj = {
       folderId: f.id,
       name: f.name,
-      address: _cdParseAddress(f.name, c.name),
+      address,
       webViewLink: f.webViewLink || '',
       shared: false,
       linkedAt: new Date().toISOString(),
@@ -107,11 +109,46 @@ async function cdLinkSelected(clientId) {
       } catch (e) { shareFails++; }
     }
     c.driveProjects.push(proj);
+
+    // Create (or link) a Finished project in the tracker so it shows in the
+    // client's Projects/Files tabs. $0 financials — no payroll/revenue impact.
+    if (typeof savedJobs !== 'undefined') {
+      const addrLc = address.toLowerCase();
+      const existing = savedJobs.find(j =>
+        (j.driveLink && f.id && j.driveLink.includes(f.id)) ||
+        (String(j.clientId) === String(c.id) && ((j.address || '').toLowerCase() === addrLc || (j.name || '').toLowerCase() === addrLc)));
+      if (existing) {
+        if (!existing.driveLink && f.webViewLink) { existing.driveLink = f.webViewLink; jobsLinked++; }
+      } else {
+        savedJobs.push({
+          id: nextJobId++,
+          name: address,
+          date: (f.modifiedTime || proj.linkedAt).slice(0, 10),
+          status: 'completed',
+          clientId: c.id,
+          clientName: c.name,
+          address,
+          driveLink: f.webViewLink || '',
+          market: 'canada',
+          grand: 0, driveCost: 0,
+          services: {}, hours: {}, payouts: {}, editors: {}, extraServices: [],
+          commissionPct: 0, commissionAmt: 0,
+          notes: 'Imported from Google Drive',
+          _importedFromDrive: true,
+        });
+        jobsCreated++;
+      }
+    }
   }
   c.driveProjects.sort((a, b) => a.address.localeCompare(b.address));
   saveClientsToStorage();
+  if ((jobsCreated || jobsLinked) && typeof saveJobsToStorage === 'function') saveJobsToStorage();
   document.getElementById('cd-scan-modal')?.remove();
-  try { showDhToast('Projects linked', checked.length + ' project' + (checked.length === 1 ? '' : 's') + ' added to ' + c.name + (shareFails ? ' — ' + shareFails + ' could not be shared' : ''), 'check', 'var(--green)', 4000); } catch (e) {}
+  const bits = [checked.length + ' folder' + (checked.length === 1 ? '' : 's') + ' linked'];
+  if (jobsCreated) bits.push(jobsCreated + ' finished project' + (jobsCreated === 1 ? '' : 's') + ' created');
+  if (jobsLinked) bits.push(jobsLinked + ' existing project' + (jobsLinked === 1 ? '' : 's') + ' updated');
+  if (shareFails) bits.push(shareFails + ' could not be shared');
+  try { showDhToast('Drive import complete', bits.join(' · '), 'check', 'var(--green)', 5000); } catch (e) {}
   if (typeof renderClientPortal === 'function' && typeof currentPortalClientId !== 'undefined' && currentPortalClientId) {
     renderClientPortal(clientId, 'assets');
   }
