@@ -2849,11 +2849,24 @@ async function cpShowTab(tab){
         <div style="margin-bottom:12px">
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Shoot type</label>
           <select id="cp-book-type" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
-            <option value="Aerial Photo">Aerial Photo</option>
-            <option value="Aerial Video">Aerial Video</option>
-            <option value="Photo+Video">Photo + Video</option>
-            <option value="Virtual Tour">Virtual Tour</option>
-            <option value="Other">Other</option>
+            <optgroup label="Property shoots">
+              <option value="Reel Package">Reel Package (video + photos + reels)</option>
+              <option value="Photo+Video">Photo + Video</option>
+              <option value="Aerial Photo">Photo only</option>
+              <option value="Aerial Video">Video only</option>
+              <option value="Twilight Shoot">Twilight shoot</option>
+              <option value="Exterior Only">Exterior only</option>
+            </optgroup>
+            <optgroup label="Add-ons & extras">
+              <option value="Additional Reels">Additional social reels</option>
+              <option value="Virtual Tour">Virtual Tour</option>
+              <option value="Floor Plan">Floor plan</option>
+            </optgroup>
+            <optgroup label="Packages">
+              <option value="Agent Promo">Agent Promo package</option>
+              <option value="Social Day Rate">Social Day Rate (half/full day)</option>
+            </optgroup>
+            <option value="Other">Other / not sure</option>
           </select>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
