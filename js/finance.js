@@ -61,7 +61,7 @@ const US_MARKET_PRICING={
     agentPromo:4000,
     exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
-    reelAddon:800,
+    reelAddon:400,
     offSeasonDiscount:1000,
   },
   'other_us':{
