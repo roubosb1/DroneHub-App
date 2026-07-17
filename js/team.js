@@ -1461,6 +1461,22 @@ function renderTracker(){
   const countEl=document.getElementById('tracker-row-count');
   if(!tbody) return;
 
+  // Self-heal: imported Drive projects always belong in Completed — stamp a
+  // finished production stage on any that are missing one (once per session)
+  if(!window._dhImportStamped&&typeof savedJobs!=='undefined'){
+    window._dhImportStamped=true;
+    let stamped=0;
+    savedJobs.forEach(j=>{
+      if(!j._importedFromDrive) return;
+      const st=getTrackerStage(j.id);
+      if(st.editStatus!=='finals_sent'){
+        setTrackerStage(j.id,{stage:'delivered',editStatus:'finals_sent',filesReceived:true,downloadLink:j.driveLink||st.downloadLink||'',completionDate:j.date||''});
+        stamped++;
+      }
+    });
+    if(stamped){try{showDhToast('Tracker updated',stamped+' imported project'+(stamped===1?'':'s')+' moved to Completed','check','var(--green)',4000);}catch(e){}}
+  }
+
   const _isPhoto = _trackerMode === 'photo';
 
   // Remove old contractor filter population (replaced by client autocomplete)
