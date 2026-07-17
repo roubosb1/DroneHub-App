@@ -1836,8 +1836,8 @@ function renderTracker(){
       </td>
       <td style="padding:4px 6px;overflow:hidden;text-align:center">
         <select onchange="trackerInlineSave('${j.id}','claimedBy',this.value,'${_trackerMode}');renderTracker()" title="Assign Editor"
-          style="width:100%;padding:2px 2px;border-radius:6px;border:1px solid ${_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${_isDhEditor?'#FF7070':_lm?vidColor(editor):'#fff'};font-size:10px;font-weight:700;cursor:pointer;outline:none">
-          ${buildEditorOptions(_rawEditor||'DroneHub')}
+          style="width:100%;padding:2px 2px;border-radius:6px;border:1px solid ${!_rawEditor?'rgba(255,255,255,.18)':_isDhEditor?'rgba(240,82,82,.5)':vidColor(editor)+'66'};background:${!_rawEditor?'rgba(255,255,255,.05)':_isDhEditor?'rgba(240,82,82,.18)':vidColor(editor)+'22'};color:${!_rawEditor?'var(--muted)':_isDhEditor?'#FF7070':_lm?vidColor(editor):'#fff'};font-size:10px;font-weight:700;cursor:pointer;outline:none">
+          ${_rawEditor?buildEditorOptions(_rawEditor):buildEditorOptions('')}
         </select>
       </td>
       <td style="padding:4px 6px;overflow:hidden;text-align:center">
