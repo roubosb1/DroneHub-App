@@ -2899,8 +2899,8 @@ async function cpShowTab(tab){
       </div>
 
       <!-- Book a Shoot modal -->
-      <div id="cp-book-modal" style="display:none;position:fixed;inset:0;background:rgba(6,10,22,.72);backdrop-filter:blur(4px);z-index:9400;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto" onclick="if(event.target===this)cpCloseBookModal()">
-      <div class="card" style="width:100%;max-width:640px;margin:0">
+      <div id="cp-book-modal" style="display:none;position:fixed;inset:0;background:rgba(6,10,22,.72);backdrop-filter:blur(4px);z-index:9400;justify-content:center;padding:30px 16px;overflow-y:auto" onclick="if(event.target===this)cpCloseBookModal()">
+      <div class="card" style="width:100%;max-width:640px;margin:auto">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="section-label" style="display:flex;align-items:center;gap:6px;margin:0">${_icon('calendar',14)} Request a new shoot</div>
           <button onclick="cpCloseBookModal()" style="width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:14px;cursor:pointer">✕</button>
