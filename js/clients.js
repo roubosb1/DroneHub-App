@@ -2893,23 +2893,42 @@ async function cpShowTab(tab){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
           <div>
             <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Preferred date</label>
-            <input type="date" id="cp-book-date" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <input type="date" id="cp-book-date" onchange="cpCalCheckDate()" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Preferred time</label>
-            <input type="time" id="cp-book-time" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <input type="time" id="cp-book-time" onchange="cpCalCheckDate()" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
           </div>
           <div>
             <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Approx. sq ft</label>
             <input type="number" id="cp-book-sqft" placeholder="e.g. 2500" min="0" step="100" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
           </div>
         </div>
+        <div id="cp-cal-day-view" style="margin-bottom:12px"></div>
         <div style="margin-bottom:16px">
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Notes</label>
           <textarea id="cp-book-notes" placeholder="Any special instructions, access notes, or questions…" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);min-height:70px;resize:vertical;font-family:var(--font)"></textarea>
         </div>
         <div id="cp-book-success" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(34,217,122,.12);border:1px solid rgba(34,217,122,.3);color:var(--green);font-size:13px;font-weight:600;margin-bottom:12px">✓ Request submitted! We'll confirm your booking shortly.</div>
         <button onclick="cpSubmitBookingRequest()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Submit Request →</button>
+      </div>
+      <div class="card" style="margin-bottom:18px">
+        <div class="section-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px">${_icon('calendar',14)} Your calendar</div>
+        ${c.calendarIcs?`
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--green);font-weight:600">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Calendar connected — pick a date above and we'll show your schedule for that day
+            </div>
+            <button onclick="cpCalDisconnect()" style="padding:5px 14px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">Disconnect</button>
+          </div>`
+        :`
+          <div style="font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:10px">Link your calendar so you can spot conflicts while booking. Paste your calendar's iCal address (ends in <strong style="color:var(--offwhite)">.ics</strong>) — in Google Calendar: Settings → your calendar → Integrate calendar → <em>Secret address in iCal format</em>. Outlook and Apple Calendar publish iCal links too.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="url" id="cp-cal-ics-input" placeholder="https://calendar.google.com/…/basic.ics" style="flex:1;min-width:220px;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <button onclick="cpCalConnect()" id="cp-cal-connect-btn" style="padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Connect</button>
+          </div>
+          <div id="cp-cal-connect-status" style="font-size:11px;color:var(--muted);margin-top:8px"></div>`}
       </div>
       ${myBookings.length?`<div class="card">
         <div class="section-label" style="margin-bottom:12px">Your shoots</div>
@@ -2929,6 +2948,7 @@ async function cpShowTab(tab){
   }
 
   document.getElementById('cp-content').innerHTML=html;
+  if(tab==='booking') setTimeout(()=>{if(typeof cpCalCheckDate==='function')cpCalCheckDate();},100);
 }
 
 function cpCloseInvoice(){
@@ -3116,6 +3136,89 @@ function cpSubmitBookingRequest(){
   if(successEl){successEl.style.display='block';}
   ['cp-book-address','cp-book-date','cp-book-time','cp-book-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   setTimeout(()=>cpShowTab('booking'),1800);
+}
+
+// ── Client calendar link (iCal/ICS) — conflict check while booking ───────────
+let _cpCalCache=null; // {url, events, at}
+
+function cpCalConnect(){
+  const input=document.getElementById('cp-cal-ics-input');
+  const status=document.getElementById('cp-cal-connect-status');
+  const url=(input?.value||'').trim();
+  const c=(clients||[]).find(x=>x.id===cpActiveClientId);
+  if(!c) return;
+  if(!url||!/^https?:\/\//i.test(url)||!url.toLowerCase().includes('.ics')){
+    if(status){status.textContent='That doesn’t look like an iCal address — it should start with https:// and contain .ics';status.style.color='var(--red)';}
+    return;
+  }
+  if(status){status.textContent='Checking your calendar…';status.style.color='var(--muted)';}
+  fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(url))
+    .then(r=>r.json().then(j=>({ok:r.ok,j})))
+    .then(({ok,j})=>{
+      if(!ok) throw new Error(j.error||'Could not read that calendar');
+      c.calendarIcs=url;
+      saveClientsToStorage();
+      _cpCalCache={url,events:j.events||[],at:Date.now()};
+      cpShowTab('booking');
+    })
+    .catch(e=>{ if(status){status.textContent='Could not read that calendar: '+e.message;status.style.color='var(--red)';} });
+}
+
+function cpCalDisconnect(){
+  const c=(clients||[]).find(x=>x.id===cpActiveClientId);
+  if(!c) return;
+  delete c.calendarIcs;
+  saveClientsToStorage();
+  _cpCalCache=null;
+  cpShowTab('booking');
+}
+
+function _cpCalFetch(url){
+  if(_cpCalCache&&_cpCalCache.url===url&&Date.now()-_cpCalCache.at<10*60*1000) return Promise.resolve(_cpCalCache.events);
+  return fetch('/.netlify/functions/ics-proxy?url='+encodeURIComponent(url))
+    .then(r=>r.json().then(j=>({ok:r.ok,j})))
+    .then(({ok,j})=>{
+      if(!ok) throw new Error(j.error||'sync failed');
+      _cpCalCache={url,events:j.events||[],at:Date.now()};
+      return _cpCalCache.events;
+    });
+}
+
+function cpCalCheckDate(){
+  const el=document.getElementById('cp-cal-day-view');
+  if(!el) return;
+  const c=(clients||[]).find(x=>x.id===cpActiveClientId);
+  const date=document.getElementById('cp-book-date')?.value;
+  if(!c?.calendarIcs||!date){el.innerHTML='';return;}
+  el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border:1px solid var(--border);border-radius:10px">Checking your calendar…</div>';
+  _cpCalFetch(c.calendarIcs).then(evts=>{
+    const day=(evts||[]).filter(e=>e.date===date||(e.endDate&&e.date<=date&&date<=e.endDate));
+    const toMin=t=>{const[a,b]=(t||'').split(':').map(Number);return isNaN(a)?null:a*60+(b||0);};
+    const shootStart=toMin(document.getElementById('cp-book-time')?.value);
+    const shootEnd=shootStart!=null?shootStart+120:null; // assume ~2h shoot
+    const fmtT=t=>{if(!t)return'';const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';return((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap;};
+    if(!day.length){
+      el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--green);padding:9px 12px;background:rgba(34,217,122,.08);border:1px solid rgba(34,217,122,.25);border-radius:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Your calendar is clear on ${date}</div>`;
+      return;
+    }
+    const rows=day.map(e=>{
+      const evStart=toMin(e.time),evEnd=toMin(e.endTime)??(evStart!=null?evStart+60:null);
+      const conflict=shootStart!=null&&evStart!=null&&evStart<shootEnd&&shootStart<evEnd;
+      const when=e.time?fmtT(e.time)+(e.endTime?' – '+fmtT(e.endTime):''):'All day';
+      return `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px">
+        <span style="color:${conflict?'var(--red)':'var(--offwhite)'};font-weight:${conflict?'700':'500'}">${conflict?'⚠️ ':''}${(e.title||'Busy').replace(/</g,'&lt;')}</span>
+        <span style="color:${conflict?'var(--red)':'var(--muted)'};white-space:nowrap">${when}</span>
+      </div>`;
+    }).join('');
+    const anyConflict=shootStart!=null&&day.some(e=>{const s=toMin(e.time),en=toMin(e.endTime)??(s!=null?s+60:null);return s!=null&&s<shootEnd&&shootStart<en;});
+    el.innerHTML=`<div style="padding:10px 14px;background:var(--navy-lift);border:1px solid ${anyConflict?'rgba(240,82,82,.4)':'var(--border)'};border-radius:10px">
+      <div style="font-size:10px;font-weight:700;color:${anyConflict?'var(--red)':'var(--muted)'};text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${anyConflict?'⚠️ Possible conflict — your schedule on '+date:'Your schedule on '+date}</div>
+      ${rows}
+      ${anyConflict?'<div style="font-size:11px;color:var(--muted);margin-top:6px">Shoots typically run about 2 hours — consider a different time, or submit anyway and we’ll sort timing out with you.</div>':''}
+    </div>`;
+  }).catch(()=>{
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border:1px solid var(--border);border-radius:10px">Couldn’t reach your calendar right now — you can still book.</div>';
+  });
 }
 
 // ── FEATURE 4: Notification Badge ────────────────────────────────────────────
