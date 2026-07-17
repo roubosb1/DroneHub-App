@@ -78,7 +78,7 @@ US MARKET jobs use PACKAGES instead of the service booleans (leave all "services
 - usSocialTier (only when usPkgType is "social") — number of reels: "r1".."r5", or "fullDay" for unlimited.
 - usDayType (only when usPkgType is "day") — "half" or "full".
 - usAddons — sunrise (sunrise/sunset/twilight lighting), photoHDR (HDR photos), photoFlash (flash photography). Set true only when clearly requested.
-- usListingReels (only when usPkgType is "listing") — number of social reels requested IN ADDITION to the listing shoot (e.g. "house tour plus 3 reels" -> usPkgType "listing", usListingReels 3). 0 if none. When reels are the ONLY deliverable use usPkgType "social" with usSocialTier instead.
+- usListingReels (only when usPkgType is "listing") — TOTAL number of social reels wanted with the listing shoot. Every listing includes 1 reel in its price, so default to 1 when reels aren't mentioned; "house tour plus 3 reels" -> usPkgType "listing", usListingReels 3 (1 included + 2 charged). When reels are the ONLY deliverable use usPkgType "social" with usSocialTier instead.
 - For Canada jobs set usPkgType/usListingTier/usSocialTier/usDayType to null, usListingReels 0, and all usAddons false.
 
 Respond with ONLY a single JSON object, no markdown fences, no commentary, matching exactly this shape:
@@ -92,7 +92,7 @@ Respond with ONLY a single JSON object, no markdown fences, no commentary, match
   "services": { "video": bool, "photo": bool, "tvideo": bool, "tphoto": bool, "reel": bool, "extphoto": bool, "extvideo": bool, "floorplan": bool, "randomvideo": bool, "randomphoto": bool, "rush": bool },
   "usPkgType": "listing"|"social"|"agent"|"day"|"exterior"|null,
   "usListingTier": "under4k"|"over4k"|"over8k"|null,
-  "usListingReels": number (0 if none),
+  "usListingReels": number (total reels on a listing; 1 is included in the package price — default 1),
   "usSocialTier": "r1"|"r2"|"r3"|"r4"|"r5"|"fullDay"|null,
   "usDayType": "half"|"full"|null,
   "usAddons": { "sunrise": bool, "photoHDR": bool, "photoFlash": bool },

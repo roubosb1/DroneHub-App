@@ -1108,7 +1108,7 @@ function _ejInitUSEdit(job){
     socialTier:ud.socialTier||null,
     dayType:ud.dayType||null,
     reelCount:ud.reelCount||0,
-    listingReelCount:ud.listingReelCount||0,
+    listingReelCount:ud.listingReelCount||(ud.pkgType==='listing'?1:0),
     reelsTBD:ud.reelsTBD||false,
     dayLocations:ud.dayLocations||[],
     offSeason:ud.offSeason||false,
@@ -1230,7 +1230,8 @@ function recalcEditUS(){
       base=p.listing[_ejUsState.listingTier]||0;
       const tl={under4k:'Under 4k sqft',over4k:'4k–8k sqft',over8k:'Over 8k sqft'};
       parts.push(`Listing (${tl[_ejUsState.listingTier]}) $${base.toLocaleString()}`);
-      if(_ejUsState.listingReelCount>0){const rr=p.reelAddon||400;const rt=_ejUsState.listingReelCount*rr;base+=rt;parts.push(`Reel add-on ×${_ejUsState.listingReelCount} +$${rt.toLocaleString()}`);}
+      {const _xr=Math.max(0,(_ejUsState.listingReelCount||1)-1);
+      if(_xr>0){const rr=p.reelAddon||400;const rt=_xr*rr;base+=rt;parts.push(`Extra reels ×${_xr} +$${rt.toLocaleString()}`);}}
       break;
     case 'social':
       if(!_ejUsState.socialTier) return noSel('← Select social package tier');
@@ -1374,7 +1375,7 @@ function saveEditJob(){
       case 'listing':
         if(!_ejUsState.listingTier){alert('Please select a property size tier.');return;}
         total=p.listing[_ejUsState.listingTier]||0;
-        total+=(_ejUsState.listingReelCount||0)*(p.reelAddon||400);
+        total+=Math.max(0,(_ejUsState.listingReelCount||1)-1)*(p.reelAddon||400);
         break;
       case 'social':
         if(!_ejUsState.socialTier){alert('Please select a social package tier.');return;}
@@ -1780,11 +1781,9 @@ function aiQuoteApplyToForm(d){
       let tier=d.usListingTier;
       if(!tier&&d.sqft) tier=d.sqft<4000?'under4k':(d.sqft<=8000?'over4k':'over8k');
       if(tier&&typeof selectUSTier==='function') selectUSTier(tier);
-      if(d.usListingReels>0){
-        usQuoteState.listingReelCount=Math.round(d.usListingReels);
-        const rc=document.getElementById('us-listing-reel-count');
-        if(rc) rc.textContent=usQuoteState.listingReelCount;
-      }
+      usQuoteState.listingReelCount=Math.max(1,Math.round(d.usListingReels||1));
+      const rc=document.getElementById('us-listing-reel-count');
+      if(rc) rc.textContent=usQuoteState.listingReelCount;
     }
     if(pkg==='social'&&d.usSocialTier&&typeof selectUSSocialTier==='function') selectUSSocialTier(d.usSocialTier);
     if(pkg==='day'&&d.usDayType&&typeof selectUSDayType==='function') selectUSDayType(d.usDayType);
@@ -2000,9 +1999,10 @@ function renderUSServicePanel(market){
       if(btn) btn.classList.toggle('us-tier-active', usQuoteState.listingTier===k);
     });
     const rp = document.getElementById('us-listing-reel-price');
-    if(rp) rp.textContent = '$'+(p.reelAddon||400).toLocaleString()+' each · standalone reels are $'+(p.social?.r1||500).toLocaleString();
+    if(rp) rp.textContent = '1 included · additional $'+(p.reelAddon||400).toLocaleString()+' each';
+    if(!usQuoteState.listingReelCount) usQuoteState.listingReelCount=1;
     const rc = document.getElementById('us-listing-reel-count');
-    if(rc) rc.textContent = usQuoteState.listingReelCount||0;
+    if(rc) rc.textContent = usQuoteState.listingReelCount;
   }
 }
 
@@ -2011,7 +2011,7 @@ function selectUSPkg(pkgType){
   usQuoteState.listingTier = null;
   usQuoteState.socialTier = null;
   usQuoteState.dayType = null;
-  usQuoteState.listingReelCount = 0;
+  usQuoteState.listingReelCount = pkgType==='listing'?1:0; // listing includes 1 reel
   const market = document.getElementById('job-market-input')?.value || usQuoteState.market;
   renderUSServicePanel(market);
   calcUS();
@@ -2045,9 +2045,10 @@ function selectUSDayType(type){
   calcUS();
 }
 
-// Social reels added onto a Listing Video package (cheaper than standalone)
+// Total social reels on a Listing Video package — the first is included in
+// the listing price, additional ones are charged at the market's reelAddon rate.
 function changeUSListingReels(delta){
-  usQuoteState.listingReelCount = Math.max(0, (usQuoteState.listingReelCount||0)+delta);
+  usQuoteState.listingReelCount = Math.max(1, (usQuoteState.listingReelCount||1)+delta);
   const el = document.getElementById('us-listing-reel-count');
   if(el) el.textContent = usQuoteState.listingReelCount;
   calcUS();
@@ -2128,7 +2129,7 @@ function getUSGrand(){
     case 'listing':
       if(!usQuoteState.listingTier) return 0;
       base = p.listing[usQuoteState.listingTier] || 0;
-      base += (usQuoteState.listingReelCount||0) * (p.reelAddon||400);
+      base += Math.max(0,(usQuoteState.listingReelCount||1)-1) * (p.reelAddon||400); // first reel included
       break;
     case 'social':
       if(!usQuoteState.socialTier) return 0;
@@ -2202,10 +2203,11 @@ function renderUSQuote(market, grand){
   switch(usQuoteState.pkgType){
     case 'listing':{
       const tierLabels = { under4k:'Under 4,000 sqft', over4k:'4,000–8,000 sqft', over8k:'Over 8,000 sqft' };
-      lines.push({ label:'Listing Video — '+tierLabels[usQuoteState.listingTier||'under4k'], amount: p?.listing[usQuoteState.listingTier]||0 });
-      if(usQuoteState.listingReelCount>0){
+      lines.push({ label:'Listing Video — '+tierLabels[usQuoteState.listingTier||'under4k']+' (includes 1 social reel)', amount: p?.listing[usQuoteState.listingTier]||0 });
+      const _extraReels=Math.max(0,(usQuoteState.listingReelCount||1)-1);
+      if(_extraReels>0){
         const rr=p?.reelAddon||400;
-        lines.push({ label:`Social reel add-on (${usQuoteState.listingReelCount} × $${rr.toLocaleString()})`, amount: usQuoteState.listingReelCount*rr });
+        lines.push({ label:`Additional social reels (${_extraReels} × $${rr.toLocaleString()})`, amount: _extraReels*rr });
       }
       break;
     }

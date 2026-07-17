@@ -3852,8 +3852,9 @@ function openInvoice(jobId){
     const socialLabels={r1:'1 Reel',r2:'2 Reels',r3:'3 Reels',r5:'5 Reels',fullDay:'Full Day Social'};
     if(ud.pkgType==='listing'&&ud.listingTier){
       const basePrice=p.listing[ud.listingTier]||job.grand;
-      lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier}`,qty:1,unit:basePrice,total:basePrice});
-      if((ud.listingReelCount||0)>0){const rr=p.reelAddon||400;lines.push({desc:'Add-on: Social Reels',qty:ud.listingReelCount,unit:rr,total:ud.listingReelCount*rr});}
+      lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier} (includes 1 social reel)`,qty:1,unit:basePrice,total:basePrice});
+      {const _xr=Math.max(0,(ud.listingReelCount||1)-1);
+      if(_xr>0){const rr=p.reelAddon||400;lines.push({desc:'Add-on: Additional Social Reels',qty:_xr,unit:rr,total:_xr*rr});}}
       if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
       if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
       if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
