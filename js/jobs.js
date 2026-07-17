@@ -363,7 +363,16 @@ function renderJobs(){
   statuses.forEach(st=>{
     const col=document.getElementById('col-'+st);
     if(!col) return;
-    const jobs=filtered.filter(j=>(j.status||'quoted')===st);
+    let jobs=filtered.filter(j=>(j.status||'quoted')===st);
+    // Completed column: show everything from the last 30 days; if that's fewer
+    // than 10 jobs, top up with older ones so 10 always remain visible.
+    // Skipped while searching or stat-filtering so older jobs stay findable.
+    if(st==='completed' && !jobsQ && !_jobsStatFilter){
+      const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
+      const sorted=jobs.slice().sort((a,b)=>new Date(b.completedAt||b.date||0)-new Date(a.completedAt||a.date||0));
+      const recent=sorted.filter(j=>new Date(j.completedAt||j.date||0)>=cutoff);
+      jobs = recent.length>=10 ? recent : sorted.slice(0,10);
+    }
     if(!jobs.length){col.innerHTML='<div style="font-size:11px;color:#ccc;padding:8px 4px">None</div>';return;}
     col.innerHTML=jobs.map(j=>{
       const actionBtns=[];
