@@ -2280,7 +2280,7 @@ function renderUSQuote(market, grand){
       </div>`).join('')}
       <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 0;font-size:15px;font-weight:900">
         <span style="color:var(--white)">Total</span>
-        <span style="color:var(--blue-bright)">${fmt(grand)} <span style="font-size:11px;font-weight:600;color:var(--muted)">USD · No HST</span></span>
+        <span style="color:var(--blue-bright)">${fmt(grand)} <span style="font-size:11px;font-weight:600;color:var(--muted)">USD</span></span>
       </div>
       <div style="margin-top:8px;padding:8px 12px;background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.2);border-radius:8px;font-size:11px;color:var(--muted)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Invoice will be sent in <strong style="color:var(--white)">USD</strong> — payment processed via Stripe to Chase (US account)
