@@ -1780,7 +1780,8 @@ function aiQuoteApplyToForm(d){
     if(pkg==='listing'){
       let tier=d.usListingTier;
       if(!tier&&d.sqft) tier=d.sqft<4000?'under4k':(d.sqft<=8000?'over4k':'over8k');
-      if(tier&&typeof selectUSTier==='function') selectUSTier(tier);
+      if(!tier) tier='under4k'; // no size given — default to the most common tier so a price always fills
+      if(typeof selectUSTier==='function') selectUSTier(tier);
       usQuoteState.listingReelCount=Math.max(1,Math.round(d.usListingReels||1));
       const rc=document.getElementById('us-listing-reel-count');
       if(rc) rc.textContent=usQuoteState.listingReelCount;
