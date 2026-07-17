@@ -123,6 +123,28 @@ function saveJob(){
     linkDealToJob(dealId, job.id, job.grand);
   }
 
+  // If this quote was built from a client booking request, absorb the request:
+  // carry its client link over if the form didn't set one, then remove the
+  // original requested card so the pipeline doesn't show both.
+  if(window._quoteFromRequestId){
+    const reqIdx=savedJobs.findIndex(x=>String(x.id)===String(window._quoteFromRequestId));
+    const _reqCand=reqIdx>=0?savedJobs[reqIdx]:null;
+    const _reqMatches=_reqCand&&(
+      (job.clientId&&job.clientId===_reqCand.clientId)||
+      (_reqCand.address&&(job.address||job.name||'').toLowerCase().includes(_reqCand.address.slice(0,10).toLowerCase()))
+    );
+    if(reqIdx>=0&&_reqMatches){
+      const req=savedJobs[reqIdx];
+      if(!job.clientId&&req.clientId){
+        job.clientId=req.clientId;
+        job.clientName=(clients.find(c=>c.id===req.clientId)?.name)||req.clientName||'';
+      }
+      if(!job.shootTime&&req.preferredTime) job.shootTime=req.preferredTime;
+      savedJobs.splice(reqIdx,1);
+    }
+    window._quoteFromRequestId=null;
+  }
+
   savedJobs.push(job);
   saveJobsToStorage();
 
@@ -351,6 +373,7 @@ function renderJobs(){
         ${j.shootType?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:4px">${j.shootType}</div>`:''}
         ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,60)}${j.notes.length>60?'…':''}</div>`:''}
         <div class="job-card-actions">
+          <button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();quoteFromRequest('${j.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Build quote</button>
           <button class="job-action-btn job-action-confirm" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">✓ Confirm</button>
           <button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','quoted')">→ Quoted</button>
           <button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob('${j.id}')">Delete</button>
@@ -1560,6 +1583,34 @@ function _aiQuoteSetStatus(msg, isError){
   if(!el) return;
   el.textContent = msg;
   el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+
+// Bring a client booking request into the quote builder: opens the Quote pane,
+// pre-types the request details into the AI assistant box, and remembers the
+// request so saving the finished quote replaces it instead of duplicating.
+function quoteFromRequest(jobId){
+  const j=(savedJobs||[]).find(x=>String(x.id)===String(jobId));
+  if(!j) return;
+  window._quoteFromRequestId=j.id;
+  const clientRec=(typeof clients!=='undefined'?clients:[]).find(c=>c.id===j.clientId);
+  const parts=[];
+  parts.push(j.address||j.name||'');
+  if(clientRec?.name) parts.push('Client is '+clientRec.name+(clientRec.email?' ('+clientRec.email+')':'')+'.');
+  else if(j.clientName) parts.push('Client is '+j.clientName+'.');
+  if(j.shootType) parts.push('They requested: '+j.shootType+'.');
+  if(j.date) parts.push('Shoot on '+j.date+(j.preferredTime?' at '+j.preferredTime:'')+'.');
+  if(j.notes) parts.push('Client notes: '+j.notes);
+  const description=parts.filter(Boolean).join(' ');
+  showPane('quote');
+  setTimeout(()=>{
+    const input=document.getElementById('ai-quote-input');
+    if(input){
+      input.value=description;
+      input.scrollIntoView({behavior:'smooth',block:'center'});
+      input.focus();
+    }
+    _aiQuoteSetStatus('Request loaded — click "Fill quote form" to build it out.');
+  },300);
 }
 
 async function aiQuoteGenerate(){
