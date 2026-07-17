@@ -140,6 +140,7 @@ function saveJob(){
         job.clientName=(clients.find(c=>c.id===req.clientId)?.name)||req.clientName||'';
       }
       if(!job.shootTime&&req.preferredTime) job.shootTime=req.preferredTime;
+      if(req.requestChat&&req.requestChat.length) job.requestChat=req.requestChat;
       savedJobs.splice(reqIdx,1);
     }
     window._quoteFromRequestId=null;
@@ -370,10 +371,11 @@ function renderJobs(){
         <div class="job-card-title">${j.name}</div>
         <div class="job-card-meta">${j.date||'No date'}${j.preferredTime?' at '+j.preferredTime:''}</div>
         ${clientName?`<div style="font-size:11px;color:var(--green);margin-bottom:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</div>`:''}
-        ${j.shootType?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:4px">${j.shootType}</div>`:''}
+        ${j.shootType?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:4px">${j.shootType}${j.sqft?' · '+j.sqft.toLocaleString()+' sqft':''}</div>`:''}
         ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,60)}${j.notes.length>60?'…':''}</div>`:''}
         <div class="job-card-actions">
           <button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();quoteFromRequest('${j.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Build quote</button>
+          <button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openRequestChat('${j.id}','team')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages${(j.requestChat&&j.requestChat.length)?' ('+j.requestChat.length+')':''}</button>
           <button class="job-action-btn job-action-confirm" onclick="event.stopPropagation();updateJobStatus('${j.id}','confirmed')">✓ Confirm</button>
           <button class="job-action-btn" onclick="event.stopPropagation();updateJobStatus('${j.id}','quoted')">→ Quoted</button>
           <button class="job-action-btn job-action-delete" onclick="event.stopPropagation();deleteJob('${j.id}')">Delete</button>
@@ -1585,6 +1587,86 @@ function _aiQuoteSetStatus(msg, isError){
   el.style.color = isError ? 'var(--red)' : 'var(--muted)';
 }
 
+// ── Booking request chat ─────────────────────────────────────────────────────
+// Per-booking message thread stored on the job record (j.requestChat) so the
+// client and the team can negotiate date/time before the shoot is confirmed.
+// Works from both the ops requested card (role 'team') and the client portal
+// Your Shoots list (role 'client').
+let _reqChatJobId=null,_reqChatRole='team';
+function _reqChatEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _reqChatAuthor(){
+  if(_reqChatRole==='client'){
+    const c=(typeof clients!=='undefined'?clients:[]).find(x=>x.id===(typeof cpActiveClientId!=='undefined'?cpActiveClientId:null));
+    return c?.name||'Client';
+  }
+  return (typeof gateGetSession==='function'&&gateGetSession()?.name)||'DroneHub Media';
+}
+function openRequestChat(jobId,role){
+  _reqChatJobId=jobId;_reqChatRole=role||'team';
+  const j=(savedJobs||[]).find(x=>String(x.id)===String(jobId));
+  if(!j) return;
+  let ov=document.getElementById('req-chat-overlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='req-chat-overlay';
+    ov.style.cssText='display:none;position:fixed;inset:0;background:rgba(6,10,22,.7);backdrop-filter:blur(4px);z-index:9500;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML=`<div style="width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div id="req-chat-title" style="font-size:14px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="req-chat-sub" style="font-size:11px;color:var(--muted);margin-top:2px"></div>
+        </div>
+        <button onclick="document.getElementById('req-chat-overlay').style.display='none'" style="flex-shrink:0;width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <div id="req-chat-thread" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:180px"></div>
+      <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+        <textarea id="req-chat-input" rows="1" placeholder="e.g. Could we do 2 hours later that day?" style="flex:1;box-sizing:border-box;padding:10px 14px;border:1px solid var(--border-bright);border-radius:18px;font-size:13px;background:var(--navy-lift);color:var(--white);resize:none;font-family:var(--font)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();reqChatSend();}"></textarea>
+        <button onclick="reqChatSend()" style="flex-shrink:0;width:38px;height:38px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click',e=>{if(e.target===ov)ov.style.display='none';});
+  }
+  document.getElementById('req-chat-title').textContent=j.address||j.name||'Booking request';
+  document.getElementById('req-chat-sub').textContent='Requested for '+(j.date||'—')+(j.preferredTime?' at '+j.preferredTime:'')+' · chat about timing, access, or details';
+  reqChatRenderThread(j);
+  ov.style.display='flex';
+  setTimeout(()=>document.getElementById('req-chat-input')?.focus(),100);
+}
+function reqChatRenderThread(j){
+  const el=document.getElementById('req-chat-thread');
+  if(!el) return;
+  const msgs=j.requestChat||[];
+  if(!msgs.length){
+    el.innerHTML=`<div style="margin:auto;text-align:center;color:var(--muted);font-size:12px;padding:24px 12px">No messages yet.<br>${_reqChatRole==='client'?'Ask us anything about your booking — timing, access, deliverables.':'Message the client here — e.g. propose a different time if the requested slot does not work.'}</div>`;
+    return;
+  }
+  const fmt=iso=>new Date(iso).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  el.innerHTML=msgs.map(m=>{
+    const mine=m.from===_reqChatRole;
+    return `<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'}">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:2px;padding:0 6px">${_reqChatEsc(m.by||(m.from==='client'?'Client':'DroneHub Media'))} · ${fmt(m.at)}</div>
+      <div style="max-width:85%;padding:8px 13px;border-radius:${mine?'14px 14px 4px 14px':'14px 14px 14px 4px'};background:${mine?'linear-gradient(135deg,var(--blue),var(--blue-dim))':'var(--navy-lift)'};border:1px solid ${mine?'transparent':'var(--border)'};color:${mine?'#fff':'var(--white)'};font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word">${_reqChatEsc(m.text)}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+function reqChatSend(){
+  const j=(savedJobs||[]).find(x=>String(x.id)===String(_reqChatJobId));
+  const input=document.getElementById('req-chat-input');
+  const text=(input?.value||'').trim();
+  if(!j||!text) return;
+  j.requestChat=j.requestChat||[];
+  j.requestChat.push({from:_reqChatRole,by:_reqChatAuthor(),text,at:new Date().toISOString()});
+  saveJobsToStorage();
+  input.value='';
+  reqChatRenderThread(j);
+  // Client messages ping the ops notification bell (routes to Sales → Jobs)
+  if(_reqChatRole==='client'&&typeof addSocialNotification==='function'){
+    addSocialNotification(j.id,`${_reqChatAuthor()} on ${j.name}: ${text.slice(0,90)}${text.length>90?'…':''}`,'booking');
+  }
+}
+
 // Bring a client booking request into the quote builder: opens the Quote pane,
 // pre-types the request details into the AI assistant box, and remembers the
 // request so saving the finished quote replaces it instead of duplicating.
@@ -1597,6 +1679,7 @@ function quoteFromRequest(jobId){
   parts.push(j.address||j.name||'');
   if(clientRec?.name) parts.push('Client is '+clientRec.name+(clientRec.email?' ('+clientRec.email+')':'')+'.');
   else if(j.clientName) parts.push('Client is '+j.clientName+'.');
+  if(j.sqft) parts.push('Property is about '+j.sqft+' sqft.');
   if(j.shootType) parts.push('They requested: '+j.shootType+'.');
   if(j.date) parts.push('Shoot on '+j.date+(j.preferredTime?' at '+j.preferredTime:'')+'.');
   if(j.notes) parts.push('Client notes: '+j.notes);

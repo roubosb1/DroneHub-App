@@ -2869,7 +2869,7 @@ async function cpShowTab(tab){
             <option value="Other">Other / not sure</option>
           </select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
           <div>
             <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Preferred date</label>
             <input type="date" id="cp-book-date" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
@@ -2877,6 +2877,10 @@ async function cpShowTab(tab){
           <div>
             <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Preferred time</label>
             <input type="time" id="cp-book-time" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Approx. sq ft</label>
+            <input type="number" id="cp-book-sqft" placeholder="e.g. 2500" min="0" step="100" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
           </div>
         </div>
         <div style="margin-bottom:16px">
@@ -2892,9 +2896,12 @@ async function cpShowTab(tab){
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date||'—'}${j.shootTime?' at '+j.shootTime:''}${j.address?' · '+j.address:''}</div>
-            ${j.shootType?`<div style="font-size:11px;color:var(--blue-bright);margin-top:2px">${j.shootType}</div>`:''}
+            ${j.shootType?`<div style="font-size:11px;color:var(--blue-bright);margin-top:2px">${j.shootType}${j.sqft?' · '+j.sqft.toLocaleString()+' sqft':''}</div>`:''}
           </div>
-          <div style="flex-shrink:0">${statusBadge(j.status)}</div>
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:8px">
+            ${['requested','quoted','confirmed'].includes(j.status)?`<button onclick="openRequestChat('${j.id}','client')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message${(j.requestChat&&j.requestChat.length)?' ('+j.requestChat.length+')':''}</button>`:''}
+            ${statusBadge(j.status)}
+          </div>
         </div>`).join('')}
       </div>`:''}
     </div>`;
@@ -3056,8 +3063,10 @@ function cpSubmitBookingRequest(){
   const preferredDate=(document.getElementById('cp-book-date')?.value||'');
   const preferredTime=(document.getElementById('cp-book-time')?.value||'');
   const notes=(document.getElementById('cp-book-notes')?.value||'').trim();
+  const sqft=parseInt(document.getElementById('cp-book-sqft')?.value)||0;
   if(!address){alert('Please enter a property address.');return;}
   if(!preferredDate){alert('Please select a preferred date.');return;}
+  if(!sqft){alert('Please enter the approximate square footage — it helps us quote your shoot accurately.');return;}
   const newJob={
     id:'jr_'+Date.now(),
     name:address+' — '+shootType,
@@ -3067,6 +3076,7 @@ function cpSubmitBookingRequest(){
     clientId:cpActiveClientId,
     shootType,
     preferredTime,
+    sqft,
     notes,
     requestedAt:new Date().toISOString(),
     grand:0,
