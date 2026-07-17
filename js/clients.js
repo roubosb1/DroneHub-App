@@ -2856,26 +2856,28 @@ async function cpShowTab(tab){
   }
   else if(tab==='booking'){
     html=`<div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
-        <div style="font-size:16px;font-weight:800;color:var(--white)">Calendar</div>
-        <button onclick="cpOpenBookModal()" style="display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Book a Shoot</button>
-      </div>
-      <div class="card" style="margin-bottom:14px;padding:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <button onclick="cpCalNavMonth(-1)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:15px;cursor:pointer">‹</button>
-          <div id="cp-cal-month-label" style="font-size:14px;font-weight:800;color:var(--white)"></div>
-          <button onclick="cpCalNavMonth(1)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:15px;cursor:pointer">›</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <button onclick="cpCalNav(-1)" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--navy-lift);cursor:pointer;font-size:14px;color:var(--offwhite)">‹</button>
+        <div style="font-size:16px;font-weight:700;min-width:180px;text-align:center;color:var(--white)" id="cp-cal-month-label"></div>
+        <button onclick="cpCalNav(1)" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--navy-lift);cursor:pointer;font-size:14px;color:var(--offwhite)">›</button>
+        <button onclick="cpCalToday()" style="padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:var(--navy-lift);font-size:12px;cursor:pointer;color:var(--offwhite);font-weight:600">Today</button>
+        <div style="flex:1"></div>
+        <div style="display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden">
+          <button id="cp-cal-vbtn-day" onclick="cpCalSetView('day')" style="padding:5px 14px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Day</button>
+          <button id="cp-cal-vbtn-week" onclick="cpCalSetView('week')" style="padding:5px 14px;border:none;border-left:1px solid var(--border);background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Week</button>
+          <button id="cp-cal-vbtn-month" onclick="cpCalSetView('month')" style="padding:5px 14px;border:none;border-left:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s">Month</button>
         </div>
-        <div id="cp-cal-grid-wrap"></div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:10px;color:var(--muted)">
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--amber);margin-right:5px"></span>Requested</span>
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#A8B4D0;margin-right:5px"></span>Quoted</span>
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#F5A623;margin-right:5px"></span>Confirmed</span>
-          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#22D97A;margin-right:5px"></span>Completed</span>
-          ${c.calendarIcs?'<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--blue-bright);margin-right:5px"></span>Your calendar</span>':''}
-          <span style="margin-left:auto">Click any day to book it</span>
-        </div>
+        <button onclick="cpOpenBookModal()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:9px;border:1px solid var(--blue);background:rgba(91,141,239,.15);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Book a Shoot</button>
       </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--muted)">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:var(--amber)"></span>Requested</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:#A8B4D0"></span>Quoted</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:#F5A623"></span>Confirmed</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:#22D97A"></span>Completed</span>
+        ${c.calendarIcs?'<span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:var(--blue-bright)"></span>Your calendar</span>':''}
+        <span style="margin-left:auto">Double-click a time slot — or a day in Month view — to book it</span>
+      </div>
+      <div id="cp-cal-body" style="margin-bottom:18px"></div>
       <div class="card" style="margin-bottom:18px">
         <div class="section-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px">${_icon('calendar',14)} Your calendar</div>
         ${c.calendarIcs?`
@@ -2956,7 +2958,7 @@ async function cpShowTab(tab){
   }
 
   document.getElementById('cp-content').innerHTML=html;
-  if(tab==='booking') setTimeout(()=>{if(typeof cpCalRenderGrid==='function')cpCalRenderGrid(true);},100);
+  if(tab==='booking') setTimeout(()=>{if(typeof cpCalRender==='function')cpCalRender(true);},100);
 }
 
 function cpCloseInvoice(){
@@ -3229,73 +3231,255 @@ function cpCalCheckDate(){
   });
 }
 
-// ── Client portal month calendar ─────────────────────────────────────────────
-let _cpCalViewYm=null; // 'YYYY-MM' currently displayed
+// ── Client portal calendar — exact clone of the ops calendar views ───────────
+let _cpCalView='week';
+let _cpCalSelDate=null; // 'YYYY-MM-DD'
 
-function cpCalNavMonth(delta){
-  const [y,m]=(_cpCalViewYm||new Date().toISOString().slice(0,7)).split('-').map(Number);
-  const d=new Date(y,m-1+delta,1);
-  _cpCalViewYm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  cpCalRenderGrid(false);
-}
+function _cpDs(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
-function cpCalRenderGrid(fetchIcs){
-  const wrap=document.getElementById('cp-cal-grid-wrap');
-  if(!wrap) return;
+// Gather this client's events for a date: their DroneHub shoots (status-colored)
+// plus their own linked-calendar events (blue).
+function _cpCalDayEvents(ds){
   const c=(clients||[]).find(x=>x.id===cpActiveClientId);
-  if(!_cpCalViewYm){const n=new Date();_cpCalViewYm=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
-  const [y,m]=_cpCalViewYm.split('-').map(Number);
-  const label=document.getElementById('cp-cal-month-label');
-  if(label) label.textContent=new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const stCol={
+    requested:{bg:'rgba(245,166,35,.14)',border:'var(--amber)',text:'var(--amber)'},
+    quoted:{bg:'rgba(168,180,208,.14)',border:'#A8B4D0',text:'#A8B4D0'},
+    confirmed:{bg:'rgba(245,166,35,.16)',border:'#F5A623',text:'#F5A623'},
+    completed:{bg:'rgba(34,217,122,.14)',border:'#22D97A',text:'#22D97A'},
+  };
+  const evts=[];
+  (savedJobs||[]).filter(j=>j.clientId===cpActiveClientId&&j.date===ds).forEach(j=>{
+    const t=(j.shootTime||j.preferredTime||'').slice(0,5);
+    let endT='';
+    if(t){const dur=parseFloat(j.duration)||2;const[h,m]=t.split(':').map(Number);const em=h*60+(m||0)+Math.round(dur*60);endT=String(Math.floor(em/60)%24).padStart(2,'0')+':'+String(em%60).padStart(2,'0');}
+    evts.push({name:j.name||j.address||'Shoot',_time:t,_endTime:endT,_col:stCol[j.status||'quoted']||stCol.quoted,_jobId:j.id,_active:['requested','quoted','confirmed'].includes(j.status)});
+  });
+  const ics=(c?.calendarIcs&&_cpCalCache?.url===c.calendarIcs)?(_cpCalCache.events||[]):[];
+  ics.filter(e=>e.date===ds||(e.endDate&&e.date<=ds&&ds<=e.endDate)).forEach(e=>{
+    evts.push({name:e.title||'Busy',_time:(e.time||'').slice(0,5),_endTime:(e.endTime||'').slice(0,5),_col:{bg:'rgba(91,141,239,.14)',border:'var(--blue-bright)',text:'var(--blue-bright)'}});
+  });
+  return evts.sort((a,b)=>(a._time||'').localeCompare(b._time||''));
+}
 
-  const startDow=new Date(y,m-1,1).getDay();
-  const dim=new Date(y,m,0).getDate();
-  const n=new Date();
-  const todayStr=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
-  const cJobs=(savedJobs||[]).filter(j=>j.clientId===cpActiveClientId);
-  const icsEvts=(c?.calendarIcs&&_cpCalCache?.url===c.calendarIcs)?(_cpCalCache.events||[]):[];
-  const stColor={requested:'var(--amber)',quoted:'#A8B4D0',confirmed:'#F5A623',completed:'#22D97A'};
-  const fmtT=t=>{if(!t)return'';const[h,mi]=t.split(':').map(Number);const ap=h>=12?'p':'a';return((h%12)||12)+(mi?':'+String(mi).padStart(2,'0'):'')+ap;};
+// Same duration-based positioning math as the ops calendar (52px per hour row)
+function _cpCalBlockPos(e,idx){
+  if(!e._time||!e._endTime) return '';
+  const [sh,sm]=e._time.split(':').map(n=>parseInt(n,10));
+  const [eh,em]=e._endTime.split(':').map(n=>parseInt(n,10));
+  if(isNaN(sh)||isNaN(eh)) return '';
+  const dur=(eh*60+em)-(sh*60+sm);
+  if(dur<=0) return '';
+  const top=(sm/60)*52;
+  const hgt=Math.max((dur/60)*52-3,16);
+  const off=2+(idx||0)*14;
+  return `position:absolute;top:${top}px;left:${off}px;right:2px;height:${hgt}px;z-index:${3+(idx||0)};box-sizing:border-box;white-space:normal;`;
+}
+function _cpCalTimeRange(e){
+  if(!e._time) return '';
+  return e._time+(e._endTime?' – '+e._endTime:'');
+}
+function _cpCalChipClick(e){
+  return e._jobId&&e._active?`event.stopPropagation();openRequestChat('${e._jobId}','client')`:'event.stopPropagation()';
+}
+function _cpCalWeekChip(e,ei){
+  const c=e._col,pos=_cpCalBlockPos(e,ei);
+  return `<div onclick="${_cpCalChipClick(e)}" title="${_cpCalTimeRange(e)} ${(e.name||'').replace(/"/g,'&quot;')}" style="padding:2px 5px;border-radius:4px;background:${c.bg};border-left:2px solid ${c.border};color:${c.text};font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:${e._jobId&&e._active?'pointer':'default'};${pos}">${e._time?e._time+' ':''}${e.name}</div>`;
+}
+function _cpCalDayPill(e,ei){
+  const c=e._col,pos=_cpCalBlockPos(e,ei);
+  const timeLbl=_cpCalTimeRange(e);
+  const time=timeLbl?`<span style="font-size:10px;opacity:.75;margin-right:5px">${timeLbl}</span>`:'';
+  return `<div onclick="${_cpCalChipClick(e)}" title="${timeLbl} ${(e.name||'').replace(/"/g,'&quot;')}" style="padding:5px 10px;border-radius:7px;background:${c.bg};border-left:3px solid ${c.border};color:${c.text};font-size:12px;font-weight:600;cursor:${e._jobId&&e._active?'pointer':'default'};margin-bottom:4px;overflow:hidden;${pos}">${time}${e.name}</div>`;
+}
 
-  const cells=[];
-  for(let i=0;i<startDow;i++) cells.push('<div></div>');
-  for(let d=1;d<=dim;d++){
-    const ds=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const dayJobs=cJobs.filter(j=>j.date===ds);
-    const dayEvts=icsEvts.filter(e=>e.date===ds||(e.endDate&&e.date<=ds&&ds<=e.endDate));
-    const chips=[];
-    dayJobs.forEach(j=>{
-      const col=stColor[j.status||'quoted']||'#A8B4D0';
-      chips.push(`<div title="${(j.name||'').replace(/"/g,'&quot;')}" style="font-size:9px;font-weight:700;color:#0A0F1E;background:${col};border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(j.shootTime||j.preferredTime)?fmtT(j.shootTime||j.preferredTime)+' ':''}${(j.address||j.name||'Shoot').split(/[-,]/)[0].trim()}</div>`);
-    });
-    dayEvts.forEach(e=>{
-      chips.push(`<div title="${(e.title||'Busy').replace(/"/g,'&quot;')}" style="font-size:9px;font-weight:600;color:var(--blue-bright);background:rgba(91,141,239,.14);border:1px solid rgba(91,141,239,.3);border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.time?fmtT(e.time)+' ':''}${(e.title||'Busy')}</div>`);
-    });
-    const shown=chips.slice(0,3);
-    const more=chips.length-shown.length;
-    const isToday=ds===todayStr;
-    cells.push(`<div onclick="cpOpenBookModal('${ds}')" style="min-height:84px;padding:5px 6px;border:1px solid ${isToday?'var(--blue)':'var(--border)'};border-radius:8px;background:${isToday?'rgba(91,141,239,.08)':'var(--navy-lift)'};cursor:pointer;overflow:hidden" onmouseenter="this.style.borderColor='var(--blue-bright)'" onmouseleave="this.style.borderColor='${isToday?'var(--blue)':'var(--border)'}'">
-      <div style="font-size:11px;font-weight:${isToday?'800':'600'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'}">${d}</div>
-      ${shown.join('')}${more>0?`<div style="font-size:9px;color:var(--muted);margin-top:2px">+${more} more</div>`:''}
-    </div>`);
-  }
-  wrap.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
-      ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;padding:2px 0">${d}</div>`).join('')}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells.join('')}</div>`;
+function cpCalSetView(view,dateStr){
+  _cpCalView=view;
+  if(dateStr)_cpCalSelDate=dateStr;
+  ['day','week','month'].forEach(v=>{
+    const btn=document.getElementById('cp-cal-vbtn-'+v);
+    if(btn){btn.style.background=v===view?'rgba(91,141,239,.18)':'transparent';btn.style.color=v===view?'var(--blue-bright)':'var(--muted)';}
+  });
+  cpCalRender(false);
+}
+function cpCalNav(delta){
+  const d=new Date((_cpCalSelDate||_cpDs(new Date()))+'T12:00:00');
+  if(_cpCalView==='day') d.setDate(d.getDate()+delta);
+  else if(_cpCalView==='week') d.setDate(d.getDate()+delta*7);
+  else d.setMonth(d.getMonth()+delta,1);
+  _cpCalSelDate=_cpDs(d);
+  cpCalRender(false);
+}
+function cpCalToday(){_cpCalSelDate=_cpDs(new Date());cpCalRender(false);}
 
-  // Pull the client's own calendar once per session, then repaint with events
+function cpCalRender(fetchIcs){
+  const body=document.getElementById('cp-cal-body');
+  if(!body) return;
+  if(!_cpCalSelDate)_cpCalSelDate=_cpDs(new Date());
+  ['day','week','month'].forEach(v=>{
+    const btn=document.getElementById('cp-cal-vbtn-'+v);
+    if(btn){btn.style.background=v===_cpCalView?'rgba(91,141,239,.18)':'transparent';btn.style.color=v===_cpCalView?'var(--blue-bright)':'var(--muted)';}
+  });
+  if(_cpCalView==='month') _cpCalRenderMonth();
+  else if(_cpCalView==='day') _cpCalRenderDay();
+  else _cpCalRenderWeek();
+  const c=(clients||[]).find(x=>x.id===cpActiveClientId);
   if(fetchIcs&&c?.calendarIcs&&_cpCalCache?.url!==c.calendarIcs&&typeof _cpCalFetch==='function'){
-    _cpCalFetch(c.calendarIcs).then(()=>cpCalRenderGrid(false)).catch(()=>{});
+    _cpCalFetch(c.calendarIcs).then(()=>cpCalRender(false)).catch(()=>{});
   }
 }
 
-function cpOpenBookModal(date){
+function _cpCalRenderMonth(){
+  const body=document.getElementById('cp-cal-body');
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const d=new Date(_cpCalSelDate+'T12:00:00');
+  const y=d.getFullYear(),m=d.getMonth();
+  const label=document.getElementById('cp-cal-month-label');
+  if(label) label.textContent=MONTHS[m]+' '+y;
+  const firstDay=new Date(y,m,1).getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const daysInPrev=new Date(y,m,0).getDate();
+  const todayStr=_cpDs(new Date());
+  let html='';
+  for(let i=firstDay-1;i>=0;i--)
+    html+=`<div class="cal-cell other-month"><span style="font-size:12px;color:var(--border-bright)">${daysInPrev-i}</span></div>`;
+  for(let dd=1;dd<=daysInMonth;dd++){
+    const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+    const isToday=ds===todayStr;
+    const items=_cpCalDayEvents(ds);
+    const badges=items.slice(0,4).map(e=>{
+      const col=e._col;
+      const lbl=((e._time?e._time+' ':'')+e.name).slice(0,24);
+      return `<div title="${(e.name||'').replace(/"/g,'&quot;')}" style="font-size:11px;padding:4px 8px 4px 9px;border-radius:6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;font-weight:600;background:${col.bg};border-left:3px solid ${col.border};color:${col.text}">${lbl}</div>`;
+    }).join('');
+    const more=items.length>4?`<div style="font-size:9px;color:var(--muted);padding:1px 4px">+${items.length-4} more</div>`:'';
+    html+=`<div class="cal-cell${isToday?' today':''}" onclick="cpCalSetView('day','${ds}')" ondblclick="event.stopPropagation();cpOpenBookModal('${ds}')">
+      <div style="font-size:${isToday?'17':'14'}px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};margin-bottom:8px;line-height:1">${dd}${isToday?'<span style="font-size:9px;font-weight:700;color:var(--blue-bright);padding:1px 5px;border-radius:5px;background:rgba(91,141,239,.15);margin-left:4px">TODAY</span>':''}</div>
+      <div>${badges}${more}</div>
+    </div>`;
+  }
+  const total=Math.ceil((firstDay+daysInMonth)/7)*7;
+  for(let dd=1;dd<=total-firstDay-daysInMonth;dd++)
+    html+=`<div class="cal-cell other-month"><span style="font-size:12px;color:var(--border-bright)">${dd}</span></div>`;
+  const dayHdr=n=>`<div style="background:var(--navy-mid);text-align:center;padding:8px 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">${n}</div>`;
+  body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:var(--border);border-radius:12px;overflow:hidden">
+    ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(dayHdr).join('')}${html}
+  </div>`;
+}
+
+function _cpCalRenderWeek(){
+  const body=document.getElementById('cp-cal-body');
+  const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const anchor=new Date(_cpCalSelDate+'T12:00:00');
+  const weekStart=new Date(anchor); weekStart.setDate(anchor.getDate()-anchor.getDay());
+  const weekDays=[];
+  for(let i=0;i<7;i++){const dd=new Date(weekStart);dd.setDate(weekStart.getDate()+i);weekDays.push(dd);}
+  const label=document.getElementById('cp-cal-month-label');
+  if(label){
+    const s=weekDays[0],e=weekDays[6];
+    label.textContent=s.getMonth()===e.getMonth()
+      ?MONTHS[s.getMonth()]+' '+s.getDate()+'–'+e.getDate()+', '+s.getFullYear()
+      :MONTHS[s.getMonth()]+' '+s.getDate()+' – '+MONTHS[e.getMonth()]+' '+e.getDate()+', '+e.getFullYear();
+  }
+  const todayStr=_cpDs(new Date());
+  const now=new Date(),nowHour=now.getHours(),nowMin=now.getMinutes();
+  const dayEvts=weekDays.map(dd=>_cpCalDayEvents(_cpDs(dd)));
+  const hasAllDay=dayEvts.some(evts=>evts.some(e=>!e._time));
+
+  let colHeaderHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);position:sticky;top:0;z-index:10;background:var(--navy-mid);border-bottom:1px solid var(--border)">`;
+  colHeaderHtml+=`<div style="border-right:1px solid var(--border);padding:6px"></div>`;
+  colHeaderHtml+=weekDays.map((dd,i)=>{
+    const ds=_cpDs(dd);
+    const isToday=ds===todayStr;
+    return `<div onclick="cpCalSetView('day','${ds}')" style="${i<6?'border-right:1px solid var(--border);':''}padding:8px 4px;text-align:center;cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background=''">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">${DAYS[dd.getDay()]}</div>
+      <div style="font-size:${isToday?'16':'14'}px;font-weight:${isToday?'800':'500'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'};line-height:1.2;margin-top:2px">${dd.getDate()}${isToday?'<div style="width:6px;height:6px;background:var(--blue-bright);border-radius:50%;margin:2px auto 0"></div>':''}</div>
+    </div>`;
+  }).join('');
+  colHeaderHtml+='</div>';
+
+  let allDayHtml='';
+  if(hasAllDay){
+    allDayHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);position:sticky;top:44px;z-index:9;background:var(--navy-mid);border-bottom:1px solid var(--border)">`;
+    allDayHtml+=`<div style="padding:6px;font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;border-right:1px solid var(--border)">All day</div>`;
+    allDayHtml+=weekDays.map((dd,i)=>`<div style="padding:4px;min-height:32px;${i<6?'border-right:1px solid var(--border);':''}">
+      ${dayEvts[i].filter(e=>!e._time).map(e=>_cpCalWeekChip(e)).join('')}
+    </div>`).join('');
+    allDayHtml+='</div>';
+  }
+
+  let hoursHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr)">`;
+  for(let h=0;h<24;h++){
+    const lbl=h===0?'12 AM':h<12?h+' AM':h===12?'12 PM':(h-12)+' PM';
+    hoursHtml+=`<div style="font-size:10px;color:var(--muted);padding:8px 6px 0;text-align:right;min-height:52px;${h>0?'border-top:1px solid var(--border);':''}background:var(--navy-mid)">${lbl}</div>`;
+    weekDays.forEach((dd,i)=>{
+      const ds=_cpDs(dd);
+      const isToday=ds===todayStr;
+      const hEvts=dayEvts[i].filter(e=>e._time&&parseInt(e._time.split(':')[0],10)===h);
+      const isNowHour=isToday&&h===nowHour;
+      hoursHtml+=`<div ondblclick="cpOpenBookModal('${ds}',${h})" style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
+      if(isNowHour){const pct=(nowMin/60)*100;hoursHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
+      hEvts.forEach((e,ei)=>{hoursHtml+=_cpCalWeekChip(e,ei);});
+      hoursHtml+='</div>';
+    });
+  }
+  hoursHtml+='</div>';
+
+  body.innerHTML=`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden"><div id="cp-cal-week-scroll" style="overflow-y:auto;max-height:calc(100vh - 260px)">${colHeaderHtml}${allDayHtml}${hoursHtml}</div></div>`;
+  setTimeout(()=>{const sc=document.getElementById('cp-cal-week-scroll');if(sc)sc.scrollTop=7*52;},50);
+}
+
+function _cpCalRenderDay(){
+  const body=document.getElementById('cp-cal-body');
+  const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const d=new Date(_cpCalSelDate+'T12:00:00');
+  const label=document.getElementById('cp-cal-month-label');
+  if(label) label.textContent=DAYS[d.getDay()]+', '+MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  const evts=_cpCalDayEvents(_cpCalSelDate);
+  const timedEvts=evts.filter(e=>e._time);
+  const allDayEvts=evts.filter(e=>!e._time);
+  let adHtml='';
+  if(allDayEvts.length){
+    adHtml=`<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">All Day</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${allDayEvts.map(e=>_cpCalDayPill(e)).join('')}</div>
+    </div>`;
+  }
+  const now=new Date();
+  const isToday=_cpCalSelDate===_cpDs(now);
+  const nowHour=now.getHours(),nowMin=now.getMinutes();
+  let rowsHtml='';
+  for(let h=0;h<24;h++){
+    const lbl=h===0?'12 AM':h<12?h+' AM':h===12?'12 PM':(h-12)+' PM';
+    const hEvts=timedEvts.filter(e=>parseInt(e._time.split(':')[0],10)===h);
+    const isNowHour=isToday&&h===nowHour;
+    const border=h>0?'border-top:1px solid var(--border);':'';
+    rowsHtml+=`<div style="padding:0 6px;text-align:right;font-size:10px;color:var(--muted);line-height:1;padding-top:8px;min-height:52px;${border}background:var(--navy-mid)">${lbl}</div>`;
+    rowsHtml+=`<div ondblclick="cpOpenBookModal('${_cpCalSelDate}',${h})" style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative;cursor:default">`;
+    if(isNowHour){
+      const pct=(nowMin/60)*100;
+      rowsHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"><span style="position:absolute;left:-6px;top:-4px;width:10px;height:10px;background:var(--blue-bright);border-radius:50%;display:block"></span></div>`;
+    }
+    hEvts.forEach((e,ei)=>{rowsHtml+=_cpCalDayPill(e,ei);});
+    rowsHtml+='</div>';
+  }
+  body.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+    <button onclick="cpCalSetView('month')" style="border:none;background:none;color:var(--blue-bright);cursor:pointer;font-size:12px;font-weight:600;padding:0;display:flex;align-items:center;gap:4px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>Month
+    </button>
+    <span style="color:var(--border);font-size:12px">/</span>
+    <span style="font-size:12px;color:var(--muted)">${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}</span>
+  </div>${adHtml}<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden"><div id="cp-cal-day-scroll" style="overflow-y:auto;max-height:calc(100vh - 280px)"><div style="display:grid;grid-template-columns:52px 1fr">${rowsHtml}</div></div></div>`;
+  setTimeout(()=>{const sc=document.getElementById('cp-cal-day-scroll');if(sc)sc.scrollTop=7*52;},50);
+}
+
+function cpOpenBookModal(date,hour){
   const ov=document.getElementById('cp-book-modal');
   if(!ov) return;
   ov.style.display='flex';
   if(date){const el=document.getElementById('cp-book-date');if(el){el.value=date;}}
+  if(hour!=null){const tl=document.getElementById('cp-book-time');if(tl){tl.value=String(hour).padStart(2,'0')+':00';}}
   if(typeof cpCalCheckDate==='function') cpCalCheckDate();
   setTimeout(()=>document.getElementById('cp-book-address')?.focus(),100);
 }
