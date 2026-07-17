@@ -2107,7 +2107,7 @@ const CP_NAV=[
   {tab:'files',     label:'Files',       icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'},
   {tab:'messages',  label:'LouChat',     icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'},
   {tab:'social',    label:'Social',      icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>'},
-  {tab:'booking',   label:'Book a Shoot',icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
+  {tab:'booking',   label:'Calendar',icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
   {tab:'profile',   label:'My Profile',  icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'},
 ];
 
@@ -2855,14 +2855,53 @@ async function cpShowTab(tab){
       </div>`;
   }
   else if(tab==='booking'){
-    const myBookings=savedJobs.filter(j=>j.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
-    const statusBadge=s=>s==='requested'?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(245,166,35,.15);color:var(--amber)">REQUESTED</span>`
-      :s==='confirmed'?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(34,217,122,.12);color:var(--green)">CONFIRMED</span>`
-      :s==='completed'?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(91,141,239,.15);color:var(--blue-bright)">COMPLETED</span>`
-      :`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--navy-lift);color:var(--muted)">${s||'—'}</span>`;
     html=`<div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="font-size:16px;font-weight:800;color:var(--white)">Calendar</div>
+        <button onclick="cpOpenBookModal()" style="display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Book a Shoot</button>
+      </div>
+      <div class="card" style="margin-bottom:14px;padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <button onclick="cpCalNavMonth(-1)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:15px;cursor:pointer">‹</button>
+          <div id="cp-cal-month-label" style="font-size:14px;font-weight:800;color:var(--white)"></div>
+          <button onclick="cpCalNavMonth(1)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--white);font-size:15px;cursor:pointer">›</button>
+        </div>
+        <div id="cp-cal-grid-wrap"></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:10px;color:var(--muted)">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--amber);margin-right:5px"></span>Requested</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#A8B4D0;margin-right:5px"></span>Quoted</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#F5A623;margin-right:5px"></span>Confirmed</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#22D97A;margin-right:5px"></span>Completed</span>
+          ${c.calendarIcs?'<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--blue-bright);margin-right:5px"></span>Your calendar</span>':''}
+          <span style="margin-left:auto">Click any day to book it</span>
+        </div>
+      </div>
       <div class="card" style="margin-bottom:18px">
-        <div class="section-label" style="margin-bottom:14px;display:flex;align-items:center;gap:6px">${_icon('calendar',14)} Request a new shoot</div>
+        <div class="section-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px">${_icon('calendar',14)} Your calendar</div>
+        ${c.calendarIcs?`
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--green);font-weight:600">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Calendar connected — your events show on the calendar above
+            </div>
+            <button onclick="cpCalDisconnect()" style="padding:5px 14px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">Disconnect</button>
+          </div>`
+        :`
+          <div style="font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:10px">Link your calendar to see your own events on the calendar above and spot conflicts while booking. Paste your calendar's iCal address (ends in <strong style="color:var(--offwhite)">.ics</strong>) — in Google Calendar: Settings → your calendar → Integrate calendar → <em>Secret address in iCal format</em>. Outlook and Apple Calendar publish iCal links too.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="url" id="cp-cal-ics-input" placeholder="https://calendar.google.com/…/basic.ics" style="flex:1;min-width:220px;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+            <button onclick="cpCalConnect()" id="cp-cal-connect-btn" style="padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Connect</button>
+          </div>
+          <div id="cp-cal-connect-status" style="font-size:11px;color:var(--muted);margin-top:8px"></div>`}
+      </div>
+
+      <!-- Book a Shoot modal -->
+      <div id="cp-book-modal" style="display:none;position:fixed;inset:0;background:rgba(6,10,22,.72);backdrop-filter:blur(4px);z-index:9400;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto" onclick="if(event.target===this)cpCloseBookModal()">
+      <div class="card" style="width:100%;max-width:640px;margin:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="section-label" style="display:flex;align-items:center;gap:6px;margin:0">${_icon('calendar',14)} Request a new shoot</div>
+          <button onclick="cpCloseBookModal()" style="width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:14px;cursor:pointer">✕</button>
+        </div>
         <div style="margin-bottom:12px">
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Property address</label>
           <input type="text" id="cp-book-address" placeholder="123 Main St, Oakville, ON" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:14px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
@@ -2912,43 +2951,12 @@ async function cpShowTab(tab){
         <div id="cp-book-success" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(34,217,122,.12);border:1px solid rgba(34,217,122,.3);color:var(--green);font-size:13px;font-weight:600;margin-bottom:12px">✓ Request submitted! We'll confirm your booking shortly.</div>
         <button onclick="cpSubmitBookingRequest()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Submit Request →</button>
       </div>
-      <div class="card" style="margin-bottom:18px">
-        <div class="section-label" style="margin-bottom:10px;display:flex;align-items:center;gap:6px">${_icon('calendar',14)} Your calendar</div>
-        ${c.calendarIcs?`
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--green);font-weight:600">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Calendar connected — pick a date above and we'll show your schedule for that day
-            </div>
-            <button onclick="cpCalDisconnect()" style="padding:5px 14px;border-radius:14px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">Disconnect</button>
-          </div>`
-        :`
-          <div style="font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:10px">Link your calendar so you can spot conflicts while booking. Paste your calendar's iCal address (ends in <strong style="color:var(--offwhite)">.ics</strong>) — in Google Calendar: Settings → your calendar → Integrate calendar → <em>Secret address in iCal format</em>. Outlook and Apple Calendar publish iCal links too.</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <input type="url" id="cp-cal-ics-input" placeholder="https://calendar.google.com/…/basic.ics" style="flex:1;min-width:220px;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
-            <button onclick="cpCalConnect()" id="cp-cal-connect-btn" style="padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--blue-dim));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Connect</button>
-          </div>
-          <div id="cp-cal-connect-status" style="font-size:11px;color:var(--muted);margin-top:8px"></div>`}
       </div>
-      ${myBookings.length?`<div class="card">
-        <div class="section-label" style="margin-bottom:12px">Your shoots</div>
-        ${myBookings.map(j=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date||'—'}${j.shootTime?' at '+j.shootTime:''}${j.address?' · '+j.address:''}</div>
-            ${j.shootType?`<div style="font-size:11px;color:var(--blue-bright);margin-top:2px">${j.shootType}${j.sqft?' · '+j.sqft.toLocaleString()+' sqft':''}</div>`:''}
-          </div>
-          <div style="flex-shrink:0;display:flex;align-items:center;gap:8px">
-            ${['requested','quoted','confirmed'].includes(j.status)?`<button onclick="openRequestChat('${j.id}','client')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message${(j.requestChat&&j.requestChat.length)?' ('+j.requestChat.length+')':''}</button>`:''}
-            ${statusBadge(j.status)}
-          </div>
-        </div>`).join('')}
-      </div>`:''}
     </div>`;
   }
 
   document.getElementById('cp-content').innerHTML=html;
-  if(tab==='booking') setTimeout(()=>{if(typeof cpCalCheckDate==='function')cpCalCheckDate();},100);
+  if(tab==='booking') setTimeout(()=>{if(typeof cpCalRenderGrid==='function')cpCalRenderGrid(true);},100);
 }
 
 function cpCloseInvoice(){
@@ -3219,6 +3227,81 @@ function cpCalCheckDate(){
   }).catch(()=>{
     el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:8px 12px;background:var(--navy-lift);border:1px solid var(--border);border-radius:10px">Couldn’t reach your calendar right now — you can still book.</div>';
   });
+}
+
+// ── Client portal month calendar ─────────────────────────────────────────────
+let _cpCalViewYm=null; // 'YYYY-MM' currently displayed
+
+function cpCalNavMonth(delta){
+  const [y,m]=(_cpCalViewYm||new Date().toISOString().slice(0,7)).split('-').map(Number);
+  const d=new Date(y,m-1+delta,1);
+  _cpCalViewYm=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  cpCalRenderGrid(false);
+}
+
+function cpCalRenderGrid(fetchIcs){
+  const wrap=document.getElementById('cp-cal-grid-wrap');
+  if(!wrap) return;
+  const c=(clients||[]).find(x=>x.id===cpActiveClientId);
+  if(!_cpCalViewYm){const n=new Date();_cpCalViewYm=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
+  const [y,m]=_cpCalViewYm.split('-').map(Number);
+  const label=document.getElementById('cp-cal-month-label');
+  if(label) label.textContent=new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  const startDow=new Date(y,m-1,1).getDay();
+  const dim=new Date(y,m,0).getDate();
+  const n=new Date();
+  const todayStr=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  const cJobs=(savedJobs||[]).filter(j=>j.clientId===cpActiveClientId);
+  const icsEvts=(c?.calendarIcs&&_cpCalCache?.url===c.calendarIcs)?(_cpCalCache.events||[]):[];
+  const stColor={requested:'var(--amber)',quoted:'#A8B4D0',confirmed:'#F5A623',completed:'#22D97A'};
+  const fmtT=t=>{if(!t)return'';const[h,mi]=t.split(':').map(Number);const ap=h>=12?'p':'a';return((h%12)||12)+(mi?':'+String(mi).padStart(2,'0'):'')+ap;};
+
+  const cells=[];
+  for(let i=0;i<startDow;i++) cells.push('<div></div>');
+  for(let d=1;d<=dim;d++){
+    const ds=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const dayJobs=cJobs.filter(j=>j.date===ds);
+    const dayEvts=icsEvts.filter(e=>e.date===ds||(e.endDate&&e.date<=ds&&ds<=e.endDate));
+    const chips=[];
+    dayJobs.forEach(j=>{
+      const col=stColor[j.status||'quoted']||'#A8B4D0';
+      chips.push(`<div title="${(j.name||'').replace(/"/g,'&quot;')}" style="font-size:9px;font-weight:700;color:#0A0F1E;background:${col};border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(j.shootTime||j.preferredTime)?fmtT(j.shootTime||j.preferredTime)+' ':''}${(j.address||j.name||'Shoot').split(/[-,]/)[0].trim()}</div>`);
+    });
+    dayEvts.forEach(e=>{
+      chips.push(`<div title="${(e.title||'Busy').replace(/"/g,'&quot;')}" style="font-size:9px;font-weight:600;color:var(--blue-bright);background:rgba(91,141,239,.14);border:1px solid rgba(91,141,239,.3);border-radius:4px;padding:1px 5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.time?fmtT(e.time)+' ':''}${(e.title||'Busy')}</div>`);
+    });
+    const shown=chips.slice(0,3);
+    const more=chips.length-shown.length;
+    const isToday=ds===todayStr;
+    cells.push(`<div onclick="cpOpenBookModal('${ds}')" style="min-height:84px;padding:5px 6px;border:1px solid ${isToday?'var(--blue)':'var(--border)'};border-radius:8px;background:${isToday?'rgba(91,141,239,.08)':'var(--navy-lift)'};cursor:pointer;overflow:hidden" onmouseenter="this.style.borderColor='var(--blue-bright)'" onmouseleave="this.style.borderColor='${isToday?'var(--blue)':'var(--border)'}'">
+      <div style="font-size:11px;font-weight:${isToday?'800':'600'};color:${isToday?'var(--blue-bright)':'var(--offwhite)'}">${d}</div>
+      ${shown.join('')}${more>0?`<div style="font-size:9px;color:var(--muted);margin-top:2px">+${more} more</div>`:''}
+    </div>`);
+  }
+  wrap.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+      ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;padding:2px 0">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells.join('')}</div>`;
+
+  // Pull the client's own calendar once per session, then repaint with events
+  if(fetchIcs&&c?.calendarIcs&&_cpCalCache?.url!==c.calendarIcs&&typeof _cpCalFetch==='function'){
+    _cpCalFetch(c.calendarIcs).then(()=>cpCalRenderGrid(false)).catch(()=>{});
+  }
+}
+
+function cpOpenBookModal(date){
+  const ov=document.getElementById('cp-book-modal');
+  if(!ov) return;
+  ov.style.display='flex';
+  if(date){const el=document.getElementById('cp-book-date');if(el){el.value=date;}}
+  if(typeof cpCalCheckDate==='function') cpCalCheckDate();
+  setTimeout(()=>document.getElementById('cp-book-address')?.focus(),100);
+}
+function cpCloseBookModal(){
+  const ov=document.getElementById('cp-book-modal');
+  if(ov) ov.style.display='none';
 }
 
 // ── FEATURE 4: Notification Badge ────────────────────────────────────────────
