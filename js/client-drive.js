@@ -192,6 +192,16 @@ async function cdLinkSelected(clientId) {
           notes: 'Imported from Google Drive',
           _importedFromDrive: true,
         });
+        // Completed production stage so it shows in the tracker's Completed tab
+        if (typeof setTrackerStage === 'function') {
+          setTrackerStage(nextJobId - 1, {
+            stage: 'delivered',
+            editStatus: 'finals_sent',
+            filesReceived: true,
+            downloadLink: main.webViewLink || '',
+            completionDate: (main.modifiedTime || '').slice(0, 10),
+          });
+        }
         jobsCreated++;
       }
     }
@@ -239,6 +249,20 @@ function _cdReconcileImportedJobs(c) {
     if (!addrs.has(a) || seen.has(a)) { savedJobs.splice(i, 1); removed++; continue; }
     seen.add(a);
     if (!j.markedPaid) { j.markedPaid = true; j.paidAt = j.date || new Date().toISOString().slice(0, 10); changed = true; }
+    // Back-fill a completed production stage so imported projects appear in
+    // the tracker's Completed tab with their Drive link
+    if (typeof setTrackerStage === 'function' && typeof getTrackerStage === 'function') {
+      const st = getTrackerStage(j.id);
+      if (st.editStatus !== 'finals_sent') {
+        setTrackerStage(j.id, {
+          stage: 'delivered',
+          editStatus: 'finals_sent',
+          filesReceived: true,
+          downloadLink: j.driveLink || st.downloadLink || '',
+          completionDate: j.date || '',
+        });
+      }
+    }
   }
   if ((removed || changed) && typeof saveJobsToStorage === 'function') saveJobsToStorage();
   return removed;
