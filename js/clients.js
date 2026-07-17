@@ -2178,7 +2178,7 @@ async function cpShowTab(tab){
   const _cpContentEl=document.getElementById('cp-content');
   if(_cpContentEl){
     if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
-    else if(tab==='files'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
+    else if(tab==='files'||tab==='projects'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
     else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
   }
   setTimeout(cpUpdateNotifBadge,100);
@@ -2329,28 +2329,49 @@ async function cpShowTab(tab){
     </div>`;
   }
   else if(tab==='projects'){
-    html=`<div class="card">
-      <div class="section-label" style="margin-bottom:14px">Your projects</div>
-      ${cJobs.length?cJobs.map(j=>{
-        const svcsStr=Object.entries(j.services||{}).filter(([k,v])=>v).map(([k])=>({video:'Video',photo:'Photo',reel:'Social reels',extphoto:'Ext. photo',extvideo:'Ext. video',floorplan:'Floor plan',rush:'Rush',tvideo:'Twilight video',tphoto:'Twilight photo',custom:j.customDesc||'Custom'}[k]||k)).filter(Boolean).join(' · ');
-        return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700;color:var(--white)">${j.name}</div>
-              <div style="font-size:12px;color:var(--muted);margin-top:3px"> ${j.address}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date}${j.shootTime?' at '+j.shootTime:''}</div>
-              ${svcsStr?`<div style="font-size:11px;color:var(--blue-bright);margin-top:4px">${svcsStr}</div>`:''}
-              ${j.notes?`<div style="font-size:11px;color:var(--muted);font-style:italic;margin-top:4px">${j.notes}</div>`:''}
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <span class="status-badge status-${j.status||'quoted'}" style="display:block;margin-bottom:6px">${j.status||'quoted'}</span>
-              <span style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(j.grand)}</span>
-            </div>
-          </div>
+    // Mirror of the ops Job pipeline: Requested / Quoted / Confirmed / Completed
+    const _stCols=[
+      {key:'requested',label:'Requested',color:'var(--amber)',bg:'rgba(245,166,35,.1)'},
+      {key:'quoted',label:'Quoted',color:'#A8B4D0',bg:'#1C2333'},
+      {key:'confirmed',label:'Confirmed',color:'#F5A623',bg:'rgba(245,166,35,.1)'},
+      {key:'completed',label:'Completed',color:'#22D97A',bg:'rgba(34,217,122,.1)'},
+    ];
+    const _svcNames=j=>Object.entries(j.services||{}).filter(([k,v])=>v).map(([k])=>({video:'Video',photo:'Photo',reel:'Social reels',extphoto:'Ext. photo',extvideo:'Ext. video',floorplan:'Floor plan',rush:'Rush',tvideo:'Twilight video',tphoto:'Twilight photo',custom:j.customDesc||'Custom'}[k]||k)).filter(Boolean).join(' · ');
+    const _colJobs=key=>{
+      let js=cJobs.filter(j=>(j.status||'quoted')===key);
+      if(key==='completed'){
+        // Same trim as ops: everything from the last 30 days, minimum 10 shown.
+        const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
+        const sorted=js.slice().sort((a,b)=>new Date(b.completedAt||b.date||0)-new Date(a.completedAt||a.date||0));
+        const recent=sorted.filter(j=>new Date(j.completedAt||j.date||0)>=cutoff);
+        js=recent.length>=10?recent:sorted.slice(0,10);
+      }
+      return js;
+    };
+    html=`<div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:14px">Job pipeline</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">
+      ${_stCols.map(st=>{
+        const js=_colJobs(st.key);
+        return `<div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${st.color};margin-bottom:8px;padding:4px 8px;background:${st.bg};border-radius:6px">${st.label}${js.length?` <span style="opacity:.75">· ${js.length}</span>`:''}</div>
+          ${js.length?js.map(j=>{
+            const active=['requested','quoted','confirmed'].includes(j.status);
+            const info=[j.shootType,j.sqft?j.sqft.toLocaleString()+' sqft':'',(!j.shootType&&_svcNames(j))?_svcNames(j):''].filter(Boolean).join(' · ');
+            return `<div class="job-card">
+              <div class="job-card-title">${j.name}</div>
+              <div class="job-card-meta">${j.date||'—'}${j.shootTime?' at '+j.shootTime:(j.preferredTime?' at '+j.preferredTime:'')}</div>
+              ${info?`<div style="font-size:11px;color:var(--blue-bright);margin-bottom:4px">${info}</div>`:''}
+              ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,80)}${j.notes.length>80?'…':''}</div>`:''}
+              ${j.status==='requested'?`<div class="job-card-amount" style="color:var(--muted);font-size:12px">Pending quote</div>`:`<div class="job-card-amount">${fmtN(j.grand)}</div>`}
+              ${active?`<div class="job-card-actions">
+                <button onclick="openRequestChat('${j.id}','client')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message${(j.requestChat&&j.requestChat.length)?' ('+j.requestChat.length+')':''}</button>
+              </div>`:''}
+            </div>`;
+          }).join(''):'<div style="font-size:11px;color:var(--muted);padding:8px 4px">None</div>'}
         </div>`;
-      }).join('')
-      :'<div style="color:var(--muted);font-size:13px;padding:12px 0">No projects yet.</div>'}
-    </div>`;
+      }).join('')}
+    </div>
+    ${!cJobs.length?'<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No projects yet.</div>':''}`;
   }
   else if(tab==='invoices'){
     const inv=cJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
