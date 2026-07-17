@@ -72,6 +72,7 @@ function saveJob(){
       socialTier:usQuoteState.socialTier,
       dayType:usQuoteState.dayType,
       reelCount:usQuoteState.reelCount,
+      listingReelCount:usQuoteState.listingReelCount||0,
       reelsTBD:usQuoteState.reelsTBD,
       dayLocations:(usQuoteState.dayLocations||[]).map(l=>({...l})),
       addons:{...usQuoteState.addons},
@@ -1107,6 +1108,7 @@ function _ejInitUSEdit(job){
     socialTier:ud.socialTier||null,
     dayType:ud.dayType||null,
     reelCount:ud.reelCount||0,
+    listingReelCount:ud.listingReelCount||0,
     reelsTBD:ud.reelsTBD||false,
     dayLocations:ud.dayLocations||[],
     offSeason:ud.offSeason||false,
@@ -1228,6 +1230,7 @@ function recalcEditUS(){
       base=p.listing[_ejUsState.listingTier]||0;
       const tl={under4k:'Under 4k sqft',over4k:'4k–8k sqft',over8k:'Over 8k sqft'};
       parts.push(`Listing (${tl[_ejUsState.listingTier]}) $${base.toLocaleString()}`);
+      if(_ejUsState.listingReelCount>0){const rr=p.reelAddon||400;const rt=_ejUsState.listingReelCount*rr;base+=rt;parts.push(`Reel add-on ×${_ejUsState.listingReelCount} +$${rt.toLocaleString()}`);}
       break;
     case 'social':
       if(!_ejUsState.socialTier) return noSel('← Select social package tier');
@@ -1371,6 +1374,7 @@ function saveEditJob(){
       case 'listing':
         if(!_ejUsState.listingTier){alert('Please select a property size tier.');return;}
         total=p.listing[_ejUsState.listingTier]||0;
+        total+=(_ejUsState.listingReelCount||0)*(p.reelAddon||400);
         break;
       case 'social':
         if(!_ejUsState.socialTier){alert('Please select a social package tier.');return;}
@@ -1404,6 +1408,7 @@ function saveEditJob(){
       pkgType:_ejUsState.pkgType,
       listingTier:_ejUsState.listingTier,
       socialTier:_ejUsState.socialTier,
+      listingReelCount:_ejUsState.listingReelCount||0,
       offSeason:_ejUsState.offSeason,
       addons:{..._ejUsState.addons},
     };
@@ -1775,6 +1780,11 @@ function aiQuoteApplyToForm(d){
       let tier=d.usListingTier;
       if(!tier&&d.sqft) tier=d.sqft<4000?'under4k':(d.sqft<=8000?'over4k':'over8k');
       if(tier&&typeof selectUSTier==='function') selectUSTier(tier);
+      if(d.usListingReels>0){
+        usQuoteState.listingReelCount=Math.round(d.usListingReels);
+        const rc=document.getElementById('us-listing-reel-count');
+        if(rc) rc.textContent=usQuoteState.listingReelCount;
+      }
     }
     if(pkg==='social'&&d.usSocialTier&&typeof selectUSSocialTier==='function') selectUSSocialTier(d.usSocialTier);
     if(pkg==='day'&&d.usDayType&&typeof selectUSDayType==='function') selectUSDayType(d.usDayType);
@@ -1926,7 +1936,7 @@ function onMarketChange(market){
     renderUSServicePanel(market);
     calcUS();
   } else {
-    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, reelsTBD:false, dayLocations:[], addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
+    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, listingReelCount:0, reelsTBD:false, dayLocations:[], addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
     calc();
   }
 }
@@ -1983,12 +1993,16 @@ function renderUSServicePanel(market){
     }
   }
 
-  // Update listing tier active states
+  // Update listing tier active states + reel add-on price/count
   if(usQuoteState.pkgType==='listing'){
     ['under4k','over4k','over8k'].forEach(k=>{
       const btn = document.getElementById('us-tier-'+k);
       if(btn) btn.classList.toggle('us-tier-active', usQuoteState.listingTier===k);
     });
+    const rp = document.getElementById('us-listing-reel-price');
+    if(rp) rp.textContent = '$'+(p.reelAddon||400).toLocaleString()+' each · standalone reels are $'+(p.social?.r1||500).toLocaleString();
+    const rc = document.getElementById('us-listing-reel-count');
+    if(rc) rc.textContent = usQuoteState.listingReelCount||0;
   }
 }
 
@@ -1997,6 +2011,7 @@ function selectUSPkg(pkgType){
   usQuoteState.listingTier = null;
   usQuoteState.socialTier = null;
   usQuoteState.dayType = null;
+  usQuoteState.listingReelCount = 0;
   const market = document.getElementById('job-market-input')?.value || usQuoteState.market;
   renderUSServicePanel(market);
   calcUS();
@@ -2027,6 +2042,14 @@ function selectUSDayType(type){
   const fullBtn = document.getElementById('us-day-full');
   if(halfBtn) halfBtn.classList.toggle('us-day-active', type==='half');
   if(fullBtn) fullBtn.classList.toggle('us-day-active', type==='full');
+  calcUS();
+}
+
+// Social reels added onto a Listing Video package (cheaper than standalone)
+function changeUSListingReels(delta){
+  usQuoteState.listingReelCount = Math.max(0, (usQuoteState.listingReelCount||0)+delta);
+  const el = document.getElementById('us-listing-reel-count');
+  if(el) el.textContent = usQuoteState.listingReelCount;
   calcUS();
 }
 
@@ -2105,6 +2128,7 @@ function getUSGrand(){
     case 'listing':
       if(!usQuoteState.listingTier) return 0;
       base = p.listing[usQuoteState.listingTier] || 0;
+      base += (usQuoteState.listingReelCount||0) * (p.reelAddon||400);
       break;
     case 'social':
       if(!usQuoteState.socialTier) return 0;
@@ -2179,6 +2203,10 @@ function renderUSQuote(market, grand){
     case 'listing':{
       const tierLabels = { under4k:'Under 4,000 sqft', over4k:'4,000–8,000 sqft', over8k:'Over 8,000 sqft' };
       lines.push({ label:'Listing Video — '+tierLabels[usQuoteState.listingTier||'under4k'], amount: p?.listing[usQuoteState.listingTier]||0 });
+      if(usQuoteState.listingReelCount>0){
+        const rr=p?.reelAddon||400;
+        lines.push({ label:`Social reel add-on (${usQuoteState.listingReelCount} × $${rr.toLocaleString()})`, amount: usQuoteState.listingReelCount*rr });
+      }
       break;
     }
     case 'social':{

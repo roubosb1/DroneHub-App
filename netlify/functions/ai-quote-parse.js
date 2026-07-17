@@ -78,8 +78,8 @@ US MARKET jobs use PACKAGES instead of the service booleans (leave all "services
 - usSocialTier (only when usPkgType is "social") — number of reels: "r1".."r5", or "fullDay" for unlimited.
 - usDayType (only when usPkgType is "day") — "half" or "full".
 - usAddons — sunrise (sunrise/sunset/twilight lighting), photoHDR (HDR photos), photoFlash (flash photography). Set true only when clearly requested.
-- If reels are requested IN ADDITION to a listing shoot, keep usPkgType "listing", set the tier, and state the extra reel count prominently at the START of notes (e.g. "3 social reels also requested — add to quote manually").
-- For Canada jobs set usPkgType/usListingTier/usSocialTier/usDayType to null and all usAddons false.
+- usListingReels (only when usPkgType is "listing") — number of social reels requested IN ADDITION to the listing shoot (e.g. "house tour plus 3 reels" -> usPkgType "listing", usListingReels 3). 0 if none. When reels are the ONLY deliverable use usPkgType "social" with usSocialTier instead.
+- For Canada jobs set usPkgType/usListingTier/usSocialTier/usDayType to null, usListingReels 0, and all usAddons false.
 
 Respond with ONLY a single JSON object, no markdown fences, no commentary, matching exactly this shape:
 {
@@ -92,6 +92,7 @@ Respond with ONLY a single JSON object, no markdown fences, no commentary, match
   "services": { "video": bool, "photo": bool, "tvideo": bool, "tphoto": bool, "reel": bool, "extphoto": bool, "extvideo": bool, "floorplan": bool, "randomvideo": bool, "randomphoto": bool, "rush": bool },
   "usPkgType": "listing"|"social"|"agent"|"day"|"exterior"|null,
   "usListingTier": "under4k"|"over4k"|"over8k"|null,
+  "usListingReels": number (0 if none),
   "usSocialTier": "r1"|"r2"|"r3"|"r4"|"r5"|"fullDay"|null,
   "usDayType": "half"|"full"|null,
   "usAddons": { "sunrise": bool, "photoHDR": bool, "photoFlash": bool },

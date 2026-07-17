@@ -31,6 +31,7 @@ const US_MARKET_PRICING={
     agentPromo:4000,
     exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    reelAddon:400,
     offSeasonDiscount:1000,
   },
   'texas':{
@@ -40,6 +41,7 @@ const US_MARKET_PRICING={
     agentPromo:4000,
     exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    reelAddon:400,
     offSeasonDiscount:1000,
   },
   'arizona':{
@@ -49,6 +51,7 @@ const US_MARKET_PRICING={
     agentPromo:4000,
     exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    reelAddon:400,
     offSeasonDiscount:1000,
   },
   'colorado':{
@@ -58,6 +61,7 @@ const US_MARKET_PRICING={
     agentPromo:4000,
     exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    reelAddon:800,
     offSeasonDiscount:1000,
   },
   'other_us':{
@@ -67,6 +71,7 @@ const US_MARKET_PRICING={
     agentPromo:4000,
     exteriorOnly:750,
     addons:{ sunrise:500, photoHDR:500, photoFlash:1000 },
+    reelAddon:400,
     offSeasonDiscount:1000,
   },
 };
@@ -81,6 +86,7 @@ let usQuoteState={
   socialTier:null,      // 'r1'|'r2'|'r3'|'r5'|'fullDay'
   dayType:null,         // 'half'|'full'
   reelCount:0,          // legacy single-count (kept for old job compatibility)
+  listingReelCount:0,   // social reels added onto a Listing Video package
   reelsTBD:false,       // legacy flag
   dayLocations:[],      // [{address:string, reelCount:number}] — multi-location reel tracker
   addons:{ sunrise:false, photoHDR:false, photoFlash:false },
@@ -3847,6 +3853,7 @@ function openInvoice(jobId){
     if(ud.pkgType==='listing'&&ud.listingTier){
       const basePrice=p.listing[ud.listingTier]||job.grand;
       lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier}`,qty:1,unit:basePrice,total:basePrice});
+      if((ud.listingReelCount||0)>0){const rr=p.reelAddon||400;lines.push({desc:'Add-on: Social Reels',qty:ud.listingReelCount,unit:rr,total:ud.listingReelCount*rr});}
       if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
       if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
       if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
