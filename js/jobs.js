@@ -1766,6 +1766,27 @@ function aiQuoteApplyToForm(d){
   if(fpKey){ const el=document.getElementById('sel-floorplan'); if(el){ el.value=fpKey; } }
   if((vidKey||phoKey||fpKey) && typeof onContractorChange==='function') onContractorChange();
 
+  // US market — select package, tier, and add-ons in the US services panel
+  const _appliedMarket=document.getElementById('job-market-input')?.value||'canada';
+  if(_appliedMarket!=='canada'){
+    const pkg=d.usPkgType||'listing';
+    if(typeof selectUSPkg==='function') selectUSPkg(pkg);
+    if(pkg==='listing'){
+      let tier=d.usListingTier;
+      if(!tier&&d.sqft) tier=d.sqft<4000?'under4k':(d.sqft<=8000?'over4k':'over8k');
+      if(tier&&typeof selectUSTier==='function') selectUSTier(tier);
+    }
+    if(pkg==='social'&&d.usSocialTier&&typeof selectUSSocialTier==='function') selectUSSocialTier(d.usSocialTier);
+    if(pkg==='day'&&d.usDayType&&typeof selectUSDayType==='function') selectUSDayType(d.usDayType);
+    if(d.usAddons){
+      [['sunrise','us-addon-sunrise'],['photoHDR','us-addon-photoHDR'],['photoFlash','us-addon-photoFlash']].forEach(([k,id])=>{
+        const el=document.getElementById(id);
+        if(el&&typeof d.usAddons[k]==='boolean') el.checked=d.usAddons[k];
+      });
+    }
+    if(typeof calcUS==='function') calcUS();
+  }
+
   // Services — only flip toggles that differ from the AI's desired state
   if(d.services && typeof svc==='object'){
     Object.entries(d.services).forEach(([key,want])=>{

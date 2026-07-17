@@ -63,11 +63,23 @@ ${JSON.stringify(clients)}
 
 Valid "market" values: ${JSON.stringify(MARKETS)}. Infer from the address/city if not explicit (Canadian address -> "canada", else best US region match, default "other_us" if unclear).
 
-Valid service keys (booleans): ${JSON.stringify(SERVICE_KEYS)}.
+Valid service keys (booleans) — CANADA MARKET ONLY: ${JSON.stringify(SERVICE_KEYS)}.
 - video = drone video, photo = drone photos, tvideo = twilight video, tphoto = twilight photos,
   reel = additional social media reel, extphoto = exterior-only photo shoot, extvideo = exterior-only video shoot,
   floorplan = floor plan, randomvideo/randomphoto = miscellaneous video/photo shoot hours, rush = rush order requested.
 Only set a service true if the text actually implies it. Don't assume video+photo by default — only mark what's mentioned.
+
+US MARKET jobs use PACKAGES instead of the service booleans (leave all "services" false for US jobs):
+- usPkgType — exactly one of "listing", "social", "agent", "day", "exterior", or null:
+  · "listing" = a property listing / house tour shoot (video and photos of a home for sale). This is the default for property media requests.
+  · "social" = a standalone reel package where social reels are the main deliverable (no full listing video).
+  · "agent" = agent personal-brand promo shoot. · "day" = half/full social day rate. · "exterior" = exterior-only shoot.
+- usListingTier (only when usPkgType is "listing") — by property size: under 4,000 sqft -> "under4k"; 4,000–8,000 -> "over4k"; over 8,000 -> "over8k". Derive from sqft when given.
+- usSocialTier (only when usPkgType is "social") — number of reels: "r1".."r5", or "fullDay" for unlimited.
+- usDayType (only when usPkgType is "day") — "half" or "full".
+- usAddons — sunrise (sunrise/sunset/twilight lighting), photoHDR (HDR photos), photoFlash (flash photography). Set true only when clearly requested.
+- If reels are requested IN ADDITION to a listing shoot, keep usPkgType "listing", set the tier, and state the extra reel count prominently at the START of notes (e.g. "3 social reels also requested — add to quote manually").
+- For Canada jobs set usPkgType/usListingTier/usSocialTier/usDayType to null and all usAddons false.
 
 Respond with ONLY a single JSON object, no markdown fences, no commentary, matching exactly this shape:
 {
@@ -78,13 +90,18 @@ Respond with ONLY a single JSON object, no markdown fences, no commentary, match
   "photographerName": string|null,
   "floorplanName": string|null,
   "services": { "video": bool, "photo": bool, "tvideo": bool, "tphoto": bool, "reel": bool, "extphoto": bool, "extvideo": bool, "floorplan": bool, "randomvideo": bool, "randomphoto": bool, "rush": bool },
+  "usPkgType": "listing"|"social"|"agent"|"day"|"exterior"|null,
+  "usListingTier": "under4k"|"over4k"|"over8k"|null,
+  "usSocialTier": "r1"|"r2"|"r3"|"r4"|"r5"|"fullDay"|null,
+  "usDayType": "half"|"full"|null,
+  "usAddons": { "sunrise": bool, "photoHDR": bool, "photoFlash": bool },
   "clientName": string|null,
   "clientEmail": string|null,
   "clientPhone": string|null,
   "jobDate": string|null (YYYY-MM-DD),
   "jobTime": string|null (HH:MM, 24h),
   "duration": number|null (hours),
-  "notes": string|null (anything not captured above — gate codes, special instructions, etc.)
+  "notes": string|null (anything not captured above — gate codes, special instructions, extra reels on a listing, etc.)
 }`;
 }
 
