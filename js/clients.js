@@ -2179,6 +2179,7 @@ async function cpShowTab(tab){
   if(_cpContentEl){
     if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
     else if(tab==='files'||tab==='projects'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
+    else if(tab==='booking'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
     else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
   }
   setTimeout(cpUpdateNotifBadge,100);
