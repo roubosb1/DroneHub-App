@@ -195,7 +195,125 @@ exports.handler = async (event) => {
     }
 
     if (platform === 'instagram' || platform === 'facebook') {
-      return { statusCode: 200, headers, body: JSON.stringify({ notConfigured: true, message: 'Instagram/Facebook need a Meta Developer app connection — coming soon' }) };
+      if (!process.env.META_APP_ID) {
+        return { statusCode: 200, headers, body: JSON.stringify({ notConfigured: true, message: 'META_APP_ID / META_APP_SECRET not set in Netlify environment variables' }) };
+      }
+      const acctId = body.acctId;
+      if (!acctId) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true, message: 'Connect with Facebook to pull live stats' }) };
+
+      // Long-lived user token stored by meta-auth
+      const orgId = process.env.ORG_ID || 'dronehub_main';
+      const doc = await getDb().doc(`dh_secure/${orgId}_meta_${acctId}`).get();
+      const userToken = doc.exists ? doc.data()?.metaAccessToken : null;
+      if (!userToken) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true, message: 'Connect with Facebook to pull live stats' }) };
+      const expiresAt = doc.data()?.metaExpiresAt || 0;
+      const expiringSoon = expiresAt && (expiresAt - Date.now()) < 7 * 86400000;
+
+      const FBV = 'v21.0';
+      const g = async (path, params) => {
+        const qs = new URLSearchParams({ ...(params || {}), access_token: userToken });
+        const r = await fetch(`https://graph.facebook.com/${FBV}/${path}?${qs}`);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || `Graph API ${r.status}`);
+        return d;
+      };
+
+      // Pages this user manages, with any linked IG business accounts
+      const pages = (await g('me/accounts', {
+        fields: 'id,name,link,fan_count,followers_count,picture{url},access_token,instagram_business_account{id,username,name,profile_picture_url,followers_count,media_count}',
+        limit: '50',
+      })).data || [];
+
+      const norm = s => (s || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
+      const want = norm(handle);
+
+      if (platform === 'instagram') {
+        const withIg = pages.filter(pg => pg.instagram_business_account);
+        if (!withIg.length) return { statusCode: 200, headers, body: JSON.stringify({ error: 'No Instagram Business account is linked to any Facebook Page this login manages. Link the IG account to a Page (Professional account) first.' }) };
+        const match = withIg.find(pg => norm(pg.instagram_business_account.username) === want || norm(pg.instagram_business_account.name) === want) || withIg[0];
+        const ig = match.instagram_business_account;
+
+        if (action === 'media') {
+          const media = (await g(`${ig.id}/media`, {
+            fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+            limit: '12',
+          })).data || [];
+          return { statusCode: 200, headers, body: JSON.stringify({
+            ok: true,
+            media: media.map(m => ({
+              id: m.id,
+              caption: (m.caption || '').slice(0, 120),
+              type: m.media_type,
+              thumb: m.thumbnail_url || m.media_url || '',
+              url: m.permalink,
+              date: (m.timestamp || '').slice(0, 10),
+              likes: m.like_count || 0,
+              comments: m.comments_count || 0,
+            })),
+          }) };
+        }
+
+        if (action === 'insights') {
+          const range = Math.min(parseInt(body.range || '28', 10) || 28, 90); // IG daily metrics cap at ~93 days back
+          const since = Math.floor((Date.now() - range * 86400000) / 1000);
+          const until = Math.floor(Date.now() / 1000);
+          let days = [];
+          try {
+            const ins = await g(`${ig.id}/insights`, { metric: 'reach', period: 'day', since: String(since), until: String(until) });
+            const reach = (ins.data || []).find(m => m.name === 'reach');
+            days = (reach?.values || []).map(v => ({ date: (v.end_time || '').slice(0, 10), reach: v.value || 0 }));
+          } catch (e) { /* insights can 400 on brand-new accounts — profile stats still work */ }
+          return { statusCode: 200, headers, body: JSON.stringify({ ok: true, days, expiringSoon }) };
+        }
+
+        return { statusCode: 200, headers, body: JSON.stringify({
+          ok: true,
+          platform: 'instagram',
+          name: ig.name || '@' + ig.username,
+          avatar: ig.profile_picture_url || '',
+          followers: ig.followers_count || 0,
+          views: 0,
+          posts: ig.media_count || 0,
+          url: 'https://www.instagram.com/' + ig.username,
+          expiringSoon,
+        }) };
+      }
+
+      // Facebook Page
+      const match = pages.find(pg => norm(pg.name) === want || (pg.link || '').toLowerCase().includes(want)) || pages[0];
+      if (!match) return { statusCode: 200, headers, body: JSON.stringify({ error: 'This Facebook login does not manage any Pages.' }) };
+
+      if (action === 'media') {
+        const posts = (await g(`${match.id}/posts`, {
+          fields: 'message,created_time,permalink_url,likes.summary(true),comments.summary(true)',
+          limit: '10',
+        }).catch(() => ({ data: [] }))).data || [];
+        return { statusCode: 200, headers, body: JSON.stringify({
+          ok: true,
+          media: posts.map(po => ({
+            id: po.id,
+            caption: (po.message || '').slice(0, 120),
+            type: 'POST',
+            thumb: '',
+            url: po.permalink_url,
+            date: (po.created_time || '').slice(0, 10),
+            likes: po.likes?.summary?.total_count || 0,
+            comments: po.comments?.summary?.total_count || 0,
+          })),
+        }) };
+      }
+
+      return { statusCode: 200, headers, body: JSON.stringify({
+        ok: true,
+        platform: 'facebook',
+        name: match.name,
+        avatar: match.picture?.data?.url || '',
+        followers: match.followers_count || match.fan_count || 0,
+        views: 0,
+        posts: 0,
+        url: match.link || '',
+        expiringSoon,
+      }) };
     }
 
     if (platform === 'tiktok') {

@@ -9,9 +9,9 @@ const SOCIAL_METRICS_API = '/.netlify/functions/social-metrics';
 const SA_PLATFORMS = [
   { id: 'youtube',   label: 'YouTube',   color: '#FF0000', live: true,
     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="var(--navy)"/></svg>' },
-  { id: 'instagram', label: 'Instagram', color: '#E4405F', live: false,
+  { id: 'instagram', label: 'Instagram', color: '#E4405F', live: true,
     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>' },
-  { id: 'facebook',  label: 'Facebook',  color: '#1877F2', live: false,
+  { id: 'facebook',  label: 'Facebook',  color: '#1877F2', live: true,
     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>' },
   { id: 'tiktok',    label: 'TikTok',    color: '#69C9D0', live: false,
     icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>' },
@@ -66,14 +66,22 @@ async function socialAcctRefresh(acctId, silent) {
     const res = await fetch(SOCIAL_METRICS_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: acct.platform, handle: acct.handle }),
+      body: JSON.stringify({ platform: acct.platform, handle: acct.handle, acctId: acct.id }),
     });
     const data = await res.json();
     if (data.notConfigured) {
       if (!silent) try { showDhToast('Not connected yet', data.message || 'This platform needs API setup', '⚠', 'var(--orange)', 5000); } catch (e) {}
       return;
     }
+    if (data.notConnected) {
+      acct.metaConnected = false;
+      socialAcctsSave(arr);
+      if (!silent) try { showDhToast('Connect with Facebook', 'Open this account and click Connect to pull live Instagram/Facebook stats', 'ℹ️', 'var(--blue-bright)', 5000); } catch (e) {}
+      return;
+    }
     if (data.error) throw new Error(data.error);
+    if (data.expiringSoon && !silent) try { showDhToast('Meta connection expiring soon', 'Reconnect with Facebook within a week to keep stats flowing', '⚠', 'var(--orange)', 6000); } catch (e) {}
+    if (acct.platform === 'instagram' || acct.platform === 'facebook') acct.metaConnected = true;
     acct.name = data.name || acct.name;
     acct.avatar = data.avatar || acct.avatar || '';
     acct.url = data.url || acct.url || '';
@@ -217,6 +225,10 @@ async function socialAcctDetail(acctId) {
     <div id="sa-detail-insights" style="margin-bottom:18px"></div>
     <div id="sa-detail-videos"><div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Loading recent videos…</div></div>`;
 
+  if (acct.platform === 'instagram' || acct.platform === 'facebook') {
+    _saRenderMetaSection(acct);
+    return;
+  }
   if (acct.platform !== 'youtube') {
     document.getElementById('sa-detail-videos').innerHTML = '';
     return;
@@ -224,6 +236,68 @@ async function socialAcctDetail(acctId) {
 
   _saRenderInsights(acct);
   _saRenderVideos(acct);
+}
+
+// ── Meta (Instagram/Facebook) connect + recent posts ─────────────────────────
+function socialAcctConnectMeta(acctId) {
+  window.location.href = '/.netlify/functions/meta-auth?step=init&acctId=' + encodeURIComponent(acctId);
+}
+
+async function _saRenderMetaSection(acct) {
+  const insEl = document.getElementById('sa-detail-insights');
+  const vidEl = document.getElementById('sa-detail-videos');
+  if (!insEl || !vidEl) return;
+  const p = _saPlatform(acct.platform);
+  if (!acct.metaConnected) {
+    vidEl.innerHTML = '';
+    insEl.innerHTML = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">Connect ${p.label} via Facebook</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">Followers, recent posts with likes and comments${acct.platform === 'instagram' ? ', and daily reach' : ''} — pulled live from Meta. Sign in once with the Facebook account that manages this ${acct.platform === 'instagram' ? 'Instagram Business account' : 'Page'} to grant read-only access.</div>
+      </div>
+      <button onclick="socialAcctConnectMeta('${acct.id}')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:12px;border:1px solid rgba(24,119,242,.5);background:rgba(24,119,242,.1);color:#1877F2;font-size:12px;font-weight:700;cursor:pointer">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Connect with Facebook
+      </button>
+    </div>`;
+    return;
+  }
+  insEl.innerHTML = '';
+  vidEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Loading recent posts…</div>`;
+  try {
+    const res = await fetch(SOCIAL_METRICS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: acct.platform, handle: acct.handle, action: 'media', acctId: acct.id }),
+    });
+    const data = await res.json();
+    if (data.notConnected) {
+      const arr = socialAcctsLoad(); const a = arr.find(x => x.id === acct.id);
+      if (a) { a.metaConnected = false; socialAcctsSave(arr); }
+      _saRenderMetaSection({ ...acct, metaConnected: false });
+      return;
+    }
+    if (data.error) throw new Error(data.error);
+    const media = data.media || [];
+    if (!media.length) { vidEl.innerHTML = `<div class="card" style="text-align:center;color:var(--muted);font-size:12px">No recent posts found.</div>`; return; }
+    vidEl.innerHTML = `<div class="card">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Recent posts <span style="color:var(--green);margin-left:6px">● Connected</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+        ${media.map(m => `
+          <a href="${m.url}" target="_blank" style="text-decoration:none;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:block">
+            ${m.thumb ? `<img src="${m.thumb}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" onerror="this.style.display='none'">` : `<div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:${p.color}">${p.icon}</div>`}
+            <div style="padding:10px">
+              <div style="font-size:10px;color:var(--offwhite);line-height:1.4;height:28px;overflow:hidden">${(m.caption || '').replace(/</g, '&lt;') || '<span style="color:var(--muted)">No caption</span>'}</div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted)">
+                <span>❤ ${_saFmt(m.likes)}</span><span>💬 ${_saFmt(m.comments)}</span><span>${m.date}</span>
+              </div>
+            </div>
+          </a>`).join('')}
+      </div>
+    </div>`;
+  } catch (err) {
+    vidEl.innerHTML = `<div class="card" style="color:#E85D5D;font-size:12px">${err.message}</div>`;
+  }
 }
 
 // ── Private channel analytics (watch time, daily views, traffic sources) ─────
@@ -503,6 +577,25 @@ async function socialVideoDetail(acctId, videoId) {
     const msg = hash === '#yt-denied' ? 'Access denied' : decodeURIComponent(hash.replace('#yt-error=', ''));
     window.location.hash = '';
     setTimeout(() => { try { showDhToast('YouTube connection failed', msg, '⚠', 'var(--orange)', 6000); } catch (e) {} }, 600);
+  } else if (hash.startsWith('#meta-connected=')) {
+    const acctId = decodeURIComponent(hash.replace('#meta-connected=', ''));
+    window.location.hash = '';
+    const arr = socialAcctsLoad();
+    const a = arr.find(x => x.id === acctId);
+    if (a) { a.metaConnected = true; socialAcctsSave(arr); }
+    setTimeout(() => {
+      try {
+        showDhToast('Meta account connected', a?.name || '', '✅', 'var(--green)', 4000);
+        showPane('social');
+        setSocialSubTab('analytics');
+        if (a) socialAcctRefresh(acctId, true).then(() => socialAcctDetail(acctId));
+        else socialAcctDetail(acctId);
+      } catch (e) {}
+    }, 600);
+  } else if (hash.startsWith('#meta-error=') || hash === '#meta-denied') {
+    const msg = hash === '#meta-denied' ? 'Access denied' : decodeURIComponent(hash.replace('#meta-error=', ''));
+    window.location.hash = '';
+    setTimeout(() => { try { showDhToast('Meta connection failed', msg, '⚠', 'var(--orange)', 6000); } catch (e) {} }, 600);
   }
 })();
 
