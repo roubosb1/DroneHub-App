@@ -118,6 +118,16 @@ exports.handler = async (event) => {
         updatedAt: Date.now(),
       }, { merge: true });
 
+      // Also keep an org-wide default token (most recent connection) so
+      // Business Discovery can pull public stats for accounts nobody has
+      // explicitly connected.
+      await getDb().doc(`dh_secure/${orgId}_meta_default`).set({
+        metaAccessToken: accessToken,
+        metaName: name,
+        metaExpiresAt: expiresAt,
+        updatedAt: Date.now(),
+      }, { merge: true });
+
       return { statusCode: 302, headers: { Location: `${siteUrl}/#meta-connected=${encodeURIComponent(acctId)}` }, body: '' };
     } catch (err) {
       console.error('[meta-auth] callback error:', err.message);

@@ -199,14 +199,28 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ notConfigured: true, message: 'META_APP_ID / META_APP_SECRET not set in Netlify environment variables' }) };
       }
       const acctId = body.acctId;
-      if (!acctId) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true, message: 'Connect with Facebook to pull live stats' }) };
-
-      // Long-lived user token stored by meta-auth
       const orgId = process.env.ORG_ID || 'dronehub_main';
-      const doc = await getDb().doc(`dh_secure/${orgId}_meta_${acctId}`).get();
-      const userToken = doc.exists ? doc.data()?.metaAccessToken : null;
-      if (!userToken) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true, message: 'Connect with Facebook to pull live stats' }) };
-      const expiresAt = doc.data()?.metaExpiresAt || 0;
+
+      // Prefer this account's own connection; fall back to the org-wide
+      // default token (last person to connect) for Business Discovery of
+      // public stats on accounts nobody has connected.
+      let userToken = null, tokenIsOwn = false, expiresAt = 0;
+      if (acctId) {
+        const doc = await getDb().doc(`dh_secure/${orgId}_meta_${acctId}`).get();
+        if (doc.exists && doc.data()?.metaAccessToken) {
+          userToken = doc.data().metaAccessToken;
+          expiresAt = doc.data().metaExpiresAt || 0;
+          tokenIsOwn = true;
+        }
+      }
+      if (!userToken) {
+        const def = await getDb().doc(`dh_secure/${orgId}_meta_default`).get();
+        if (def.exists && def.data()?.metaAccessToken) {
+          userToken = def.data().metaAccessToken;
+          expiresAt = def.data().metaExpiresAt || 0;
+        }
+      }
+      if (!userToken) return { statusCode: 200, headers, body: JSON.stringify({ notConnected: true, message: 'Connect at least one account with Facebook to enable Instagram stats' }) };
       const expiringSoon = expiresAt && (expiresAt - Date.now()) < 7 * 86400000;
 
       const FBV = 'v21.0';
@@ -230,8 +244,48 @@ exports.handler = async (event) => {
       if (platform === 'instagram') {
         const withIg = pages.filter(pg => pg.instagram_business_account);
         if (!withIg.length) return { statusCode: 200, headers, body: JSON.stringify({ error: 'No Instagram Business account is linked to any Facebook Page this login manages. Link the IG account to a Page (Professional account) first.' }) };
-        const match = withIg.find(pg => norm(pg.instagram_business_account.username) === want || norm(pg.instagram_business_account.name) === want) || withIg[0];
-        const ig = match.instagram_business_account;
+        const managedMatch = withIg.find(pg => norm(pg.instagram_business_account.username) === want || norm(pg.instagram_business_account.name) === want);
+
+        // ── Business Discovery: public stats for any professional IG account
+        // this token does NOT manage — followers, posts, recent media. No
+        // private insights (reach/demographics) on this path.
+        if (!managedMatch) {
+          const viaId = withIg[0].instagram_business_account.id;
+          const username = (handle || '').trim().replace(/^@/, '').replace(/.*instagram\.com\//i, '').replace(/[/?].*$/, '');
+          const mediaFields = 'media.limit(12){caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count}';
+          let bd;
+          try {
+            bd = (await g(`${viaId}`, { fields: `business_discovery.username(${username}){username,name,profile_picture_url,followers_count,media_count,${mediaFields}}` })).business_discovery;
+          } catch (e) {
+            return { statusCode: 200, headers, body: JSON.stringify({ error: 'Instagram account "@' + username + '" not found — it must be a public Business or Creator account (personal accounts are not reachable). (' + e.message + ')' }) };
+          }
+          if (action === 'media') {
+            const media = bd.media?.data || [];
+            return { statusCode: 200, headers, body: JSON.stringify({
+              ok: true, discovery: true,
+              media: media.map(m => ({
+                id: m.id, caption: (m.caption || '').slice(0, 120), type: m.media_type,
+                thumb: m.thumbnail_url || m.media_url || '', url: m.permalink,
+                date: (m.timestamp || '').slice(0, 10), likes: m.like_count || 0, comments: m.comments_count || 0,
+              })),
+            }) };
+          }
+          if (action === 'insights') {
+            return { statusCode: 200, headers, body: JSON.stringify({ ok: true, discovery: true, days: [] }) };
+          }
+          return { statusCode: 200, headers, body: JSON.stringify({
+            ok: true, discovery: true,
+            platform: 'instagram',
+            name: bd.name || '@' + bd.username,
+            avatar: bd.profile_picture_url || '',
+            followers: bd.followers_count || 0,
+            views: 0,
+            posts: bd.media_count || 0,
+            url: 'https://www.instagram.com/' + bd.username,
+          }) };
+        }
+
+        const ig = managedMatch.instagram_business_account;
 
         if (action === 'media') {
           const media = (await g(`${ig.id}/media`, {
@@ -279,9 +333,11 @@ exports.handler = async (event) => {
         }) };
       }
 
-      // Facebook Page
-      const match = pages.find(pg => norm(pg.name) === want || (pg.link || '').toLowerCase().includes(want)) || pages[0];
-      if (!match) return { statusCode: 200, headers, body: JSON.stringify({ error: 'This Facebook login does not manage any Pages.' }) };
+      // Facebook Page — only Pages the token manages are readable (Meta gates
+      // public Page data behind its own review permission)
+      const fbMatch = pages.find(pg => norm(pg.name) === want || (pg.link || '').toLowerCase().includes(want));
+      const match = fbMatch || (tokenIsOwn ? pages[0] : null);
+      if (!match) return { statusCode: 200, headers, body: JSON.stringify({ error: 'This Facebook Page is not managed by any connected login. Facebook Pages need management access (or a Page role grant) to track — public lookup is Instagram-only.' }) };
 
       if (action === 'media') {
         const posts = (await g(`${match.id}/posts`, {

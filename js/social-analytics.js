@@ -81,7 +81,7 @@ async function socialAcctRefresh(acctId, silent) {
     }
     if (data.error) throw new Error(data.error);
     if (data.expiringSoon && !silent) try { showDhToast('Meta connection expiring soon', 'Reconnect with Facebook within a week to keep stats flowing', '⚠', 'var(--orange)', 6000); } catch (e) {}
-    if (acct.platform === 'instagram' || acct.platform === 'facebook') acct.metaConnected = true;
+    if (acct.platform === 'instagram' || acct.platform === 'facebook') acct.metaConnected = !data.discovery;
     acct.name = data.name || acct.name;
     acct.avatar = data.avatar || acct.avatar || '';
     acct.url = data.url || acct.url || '';
@@ -249,20 +249,19 @@ async function _saRenderMetaSection(acct) {
   if (!insEl || !vidEl) return;
   const p = _saPlatform(acct.platform);
   if (!acct.metaConnected) {
-    vidEl.innerHTML = '';
     insEl.innerHTML = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div style="flex:1;min-width:220px">
-        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">Connect ${p.label} via Facebook</div>
-        <div style="font-size:11px;color:var(--muted);line-height:1.6">Followers, recent posts with likes and comments${acct.platform === 'instagram' ? ', and daily reach' : ''} — pulled live from Meta. Sign in once with the Facebook account that manages this ${acct.platform === 'instagram' ? 'Instagram Business account' : 'Page'} to grant read-only access.</div>
+        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">${acct.platform === 'instagram' ? 'Public stats shown — connect for full insights' : 'Connect ' + p.label + ' via Facebook'}</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">${acct.platform === 'instagram' ? 'Followers and recent posts come from public data. Connecting with the Facebook account that manages this Instagram unlocks reach, profile views, and demographics.' : 'Page followers and recent posts — pulled live from Meta. Sign in once with the Facebook account that manages this Page to grant read-only access.'}</div>
       </div>
       <button onclick="socialAcctConnectMeta('${acct.id}')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:12px;border:1px solid rgba(24,119,242,.5);background:rgba(24,119,242,.1);color:#1877F2;font-size:12px;font-weight:700;cursor:pointer">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
         Connect with Facebook
       </button>
     </div>`;
-    return;
+  } else {
+    insEl.innerHTML = '';
   }
-  insEl.innerHTML = '';
   vidEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Loading recent posts…</div>`;
   try {
     const res = await fetch(SOCIAL_METRICS_API, {
