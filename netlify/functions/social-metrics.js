@@ -289,12 +289,13 @@ exports.handler = async (event) => {
 
         if (action === 'media') {
           const media = (await g(`${ig.id}/media`, {
-            fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+            fields: 'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
             limit: '12',
           })).data || [];
-          return { statusCode: 200, headers, body: JSON.stringify({
-            ok: true,
-            media: media.map(m => ({
+          // Owner connection → per-post insights: views, reach, saves, and for
+          // reels the retention numbers (avg watch time, total watch time)
+          const enriched = await Promise.all(media.map(async m => {
+            const base = {
               id: m.id,
               caption: (m.caption || '').slice(0, 120),
               type: m.media_type,
@@ -303,8 +304,26 @@ exports.handler = async (event) => {
               date: (m.timestamp || '').slice(0, 10),
               likes: m.like_count || 0,
               comments: m.comments_count || 0,
-            })),
-          }) };
+            };
+            try {
+              const isReel = m.media_product_type === 'REELS';
+              const metrics = isReel
+                ? 'views,reach,saved,shared,ig_reels_avg_watch_time,ig_reels_video_view_total_time'
+                : 'views,reach,saved';
+              const ins = (await g(`${m.id}/insights`, { metric: metrics })).data || [];
+              const val = n => ins.find(x => x.name === n)?.values?.[0]?.value;
+              if (val('views') != null) base.views = val('views');
+              if (val('reach') != null) base.reach = val('reach');
+              if (val('saved') != null) base.saves = val('saved');
+              if (val('shared') != null) base.shares = val('shared');
+              const awt = val('ig_reels_avg_watch_time'); // milliseconds
+              if (awt != null) base.avgWatchSec = Math.round(awt / 100) / 10;
+              const twt = val('ig_reels_video_view_total_time'); // milliseconds
+              if (twt != null) base.totalWatchHrs = Math.round(twt / 3600000 * 10) / 10;
+            } catch (e) { /* insights unavailable on some media (old posts, boosted) — keep public fields */ }
+            return base;
+          }));
+          return { statusCode: 200, headers, body: JSON.stringify({ ok: true, media: enriched }) };
         }
 
         if (action === 'insights') {

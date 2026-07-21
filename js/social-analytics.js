@@ -290,6 +290,13 @@ async function _saRenderMetaSection(acct) {
               <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted)">
                 <span>❤ ${_saFmt(m.likes)}</span><span>💬 ${_saFmt(m.comments)}</span><span>${m.date}</span>
               </div>
+              ${(m.views != null || m.reach != null) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid var(--border);font-size:10px">
+                ${m.views != null ? `<span style="color:var(--blue-bright);font-weight:700">▶ ${_saFmt(m.views)} views</span>` : ''}
+                ${m.reach != null ? `<span style="color:var(--muted)">${_saFmt(m.reach)} reach</span>` : ''}
+                ${m.avgWatchSec != null ? `<span style="color:var(--green);font-weight:700">⏱ ${m.avgWatchSec}s avg watch</span>` : ''}
+                ${m.saves != null && m.saves > 0 ? `<span style="color:var(--muted)">🔖 ${_saFmt(m.saves)}</span>` : ''}
+                ${m.totalWatchHrs != null && m.totalWatchHrs > 0 ? `<span style="color:var(--muted)">${m.totalWatchHrs}h watched</span>` : ''}
+              </div>` : ''}
             </div>
           </a>`).join('')}
       </div>
