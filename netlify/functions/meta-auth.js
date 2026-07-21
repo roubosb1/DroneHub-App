@@ -66,7 +66,7 @@ exports.handler = async (event) => {
     authUrl.searchParams.set('client_id', process.env.META_APP_ID);
     authUrl.searchParams.set('redirect_uri', getRedirectUri(event));
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights,business_management');
+    authUrl.searchParams.set('scope', 'pages_show_list,pages_read_engagement,read_insights,instagram_basic,instagram_manage_insights');
     authUrl.searchParams.set('state', makeState(p.acctId));
     return { statusCode: 302, headers: { Location: authUrl.toString() }, body: '' };
   }
