@@ -239,7 +239,11 @@ exports.handler = async (event) => {
       })).data || [];
 
       const norm = s => (s || '').toLowerCase().replace(/^@/, '').replace(/[^a-z0-9]/g, '');
-      const want = norm(handle);
+      // URL handles: extract the page/profile slug so facebook.com/MyPage matches
+      let _handleForMatch = (handle || '').trim();
+      const _slugM = _handleForMatch.match(/(?:facebook|instagram)\.com\/([^/?#]+)/i);
+      if (_slugM) _handleForMatch = _slugM[1];
+      const want = norm(_handleForMatch);
 
       if (platform === 'instagram') {
         const withIg = pages.filter(pg => pg.instagram_business_account);
