@@ -308,14 +308,14 @@ exports.handler = async (event) => {
             try {
               const isReel = m.media_product_type === 'REELS';
               const metrics = isReel
-                ? 'views,reach,saved,shared,ig_reels_avg_watch_time,ig_reels_video_view_total_time'
+                ? 'views,reach,saved,shares,ig_reels_avg_watch_time,ig_reels_video_view_total_time'
                 : 'views,reach,saved';
               const ins = (await g(`${m.id}/insights`, { metric: metrics })).data || [];
               const val = n => ins.find(x => x.name === n)?.values?.[0]?.value;
               if (val('views') != null) base.views = val('views');
               if (val('reach') != null) base.reach = val('reach');
               if (val('saved') != null) base.saves = val('saved');
-              if (val('shared') != null) base.shares = val('shared');
+              if (val('shares') != null) base.shares = val('shares');
               const awt = val('ig_reels_avg_watch_time'); // milliseconds
               if (awt != null) base.avgWatchSec = Math.round(awt / 100) / 10;
               const twt = val('ig_reels_video_view_total_time'); // milliseconds
@@ -378,13 +378,26 @@ exports.handler = async (event) => {
         }) };
       }
 
+      // Page insights (28d impressions) — uses the page's own access token
+      let pageImpressions = 0;
+      try {
+        const pgToken = match.access_token || userToken;
+        const qs = new URLSearchParams({ metric: 'page_impressions', period: 'days_28', access_token: pgToken });
+        const ir = await fetch(`https://graph.facebook.com/${FBV}/${match.id}/insights?${qs}`);
+        const idata = await ir.json();
+        if (ir.ok) {
+          const vals = idata.data?.find(m => m.name === 'page_impressions')?.values || [];
+          pageImpressions = vals.length ? (vals[vals.length - 1].value || 0) : 0;
+        }
+      } catch (e) { /* insights optional */ }
+
       return { statusCode: 200, headers, body: JSON.stringify({
         ok: true,
         platform: 'facebook',
         name: match.name,
         avatar: match.picture?.data?.url || '',
         followers: match.followers_count || match.fan_count || 0,
-        views: 0,
+        views: pageImpressions,
         posts: 0,
         url: match.link || '',
         expiringSoon,
