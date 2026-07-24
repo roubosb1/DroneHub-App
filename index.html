@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>window.addEventListener('error',function(e){try{var a=JSON.parse(sessionStorage.getItem('_dbg_errors')||'[]');a.push((e.message||'?')+' @ '+(e.filename||'')+':'+e.lineno);sessionStorage.setItem('_dbg_errors',JSON.stringify(a.slice(0,10)));}catch(x){}});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -4500,7 +4501,7 @@
 <script src="js/tracker.js?v=50"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=4"></script>
-<script src="js/calendar.js?v=60"></script>
+<script src="js/calendar.js?v=61"></script>
 <script src="js/team.js?v=52"></script>
 <script src="js/jobs.js?v=10"></script>
 <script src="js/clients.js?v=76"></script>
@@ -5371,6 +5372,8 @@ function mobCancelTimeOffRequest(requestId){
 // ─────────────────────────────────────────────────────────────────────────────
 
 function showPane(id,ev){
+  // Meta App Review demo session is pinned to the Social pane
+  try{ if(id!=='social'&&gateGetSession()?.reviewer) id='social'; }catch(e){}
   // Hide desktop profile pane whenever navigating to any regular pane
   dskHideMyProfile&&dskHideMyProfile();
   // ── Desktop LouChat full-screen: always restore normal layout first ──────────
@@ -7878,7 +7881,7 @@ function gateInit(){
     return;
   }
   const session=gateGetSession();
-  if(session&&session.email){
+    if(session&&session.email){
     // Restore Firebase proxy token so sync works after a page refresh
     const _storedTok=localStorage.getItem('dh_token');
     if(_storedTok){
@@ -7891,7 +7894,7 @@ function gateInit(){
     // blank, but surface the sign-in prompt immediately rather than letting every
     // save fail silently later with no explanation.
     gateEnterApp(session);
-    _fbShowSessionExpired();
+    if(!session.reviewer) _fbShowSessionExpired();
     return;
   }
   // Clear any stale session — fix name and inject missing jobTitle
@@ -7921,7 +7924,7 @@ function gateInit(){
   // Only push to Firebase if we actually added new accounts — prevents wiping existing passHash values
   if(usersChanged) gateSaveUsers(users);
   else try{localStorage.setItem('dronehub_gate_users',JSON.stringify(users));}catch(e){}
-  document.getElementById('site-login-gate').style.display='flex';
+    document.getElementById('site-login-gate').style.display='flex';
   // Auto-select last used portal (skip the picker for returning users)
   try{
     const lastPortal=localStorage.getItem('dronehub_last_portal');
@@ -8119,6 +8122,16 @@ async function gateLogin(){
   // Revoked accounts — login permanently blocked
   const REVOKED_EMAILS=['adrian@dronehubmedia.com'];
   if(REVOKED_EMAILS.includes(email)){errEl.textContent='This account has been deactivated. Please contact your administrator.';errEl.style.display='block';_restoreBtn();return;}
+
+  // ── Meta App Review demo account ─────────────────────────────────────────
+  // Locked to the Social pane; gets no Firebase token, so no org data ever
+  // loads — the reviewer connects their own test Meta account to demo the flow.
+  if(email==='reviewer@dronehubmedia.com'){
+    if(pass!=='DroneHubReview2026!'){recordLoginFailure(email);errEl.textContent='Incorrect password.';errEl.style.display='block';_restoreBtn();return;}
+    gateSaveSession({name:'Meta App Reviewer',email,role:'reviewer',reviewer:true,jobTitle:'Reviewer'});
+    location.reload();
+    return;
+  }
 
   // Rate limit check — block after 5 failures for 15 min
   const _rateLock=checkRateLimit(email);
@@ -8483,6 +8496,16 @@ async function gateSignup(){
 
 let _activeSessionEmail = ''; // module-level so showPane can read it without re-parsing storage
 
+// Meta App Review demo session: hide every nav destination except Social and
+// pin the app there. Runs after the app shell renders.
+function _applyReviewerLock(){
+  const s=gateGetSession(); if(!s?.reviewer) return;
+  document.querySelectorAll('#app-global-nav .app-gnav-item').forEach(b=>{ if(b.id!=='app-gnav-social') b.style.display='none'; });
+  document.querySelectorAll('.tab').forEach(t=>{ const oc=t.getAttribute('onclick')||''; if(!oc.includes("'social'")) t.style.display='none'; });
+  try{ showPane('social'); }catch(e){}
+  try{ if(typeof setSocialSubTab==='function') setSocialSubTab('analytics'); }catch(e){}
+}
+
 async function gateEnterApp(session){
   // Always inject jobTitle from preset map if not already set
   if(!session.jobTitle) session.jobTitle=PRESET_JOB_TITLES[session.email?.toLowerCase()]?.title||'';
@@ -8493,6 +8516,8 @@ async function gateEnterApp(session){
   // the first time the Sales pane is opened (catches uploads by other team members)
   _salesSessionSynced = false;
   gateSaveSession(session);
+  // Reviewer demo account: lock the UI down to the Social pane only
+  if(session.reviewer) setTimeout(_applyReviewerLock,600);
   // Hide login gate, show loading overlay immediately — never a blank screen
   document.getElementById('site-login-gate').style.display='none';
   const _dhLoad=document.getElementById('dh-app-loading');

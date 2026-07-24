@@ -1980,8 +1980,7 @@ function renderMobCal(dir){
     g.id='mob-cal-grid';g.className='mc-grid';
     g.innerHTML=newHtml;clip.appendChild(g);
   }
-  // Update the events list for the currently selected date
-  _mcRenderEvents(jobsByDate);
+  // Day-view event list is rendered by _mcBuildDayScreen when a day is opened
 }
 
 // Tap a date cell in month grid → open day view
