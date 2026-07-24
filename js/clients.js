@@ -2167,6 +2167,59 @@ function cpLogout(){
   document.getElementById('cp-login-pass').value='';
 }
 
+// ── Change portal password (Profile tab) ─────────────────────────────────────
+// Updates the hash in BOTH stores that hold it — portal_accounts (portal
+// sign-in) and gate_users (main-gate client sign-in + server auth) — via their
+// normal savers so the change syncs to Firebase for other devices.
+async function cpChangePassword(){
+  const msg=document.getElementById('cp-pw-msg');
+  const btn=document.getElementById('cp-pw-btn');
+  const show=(text,ok)=>{if(msg){msg.textContent=text;msg.style.color=ok?'var(--green)':'var(--red)';msg.style.display='block';}};
+  const current=document.getElementById('cp-pw-current')?.value||'';
+  const next=document.getElementById('cp-pw-new')?.value||'';
+  const confirm2=document.getElementById('cp-pw-confirm')?.value||'';
+
+  // Resolve the signed-in portal email (cpLogin uses sessionStorage; the main
+  // gate path uses localStorage)
+  let sessEmail='';
+  try{sessEmail=(JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'null')?.email||'').toLowerCase();}catch(e){}
+  if(!sessEmail){try{sessEmail=(JSON.parse(localStorage.getItem('dronehub_cp_session')||'null')?.email||'').toLowerCase();}catch(e){}}
+  const accounts=getPortalAccounts();
+  const acct=accounts.find(a=>sessEmail?(a.email||'').toLowerCase()===sessEmail:a.clientId===cpActiveClientId);
+  if(!acct||!acct.email){show('Could not find your portal account — please sign out and back in, then try again.',false);return;}
+  const email=(acct.email||'').toLowerCase();
+
+  if(!current||!next||!confirm2){show('Please fill in all three fields.',false);return;}
+  if(next.length<8){show('New password must be at least 8 characters.',false);return;}
+  if(next!==confirm2){show('New passwords do not match.',false);return;}
+  if(next===current){show('New password must be different from your current password.',false);return;}
+  const lock=checkRateLimit('cppw:'+email);
+  if(lock){show(lock,false);return;}
+
+  if(btn){btn.disabled=true;btn.style.opacity='.6';btn.textContent='Updating…';}
+  try{
+    const ok=await verifyPass(email,current,acct.passHash);
+    if(!ok){recordLoginFailure('cppw:'+email);show(checkRateLimit('cppw:'+email)||'Current password is incorrect.',false);return;}
+    clearLoginFailures('cppw:'+email);
+
+    const newHash=await hashPass(email,next);
+    acct.passHash=newHash;
+    savePortalAccounts(accounts);
+    // Mirror into gate_users so the main-gate login and server auth accept it too
+    const gUsers=gateGetUsers();
+    const gu=gUsers.find(u=>(u.email||'').toLowerCase()===email);
+    if(gu){gu.passHash=newHash;gateSaveUsers(gUsers);}
+
+    ['cp-pw-current','cp-pw-new','cp-pw-confirm'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    show('Password updated. Use the new password next time you sign in.',true);
+    try{showDhToast('Password updated','','check','var(--green)',3000);}catch(e){}
+  }catch(err){
+    show('Something went wrong: '+(err?.message||'unknown error'),false);
+  }finally{
+    if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='Update password';}
+  }
+}
+
 async function cpShowTab(tab){
   // Only toggle tabs inside the client portal (not team portal which shares .cp-tab class)
   document.querySelectorAll('#cp-dashboard .cp-tab').forEach(t=>{
@@ -2852,6 +2905,28 @@ async function cpShowTab(tab){
         </div>
         <div style="display:flex;justify-content:flex-end">
           <button onclick="cpSaveClientProfile()" style="padding:10px 24px;border-radius:12px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save changes</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="section-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px">${_icon('lock',14)} Change Password</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Update the password you use to sign in to this portal.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Current password</label>
+            <input type="password" id="cp-pw-current" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">New password</label>
+            <input type="password" id="cp-pw-new" autocomplete="new-password" placeholder="At least 8 characters" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Confirm new password</label>
+            <input type="password" id="cp-pw-confirm" autocomplete="new-password" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white)">
+          </div>
+        </div>
+        <div id="cp-pw-msg" style="display:none;font-size:12px;font-weight:600;margin-bottom:12px"></div>
+        <div style="display:flex;justify-content:flex-end">
+          <button onclick="cpChangePassword()" id="cp-pw-btn" style="padding:10px 24px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Update password</button>
         </div>
       </div>`;
   }
