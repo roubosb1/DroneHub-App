@@ -8500,7 +8500,7 @@ let _activeSessionEmail = ''; // module-level so showPane can read it without re
 // pin the app there. Runs after the app shell renders.
 function _applyReviewerLock(){
   const s=gateGetSession(); if(!s?.reviewer) return;
-  document.querySelectorAll('#app-global-nav .app-gnav-item').forEach(b=>{ if(b.id!=='app-gnav-social') b.style.display='none'; });
+  document.querySelectorAll('#app-global-nav .app-gnav-item').forEach(b=>{ if(b.id!=='app-gnav-social'&&b.id!=='gnav-signout-btn') b.style.display='none'; });
   document.querySelectorAll('.tab').forEach(t=>{ const oc=t.getAttribute('onclick')||''; if(!oc.includes("'social'")) t.style.display='none'; });
   try{ showPane('social'); }catch(e){}
   try{ if(typeof setSocialSubTab==='function') setSocialSubTab('analytics'); }catch(e){}
