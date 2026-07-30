@@ -445,79 +445,95 @@ function mobTrkAdd(){
   const body = document.getElementById('mob-trk-add-body');
   if(!body) return;
 
+  const icon = (svg,bg,color) => `<div class="mtrk2-selcard-icon" style="background:${bg};color:${color}">${svg}</div>`;
+  const chev = `<span class="mtrk2-selcard-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>`;
+  const inCard = (fid,cap,ph,type,ic,bg,col) => `
+    <div class="mtrk2-selcard" style="padding:12px 14px">
+      ${icon(ic,bg,col)}
+      <div style="min-width:0;flex:1">
+        <div class="mtrk2-selcard-cap">${cap}</div>
+        <input id="${fid}" type="${type}" placeholder="${ph}" style="border:none;background:transparent;color:var(--white);font-size:14px;font-weight:700;padding:2px 0;outline:none;width:100%">
+      </div>
+    </div>`;
+  const selCard = (fid,cap,opts,ic,bg,col) => `
+    <div class="mtrk2-selcard">
+      ${icon(ic,bg,col)}
+      <div style="min-width:0;flex:1">
+        <div class="mtrk2-selcard-cap">${cap}</div>
+        <div class="mtrk2-selcard-val" id="${fid}-val">Tap to choose</div>
+      </div>
+      ${chev}
+      <select id="${fid}" onchange="const v=document.getElementById('${fid}-val'); if(v) v.textContent=this.options[this.selectedIndex]?.text||'—'">${opts}</select>
+    </div>`;
+  const svgFolder='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+  const svgUser='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  const svgVideo='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+  const svgCam='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+
   body.innerHTML = `
     <div class="mtrk-section" style="margin-top:0">Project Info</div>
-
-    <div class="mtrk-field">
-      ${lbl(_isPhoto?'Property Address / Project':'Project Name')}
-      ${inp('mtrk-add-name',_isPhoto?'123 Main St – City, Province…':'Project name…')}
-    </div>
-
-    <div class="mtrk-field">
-      ${lbl('Client Name')}
-      ${inp('mtrk-add-client','Client name…')}
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div class="mtrk-field" style="margin-bottom:0">
-        ${lbl('Shoot Date')}
-        ${inp('mtrk-add-date','','date')}
+    ${inCard('mtrk-add-name',_isPhoto?'Property Address / Project':'Project Name',_isPhoto?'123 Main St – City…':'Project name…','text',svgFolder,'rgba(91,141,239,.12)','var(--blue-bright)')}
+    ${inCard('mtrk-add-client','Client','Client name…','text',svgUser,'rgba(167,139,250,.12)','#A78BFA')}
+    <div class="mtrk2-hours">
+      <div class="mtrk2-hourcard">
+        <input id="mtrk-add-date" type="date">
+        <div class="cap">Shoot date</div>
       </div>
-      <div class="mtrk-field" style="margin-bottom:0">
-        ${lbl('Due Date')}
-        ${inp('mtrk-add-due','','date')}
+      <div class="mtrk2-hourcard">
+        <input id="mtrk-add-due" type="date">
+        <div class="cap">Due date</div>
       </div>
     </div>
 
     <div class="mtrk-section">Status</div>
-
-    <div class="mtrk-field">
-      ${lbl('Edit Status')}
-      <select id="mtrk-add-status" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${statusOptHtml}</select>
+    ${selCard('mtrk-add-status','Edit Status',statusOptHtml,svgVideo,'rgba(91,141,239,.12)','var(--blue-bright)')}
+    ${!_isPhoto?`
+    <div class="mtrk2-steps" id="mtrk-add-steps">
+      ${_stageOpts.map((st,i)=>`
+        <button type="button" class="mtrk2-step ${i===0?'now':''}" style="--stepc:${st.dot||'var(--blue)'}" onclick="mobTrkAddPickStage(${i})">
+          <span class="mtrk2-step-dot"></span>
+          <span class="mtrk2-step-lbl">${st.label}</span>
+        </button>`).join('')}
     </div>
-
-    ${!_isPhoto?`<div class="mtrk-field">
-      ${lbl('Kanban Stage')}
-      <select id="mtrk-add-stage" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${stageOptHtml}</select>
-    </div>`:''}
+    <select id="mtrk-add-stage" style="display:none">${stageOptHtml}</select>`:''}
 
     <div class="mtrk-section">Assignment</div>
-
-    ${contractorOptHtml?`<div class="mtrk-field">
-      ${lbl('Editor')}
-      <select id="mtrk-add-editor" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${contractorOptHtml}</select>
-    </div>`:''}
-
-    ${vidOptHtml?`<div class="mtrk-field">
-      ${lbl(_isPhoto?'Photographer':'Videographer')}
-      <select id="mtrk-add-videographer" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px">${vidOptHtml}</select>
-    </div>`:''}
+    ${contractorOptHtml?selCard('mtrk-add-editor','Editor',contractorOptHtml,svgUser,'rgba(34,217,122,.1)','var(--green)'):''}
+    ${vidOptHtml?selCard('mtrk-add-videographer',_isPhoto?'Photographer':'Videographer',vidOptHtml,svgCam,'rgba(245,166,35,.1)','var(--amber)'):''}
 
     <div class="mtrk-section">Hours</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div class="mtrk-field" style="margin-bottom:0">
-        ${lbl(_isPhoto?'Shoot Hrs':'Film Hrs')}
-        <input id="mtrk-add-film-hrs" type="number" placeholder="e.g. 2" step="0.5" min="0" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;box-sizing:border-box">
+    <div class="mtrk2-hours">
+      <div class="mtrk2-hourcard">
+        <input id="mtrk-add-film-hrs" type="number" placeholder="0" step="0.5" min="0">
+        <div class="cap">${_isPhoto?'Shoot hrs':'Film hrs'}</div>
       </div>
-      <div class="mtrk-field" style="margin-bottom:0">
-        ${lbl('Edit Hrs')}
-        <input id="mtrk-add-edit-hrs" type="number" placeholder="e.g. 4" step="0.5" min="0" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;box-sizing:border-box">
+      <div class="mtrk2-hourcard">
+        <input id="mtrk-add-edit-hrs" type="number" placeholder="0" step="0.5" min="0">
+        <div class="cap">Edit hrs</div>
       </div>
     </div>
 
     <div class="mtrk-section">Notes</div>
-
     <div class="mtrk-field">
-      <textarea id="mtrk-add-notes" rows="3" placeholder="Any notes…" style="width:100%;padding:10px 12px;border:1px solid var(--border-bright);border-radius:10px;background:var(--navy-lift);color:var(--white);font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
+      <textarea id="mtrk-add-notes" rows="3" placeholder="Any notes…" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:16px;background:var(--navy-mid);color:var(--white);font-size:14px;resize:vertical;box-sizing:border-box;outline:none"></textarea>
     </div>
 
-    <button onclick="mobTrkAddSave('${id}')" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">${_isPhoto?'Create Photo Project':'Create Video Project'}</button>
+    <button onclick="mobTrkAddSave('${id}')" style="width:100%;padding:15px;border-radius:16px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;box-shadow:0 8px 22px rgba(91,141,239,.35)">${_isPhoto?'Create Photo Project':'Create Video Project'}</button>
 
     <div style="height:calc(20px + env(safe-area-inset-bottom,0px))"></div>
   `;
 
   document.getElementById('mob-tracker-main')?.classList.add('mtrk-add-open');
+}
+
+function mobTrkAddPickStage(idx){
+  const _stageOpts = typeof TRACKER_STAGES!=='undefined' ? TRACKER_STAGES : [];
+  const sel=document.getElementById('mtrk-add-stage');
+  if(sel && _stageOpts[idx]) sel.value=_stageOpts[idx].key;
+  document.querySelectorAll('#mtrk-add-steps .mtrk2-step').forEach((b,i)=>{
+    b.classList.toggle('now',i===idx);
+    b.classList.toggle('done',i<idx);
+  });
 }
 
 function mobTrkAddBack(){

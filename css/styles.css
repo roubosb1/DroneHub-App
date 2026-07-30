@@ -1353,9 +1353,10 @@ button{font-family:var(--font);}
 .mtrk2-switch-thumb{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.4);}
 .mtrk2-switch input:checked ~ .mtrk2-switch-track{background:var(--green);}
 .mtrk2-switch input:checked ~ .mtrk2-switch-thumb{transform:translateX(19px);}
-.mtrk2-hours{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-.mtrk2-hourcard{padding:12px 14px;border-radius:14px;background:var(--navy-mid);border:1px solid var(--border);text-align:center;}
-.mtrk2-hourcard input{width:100%;border:none;background:transparent;color:var(--white);font-size:22px;font-weight:800;text-align:center;outline:none;padding:2px 0;}
+.mtrk2-hours{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:10px;}
+.mtrk2-hourcard{padding:12px 14px;border-radius:14px;background:var(--navy-mid);border:1px solid var(--border);text-align:center;min-width:0;}
+.mtrk2-hourcard input{width:100%;min-width:0;box-sizing:border-box;border:none;background:transparent;color:var(--white);font-size:22px;font-weight:800;text-align:center;outline:none;padding:2px 0;}
+.mtrk2-hourcard input[type=date]{font-size:15px;}
 .mtrk2-hourcard .cap{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
 
 /* ══ mob2 — shared mobile design kit (design language from mtrk2) ══ */
