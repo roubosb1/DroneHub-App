@@ -429,11 +429,20 @@ function getAvatarHtml(name,email,size=36,fontSize=12){
   const bg=colors[(name||'').charCodeAt(0)%colors.length];
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
 }
+let _hdrPhotoTried={};
 function renderAppHeader(){
   const session=gateGetSession&&gateGetSession();
   if(!session) return;
   const userDisplay=document.getElementById('app-user-display');
   if(!userDisplay) return;
+  // Header only reads the localStorage photo cache; on a fresh device that
+  // cache is empty until the profile page is opened. Pull the photo from
+  // Firebase once per session, then re-render with it.
+  if(session.email && !getProfilePhoto(session.email) && !_hdrPhotoTried[session.email]
+     && typeof loadProfilePhotoFromFirebase==='function' && typeof _fbToken==='function' && _fbToken()){
+    _hdrPhotoTried[session.email]=true;
+    loadProfilePhotoFromFirebase(session.email).then(p=>{ if(p) renderAppHeader(); }).catch(()=>{});
+  }
   const isAdmin=session.type==='admin'||session.role==='admin';
   const displayName=session.email==='roubosb1@gmail.com'?'Bailey Roubos':(session.name||session.email);
   const avatarHtml=getAvatarHtml(displayName,session.email,28,10);
