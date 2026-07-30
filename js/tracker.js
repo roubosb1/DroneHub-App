@@ -621,63 +621,102 @@ function mobTrkBuildDetail(jobId){
   const body = document.getElementById('mob-trk-dv-body');
   if(!body) return;
 
+  // Stage progress (video mode): index in TRACKER_STAGES drives the bar/stepper
+  const stageIdx = Math.max(0,_stageOpts.findIndex(st=>st.key===stage));
+  const stageDef = _stageOpts[stageIdx]||{};
+  const pct = _stageOpts.length>1 ? Math.round(stageIdx/(_stageOpts.length-1)*100) : 0;
+  const statusLabel = (_statusOpts.find(o=>o.key===editStatus)||{}).label||'—';
+  const _avEmail = n => { try{ const m=(typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]).find(x=>x.name===n); return m?.email||''; }catch(e){ return ''; } };
+  const _av = n => (typeof getAvatarHtml==='function' && n) ? getAvatarHtml(n,_avEmail(n),40,14) : `<div class="mtrk2-selcard-icon" style="background:rgba(255,255,255,.06);color:var(--muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
+  const chev = `<span class="mtrk2-selcard-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>`;
+
   body.innerHTML = `
-    <!-- Project info -->
-    <div style="padding:14px;background:var(--navy-mid);border-radius:12px;margin-bottom:16px;border:1px solid var(--border)">
-      <div style="font-size:15px;font-weight:800;color:var(--white);margin-bottom:4px">${job.name||job.address||'—'}</div>
-      ${clientName?`<div style="font-size:12px;color:var(--muted);margin-bottom:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</div>`:''}
-      ${job.date?`<div style="font-size:12px;color:var(--muted)">${job.date}</div>`:''}
+    <div class="mtrk2-hero">
+      <div class="mtrk2-hero-name">${job.name||job.address||'—'}</div>
+      <div class="mtrk2-chips">
+        ${clientName?`<span class="mtrk2-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</span>`:''}
+        ${job.date?`<span class="mtrk2-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${job.date}</span>`:''}
+        ${ts.rush?`<span class="mtrk2-chip" style="border-color:rgba(240,82,82,.5);color:#FF8A8A">⚡ Rush</span>`:''}
+      </div>
+      ${!_isPhoto?`
+      <div class="mtrk2-bar"><div class="mtrk2-bar-fill" style="width:${Math.max(pct,4)}%;background:${stageDef.dot||'var(--blue)'}"></div></div>
+      <div class="mtrk2-bar-label"><span style="color:${stageDef.color||'var(--muted)'}">${stageDef.label||''}</span><span>${pct}%</span></div>`:''}
     </div>
 
-    <div class="mtrk-section">Status</div>
-
-    <div class="mtrk-field">
-      <label>Edit status</label>
-      <select id="mtrk-edit-status" onchange="mobTrkSave('${jobId}','editStatus',this.value)">${editStatusOptHtml}</select>
-    </div>
-
-    ${!_isPhoto?`<div class="mtrk-field">
-      <label>Kanban stage</label>
-      <select id="mtrk-stage" onchange="mobTrkSave('${jobId}','stage',this.value)">${stageOptHtml}</select>
+    ${!_isPhoto?`
+    <div class="mtrk-section" style="margin-top:0">Pipeline</div>
+    <div class="mtrk2-steps">
+      ${_stageOpts.map((st,i)=>`
+        <button class="mtrk2-step ${i<stageIdx?'done':''} ${i===stageIdx?'now':''}" style="--stepc:${st.dot||'var(--blue)'}" onclick="mobTrkSave('${jobId}','stage','${st.key}');mobTrkBuildDetail('${jobId}')">
+          <span class="mtrk2-step-dot"></span>
+          <span class="mtrk2-step-lbl">${st.label}</span>
+        </button>`).join('')}
     </div>`:''}
+
+    <div class="mtrk-section" ${_isPhoto?'style="margin-top:0"':''}>Status</div>
+    <div class="mtrk2-selcard">
+      <div class="mtrk2-selcard-icon" style="background:rgba(91,141,239,.12);color:var(--blue-bright)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+      <div style="min-width:0;flex:1">
+        <div class="mtrk2-selcard-cap">Edit status</div>
+        <div class="mtrk2-selcard-val">${statusLabel}</div>
+      </div>
+      ${chev}
+      <select id="mtrk-edit-status" onchange="mobTrkSave('${jobId}','editStatus',this.value);mobTrkBuildDetail('${jobId}')">${editStatusOptHtml}</select>
+    </div>
 
     <div class="mtrk-section">Assignment</div>
-
-    ${contractorOptHtml?`<div class="mtrk-field">
-      <label>Editor</label>
-      <select id="mtrk-editor" onchange="mobTrkSave('${jobId}','claimedBy',this.value)">${contractorOptHtml}</select>
+    ${contractorOptHtml?`<div class="mtrk2-selcard">
+      ${_av(ts.claimedBy)}
+      <div style="min-width:0;flex:1">
+        <div class="mtrk2-selcard-cap">Editor</div>
+        <div class="mtrk2-selcard-val">${ts.claimedBy||'— Unassigned —'}</div>
+      </div>
+      ${chev}
+      <select id="mtrk-editor" onchange="mobTrkSave('${jobId}','claimedBy',this.value);mobTrkBuildDetail('${jobId}')">${contractorOptHtml}</select>
     </div>`:''}
-
-    ${vidOptHtml?`<div class="mtrk-field">
-      <label>${_isPhoto?'Photographer':'Videographer'}</label>
-      <select id="mtrk-videographer" onchange="mobTrkSave('${jobId}',${_isPhoto?`'photographer'`:`'videographer'`},this.value)">${vidOptHtml}</select>
+    ${vidOptHtml?`<div class="mtrk2-selcard">
+      ${_av(ts.videographer||ts.photographer)}
+      <div style="min-width:0;flex:1">
+        <div class="mtrk2-selcard-cap">${_isPhoto?'Photographer':'Videographer'}</div>
+        <div class="mtrk2-selcard-val">${(_isPhoto?ts.photographer:ts.videographer)||'— Unassigned —'}</div>
+      </div>
+      ${chev}
+      <select id="mtrk-videographer" onchange="mobTrkSave('${jobId}',${_isPhoto?`'photographer'`:`'videographer'`},this.value);mobTrkBuildDetail('${jobId}')">${vidOptHtml}</select>
     </div>`:''}
 
     <div class="mtrk-section">Footage & Files</div>
-
-    <div class="mtrk-check-row">
-      <input type="checkbox" id="mtrk-footage" ${ts.filesReceived?'checked':''} onchange="mobTrkSave('${jobId}','filesReceived',this.checked)">
+    <div class="mtrk2-switchrow">
       <label for="mtrk-footage">Footage / files received</label>
+      <span class="mtrk2-switch">
+        <input type="checkbox" id="mtrk-footage" ${ts.filesReceived?'checked':''} onchange="mobTrkSave('${jobId}','filesReceived',this.checked)">
+        <span class="mtrk2-switch-track"></span><span class="mtrk2-switch-thumb"></span>
+      </span>
     </div>
-    <div class="mtrk-check-row">
-      <input type="checkbox" id="mtrk-rush" ${ts.rush?'checked':''} onchange="mobTrkSave('${jobId}','rush',this.checked)">
-      <label for="mtrk-rush">Rush project</label>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div class="mtrk-field" style="margin-bottom:0">
-        <label>Film hrs</label>
-        <input type="number" id="mtrk-film-hrs" value="${ts.approxFilmHours||''}" placeholder="e.g. 2" step="0.5" min="0" onchange="mobTrkSave('${jobId}','approxFilmHours',this.value)">
-      </div>
-      <div class="mtrk-field" style="margin-bottom:0">
-        <label>Edit hrs</label>
-        <input type="number" id="mtrk-edit-hrs" value="${ts.approxEditHours||''}" placeholder="e.g. 4" step="0.5" min="0" onchange="mobTrkSave('${jobId}','approxEditHours',this.value)">
-      </div>
+    <div class="mtrk2-switchrow">
+      <label for="mtrk-rush">⚡ Rush project</label>
+      <span class="mtrk2-switch">
+        <input type="checkbox" id="mtrk-rush" ${ts.rush?'checked':''} onchange="mobTrkSave('${jobId}','rush',this.checked);mobTrkBuildDetail('${jobId}')">
+        <span class="mtrk2-switch-track"></span><span class="mtrk2-switch-thumb"></span>
+      </span>
     </div>
 
-    <div class="mtrk-field">
-      <label>Due date</label>
-      <input type="date" id="mtrk-due" value="${ts.completionDate||''}" onchange="mobTrkSave('${jobId}','completionDate',this.value)">
+    <div class="mtrk2-hours">
+      <div class="mtrk2-hourcard">
+        <input type="number" id="mtrk-film-hrs" value="${ts.approxFilmHours||''}" placeholder="0" step="0.5" min="0" onchange="mobTrkSave('${jobId}','approxFilmHours',this.value)">
+        <div class="cap">${_isPhoto?'Shoot hrs':'Film hrs'}</div>
+      </div>
+      <div class="mtrk2-hourcard">
+        <input type="number" id="mtrk-edit-hrs" value="${ts.approxEditHours||''}" placeholder="0" step="0.5" min="0" onchange="mobTrkSave('${jobId}','approxEditHours',this.value)">
+        <div class="cap">Edit hrs</div>
+      </div>
+    </div>
+
+    <div class="mtrk2-selcard" style="padding:12px 14px">
+      <div class="mtrk2-selcard-icon" style="background:rgba(245,166,35,.1);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div style="min-width:0;flex:1">
+        <div class="mtrk2-selcard-cap">Due date</div>
+        <input type="date" id="mtrk-due" value="${ts.completionDate||''}" onchange="mobTrkSave('${jobId}','completionDate',this.value)" style="border:none;background:transparent;color:var(--white);font-size:14px;font-weight:700;padding:2px 0;outline:none;width:100%">
+      </div>
     </div>
 
     <div class="mtrk-section">Links</div>
