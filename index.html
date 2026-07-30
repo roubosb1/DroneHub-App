@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=56">
+<link rel="stylesheet" href="css/styles.css?v=57">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -4793,8 +4793,17 @@ function toggleMobTopDropdown(){
   if(!dd) return;
   const isOpen = dd.classList.contains('open');
   if(isOpen){ closeMobTopDropdown(); return; }
+  // Fill the user card (avatar + name + role) each time the page opens
+  try{
+    const sess=gateGetSession()||{};
+    const av=document.getElementById('mob-more-user-avatar');
+    if(av&&typeof getAvatarHtml==='function') av.innerHTML=getAvatarHtml(sess.name||'',sess.email||'',56,20);
+    const nm=document.getElementById('mob-more-user-label');
+    if(nm) nm.textContent=sess.name||sess.email||'';
+    const tt=document.getElementById('mob-more-user-title');
+    if(tt) tt.textContent=sess.jobTitle||sess.role||'';
+  }catch(e){}
   dd.style.display = 'block';
-  ov.style.display = 'block';
   requestAnimationFrame(()=>dd.classList.add('open'));
 }
 function closeMobTopDropdown(){
@@ -10648,7 +10657,19 @@ function initGoogleMaps(){
 
 <!-- Mobile top dropdown menu (opens from hamburger in header) -->
 <div id="mob-top-dropdown">
-  <span id="mob-more-user-label" style="display:block;font-size:11px;color:var(--muted);font-weight:600;padding:4px 14px 8px;border-bottom:1px solid var(--border);margin-bottom:4px"></span>
+  <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;height:52px;padding:0 8px;background:var(--navy-card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2">
+    <button onclick="closeMobTopDropdown()" aria-label="Back" style="width:40px;height:40px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div style="text-align:center;font-size:15px;font-weight:800;color:var(--white)">Menu</div>
+    <div style="width:40px"></div>
+  </div>
+  <div id="mob-more-user-card" style="display:flex;align-items:center;gap:14px;padding:20px 18px;border-bottom:1px solid var(--border)">
+    <div id="mob-more-user-avatar"></div>
+    <div style="min-width:0">
+      <span id="mob-more-user-label" style="display:block;font-size:17px;font-weight:800;color:var(--white)"></span>
+      <span id="mob-more-user-title" style="display:block;font-size:12px;color:var(--muted);margin-top:2px"></span>
+    </div>
+  </div>
+  <div style="padding:10px 10px 30px">
 
   <button class="mob-dd-item" id="mobmore-quote" onclick="showPane('quote',event);closeMobTopDropdown()">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
@@ -10681,6 +10702,7 @@ function initGoogleMaps(){
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     Sign Out
   </button>
+  </div>
 </div>
 
 <!-- ═══ MOBILE PROFILE PANE (Instagram-style) ═══ -->

@@ -968,25 +968,31 @@ button{font-family:var(--font);}
 #mob-top-dropdown-overlay{
   display:none;position:fixed;inset:0;z-index:980;
 }
+/* Full-page menu (slides in from the right, like Instagram's more menu) */
 #mob-top-dropdown{
-  display:none;position:fixed;top:52px;right:10px;
-  background:var(--navy-card);border:1px solid var(--border-bright);
-  border-radius:14px;z-index:981;padding:8px;min-width:180px;
-  box-shadow:0 8px 32px rgba(0,0,0,.5);
-  transform-origin:top right;
-  transform:scale(.92);opacity:0;
-  transition:transform .18s cubic-bezier(.4,0,.2,1),opacity .18s;
+  display:none;position:fixed;inset:0;
+  background:var(--navy);z-index:981;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateX(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
 }
-#mob-top-dropdown.open{transform:scale(1);opacity:1;}
+#mob-top-dropdown.open{transform:translateX(0);}
 .mob-dd-item{
-  display:flex;align-items:center;gap:10px;width:100%;
-  padding:11px 14px;border:none;background:transparent;
-  color:var(--offwhite);font-size:13px;font-family:var(--font);
-  font-weight:600;cursor:pointer;border-radius:10px;text-align:left;
+  display:flex;align-items:center;gap:14px;width:100%;
+  padding:16px;border:none;background:transparent;
+  color:var(--offwhite);font-size:15px;font-family:var(--font);
+  font-weight:600;cursor:pointer;border-radius:14px;text-align:left;
   -webkit-tap-highlight-color:transparent;transition:background .12s;
+  position:relative;
+}
+.mob-dd-item svg{width:20px;height:20px;flex-shrink:0;}
+.mob-dd-item::after{
+  content:'';position:absolute;right:16px;top:50%;
+  width:8px;height:8px;border-right:2px solid var(--muted);border-top:2px solid var(--muted);
+  transform:translateY(-50%) rotate(45deg);opacity:.55;
 }
 .mob-dd-item:active,.mob-dd-item:hover{background:rgba(91,141,239,.14);color:var(--blue-bright);}
-.mob-dd-divider{height:1px;background:var(--border);margin:4px 0;}
+.mob-dd-divider{height:1px;background:var(--border);margin:8px 6px;}
 
 /* Desktop: never show mobile-only elements */
 @media(min-width:769px){
