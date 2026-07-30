@@ -287,6 +287,14 @@ async function _loadMsgKey(){
   _msgKeyLoading=(async()=>{
     try{
       const r=await fetch('/.netlify/functions/get-msg-key',{headers:{'Authorization':'Bearer '+tok}});
+      if(r.status===401){
+        // Stale token: surface the sign-in prompt instead of leaving chats
+        // stuck on [Decrypting...] forever
+        _dhToken=null;
+        try{localStorage.removeItem('dh_token');}catch(e){}
+        try{_fbShowSessionExpired();}catch(e){}
+        return null;
+      }
       if(!r.ok) return null;
       const {key}=await r.json();
       if(!key||key.length<64) return null;
