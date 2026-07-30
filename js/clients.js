@@ -3597,8 +3597,90 @@ function cpCountPendingActions(){
   return count;
 }
 
+// Everything the client should act on or know about, as clickable items
+function cpGetNotifItems(){
+  const items=[];
+  if(!cpActiveClientId) return items;
+  const cJobs=savedJobs.filter(j=>j.clientId===cpActiveClientId);
+  const esc=t=>String(t||'').replace(/</g,'&lt;');
+  // Videos waiting on the client's review
+  const allDrafts=videoDraftsLoad();
+  cJobs.forEach(j=>{
+    const vd=allDrafts.find(d=>d.jobId===j.id);
+    const last=vd&&vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;
+    if(last&&(last.status==='awaiting_review'||vd.status==='awaiting_review')){
+      items.push({icon:'video',color:'#A78BFA',bg:'rgba(167,139,250,.12)',title:'Video ready for your review',sub:esc(j.name),action:"cpShowTab('production')"});
+    }
+  });
+  // Social posts awaiting approval
+  const socialPosts=socialPostsLoad();
+  const socialWorkspaces=socialWorkspacesLoad();
+  socialPosts.forEach(p=>{
+    if(p.status!=='pending') return;
+    let mine=p.clientId&&p.clientId===cpActiveClientId;
+    if(!mine&&p.workspaceId){const ws=socialWorkspaces.find(w=>w.id===p.workspaceId);mine=ws?.clientId===cpActiveClientId;}
+    if(mine) items.push({icon:'chat',color:'#F5A623',bg:'rgba(245,166,35,.12)',title:'Social post awaiting your approval',sub:esc(p.caption||p.title||'Review in the Social tab'),action:"cpShowTab('social')"});
+  });
+  // Outstanding / overdue invoices
+  cJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&getInvoiceStatus(j)!=='paid'&&(j.grand||0)>0).forEach(j=>{
+    const overdue=getInvoiceStatus(j)==='overdue';
+    items.push({icon:'dollar',color:overdue?'#F05252':'var(--amber)',bg:overdue?'rgba(240,82,82,.12)':'rgba(245,166,35,.12)',title:overdue?'Invoice overdue':'Invoice outstanding',sub:esc(j.name),action:"cpShowTab('invoices')"});
+  });
+  // Team replies on active booking chats (last 14 days)
+  cJobs.filter(j=>['requested','quoted','confirmed'].includes(j.status)&&j.requestChat&&j.requestChat.length).forEach(j=>{
+    const last=j.requestChat[j.requestChat.length-1];
+    if(last.from==='team'&&Date.now()-new Date(last.at).getTime()<14*86400000){
+      items.push({icon:'chat',color:'var(--blue-bright)',bg:'rgba(91,141,239,.12)',title:'New message about your booking',sub:esc(j.name),action:"openRequestChat('"+String(j.id).replace(/'/g,"\\'")+"','client')"});
+    }
+  });
+  // Confirmed shoots in the next 7 days
+  const today=_cpDs(new Date()),week=_cpDs(new Date(Date.now()+7*86400000));
+  cJobs.filter(j=>j.status==='confirmed'&&j.date>=today&&j.date<=week).forEach(j=>{
+    items.push({icon:'calendar',color:'var(--green)',bg:'rgba(34,217,122,.12)',title:'Upcoming shoot · '+j.date+(j.shootTime?' at '+j.shootTime:''),sub:esc(j.name),action:"cpShowTab('booking')"});
+  });
+  return items;
+}
+
+function cpToggleNotifPanel(){
+  const existing=document.getElementById('cp-notif-panel');
+  if(existing){existing.remove();return;}
+  const items=cpGetNotifItems();
+  const isMobile=window.innerWidth<=768;
+  const panel=document.createElement('div');
+  panel.id='cp-notif-panel';
+  panel.style.cssText=isMobile
+    ?'position:fixed;left:10px;right:10px;top:60px;z-index:10005;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;box-shadow:0 16px 50px rgba(0,0,0,.5);max-height:70vh;overflow-y:auto'
+    :'position:fixed;right:18px;top:56px;z-index:10005;width:360px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;box-shadow:0 16px 50px rgba(0,0,0,.5);max-height:70vh;overflow-y:auto';
+  panel.innerHTML=`
+    <div style="padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <span style="color:var(--white)">${_icon('bell',15)}</span>
+      <span style="font-size:13px;font-weight:800;color:var(--white)">Notifications</span>
+      ${items.length?`<span style="min-width:18px;height:18px;border-radius:9px;background:var(--blue);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 5px">${items.length}</span>`:''}
+      <button onclick="document.getElementById('cp-notif-panel')?.remove()" style="margin-left:auto;width:24px;height:24px;border-radius:8px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">✕</button>
+    </div>
+    ${items.length?items.map(it=>`
+      <div onclick="document.getElementById('cp-notif-panel')?.remove();${it.action}" style="padding:12px 16px;cursor:pointer;display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.04)" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
+        <div style="width:32px;height:32px;border-radius:10px;background:${it.bg};color:${it.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">${_icon(it.icon,14)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--white)">${it.title}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.sub}</div>
+        </div>
+      </div>`).join('')
+    :`<div style="padding:36px 20px;text-align:center">
+        <div style="color:var(--muted);opacity:.5;margin-bottom:10px;display:flex;justify-content:center">${_icon('bell',26)}</div>
+        <div style="font-size:13px;color:var(--muted);font-weight:600">All caught up</div>
+        <div style="font-size:11px;color:var(--muted);opacity:.6;margin-top:3px">Nothing needs your attention right now</div>
+      </div>`}`;
+  document.body.appendChild(panel);
+  // Tap-away closes it
+  setTimeout(()=>{
+    const closer=e=>{if(!panel.contains(e.target)&&e.target.id!=='cp-notif-bell'&&!document.getElementById('cp-notif-bell')?.contains(e.target)){panel.remove();document.removeEventListener('click',closer);}};
+    document.addEventListener('click',closer);
+  },50);
+}
+
 function cpUpdateNotifBadge(){
-  const count=cpCountPendingActions();
+  const count=cpGetNotifItems().length;
   const badge=document.getElementById('cp-notif-count');
   const bell=document.getElementById('cp-notif-bell');
   if(!badge) return;

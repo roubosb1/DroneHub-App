@@ -276,7 +276,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span id="cp-welcome-name" style="font-size:13px;color:var(--offwhite);font-weight:600"></span>
-        <button id="cp-notif-bell" onclick="cpShowTab('overview')" title="Notifications" style="position:relative;padding:6px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span id="cp-notif-count" style="display:none;position:absolute;top:0;right:0;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:800;line-height:16px;text-align:center;padding:0 3px"></span></button>
+        <button id="cp-notif-bell" onclick="cpToggleNotifPanel()" title="Notifications" style="position:relative;padding:6px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span id="cp-notif-count" style="display:none;position:absolute;top:0;right:0;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:800;line-height:16px;text-align:center;padding:0 3px"></span></button>
         <button onclick="switchToTeamPortal()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1px solid rgba(245,166,35,.4);background:rgba(245,166,35,.08);color:var(--amber);font-size:12px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Team Portal</button>
         <button onclick="cpLogout()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">Sign out</button>
       </div>
@@ -4505,7 +4505,7 @@
 <script src="js/calendar.js?v=61"></script>
 <script src="js/team.js?v=52"></script>
 <script src="js/jobs.js?v=10"></script>
-<script src="js/clients.js?v=78"></script>
+<script src="js/clients.js?v=79"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>
