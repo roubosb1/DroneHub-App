@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=63">
+<link rel="stylesheet" href="css/styles.css?v=64">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -10759,11 +10759,13 @@ function initGoogleMaps(){
   <!-- Scrollable body -->
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))">
 
-    <!-- Profile hero: centered avatar, name, role chip -->
-    <div class="mob2-hero">
+    <!-- Profile hero: avatar left, name + role right (compact) -->
+    <div class="mob2-hero mob2-hero-row">
       <div id="mob-pf-avatar" class="mob2-avatar">?</div>
-      <div id="mob-pf-name" class="mob2-hero-name"></div>
-      <span class="mob2-chip"><span id="mob-pf-role"></span></span>
+      <div style="min-width:0">
+        <div id="mob-pf-name" class="mob2-hero-name"></div>
+        <span class="mob2-chip"><span id="mob-pf-role"></span></span>
+      </div>
     </div>
 
     <!-- Stat cards -->

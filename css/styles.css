@@ -1433,6 +1433,7 @@ button{font-family:var(--font);}
     border-bottom:1px solid var(--border);position:sticky;top:8px;z-index:10;
   }
   #mob-profile-pane .mob-pf-tab{
+    flex:1 1 0;min-width:0;justify-content:center;
     flex-direction:row;gap:6px;padding:9px 4px;border-radius:10px;
     border-bottom:none;font-size:10.5px;letter-spacing:.03em;
     transition:background .18s,color .18s;
@@ -1564,4 +1565,21 @@ button{font-family:var(--font);}
   #mob-profile-pane>div,#dh-notif-page,#mob-top-dropdown,
   .pane{overflow-x:hidden!important;}
   #mob-trk-dv-body>*,#mob-trk-add-body>*{max-width:100%;box-sizing:border-box;}
+}
+
+
+/* profile hero — compact horizontal variant */
+@media (max-width:768px){
+  .mob2-hero-row{
+    display:flex;align-items:center;gap:14px;text-align:left;
+    padding:14px 16px;
+    background:var(--navy);
+  }
+  .mob2-hero-row .mob2-avatar{
+    width:56px;height:56px;font-size:20px;margin:0;flex-shrink:0;
+    outline:2px solid var(--navy);
+    box-shadow:0 0 0 4px rgba(91,141,239,.35), 0 4px 14px rgba(0,0,0,.4);
+  }
+  .mob2-hero-row .mob2-hero-name{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mob2-hero-row .mob2-chip{margin-top:4px;padding:3px 10px;font-size:10.5px;}
 }
