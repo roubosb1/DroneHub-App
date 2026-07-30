@@ -327,7 +327,36 @@ exports.handler = async (event) => {
             } catch (e) { /* insights unavailable on some media (old posts, boosted) — keep public fields */ }
             return base;
           }));
-          return { statusCode: 200, headers, body: JSON.stringify({ ok: true, media: enriched }) };
+          // Collab posts authored by the partner account never appear in /media —
+          // Instagram only lists media the account owns. The /tags edge returns
+          // media this account is tagged/credited in (how collabs surface), so
+          // merge in the ones we don't already have. Insights belong to the
+          // authoring account, so these carry public likes/comments only.
+          let collabs = [];
+          try {
+            const tagged = (await g(`${ig.id}/tags`, {
+              fields: 'id,username,caption,media_type,media_url,permalink,timestamp,like_count,comments_count',
+              limit: '15',
+            })).data || [];
+            const ownIds = new Set(enriched.map(m => m.id));
+            collabs = tagged
+              .filter(t => !ownIds.has(t.id) && t.username && t.username !== ig.username)
+              .slice(0, 8)
+              .map(t => ({
+                id: t.id,
+                caption: (t.caption || '').slice(0, 120),
+                type: t.media_type,
+                thumb: t.media_url || '',
+                url: t.permalink,
+                date: (t.timestamp || '').slice(0, 10),
+                likes: t.like_count || 0,
+                comments: t.comments_count || 0,
+                collab: true,
+                by: t.username,
+              }));
+          } catch (e) { /* tags edge unavailable on some accounts — owned media still returns */ }
+          const merged = [...enriched, ...collabs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          return { statusCode: 200, headers, body: JSON.stringify({ ok: true, media: merged }) };
         }
 
         if (action === 'insights') {

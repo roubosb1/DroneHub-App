@@ -290,6 +290,7 @@ async function _saRenderMetaSection(acct) {
           <a href="${m.url}" target="_blank" style="text-decoration:none;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:block">
             ${m.thumb ? `<img src="${m.thumb}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" onerror="this.style.display='none'">` : `<div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:${p.color}">${p.icon}</div>`}
             <div style="padding:10px">
+              ${m.collab ? `<div style="display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;padding:2px 8px;border:1px solid rgba(91,141,239,.4);border-radius:999px;background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:9px;font-weight:700">🤝 Collab · @${m.by || ''}</div>` : ''}
               <div style="font-size:10px;color:var(--offwhite);line-height:1.4;height:28px;overflow:hidden">${(m.caption || '').replace(/</g, '&lt;') || '<span style="color:var(--muted)">No caption</span>'}</div>
               <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted)">
                 <span>❤ ${_saFmt(m.likes)}</span><span>💬 ${_saFmt(m.comments)}</span><span>${m.date}</span>
