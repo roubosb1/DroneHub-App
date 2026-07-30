@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=59">
+<link rel="stylesheet" href="css/styles.css?v=60">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -10758,38 +10758,35 @@ function initGoogleMaps(){
   <!-- Scrollable body -->
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))">
 
-    <!-- Profile top: avatar + name LEFT, stats grid RIGHT -->
-    <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:12px">
-      <!-- Avatar -->
-      <div id="mob-pf-avatar" style="width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;border:2px solid var(--border-bright);overflow:hidden">?</div>
-      <!-- Name + role -->
-      <div style="flex-shrink:1;min-width:0">
-        <div id="mob-pf-name" style="font-size:16px;font-weight:800;color:var(--white);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-        <div id="mob-pf-role" style="font-size:11px;color:var(--muted);font-weight:600;margin-top:1px"></div>
+    <!-- Profile hero: centered avatar, name, role chip -->
+    <div class="mob2-hero">
+      <div id="mob-pf-avatar" class="mob2-avatar">?</div>
+      <div id="mob-pf-name" class="mob2-hero-name"></div>
+      <span class="mob2-chip"><span id="mob-pf-role"></span></span>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="mob2-stats">
+      <div class="mob2-stat">
+        <div id="mob-pf-stat-active" class="num" style="color:var(--blue-bright)">0</div>
+        <div class="cap">Active</div>
       </div>
-      <!-- Stats 2x2 grid — centered in the remaining space -->
-      <div style="flex:1;display:grid;grid-template-columns:auto auto;gap:12px 38px;justify-content:center">
-        <div style="text-align:center">
-          <div id="mob-pf-stat-active" style="font-size:15px;font-weight:800;color:var(--blue-bright);line-height:1.2">0</div>
-          <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Active</div>
-        </div>
-        <div style="text-align:center">
-          <div id="mob-pf-stat-done" style="font-size:15px;font-weight:800;color:var(--green);line-height:1.2">0</div>
-          <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Done</div>
-        </div>
-        <div style="text-align:center">
-          <div id="mob-pf-stat-hrs" style="font-size:15px;font-weight:800;color:var(--amber);line-height:1.2">0</div>
-          <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Hrs</div>
-        </div>
-        <div style="text-align:center">
-          <div id="mob-pf-stat-portfolio" style="font-size:15px;font-weight:800;color:#A78BFA;line-height:1.2">0</div>
-          <div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Videos</div>
-        </div>
+      <div class="mob2-stat">
+        <div id="mob-pf-stat-done" class="num" style="color:var(--green)">0</div>
+        <div class="cap">Done</div>
+      </div>
+      <div class="mob2-stat">
+        <div id="mob-pf-stat-hrs" class="num" style="color:var(--amber)">0</div>
+        <div class="cap">Hrs</div>
+      </div>
+      <div class="mob2-stat">
+        <div id="mob-pf-stat-portfolio" class="num" style="color:#A78BFA">0</div>
+        <div class="cap">Videos</div>
       </div>
     </div>
 
     <!-- Portfolio sub-tabs: Cinema | Reels | Photos -->
-    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--navy);position:sticky;top:0;z-index:10">
+    <div class="mob-pf-tabbar">
       <button id="mob-pf-subtab-cinema" class="mob-pf-tab active" onclick="mobPfSwitchSubTab('cinema')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
         <span>Cinema</span>
