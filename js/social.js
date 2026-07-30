@@ -1192,6 +1192,141 @@ function renderNotificationPanel(){
       </div>`:''}
     </div>`;
 }
+
+// ── Full-page Notifications (Instagram-style) ────────────────────────────────
+// Categories: All · Bookings · Projects · Reminders. Opened by every bell.
+let _notifPageFilter='all';
+
+function _notifTypeCat(t){
+  if(t==='booking') return 'bookings';
+  if(t==='tax_update'||t==='timeoff_request') return 'reminders';
+  return 'projects'; // approvals, revisions, messages, video review, RSVP, date changes
+}
+
+function _notifPageItems(){
+  const items=[];
+  const esc=x=>String(x||'').replace(/</g,'&lt;');
+  // Requested bookings (live rows, not stored notifications)
+  (typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested').forEach(j=>{
+    const clientRec=(typeof clients!=='undefined'?clients:[]).find(c=>c.id===j.clientId);
+    items.push({cat:'bookings',label:'New booking',color:'var(--amber)',bg:'rgba(245,166,35,.1)',
+      icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+      title:esc(j.name),sub:esc((clientRec?.name||j.clientName||'Client portal')+' · '+(j.date||'No date')),
+      at:j.requestedAt||j.createdAt||j.date,
+      action:"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)"});
+  });
+  // Stored notifications
+  const cfg={
+    approval:{label:'Approved',color:'#22D97A',bg:'rgba(34,217,122,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'},
+    revision:{label:'Revision',color:'#FB923C',bg:'rgba(251,146,60,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'},
+    message:{label:'Message',color:'var(--blue-bright)',bg:'rgba(91,141,239,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue-bright)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'},
+    date_change:{label:'Date changed',color:'#A78BFA',bg:'rgba(167,139,250,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
+    video_approved:{label:'Video approved',color:'#22D97A',bg:'rgba(34,217,122,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
+    video_changes:{label:'Changes requested',color:'#F5C842',bg:'rgba(245,200,66,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
+    booking:{label:'Booking',color:'var(--amber)',bg:'rgba(245,166,35,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>'},
+    tax_update:{label:'Reminder',color:'#F5C842',bg:'rgba(245,200,66,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
+    timeoff_request:{label:'Time off',color:'#A78BFA',bg:'rgba(167,139,250,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>'},
+    rsvp_accept:{label:'Invite accepted',color:'#22D97A',bg:'rgba(34,217,122,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 15 2 2 4-4"/></svg>'},
+    rsvp_decline:{label:'Invite declined',color:'#E85D5D',bg:'rgba(232,93,93,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E85D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg>'},
+  };
+  const def={label:'Update',color:'var(--muted)',bg:'rgba(255,255,255,.04)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'};
+  notificationsLoad().forEach(n=>{
+    const c=cfg[n.type]||def;
+    const nav=n.type==='tax_update'?"showPane('finance')"
+      :n.type==='booking'?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)"
+      :(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')"
+      :n.type==='timeoff_request'?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}"
+      :"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
+    items.push({cat:_notifTypeCat(n.type),label:c.label,color:c.color,bg:c.bg,icon:c.icon,title:esc(n.text),sub:'',at:n.at,action:nav});
+  });
+  items.sort((a,b)=>new Date(b.at||0)-new Date(a.at||0));
+  return items;
+}
+
+function openNotificationsPage(){
+  // Mark stored notifications read (same as the old panel did)
+  const notifs=notificationsLoad();
+  notifs.forEach(n=>n.read=true);
+  notificationsSave(notifs);
+  refreshNotificationBadge();
+  renderNotificationsPage();
+}
+
+function closeNotificationsPage(){
+  const pg=document.getElementById('dh-notif-page');
+  if(pg){pg.classList.remove('open');pg.style.transform='translateX(100%)';setTimeout(()=>pg.remove(),280);}
+}
+
+function renderNotificationsPage(){
+  let pg=document.getElementById('dh-notif-page');
+  const fresh=!pg;
+  if(!pg){
+    pg=document.createElement('div');
+    pg.id='dh-notif-page';
+    pg.style.cssText='position:fixed;inset:0;z-index:960;background:var(--navy);overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)';
+    document.body.appendChild(pg);
+  }
+  const items=_notifPageItems();
+  const cats=[
+    {id:'all',label:'All'},
+    {id:'bookings',label:'Bookings'},
+    {id:'projects',label:'Projects'},
+    {id:'reminders',label:'Reminders'},
+  ];
+  const countFor=c=>c==='all'?items.length:items.filter(i=>i.cat===c).length;
+  const shown=_notifPageFilter==='all'?items:items.filter(i=>i.cat===_notifPageFilter);
+  const fmtDt=iso=>{
+    if(!iso) return '';
+    const d=new Date(iso),diff=Date.now()-d.getTime();
+    if(diff<60000) return 'Just now';
+    if(diff<3600000) return Math.floor(diff/60000)+'m';
+    if(diff<86400000) return Math.floor(diff/3600000)+'h';
+    if(diff<604800000) return Math.floor(diff/86400000)+'d';
+    return d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  };
+  const isToday=iso=>iso&&new Date(iso).toDateString()===new Date().toDateString();
+  const isWeek=iso=>iso&&(Date.now()-new Date(iso).getTime())<7*86400000;
+  const groups=[['Today',shown.filter(i=>isToday(i.at))],['This week',shown.filter(i=>!isToday(i.at)&&isWeek(i.at))],['Earlier',shown.filter(i=>!isWeek(i.at))]];
+  const row=it=>`
+    <div onclick="closeNotificationsPage();${it.action}" style="display:flex;gap:12px;align-items:flex-start;padding:13px 18px;cursor:pointer;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
+      <div style="width:38px;height:38px;border-radius:12px;background:${it.bg};border:1px solid ${it.color}44;display:flex;align-items:center;justify-content:center;flex-shrink:0">${it.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+          <span style="font-size:10px;font-weight:700;color:${it.color};text-transform:uppercase;letter-spacing:.05em">${it.label}</span>
+          <span style="font-size:10px;color:var(--muted);flex-shrink:0">${fmtDt(it.at)}</span>
+        </div>
+        <div style="font-size:13px;color:var(--white);line-height:1.45;margin-top:2px">${it.title}</div>
+        ${it.sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${it.sub}</div>`:''}
+      </div>
+    </div>`;
+  pg.innerHTML=`
+    <div style="position:sticky;top:0;z-index:2;background:var(--navy-card);border-bottom:1px solid var(--border)">
+      <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;height:52px;padding:0 8px">
+        <button onclick="closeNotificationsPage()" aria-label="Back" style="width:40px;height:40px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div style="text-align:center;font-size:15px;font-weight:800;color:var(--white)">Notifications</div>
+        <button onclick="notificationsClear();renderNotificationsPage();refreshNotificationBadge()" style="padding:6px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Clear all</button>
+      </div>
+      <div style="display:flex;gap:8px;padding:0 14px 12px;overflow-x:auto;scrollbar-width:none">
+        ${cats.map(c=>{
+          const on=_notifPageFilter===c.id;
+          return `<button onclick="_notifPageFilter='${c.id}';renderNotificationsPage()" style="flex-shrink:0;padding:7px 16px;border-radius:18px;border:1px solid ${on?'var(--blue)':'var(--border)'};background:${on?'rgba(91,141,239,.18)':'var(--navy-lift)'};color:${on?'var(--blue-bright)':'var(--offwhite)'};font-size:12px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">${c.label}${countFor(c.id)?` <span style="opacity:.65">${countFor(c.id)}</span>`:''}</button>`;
+        }).join('')}
+      </div>
+    </div>
+    ${shown.length?groups.filter(g=>g[1].length).map(g=>`
+      <div style="padding:14px 18px 6px;font-size:13px;font-weight:800;color:var(--white)">${g[0]}</div>
+      ${g[1].map(row).join('')}`).join('')
+    :`<div style="padding:70px 20px;text-align:center">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4;margin-bottom:12px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div style="font-size:14px;color:var(--muted);font-weight:600">All caught up</div>
+        <div style="font-size:12px;color:var(--muted);opacity:.6;margin-top:4px">No ${_notifPageFilter==='all'?'':_notifPageFilter+' '}notifications right now</div>
+      </div>`}
+    <div style="height:110px"></div>`;
+  if(fresh) requestAnimationFrame(()=>pg.classList.add('open'));
+  else pg.classList.add('open');
+  pg.style.transform=pg.classList.contains('open')?'translateX(0)':'';
+}
+
 function notificationsClear(){
   notificationsSave([]);
   renderNotificationPanel();
