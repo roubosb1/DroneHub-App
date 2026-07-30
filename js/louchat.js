@@ -328,7 +328,10 @@ function renderLouChat(){
       // Get last message preview
       const msgs=getLcMessages(ch.id);
       const lastMsg=msgs.length?msgs[msgs.length-1]:null;
-      const preview=lastMsg?(lastMsg.text||'').replace(/<[^>]+>/g,'').slice(0,55)||(lastMsg.text?'…':'No messages yet'):'No messages yet';
+      let preview=lastMsg?(lastMsg.text||'').replace(/<[^>]+>/g,'').slice(0,55)||(lastMsg.text?'…':'No messages yet'):'No messages yet';
+      // Encrypted payloads look like {"v":1,"iv":"..."} until the message key
+      // loads — never show ciphertext in the list
+      if(/^\s*\{"v":1,"iv"/.test(preview)) preview='🔒 New message';
       const lastTime=lastMsg?new Date(lastMsg.ts||lastMsg.sentAt||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
       const accent=meta.color||'var(--blue-bright)';
       html+=`<div id="lc-ch-${ch.id}" class="lc-dm-item" onclick="lcOpenChannel('${ch.id}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;background:${isActive?'rgba(91,141,239,.1)':'transparent'};border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s;-webkit-tap-highlight-color:transparent" onmouseover="if('${ch.id}'!==lcActiveChannel)this.style.background='rgba(255,255,255,.04)'" onmouseout="if('${ch.id}'!==lcActiveChannel)this.style.background='${isActive?'rgba(91,141,239,.1)':'transparent'}'">
