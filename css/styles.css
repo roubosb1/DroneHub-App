@@ -1522,3 +1522,36 @@ button{font-family:var(--font);}
   }
   #sales-clients-stats-bar>div>span{font-size:17px!important;}
 }
+
+/* mobile Team — single-column member cards + pill sub-tabs */
+@media (max-width:768px){
+  #team-members-grid{display:grid!important;grid-template-columns:1fr!important;gap:12px!important;}
+  #pane-team div:has(> #team-subtab-members){
+    display:flex;gap:4px;margin:4px 0 12px;padding:4px;
+    background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;
+    border-bottom:1px solid var(--border)!important;
+  }
+  #pane-team button[id^="team-subtab"]{
+    border-bottom:none!important;border-radius:10px;flex:1;justify-content:center;
+    padding:9px 12px!important;transition:background .18s,color .18s;
+  }
+  #pane-team button[id^="team-subtab"][style*="--blue-bright"]{
+    background:rgba(91,141,239,.18)!important;
+  }
+}
+
+/* mobile Social — pill sub-tabs */
+@media (max-width:768px){
+  #pane-social .no-scrollbar:has(#social-stab-workspaces){
+    display:flex;gap:4px;margin:4px 0 12px;padding:4px;
+    background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;
+    overflow-x:auto;border-bottom:1px solid var(--border)!important;
+  }
+  #pane-social button[id^="social-stab"]{
+    border-bottom:none!important;border-radius:10px;flex:1 0 auto;justify-content:center;
+    padding:9px 12px!important;transition:background .18s,color .18s;
+  }
+  #pane-social button[id^="social-stab"][style*="--blue-bright"]{
+    background:rgba(91,141,239,.18)!important;
+  }
+}
