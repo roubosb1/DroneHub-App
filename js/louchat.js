@@ -15,7 +15,7 @@ const LC_SVG={
 };
 const LC_TYPE_META={
   welcome:{icon:LC_SVG.welcome,color:'var(--blue-bright)',label:'Welcome'},
-  general:{icon:LC_SVG.general,color:'var(--blue-bright)',label:'General'},
+  general:{icon:LC_SVG.general,color:'var(--blue-bright)',label:'Team'},
   project:{icon:LC_SVG.project,color:'var(--blue)',label:'Project'},
   client:     {icon:LC_SVG.client, color:'var(--blue)',label:'Client'},
   client_dm:  {icon:LC_SVG.client, color:'#22D97A',label:'Client Messages'},
@@ -197,6 +197,13 @@ function lcEnsureDefaults(){
     // Migrate: add members array if missing
     let changed=false;
     channels.forEach(ch=>{ if(!ch.members){ch.members=[];changed=true;} });
+    // Migrate: rename the #general channel to #Team
+    const _gi=channels.findIndex(c=>c.id==='lc_general');
+    if(_gi>=0&&channels[_gi].name==='general'){
+      channels[_gi].name='Team';
+      channels[_gi].topic='Team-wide announcements and chat';
+      changed=true;
+    }
     // Migrate: add welcome channel if missing, or repair corrupted type
     const _wi=channels.findIndex(c=>c.id==='lc_welcome');
     if(_wi===-1){
@@ -213,7 +220,7 @@ function lcEnsureDefaults(){
   }
   const defaults=[
     {id:'lc_welcome',name:'welcome',type:'welcome',topic:'A message from Lou — the person this chat is named after',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]},
-    {id:'lc_general',name:'general',type:'general',topic:'Team-wide announcements and general chat',createdAt:new Date().toISOString().slice(0,10),pinned:'Welcome to LouChat! This is your team hub.',members:[]},
+    {id:'lc_general',name:'Team',type:'general',topic:'Team-wide announcements and chat',createdAt:new Date().toISOString().slice(0,10),pinned:'Welcome to LouChat! This is your team hub.',members:[]},
     {id:'lc_projects',name:'projects',type:'project',topic:'Project updates, shoot notes, and delivery tracking',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]},
     {id:'lc_social',name:'social-media',type:'social',topic:'Social media content, scheduling, and strategy',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]},
     {id:'lc_katrina',name:'katrina-barrett',type:'client',topic:'Katrina Barrett — social media management & shoots',createdAt:new Date().toISOString().slice(0,10),pinned:'Ongoing client — social media + regular shoots',members:[]},
