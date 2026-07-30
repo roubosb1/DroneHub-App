@@ -411,6 +411,9 @@ button{font-family:var(--font);}
 
   /* ── Header — fixed 52px, logo 20px, only bell + hamburger visible ── */
   .app-header{
+    /* One flat surface with the page (Instagram-style) — no lighter band */
+    background:var(--navy);
+    border-bottom:none;
     height:52px;min-height:52px;max-height:52px;
     padding:0 12px;gap:8px;overflow:hidden;flex-wrap:nowrap;
     /* Logo centred, left/right groups equal width so it's truly centred */
