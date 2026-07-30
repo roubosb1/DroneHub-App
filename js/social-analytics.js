@@ -186,17 +186,21 @@ async function socialAcctDetail(acctId) {
     ? ((typeof clients !== 'undefined' ? clients : []).find(c => String(c.id) === String(acct.clientId))?.name || 'Client')
     : 'DroneHub Media Company';
 
+  const saMob = window.innerWidth <= 768;
   cont.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:${saMob ? '10px' : '12px'};margin-bottom:${saMob ? '14px' : '20px'};flex-wrap:wrap">
       <button onclick="renderSocialAnalytics()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> All accounts
       </button>
-      ${acct.avatar ? `<img src="${acct.avatar}" style="width:44px;height:44px;border-radius:50%">` : `<span style="width:44px;height:44px;border-radius:50%;background:${p.color}22;color:${p.color};display:inline-flex;align-items:center;justify-content:center">${p.icon}</span>`}
-      <div style="flex:1;min-width:0">
-        <div style="font-size:18px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${acct.name || acct.handle}</div>
-        <div style="font-size:11px;color:${p.color};font-weight:600;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${p.icon} ${p.label} · <span style="color:var(--muted)">${owner}</span>${acct.url ? ` · <a href="${acct.url}" target="_blank" style="color:var(--blue-bright);text-decoration:none">Open channel ↗</a>` : ''}</div>
+      ${saMob ? `<button onclick="socialAcctRefresh('${acct.id}').then(()=>socialAcctDetail('${acct.id}'))" style="margin-left:auto;padding:8px 14px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">⟳ Refresh</button>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;${saMob ? 'flex-basis:100%;' : 'flex:1;'}min-width:0">
+        ${acct.avatar ? `<img src="${acct.avatar}" style="width:44px;height:44px;border-radius:50%;flex-shrink:0" onerror="this.style.display='none'">` : `<span style="width:44px;height:44px;border-radius:50%;background:${p.color}22;color:${p.color};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${p.icon}</span>`}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:${saMob ? '16px' : '18px'};font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${acct.name || acct.handle}</div>
+          <div style="font-size:11px;color:${p.color};font-weight:600;display:flex;align-items:center;gap:4px;min-width:0"><span style="flex-shrink:0;display:flex">${p.icon}</span><span style="white-space:nowrap;flex-shrink:0">${p.label}</span><span style="color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">· ${owner}</span>${acct.url ? `<a href="${acct.url}" target="_blank" style="color:var(--blue-bright);text-decoration:none;white-space:nowrap;flex-shrink:0">· Open ↗</a>` : ''}</div>
+        </div>
       </div>
-      <button onclick="socialAcctRefresh('${acct.id}').then(()=>socialAcctDetail('${acct.id}'))" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">⟳ Refresh</button>
+      ${saMob ? '' : `<button onclick="socialAcctRefresh('${acct.id}').then(()=>socialAcctDetail('${acct.id}'))" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:transparent;color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer">⟳ Refresh</button>`}
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">
