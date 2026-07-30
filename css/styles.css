@@ -1583,3 +1583,8 @@ button{font-family:var(--font);}
   .mob2-hero-row .mob2-hero-name{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mob2-hero-row .mob2-chip{margin-top:4px;padding:3px 10px;font-size:10.5px;}
 }
+
+/* profile top bar — flat navy like the rest of the mobile chrome */
+@media (max-width:768px){
+  #mob-pf-header{background:var(--navy)!important;border-bottom:none!important;}
+}
