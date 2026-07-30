@@ -385,6 +385,15 @@ function mobTrkRenderCards(){
       : `<span style="font-size:18px;font-weight:900;color:${numColor};line-height:1">${idx+1}</span>`;
     const numLabel = _mobTrkTab==='completed' ? 'Done' : _mobTrkTab==='active' ? 'Active' : 'Queue';
 
+    // Mini stage progress bar (video mode) — same scale as the detail page
+    let barHtml='';
+    if(!_isPhoto && typeof TRACKER_STAGES!=='undefined' && TRACKER_STAGES.length>1){
+      const sIdx=Math.max(0,TRACKER_STAGES.findIndex(st=>st.key===(ts.stage||'')));
+      const sPct=Math.round(sIdx/(TRACKER_STAGES.length-1)*100);
+      const sDot=TRACKER_STAGES[sIdx]?.dot||'var(--blue)';
+      barHtml=`<div class="mob-trk-card-bar"><div style="width:${Math.max(sPct,4)}%;background:${sDot}"></div></div>`;
+    }
+
     return `<div class="mob-trk-card" onclick="mobTrkOpenProject('${j.id}')">
       <div class="mob-trk-card-num">
         ${numContent}
@@ -395,6 +404,7 @@ function mobTrkRenderCards(){
         <div class="mob-trk-card-meta">${[clientName,j.date,pid].filter(Boolean).join(' · ')}</div>
         <span class="mob-trk-card-status" style="background:${ss.bg};color:${ss.color}">${ss.label}</span>
         ${isDhOrEmpty?'<span style="margin-left:6px;font-size:10px;color:#ef4444;font-weight:700">⚠ Unassigned</span>':''}
+        ${barHtml}
       </div>
       <svg class="mob-trk-card-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </div>`;

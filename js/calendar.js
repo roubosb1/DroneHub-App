@@ -1981,6 +1981,64 @@ function renderMobCal(dir){
     g.innerHTML=newHtml;clip.appendChild(g);
   }
   // Day-view event list is rendered by _mcBuildDayScreen when a day is opened
+  _mcRenderUpcoming();
+  _mcInitSwipe();
+}
+
+// ── "Upcoming" schedule list under the month grid (Apple Calendar list feel) ─
+function _mcRenderUpcoming(){
+  const el=document.getElementById('mob-cal-upcoming');
+  if(!el) return;
+  const todayStr=new Date().toISOString().slice(0,10);
+  const items=[];
+  savedJobs.forEach(j=>{
+    if(!j.date||j.date<todayStr) return;
+    if(!(j.status==='confirmed'||j.status==='completed'||j.status==='booked')) return;
+    const creator=typeof getJobCreator==='function'?getJobCreator(j):'';
+    const col=typeof getCreatorColor==='function'?getCreatorColor(creator):{border:'var(--blue)'};
+    items.push({date:j.date,time:j.shootTime||'',title:j.name||j.address||'Shoot',sub:creator||j.clientName||'',color:col.border,onclick:`mobCalSelectDay('${j.date}')`});
+  });
+  (typeof _calVisibleEvents==='function'?_calVisibleEvents():[]).forEach(ev=>{
+    const end=ev.endDate||ev.date;
+    if(end<todayStr) return;
+    const td=(typeof CAL_EVENT_TYPES!=='undefined'&&CAL_EVENT_TYPES.find(t=>t.id===ev.type))||{color:'var(--amber)',icon:''};
+    items.push({date:ev.date<todayStr?todayStr:ev.date,time:'',title:(td.icon?td.icon+' ':'')+ev.title,sub:ev.memberName||'',color:td.color,onclick:`mobCalSelectDay('${ev.date<todayStr?todayStr:ev.date}')`});
+  });
+  items.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const top=items.slice(0,6);
+  if(!top.length){
+    el.innerHTML=`<div class="mc-up-head">Upcoming</div><div class="mc-up-empty">Nothing scheduled — enjoy the quiet ✈️</div>`;
+    return;
+  }
+  const fmtD=ds=>{const d=new Date(ds+'T12:00:00');return {dow:d.toLocaleDateString('en-US',{weekday:'short'}),num:d.getDate()};};
+  el.innerHTML=`<div class="mc-up-head">Upcoming</div>`+top.map(it=>{
+    const f=fmtD(it.date);
+    return `<button class="mc-up-row" onclick="${it.onclick}">
+      <span class="mc-up-date"><span class="dow">${f.dow}</span><span class="num">${f.num}</span></span>
+      <span class="mc-up-pipe" style="background:${it.color}"></span>
+      <span class="mc-up-body">
+        <span class="mc-up-title">${it.title}</span>
+        ${(it.time||it.sub)?`<span class="mc-up-sub">${[it.time?_mcFmtTime(it.time):'',it.sub].filter(Boolean).join(' · ')}</span>`:''}
+      </span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+  }).join('');
+}
+
+// ── Swipe left/right on the month grid to change months ─────────────────────
+let _mcSwipeInit=false;
+function _mcInitSwipe(){
+  if(_mcSwipeInit) return;
+  const clip=document.getElementById('mob-cal-grid-clip');
+  if(!clip) return;
+  _mcSwipeInit=true;
+  let sx=0,sy=0,live=false;
+  clip.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;live=true;},{passive:true});
+  clip.addEventListener('touchend',e=>{
+    if(!live) return; live=false;
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>48&&Math.abs(dx)>Math.abs(dy)*1.4) calNav(dx<0?1:-1);
+  },{passive:true});
 }
 
 // Tap a date cell in month grid → open day view
