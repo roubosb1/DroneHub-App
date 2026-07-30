@@ -2570,7 +2570,7 @@ async function cpShowTab(tab){
       const on=cv.key===activeTo;
       const preview=last?((last.from==='client'?'You: ':'')+(last.text||'').replace(/<[^>]+>/g,'').slice(0,55)):cv.sub;
       const lastTime=last?new Date(last.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-      return `<div onclick="window._cpChatTo='${cv.key.replace(/'/g,"\\'")}';cpShowTab('messages')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;background:${on?'rgba(91,141,239,.1)':'transparent'};border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s;-webkit-tap-highlight-color:transparent" onmouseover="if(!${on})this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background='${on?'rgba(91,141,239,.1)':'transparent'}'">
+      return `<div onclick="window._cpChatTo='${cv.key.replace(/'/g,"\\'")}';window._cpChatPane='thread';cpShowTab('messages')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;background:${on?'rgba(91,141,239,.1)':'transparent'};border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s;-webkit-tap-highlight-color:transparent" onmouseover="if(!${on})this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background='${on?'rgba(91,141,239,.1)':'transparent'}'">
         <div style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${convoAvatar(cv,46)}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">
@@ -2631,10 +2631,15 @@ async function cpShowTab(tab){
       </div>`;
     }
 
-    html=`<div style="display:flex;height:calc(100vh - 58px);overflow:hidden">
+    // Mobile: one pane at a time — conversation list first, thread after a tap
+    const cpChatMobile=window.innerWidth<=768;
+    if(cpChatMobile&&!window._cpChatPane) window._cpChatPane='list';
+    const cpShowList=!cpChatMobile||window._cpChatPane==='list';
+    const cpShowThread=!cpChatMobile||window._cpChatPane==='thread';
+    html=`<div style="display:flex;height:calc(100vh - ${cpChatMobile?'118px':'58px'});overflow:hidden">
 
         <!-- Conversation list -->
-        <div style="width:380px;flex-shrink:0;border-right:1px solid var(--border);background:var(--navy-card);display:flex;flex-direction:column">
+        <div style="width:${cpChatMobile?'100%':'380px'};flex-shrink:0;${cpChatMobile?'':'border-right:1px solid var(--border);'}background:var(--navy-card);display:${cpShowList?'flex':'none'};flex-direction:column">
           <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
             <div style="font-size:16px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:8px">${_icon('chat',16)} LouChat</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px">DroneHub Media</div>
@@ -2648,8 +2653,9 @@ async function cpShowTab(tab){
         </div>
 
         <!-- Thread -->
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:var(--navy)">
-          <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--navy)">
+        <div style="flex:1;min-width:0;display:${cpShowThread?'flex':'none'};flex-direction:column;background:var(--navy)">
+          <div style="padding:12px ${cpChatMobile?'14px':'20px'};border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--navy)">
+            ${cpChatMobile?`<button onclick="window._cpChatPane='list';cpShowTab('messages')" style="flex-shrink:0;width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>`:''}
             ${convoAvatar(activeConvo,34)}
             <div style="flex:1;min-width:0">
               <div style="font-size:15px;font-weight:800;color:var(--white)">${activeConvo.key==='team'?'# dronehub-media':activeConvo.name}</div>
@@ -2951,7 +2957,7 @@ async function cpShowTab(tab){
         <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:#F5A623"></span>Confirmed</span>
         <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:#22D97A"></span>Completed</span>
         ${c.calendarIcs?'<span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:var(--blue-bright)"></span>Your calendar</span>':''}
-        <span style="margin-left:auto">Double-click a time slot — or a day in Month view — to book it</span>
+        <span style="margin-left:auto">${window.innerWidth<=768?'Tap a time slot to book it':'Double-click a time slot — or a day in Month view — to book it'}</span>
       </div>
       <div id="cp-cal-body" style="margin-bottom:18px"></div>
       <div class="card" style="margin-bottom:18px">
@@ -3391,6 +3397,8 @@ function cpCalRender(fetchIcs){
   const body=document.getElementById('cp-cal-body');
   if(!body) return;
   if(!_cpCalSelDate)_cpCalSelDate=_cpDs(new Date());
+  // Phones: a 7-column week grid is unreadable — start in Day view
+  if(window.innerWidth<=768&&!window._cpCalMobileInit){_cpCalView='day';window._cpCalMobileInit=true;}
   ['day','week','month'].forEach(v=>{
     const btn=document.getElementById('cp-cal-vbtn-'+v);
     if(btn){btn.style.background=v===_cpCalView?'rgba(91,141,239,.18)':'transparent';btn.style.color=v===_cpCalView?'var(--blue-bright)':'var(--muted)';}
@@ -3493,7 +3501,7 @@ function _cpCalRenderWeek(){
       const isToday=ds===todayStr;
       const hEvts=dayEvts[i].filter(e=>e._time&&parseInt(e._time.split(':')[0],10)===h);
       const isNowHour=isToday&&h===nowHour;
-      hoursHtml+=`<div ondblclick="cpOpenBookModal('${ds}',${h})" style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
+      hoursHtml+=`<div ondblclick="cpOpenBookModal('${ds}',${h})" onclick="if(window.innerWidth<=768)cpOpenBookModal('${ds}',${h})" style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
       if(isNowHour){const pct=(nowMin/60)*100;hoursHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
       hEvts.forEach((e,ei)=>{hoursHtml+=_cpCalWeekChip(e,ei);});
       hoursHtml+='</div>';
@@ -3532,7 +3540,7 @@ function _cpCalRenderDay(){
     const isNowHour=isToday&&h===nowHour;
     const border=h>0?'border-top:1px solid var(--border);':'';
     rowsHtml+=`<div style="padding:0 6px;text-align:right;font-size:10px;color:var(--muted);line-height:1;padding-top:8px;min-height:52px;${border}background:var(--navy-mid)">${lbl}</div>`;
-    rowsHtml+=`<div ondblclick="cpOpenBookModal('${_cpCalSelDate}',${h})" style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative;cursor:default">`;
+    rowsHtml+=`<div ondblclick="cpOpenBookModal('${_cpCalSelDate}',${h})" onclick="if(window.innerWidth<=768)cpOpenBookModal('${_cpCalSelDate}',${h})" style="min-height:52px;${border}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:4px 8px;position:relative;cursor:default">`;
     if(isNowHour){
       const pct=(nowMin/60)*100;
       rowsHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"><span style="position:absolute;left:-6px;top:-4px;width:10px;height:10px;background:var(--blue-bright);border-radius:50%;display:block"></span></div>`;
