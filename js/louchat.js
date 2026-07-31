@@ -265,7 +265,7 @@ function renderLouChat(){
   const _lcMyName=(_lcSession?.name||'').toLowerCase().trim();
 
   // Group channels by type — personal contractor channels are filtered per-user
-  const groups={};
+  let groups={};
   channels.forEach(ch=>{
     // Admin-only channel: hide from non-admins
     if(ch.type==='admin' && !_lcIsAdmin) return;
@@ -293,8 +293,15 @@ function renderLouChat(){
     groups[t].sort((a,b)=>lcLastMsgTs(b)-lcLastMsgTs(a));
   });
 
-  // Section order: welcome pinned first, then sections ranked by their
-  // newest message so the most recent conversations surface at the top
+  // Mobile: one flat list sorted purely by newest message (Instagram-style),
+  // welcome pinned on top. Desktop keeps the grouped sections.
+  const _mobFlat=window.innerWidth<=768;
+  if(_mobFlat){
+    const flat=[];
+    ['general','project','client','client_dm','social','admin'].forEach(t=>(groups[t]||[]).forEach(ch=>flat.push(ch)));
+    flat.sort((a,b)=>lcLastMsgTs(b)-lcLastMsgTs(a));
+    groups={welcome:groups.welcome||[],general:flat,project:[],client:[],client_dm:[],social:[],admin:[]};
+  }
   const _rest=['general','project','client','client_dm','social','admin']
     .sort((a,b)=>{
       const ts=t=>(groups[t]||[]).reduce((m,ch)=>Math.max(m,lcLastMsgTs(ch)),0);
@@ -326,7 +333,7 @@ function renderLouChat(){
       return;
     }
 
-    html+=`<div style="padding:10px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:5px">
+    if(!_mobFlat) html+=`<div style="padding:10px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:5px">
       <span style="display:flex;align-items:center;color:var(--muted)">${meta.icon}</span> ${meta.label}
     </div>`;
     groups[type].forEach(ch=>{
@@ -386,6 +393,7 @@ function lcMobBack(){
   document.getElementById('lc-flex-container')?.classList.remove('lc-mob-chat-open');
   document.body.classList.remove('lc-chat-full');
   document.body.classList.remove('lc-vc-mode');
+  try{ renderLouChat(); }catch(e){} // refresh list order (recent chat on top)
 }
 
 /* ── Instagram-style mobile input bar ──────────────────────── */
