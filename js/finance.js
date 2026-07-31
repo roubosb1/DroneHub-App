@@ -361,15 +361,16 @@ function openModal(html,opts){
   var df=(opts&&opts.flex)?';display:flex;flex-direction:column':'';
   box.style.cssText='background:var(--navy-card);border-radius:16px;width:100%;max-width:'+mw+'px;border:1px solid var(--border-bright);overflow:hidden'+mh+df;
   box.innerHTML=html;
-  // Mobile: every finance modal is a full page, not a floating popup
+  // Mobile: every finance modal is a full page with a back button, like the
+  // app's other secondary pages
   if(window.innerWidth<=768){
     ov.classList.add('modal-fullpage');
-    const x=document.createElement('button');
-    x.setAttribute('aria-label','Close');
-    x.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    x.onclick=closeModal;
-    x.style.cssText='position:fixed;top:10px;right:12px;z-index:10001;width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:rgba(28,35,51,.92);color:var(--offwhite);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent';
-    ov.appendChild(x);
+    const back=document.createElement('button');
+    back.setAttribute('aria-label','Back');
+    back.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style="font-size:14px;font-weight:600">Back</span>';
+    back.onclick=closeModal;
+    back.style.cssText='position:fixed;top:8px;left:8px;z-index:10001;display:flex;align-items:center;gap:2px;padding:8px 12px 8px 6px;border:none;background:transparent;color:var(--blue-bright);cursor:pointer;-webkit-tap-highlight-color:transparent';
+    ov.appendChild(back);
   }
   ov.appendChild(box);
   document.body.appendChild(ov);

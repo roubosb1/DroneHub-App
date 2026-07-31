@@ -1727,6 +1727,7 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   #emp-modal-overlay.modal-fullpage>div{
     max-width:none!important;width:100%!important;height:100%!important;max-height:none!important;
     border-radius:0!important;border:none!important;overflow-y:auto!important;
+    padding-top:44px;box-sizing:border-box;
     padding-bottom:env(safe-area-inset-bottom,0px);
   }
 }
