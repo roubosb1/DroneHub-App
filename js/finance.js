@@ -367,7 +367,7 @@ function openModal(html,opts){
     ov.classList.add('modal-fullpage');
     const back=document.createElement('button');
     back.setAttribute('aria-label','Back');
-    back.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span style="font-size:14px;font-weight:600">Back</span>';
+    back.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
     back.onclick=closeModal;
     back.style.cssText='position:fixed;top:8px;left:8px;z-index:10001;display:flex;align-items:center;gap:2px;padding:8px 12px 8px 6px;border:none;background:transparent;color:var(--blue-bright);cursor:pointer;-webkit-tap-highlight-color:transparent';
     ov.appendChild(back);
