@@ -378,6 +378,7 @@ function renderLouChat(){
 function lcMobBack(){
   document.getElementById('lc-flex-container')?.classList.remove('lc-mob-chat-open');
   document.body.classList.remove('lc-chat-full');
+  document.body.classList.remove('lc-vc-mode');
 }
 
 /* ── Instagram-style mobile input bar ──────────────────────── */
@@ -423,6 +424,7 @@ function lcIgToggleEmoji(){
 }
 
 function lcOpenChannel(channelId){
+  document.body.classList.remove('lc-vc-mode');
   const prevChannel=lcActiveChannel;
   lcActiveChannel=channelId;
   markLcRead(channelId);
@@ -1159,6 +1161,7 @@ function lcOpenVideoCall(){
   if(inputEl) inputEl.style.display='none';
   if(pinnedEl) pinnedEl.style.display='none';
   if(actionsEl) actionsEl.style.display='none';
+  document.body.classList.add('lc-vc-mode');
   if(vcView) vcView.style.display='flex';
 
   // Make sure we're in lobby state
@@ -1166,6 +1169,12 @@ function lcOpenVideoCall(){
   const active=document.getElementById('lc-vc-active');
   if(lobby) lobby.style.display='flex';
   if(active) active.style.display='none';
+
+  // Mobile: slide the call screen in over the channel list (immersive, like a thread)
+  if(window.innerWidth<=768){
+    document.getElementById('lc-flex-container')?.classList.add('lc-mob-chat-open');
+    document.body.classList.add('lc-chat-full');
+  }
 
   lcRenderInvitePanel();
 }

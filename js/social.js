@@ -1246,7 +1246,8 @@ function _notifPageItems(){
       :(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')"
       :n.type==='timeoff_request'?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}"
       :"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
-    items.push({cat:_notifTypeCat(n.type),label:c.label,color:c.color,bg:c.bg,icon:c.icon,title:esc(n.text),sub:'',at:n.at,action:nav});
+    items.push({cat:_notifTypeCat(n.type),label:c.label,color:c.color,bg:c.bg,icon:c.icon,title:esc(n.text),sub:'',at:n.at,action:nav,
+      href:n.type==='meet_invite'?(n.meetUrl||''):''});
   });
   items.sort((a,b)=>new Date(b.at||0)-new Date(a.at||0));
   return items;
@@ -1306,6 +1307,7 @@ function renderNotificationsPage(){
         </div>
         <div style="font-size:13px;color:var(--white);line-height:1.45;margin-top:2px">${it.title}</div>
         ${it.sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${it.sub}</div>`:''}
+        ${it.href?`<a href="${it.href}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:8px 16px;border-radius:10px;background:linear-gradient(135deg,#1a73e8,#1557b0);color:#fff;text-decoration:none;font-size:12px;font-weight:700">📹 Join Google Meet</a><div style="font-size:10px;color:var(--muted);margin-top:5px;word-break:break-all">${it.href}</div>`:''}
       </div>
     </div>`;
   pg.innerHTML=`
