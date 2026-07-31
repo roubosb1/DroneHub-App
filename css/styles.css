@@ -1667,3 +1667,13 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   body.lc-chat-full:not(.lc-vc-mode) #lc-channel-desc{display:none!important;}
   body.lc-chat-full:not(.lc-vc-mode) #lc-pinned-bar{display:none!important;}
 }
+
+/* chat input bubble: single clean outline — no inner borders */
+@media (max-width:768px){
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill{
+    border:none!important;background:rgba(255,255,255,.06)!important;
+  }
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-cam{
+    border:none!important;background:rgba(255,255,255,.06)!important;
+  }
+}
