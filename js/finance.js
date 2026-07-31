@@ -587,6 +587,12 @@ function populateEmpPayFilters(){
   });
   empSel.innerHTML='<option value="">All employees</option>'+[...names].sort().map(n=>`<option${n===curEmp?' selected':''}>${n}</option>`).join('');
   yrSel.innerHTML='<option value="">All years</option>'+[...years].sort().reverse().map(y=>`<option${y===curYr?' selected':''}>${y}</option>`).join('');
+  // Default to the current year so the list doesn't open with every stub ever;
+  // "All years" (or any year) is still selectable
+  if(!curYr){
+    const nowY=String(new Date().getFullYear());
+    if(years.has(nowY)) yrSel.value=nowY;
+  }
 }
 
 function renderEmployeePayroll(){
@@ -628,8 +634,8 @@ function renderEmployeePayroll(){
       return `<div class="emp-stub-tile" data-sk="${sk}" style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .1s;min-width:0" onmouseover="this.style.borderColor='var(--blue)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${mo} ${day}</div>
         <div style="font-size:14px;font-weight:700;color:var(--blue-bright);margin-bottom:2px">$${(s.net||0).toFixed(2)}</div>
-        <div style="font-size:9px;color:var(--green)">Gross $${(s.gross||0).toFixed(2)}</div>
-        ${s.dhRemittance?`<div style="font-size:9px;color:var(--orange)">CRA $${s.dhRemittance.toFixed(2)}</div>`:''}
+        <div class="emp-stub-sub" style="font-size:9px;color:var(--green)">Gross $${(s.gross||0).toFixed(2)}</div>
+        ${s.dhRemittance?`<div class="emp-stub-sub" style="font-size:9px;color:var(--orange)">CRA $${s.dhRemittance.toFixed(2)}</div>`:''}
       </div>`;
     }).join('');
     return `<div style="margin-bottom:8px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
@@ -638,7 +644,7 @@ function renderEmployeePayroll(){
         <div style="font-size:11px;color:var(--muted)">${data.stubs.length} stubs · <span style="color:var(--green)">$${data.totalGross.toFixed(2)}</span> gross · <span style="color:var(--blue-bright)">$${data.totalNet.toFixed(2)}</span> net${data.totalRemit?` · <span style="color:var(--orange)">$${data.totalRemit.toFixed(2)}</span> remit`:''}</div>
       </div>
       <div id="${uid}" style="display:none;padding:12px 16px 16px">
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        <div class="emp-stub-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
           ${stubCards}
         </div>
       </div>
