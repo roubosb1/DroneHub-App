@@ -1738,7 +1738,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 
 /* payroll filter selects: compact, tucked up under the sub-tabs */
 @media (max-width:768px){
-  div:has(> #emp-pay-filter-employee){margin:-6px 0 10px!important;gap:8px!important;}
+  div:has(> #emp-pay-filter-employee){margin:-14px 0 10px!important;gap:8px!important;}
+  /* the payroll header row above the filters collapses when its title is hidden */
+  #pane-finance div:has(> .emp-pay-title){margin-bottom:0!important;min-height:0!important;}
   #emp-pay-filter-employee,#emp-pay-filter-year{
     padding:6px 11px!important;font-size:12px!important;font-weight:600!important;
     border-radius:10px!important;-webkit-appearance:none;appearance:none;
