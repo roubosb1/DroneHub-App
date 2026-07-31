@@ -1691,5 +1691,5 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 /* collapsed follow-up messages: no hover-timestamp gutter on mobile —
    text aligns exactly under the first message */
 @media (max-width:768px){
-  .lc-ts2{display:none!important;}
+  .lc-ts,.lc-ts2{display:none!important;}
 }
