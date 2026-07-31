@@ -772,6 +772,8 @@ async function lcRenderMessages(){
   // Group messages by author+time (same author within 5 min = collapsed)
   let html='';
   let prevAuthor='', prevTime=0;
+  // Mobile: your own messages sit left; the other person mirrors to the right
+  const _viewSess=gateGetSession&&gateGetSession();
 
   msgs.forEach((m,i)=>{
     const d=new Date(m.ts);
@@ -796,11 +798,16 @@ async function lcRenderMessages(){
     const avatarColor=['#5B8DEF','#22D97A','#F5A623','#8B5CF6','#F05252','#E879F9'][m.author.charCodeAt(0)%6];
     const _lcAuthorEmail=m.authorEmail||getLcAuthorEmail(m.author)||'';
 
+    const _isMine=(m.authorEmail&&_viewSess?.email&&m.authorEmail.toLowerCase()===_viewSess.email.toLowerCase())
+                ||(!m.authorEmail&&m.author&&_viewSess?.name&&m.author===_viewSess.name)
+                ||(m.author&&_viewSess?.name&&m.author===_viewSess.name);
+    const _flip=window.innerWidth<=768&&!_isMine;
+
     if(!collapsed){
-      html+=`<div style="display:flex;gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
+      html+=`<div style="display:flex;flex-direction:${_flip?'row-reverse':'row'};gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
         ${getAvatarHtml(m.author,_lcAuthorEmail,36,12)}
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+        <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;${_flip?'justify-content:flex-end;':''}">
             <span style="font-size:13px;font-weight:700;color:var(--white)">${m.author}</span>${getUserJobTitle(m.author)?`<span style="font-size:10px;color:var(--muted);margin-left:5px">${getUserJobTitle(m.author)}</span>`:''}
             <span class="lc-ts" style="font-size:10px;color:var(--muted);opacity:0;transition:opacity .15s">${isToday?timeStr:dateStr+' '+timeStr}</span>
           </div>
@@ -814,9 +821,9 @@ async function lcRenderMessages(){
         </div>
       </div>`;
     } else {
-      html+=`<div style="padding:1px 0 1px 46px;display:flex;align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
+      html+=`<div style="padding:1px ${_flip?'46px':'0'} 1px ${_flip?'0':'46px'};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
         <span class="lc-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right">${timeStr}</span>
-        <div style="flex:1;min-width:0">
+        <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
           ${m.text?`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${lcFormatText(m.text)}</div>`:''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
         </div>
