@@ -1621,3 +1621,43 @@ body.lc-chat-full.lc-vc-mode #lc-main > div:first-child{
 /* vc-mode: title sits right, next to the camera logo */
 body.lc-vc-mode #lc-chat-header > div:has(#lc-channel-title){margin-left:auto;margin-right:2px;}
 body.lc-vc-mode #lc-channel-title{text-align:right;}
+
+/* ══ IG-style chat thread: flat navy, floating input pill, translucent header ══ */
+@media (max-width:768px){
+  body.lc-chat-full:not(.lc-vc-mode) #lc-main,
+  body.lc-chat-full:not(.lc-vc-mode) #lc-messages,
+  body.lc-chat-full:not(.lc-vc-mode) #lc-welcome-view{background:var(--navy)!important;}
+
+  /* Header floats translucent over the messages (content scrolls behind it) */
+  body.lc-chat-full:not(.lc-vc-mode) #lc-main > div:first-child{
+    position:absolute!important;top:0!important;left:0!important;right:0!important;z-index:6!important;
+    background:rgba(10,15,26,.72)!important;
+    backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;
+    border-bottom:none!important;
+  }
+  body.lc-chat-full:not(.lc-vc-mode) #lc-messages{
+    padding-top:70px!important;
+    padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))!important;
+  }
+
+  /* Input bar becomes a floating rounded bubble like the bottom nav */
+  body.lc-chat-full:not(.lc-vc-mode) #lc-mob-ig-bar{
+    position:fixed!important;z-index:7!important;
+    left:10px!important;right:10px!important;width:auto!important;
+    bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;
+    border:1px solid var(--border)!important;border-radius:28px!important;
+    background:rgba(28,35,51,.92)!important;
+    backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;
+    box-shadow:0 10px 30px rgba(0,0,0,.45)!important;
+    padding:7px 10px!important;
+  }
+  /* Pinned bar rides just above the floating input, subtle */
+  body.lc-chat-full:not(.lc-vc-mode) #lc-pinned-bar{
+    position:fixed!important;z-index:6!important;
+    left:10px!important;right:10px!important;
+    bottom:calc(72px + env(safe-area-inset-bottom,0px))!important;
+    border-radius:14px!important;border:1px solid var(--border)!important;
+    background:rgba(28,35,51,.85)!important;
+    backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
+  }
+}
