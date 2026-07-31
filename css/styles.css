@@ -1794,3 +1794,12 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     font-size:10.5px;color:var(--muted);white-space:nowrap;width:62px;text-align:left;
   }
 }
+
+/* long-press sheet action rows */
+.lc-sheet-act{
+  display:flex;align-items:center;width:100%;padding:13px 14px;margin-top:4px;
+  border:none;border-radius:12px;background:transparent;color:var(--offwhite);
+  font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;text-align:left;
+  -webkit-tap-highlight-color:transparent;
+}
+.lc-sheet-act:active{background:rgba(255,255,255,.06);}

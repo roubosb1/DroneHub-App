@@ -313,7 +313,7 @@ function renderLouChat(){
 
   // Helper: get last-message timestamp for a channel (for sorting most-recent-first)
   function lcLastMsgTs(ch){
-    const msgs=getLcMessages(ch.id);
+    let msgs=getLcMessages(ch.id);
     if(!msgs.length) return 0;
     const last=msgs[msgs.length-1];
     return new Date(last.ts||last.sentAt||0).getTime();
@@ -789,7 +789,7 @@ async function lcRenderMessages(){
   if(!_msgKey && _fbToken()) await _loadMsgKey().catch(()=>{});
   // For non-welcome channels, decrypt messages now (async)
   const rawMsgs=getLcMessages(channelId);
-  const msgs=await dhDecryptMsgs(rawMsgs);
+  let msgs=await dhDecryptMsgs(rawMsgs);
   // Bail if the user switched channels (or to welcome) while we were decrypting
   if(lcActiveChannel!==channelId) return;
   if(lcActiveChannel==='lc_welcome') return; // never overwrite welcome with message HTML
@@ -808,6 +808,11 @@ async function lcRenderMessages(){
   // Mobile: your own messages sit left; the other person mirrors to the right
   const _viewSess=gateGetSession&&gateGetSession();
   const _mobView=window.innerWidth<=768;
+  // "Delete for you": locally hidden message ids
+  try{
+    const _hid=JSON.parse(localStorage.getItem('dronehub_lc_hidden')||'[]');
+    if(_hid.length) msgs=msgs.filter(m=>!_hid.includes(m.id));
+  }catch(e){}
   // iMessage-style bubbles on mobile: mine = blue (left tail), theirs = navy (right tail)
   const _bub=(inner,mine)=>_mobView
     ?`<div class="lc-bub" style="display:inline-block;max-width:78%;padding:10px 14px;border-radius:20px;${mine?'border-bottom-left-radius:6px;background:linear-gradient(135deg,#2E63C9,#2452A8);color:#fff':'border-bottom-right-radius:6px;background:var(--navy-lift);color:var(--offwhite)'};font-size:15px;line-height:1.45;word-break:break-word;text-align:left">${inner}</div>`
@@ -844,7 +849,7 @@ async function lcRenderMessages(){
     if(!collapsed){
       const _showAvatar=!_mobView||!_isMine;
       const _showName=!_mobView;
-      html+=`<div class="lc-msg-row" style="display:flex;flex-direction:${_flip?'row-reverse':'row'};gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
+      html+=`<div class="lc-msg-row" data-mid="${m.id}" style="display:flex;flex-direction:${_flip?'row-reverse':'row'};gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="var a=this.querySelector('.lc-msg-actions'),t=this.querySelector('.lc-ts');if(a)a.style.opacity=1;if(t)t.style.opacity=1" onmouseout="var a=this.querySelector('.lc-msg-actions'),t=this.querySelector('.lc-ts');if(a)a.style.opacity=0;if(t)t.style.opacity=0">
         ${_showAvatar?getAvatarHtml(m.author,_lcAuthorEmail,36,12):''}
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
           ${_showName?`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;${_flip?'justify-content:flex-end;':''}">
@@ -862,11 +867,12 @@ async function lcRenderMessages(){
         </div>
       </div>`;
     } else {
-      html+=`<div class="lc-msg-row" style="padding:${_mobView?(_flip?'1px 46px 1px 0':'1px 0'):(_flip?'1px 46px 1px 0':'1px 0 1px 46px')};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
+      html+=`<div class="lc-msg-row" data-mid="${m.id}" style="padding:${_mobView?(_flip?'1px 46px 1px 0':'1px 0'):(_flip?'1px 46px 1px 0':'1px 0 1px 46px')};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="var a=this.querySelector('.lc-msg-actions2'),t=this.querySelector('.lc-ts2');if(a)a.style.opacity=1;if(t)t.style.opacity=1" onmouseout="var a=this.querySelector('.lc-msg-actions2'),t=this.querySelector('.lc-ts2');if(a)a.style.opacity=0;if(t)t.style.opacity=0">
         <span class="lc-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right">${timeStr}</span>
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
           ${m.text?_bub(lcFormatText(m.text),_isMine):''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
+          ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:3px;'+(_flip?'justify-content:flex-end;':'')+'">'+Object.entries(m.reactions).map(([e,n])=>`<span style="padding:1px 7px;border-radius:10px;background:rgba(91,141,239,.14);border:1px solid var(--border);color:var(--offwhite);font-size:12px">${e}${n>1?' '+n:''}</span>`).join('')+'</div>':''}
         </div>
         ${_mobView?`<span class="lc-drag-ts">${timeStr}</span>`:''}
         <div class="lc-msg-actions2" style="opacity:0;transition:opacity .15s;flex-shrink:0">
@@ -905,20 +911,90 @@ function lcInitDragTimestamps(){
   const el=document.getElementById('lc-messages');
   if(!el) return;
   _lcDragTsInit=true;
-  let sx=0,sy=0,drag=null; // null=undecided, true=horizontal, false=vertical
+  let sx=0,sy=0,drag=null,lp=null,lastTap=0,lastTapMid=null;
   const rows=()=>el.querySelectorAll('.lc-msg-row');
-  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=null;},{passive:true});
+  el.addEventListener('touchstart',e=>{
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=null;
+    const row=e.target.closest('.lc-msg-row');
+    clearTimeout(lp);
+    if(row) lp=setTimeout(()=>{ lp=null; lcOpenMsgSheet(row.dataset.mid); },450);
+  },{passive:true});
   el.addEventListener('touchmove',e=>{
     const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+    if(Math.abs(dx)>8||Math.abs(dy)>8) clearTimeout(lp);
     if(drag===null&&(Math.abs(dx)>8||Math.abs(dy)>8)) drag=Math.abs(dx)>Math.abs(dy)*1.2&&dx<0;
     if(!drag) return;
     e.preventDefault();
     const x=Math.max(-72,Math.min(0,dx));
     rows().forEach(r=>{r.classList.add('dragging');r.style.transform='translateX('+x+'px)';});
   },{passive:false});
-  const release=()=>{rows().forEach(r=>{r.classList.remove('dragging');r.style.transform='';});drag=null;};
+  const release=e=>{
+    clearTimeout(lp);
+    rows().forEach(r=>{r.classList.remove('dragging');r.style.transform='';});
+    // double-tap a bubble → ❤️
+    if(drag===null&&e&&e.changedTouches){
+      const row=e.target.closest&&e.target.closest('.lc-msg-row');
+      if(row&&e.target.closest('.lc-bub')){
+        const now=Date.now();
+        if(now-lastTap<300&&lastTapMid===row.dataset.mid){
+          lcReact(lcActiveChannel,isNaN(+row.dataset.mid)?row.dataset.mid:+row.dataset.mid,'❤️');
+          lastTap=0;lastTapMid=null;
+        } else { lastTap=now;lastTapMid=row.dataset.mid; }
+      }
+    }
+    drag=null;
+  };
   el.addEventListener('touchend',release,{passive:true});
-  el.addEventListener('touchcancel',release,{passive:true});
+  el.addEventListener('touchcancel',()=>release(),{passive:true});
+}
+
+// ── Long-press message sheet: react / reply / copy / delete-for-you ─────────
+function lcOpenMsgSheet(mid){
+  let msgs=getLcMessages(lcActiveChannel)||[];
+  const m=msgs.find(x=>String(x.id)===String(mid));
+  if(!m) return;
+  document.getElementById('lc-msg-sheet-ov')?.remove();
+  const snippet=(m.text||'').replace(/<[^>]+>/g,'').slice(0,60).replace(/"/g,'&quot;');
+  const emojis=['❤️','😂','😮','😢','😡','👍'];
+  const ov=document.createElement('div');
+  ov.id='lc-msg-sheet-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const midJs=JSON.stringify(m.id).replace(/"/g,'&quot;');
+  ov.innerHTML=`<div style="width:100%;max-width:500px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:22px 22px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom,0px))">
+    <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright);margin:0 auto 14px"></div>
+    <div style="display:flex;justify-content:space-between;gap:6px;background:var(--navy-mid);border:1px solid var(--border);border-radius:26px;padding:8px 12px;margin-bottom:12px">
+      ${emojis.map(e=>`<button onclick="lcReact(lcActiveChannel,${midJs},'${e}');document.getElementById('lc-msg-sheet-ov').remove()" style="border:none;background:transparent;font-size:26px;cursor:pointer;-webkit-tap-highlight-color:transparent">${e}</button>`).join('')}
+    </div>
+    <button onclick="lcSheetReply(${midJs})" class="lc-sheet-act">↩︎&nbsp;&nbsp;Reply</button>
+    <button onclick="lcSheetCopy(${midJs})" class="lc-sheet-act">⧉&nbsp;&nbsp;Copy</button>
+    <button onclick="lcSheetHide(${midJs})" class="lc-sheet-act" style="color:var(--red)">🗑&nbsp;&nbsp;Delete for you</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function lcSheetReply(mid){
+  document.getElementById('lc-msg-sheet-ov')?.remove();
+  const m=(getLcMessages(lcActiveChannel)||[]).find(x=>String(x.id)===String(mid));
+  const inp=document.getElementById('lc-ig-input')||document.getElementById('lc-input');
+  if(m&&inp){
+    inp.value='↪ "'+(m.text||'').replace(/<[^>]+>/g,'').slice(0,50)+'" — ';
+    inp.focus();
+    if(typeof lcIgInputChange==='function'&&inp.id==='lc-ig-input') lcIgInputChange(inp);
+  }
+}
+function lcSheetCopy(mid){
+  document.getElementById('lc-msg-sheet-ov')?.remove();
+  const m=(getLcMessages(lcActiveChannel)||[]).find(x=>String(x.id)===String(mid));
+  if(m&&navigator.clipboard) navigator.clipboard.writeText((m.text||'').replace(/<[^>]+>/g,'')).then(()=>showDhToast&&showDhToast('Copied','Message copied to clipboard','⧉','var(--blue-bright)',1800)).catch(()=>{});
+}
+function lcSheetHide(mid){
+  document.getElementById('lc-msg-sheet-ov')?.remove();
+  try{
+    const hid=JSON.parse(localStorage.getItem('dronehub_lc_hidden')||'[]');
+    const m=(getLcMessages(lcActiveChannel)||[]).find(x=>String(x.id)===String(mid));
+    if(m&&!hid.includes(m.id)){ hid.push(m.id); localStorage.setItem('dronehub_lc_hidden',JSON.stringify(hid)); }
+    lcRenderMessages&&lcRenderMessages();
+  }catch(e){}
 }
 
 // ─── LOUCHAT ATTACHMENTS & EMOJI ─────────────────────────────────────────────
