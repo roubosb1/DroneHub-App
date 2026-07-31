@@ -968,13 +968,47 @@ function lcRenderAttachment(a){
 const DAILY_API_KEY='aefdd165794ee6eb1fec8174d06b5b806653776173c0dd394b62fa5f6da2bd4c';
 let _dailyFrame=null;
 
-function lcStartGoogleMeet(){
+async function lcStartGoogleMeet(){
   const session=gateGetSession();
-  const meetUrl='https://meet.google.com/new';
 
-  // Collect invited members
-  const invited=[...document.querySelectorAll('.lc-invite-check:checked')].map(c=>c.dataset.name||c.value).filter(Boolean);
-  const inviteNote=invited.length?`\nInvited: ${invited.join(', ')}`:'';
+  // Collect invited members (checkbox value = email when the profile has one)
+  const checks=[...document.querySelectorAll('.lc-invite-check:checked')];
+  const invitedNames=checks.map(c=>c.dataset.name||c.value).filter(Boolean);
+  const invitedEmails=checks.map(c=>c.value).filter(v=>/@/.test(v));
+  const inviteNote=invitedNames.length?`\nInvited: ${invitedNames.join(', ')}`:'';
+
+  // With a connected Google account we create a REAL calendar event with a
+  // Meet room + attendees: Google emails every invitee and the posted link
+  // is one shared room. Without it, fall back to meet.google.com/new.
+  let meetUrl='https://meet.google.com/new';
+  let real=false;
+  try{
+    if(typeof _gcalIsConnected==='function'&&_gcalIsConnected()&&typeof _fbToken==='function'&&_fbToken()){
+      showDhToast('Google Meet','Setting up your call…','📹','var(--blue-bright)',2500);
+      const now=new Date();
+      const end=new Date(now.getTime()+45*60000);
+      const hm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      const r=await fetch('/.netlify/functions/google-cal',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+_fbToken()},
+        body:JSON.stringify({
+          action:'create', memberId:_gcalMemberId(),
+          title:'DroneHub Team Call',
+          date:now.toISOString().slice(0,10),
+          startTime:hm(now), endTime:hm(end),
+          description:'Started from LouChat'+(invitedNames.length?' — invited: '+invitedNames.join(', '):''),
+          withMeet:true, attendees:invitedEmails,
+        }),
+      });
+      const json=await r.json().catch(()=>({}));
+      if(r.ok&&json.meetUrl){ meetUrl=json.meetUrl; real=true; }
+      else if(!r.ok) throw new Error(json.error||'HTTP '+r.status);
+    }
+  }catch(e){
+    showDhToast('Google Meet','Could not create a shared room ('+e.message+') — opening a quick meet instead.','⚠️','var(--amber)',4500);
+  }
+
+  const emailNote=real&&invitedEmails.length?`\n📧 Calendar invites sent to ${invitedEmails.length} ${invitedEmails.length===1?'person':'people'}.`:'';
 
   // Post link to general (or first) channel
   const channels=getLcChannels();
@@ -985,7 +1019,7 @@ function lcStartGoogleMeet(){
       author:session?.name||'DroneHub',
       authorEmail:session?.email||'',
       channelId:postCh.id,
-      text:`🟢 **Google Meet started!**${inviteNote}\n\nClick to join:`,
+      text:`🟢 **Google Meet started!**${inviteNote}${emailNote}\n\nClick to join:`,
       ts:new Date().toISOString(),
       reactions:{},
       attachments:[],
@@ -993,6 +1027,19 @@ function lcStartGoogleMeet(){
       meetUrl,
     };
     saveLcMessage(postCh.id,msg);
+  }
+
+  // Targeted in-app notification for each invitee — tapping it joins the call
+  if(invitedEmails.length&&typeof notificationsLoad==='function'){
+    try{
+      const notifs=notificationsLoad();
+      notifs.unshift({id:'n_'+Date.now(),postId:null,type:'meet_invite',
+        text:`${session?.name||'A teammate'} invited you to a video call — tap to join`,
+        meetUrl,at:new Date().toISOString(),read:false,forEmails:invitedEmails});
+      if(notifs.length>50) notifs.splice(50);
+      notificationsSave(notifs);
+      if(typeof refreshNotificationBadge==='function') refreshNotificationBadge();
+    }catch(e){}
   }
   window.open(meetUrl,'_blank');
 }

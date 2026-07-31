@@ -156,6 +156,12 @@ async function socialSyncFirebase(){
 function notificationsLoad(){
   try{ return JSON.parse(localStorage.getItem('dh_social_notifs')||'[]'); }catch(e){ return []; }
 }
+// Targeted notifications: when forEmails is set, only those users see it
+function _notifVisible(n){
+  if(!n||!Array.isArray(n.forEmails)||!n.forEmails.length) return true;
+  const me=((typeof gateGetSession==='function'&&gateGetSession()?.email)||'').toLowerCase();
+  return n.forEmails.some(e=>String(e).toLowerCase()===me);
+}
 function notificationsSave(arr){
   localStorage.setItem('dh_social_notifs',JSON.stringify(arr));
   if(_fbToken()) fbSet('orgs',ORG_ID+':social_notifs',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
@@ -1079,7 +1085,7 @@ function vdCreateShell(jobId){
 // ── END VIDEO DRAFT REVIEW SYSTEM ─────────────
 
 function refreshNotificationBadge(){
-  const notifCount=notificationsLoad().filter(n=>!n.read).length;
+  const notifCount=notificationsLoad().filter(_notifVisible).filter(n=>!n.read).length;
   const requestedCount=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.status==='requested').length;
   const pendingTimeoff=(typeof _isSessionAdmin==='function'&&_isSessionAdmin()&&typeof timeoffRequestsLoad==='function') ? timeoffRequestsLoad().filter(r=>r.status==='pending').length : 0;
   const count=notifCount+requestedCount+pendingTimeoff;
@@ -1110,7 +1116,7 @@ function toggleNotificationPanel(){
 function renderNotificationPanel(){
   const panel=document.getElementById('notif-panel');
   if(!panel) return;
-  const notifs=notificationsLoad();
+  const notifs=notificationsLoad().filter(_notifVisible);
   notifs.forEach(n=>n.read=true);
   notificationsSave(notifs);
   refreshNotificationBadge();
@@ -1132,6 +1138,7 @@ function renderNotificationPanel(){
     timeoff_request:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>',bg:'rgba(167,139,250,.08)',accent:'rgba(167,139,250,.25)',label:'Time Off Request'},
     rsvp_accept:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><path d="m9 15 2 2 4-4"/></svg>',bg:'rgba(34,217,122,.08)',accent:'rgba(34,217,122,.25)',label:'Invite Accepted'},
     rsvp_decline:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E85D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg>',bg:'rgba(232,93,93,.08)',accent:'rgba(232,93,93,.25)',label:'Invite Declined'},
+    meet_invite:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',bg:'rgba(26,115,232,.1)',accent:'rgba(26,115,232,.3)',label:'Video Call'},
     booking:{icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',bg:'rgba(245,166,35,.08)',accent:'rgba(245,166,35,.25)',label:'New booking'}
   };
   const defaultType={icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',bg:'rgba(255,255,255,.04)',accent:'var(--border)',label:'Update'};
@@ -1157,7 +1164,7 @@ function renderNotificationPanel(){
   }).join('');
   const notifRows=notifs.map(n=>{
     const cfg=typeConfig[n.type]||defaultType;
-    const navAction=n.type==='tax_update'?"showPane('finance')":n.type==='booking'?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)":(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')":n.type==='timeoff_request'||n.type==='approval'&&n.text?.includes('time off')?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
+    const navAction=n.type==='meet_invite'?(n.meetUrl?"window.open('"+n.meetUrl+"','_blank')":"showPane('louchat')"):n.type==='tax_update'?"showPane('finance')":n.type==='booking'?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)":(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')":n.type==='timeoff_request'||n.type==='approval'&&n.text?.includes('time off')?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
     return `<div onclick="document.getElementById('notif-panel').style.display='none';${navAction}" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="width:32px;height:32px;border-radius:10px;background:${cfg.bg};border:1px solid ${cfg.accent};display:flex;align-items:center;justify-content:center;flex-shrink:0">${cfg.icon}</div>
@@ -1199,7 +1206,7 @@ let _notifPageFilter='all';
 
 function _notifTypeCat(t){
   if(t==='booking') return 'bookings';
-  if(t==='tax_update'||t==='timeoff_request') return 'reminders';
+  if(t==='tax_update'||t==='timeoff_request'||t==='meet_invite') return 'reminders';
   return 'projects'; // approvals, revisions, messages, video review, RSVP, date changes
 }
 
@@ -1225,14 +1232,16 @@ function _notifPageItems(){
     video_changes:{label:'Changes requested',color:'#F5C842',bg:'rgba(245,200,66,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
     booking:{label:'Booking',color:'var(--amber)',bg:'rgba(245,166,35,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>'},
     tax_update:{label:'Reminder',color:'#F5C842',bg:'rgba(245,200,66,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F5C842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
+    meet_invite:{label:'Video call',color:'#1a73e8',bg:'rgba(26,115,232,.1)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
     timeoff_request:{label:'Time off',color:'#A78BFA',bg:'rgba(167,139,250,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>'},
     rsvp_accept:{label:'Invite accepted',color:'#22D97A',bg:'rgba(34,217,122,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 15 2 2 4-4"/></svg>'},
     rsvp_decline:{label:'Invite declined',color:'#E85D5D',bg:'rgba(232,93,93,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E85D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg>'},
   };
   const def={label:'Update',color:'var(--muted)',bg:'rgba(255,255,255,.04)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'};
-  notificationsLoad().forEach(n=>{
+  notificationsLoad().filter(_notifVisible).forEach(n=>{
     const c=cfg[n.type]||def;
-    const nav=n.type==='tax_update'?"showPane('finance')"
+    const nav=n.type==='meet_invite'?(n.meetUrl?"window.open('"+n.meetUrl+"','_blank')":"showPane('louchat')")
+      :n.type==='tax_update'?"showPane('finance')"
       :n.type==='booking'?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)"
       :(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')"
       :n.type==='timeoff_request'?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}"
@@ -1246,7 +1255,7 @@ function _notifPageItems(){
 function openNotificationsPage(){
   // Mark stored notifications read (same as the old panel did)
   const notifs=notificationsLoad();
-  notifs.forEach(n=>n.read=true);
+  notifs.forEach(n=>{ if(_notifVisible(n)) n.read=true; });
   notificationsSave(notifs);
   refreshNotificationBadge();
   renderNotificationsPage();

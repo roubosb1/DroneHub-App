@@ -228,13 +228,24 @@ exports.handler = async (event) => {
         next.setDate(next.getDate() + 1);
         eventBody.end = { date: next.toISOString().slice(0, 10) };
       }
+      // Meet call: attach a conference room and real attendees — Google emails
+      // each invitee and everyone joins the SAME room via hangoutLink
+      let query = '';
+      if (body.withMeet) {
+        eventBody.conferenceData = { createRequest: { requestId: 'dh-' + Date.now(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+        query = '?conferenceDataVersion=1';
+      }
+      if (Array.isArray(body.attendees) && body.attendees.length) {
+        eventBody.attendees = body.attendees.filter(e => /@/.test(e)).map(e => ({ email: e }));
+        query += (query ? '&' : '?') + 'sendUpdates=all';
+      }
       const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events${query}`,
         { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(eventBody) }
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || `Create failed (${res.status})`);
-      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, gcalEventId: data.id }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, gcalEventId: data.id, meetUrl: data.hangoutLink || null }) };
     }
 
     // ── Update event ─────────────────────────────────────────────────────────
