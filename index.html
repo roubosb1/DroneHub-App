@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=83">
+<link rel="stylesheet" href="css/styles.css?v=84">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -1634,7 +1634,7 @@
         <div>
           <div style="font-size:16px;font-weight:700;color:var(--white)">Employee Payroll</div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div class="emp-pay-actions" style="display:flex;gap:8px">
           <button onclick="_openPayrollCalc()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Calculator</button>
           <button onclick="_openComplianceGuide()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(255,152,56,.1);color:var(--orange);font-size:12px;font-weight:700;cursor:pointer">Filing Guide</button>
           <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
@@ -4656,12 +4656,27 @@ function mobNavPlus(){
   if(pane === 'tracker')  { mobTrkAdd?.(); return; }
   if(pane === 'calendar') { openCalEventModal?.(); return; }
   if(pane === 'louchat')  { mobNewMsgOpen(); return; }
+  if(pane === 'finance' || pane === 'payroll')  { mobFinPlusOpen(); return; }
   if(pane === 'social')   { openSocialWorkspaceModal?.(); return; }
   // Default: open the hamburger for more options
   toggleMobTopDropdown?.();
 }
 
 // ── Mobile Chat + action sheet ─────────────────────────────────────────────
+function mobFinPlusOpen(){
+  const sheet=document.getElementById('mob-fin-plus-sheet');
+  const overlay=document.getElementById('mob-fin-plus-overlay');
+  if(!sheet) return;
+  const isOpen=sheet.style.display!=='none';
+  sheet.style.display=isOpen?'none':'block';
+  if(overlay) overlay.style.display=isOpen?'none':'block';
+}
+function mobFinPlusClose(){
+  const sheet=document.getElementById('mob-fin-plus-sheet');
+  const overlay=document.getElementById('mob-fin-plus-overlay');
+  if(sheet) sheet.style.display='none';
+  if(overlay) overlay.style.display='none';
+}
 function mobChatPlusOpen(){
   const sheet=document.getElementById('mob-chat-plus-sheet');
   const overlay=document.getElementById('mob-chat-plus-overlay');
@@ -11166,6 +11181,23 @@ function initGoogleMaps(){
       style="flex:1;border:1px solid var(--border);border-radius:12px;background:var(--navy-mid);color:var(--white);font-size:15px;outline:none;padding:9px 14px;box-sizing:border-box">
   </div>
   <div id="mob-newmsg-body" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:0 12px calc(90px + env(safe-area-inset-bottom,0px))"></div>
+</div>
+
+<!-- Mobile Finance + action sheet -->
+<div id="mob-fin-plus-overlay" onclick="mobFinPlusClose()" style="display:none;position:fixed;inset:0;z-index:948;background:transparent"></div>
+<div id="mob-fin-plus-sheet" style="display:none;position:fixed;top:62px;left:12px;right:12px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;z-index:949;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.55)">
+  <button onclick="mobFinPlusClose();openAddEmployeePayStub()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(91,141,239,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue-bright)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    <div><div style="color:var(--offwhite)">Add Pay Stub</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Record a new employee payment</div></div>
+  </button>
+  <button onclick="mobFinPlusClose();_openPayrollCalc()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(34,217,122,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></span>
+    <div><div style="color:var(--offwhite)">Payroll Calculator</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Gross-to-net with tax deductions</div></div>
+  </button>
+  <button onclick="mobFinPlusClose();_openComplianceGuide()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(255,152,56,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--orange)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+    <div><div style="color:var(--offwhite)">Filing Guide</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">CRA remittance & T4 filing steps</div></div>
+  </button>
 </div>
 
 <div id="mob-chat-plus-sheet" style="display:none;position:fixed;top:62px;left:12px;right:12px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;z-index:949;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4);">

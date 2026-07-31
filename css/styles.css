@@ -1702,3 +1702,18 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   .emp-group-hdr{flex-direction:column;align-items:flex-start!important;gap:3px!important;}
   .emp-group-meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 }
+
+/* mobile payroll: actions live in the + menu; compact section cards + kit selects */
+@media (max-width:768px){
+  .emp-pay-actions{display:none!important;}
+  /* section cards match the employee-row scale */
+  #pane-finance .card:has(#remittance-month-select),
+  #pane-finance .card:has(#t4-year-select){padding:12px 16px!important;margin-top:8px!important;}
+  #pane-finance .card:has(#t4-year-select) .section-label+div{display:none;} /* T4 subtitle */
+  #remittance-month-select,#t4-year-select{
+    padding:9px 12px!important;border-radius:12px!important;
+    border:1px solid var(--border-bright)!important;background:var(--navy-mid)!important;
+    font-size:13px!important;font-weight:600!important;color:var(--white)!important;
+    -webkit-appearance:none;appearance:none;
+  }
+}
