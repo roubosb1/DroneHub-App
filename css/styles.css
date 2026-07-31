@@ -1601,3 +1601,18 @@ body.lc-vc-mode #lc-mob-ig-bar{display:none!important;}
   }
   #lc-invite-list{grid-template-columns:1fr!important;}
 }
+
+/* video-call screen header: flat navy, single decorative camera logo */
+body.lc-vc-mode #lc-chat-header{background:var(--navy)!important;border-bottom:none!important;}
+body.lc-vc-mode #lc-channel-icon{display:none!important;}
+body.lc-vc-mode #lc-channel-desc{display:none!important;}
+body.lc-vc-mode #lc-mob-vc-btn{pointer-events:none;background:transparent!important;}
+
+/* video-call mode: every header-layer surface flat navy */
+body.lc-vc-mode #lc-main,
+body.lc-vc-mode #lc-main>div{background:var(--navy)!important;}
+
+/* vc-mode beats the immersive-chat header card color */
+body.lc-chat-full.lc-vc-mode #lc-main > div:first-child{
+  background:var(--navy)!important;border-bottom:none!important;
+}
