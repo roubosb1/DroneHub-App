@@ -1745,3 +1745,16 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     color:var(--white)!important;
   }
 }
+
+/* payroll: all four cards identical — same shade, height, spacing */
+@media (max-width:768px){
+  #pane-finance .card:has(#remittance-month-select),
+  #pane-finance .card:has(#t4-year-select){
+    background:var(--navy-lift)!important;
+    margin:0 0 8px!important;
+    min-height:60px;box-sizing:border-box;
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  #pane-finance .card:has(#remittance-month-select)>div:first-child,
+  #pane-finance .card:has(#t4-year-select)>div:first-child{margin-bottom:0!important;}
+}
