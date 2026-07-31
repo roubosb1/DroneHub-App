@@ -1677,3 +1677,12 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     border:none!important;background:rgba(255,255,255,.06)!important;
   }
 }
+
+/* iOS focus ring on the chat textarea — no inner outline ever */
+.lc-ig-pill textarea:focus,
+.lc-ig-pill textarea:focus-visible,
+.lc-ig-pill textarea:active{
+  outline:none!important;box-shadow:none!important;border:none!important;
+  -webkit-appearance:none!important;appearance:none!important;
+}
+.lc-ig-pill:focus-within{outline:none!important;box-shadow:none!important;}
