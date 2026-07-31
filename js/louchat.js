@@ -293,7 +293,14 @@ function renderLouChat(){
     groups[t].sort((a,b)=>lcLastMsgTs(b)-lcLastMsgTs(a));
   });
 
-  const typeOrder=['welcome','general','project','client','client_dm','social','admin'];
+  // Section order: welcome pinned first, then sections ranked by their
+  // newest message so the most recent conversations surface at the top
+  const _rest=['general','project','client','client_dm','social','admin']
+    .sort((a,b)=>{
+      const ts=t=>(groups[t]||[]).reduce((m,ch)=>Math.max(m,lcLastMsgTs(ch)),0);
+      return ts(b)-ts(a);
+    });
+  const typeOrder=['welcome',..._rest];
   let html='';
   typeOrder.forEach(type=>{
     if(!groups[type]) return;

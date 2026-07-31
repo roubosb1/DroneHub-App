@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
-<script src="js/core.js?v=4"></script>
+<script src="js/core.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.3/dist/otpauth.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
@@ -4499,7 +4499,7 @@
 <script src="js/social.js?v=56"></script>
 <script src="js/social-analytics.js?v=10"></script>
 <script src="js/sales.js"></script>
-<script src="js/louchat.js?v=58"></script>
+<script src="js/louchat.js?v=59"></script>
 <script src="js/tracker.js?v=52"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=4"></script>
@@ -4920,7 +4920,7 @@ function mobShowProfile(){
   // Populate header & stats — use real photo if available
   const avatarEl = document.getElementById('mob-pf-avatar');
   if(avatarEl){
-    const photo = typeof getProfilePhoto === 'function' ? getProfilePhoto(s.email||member.email||'') : null;
+    const photo = (typeof getMyProfilePhoto==='function' ? getMyProfilePhoto() : null) || (typeof getProfilePhoto==='function' ? getProfilePhoto(member.email||'') : null);
     if(photo){
       avatarEl.innerHTML = `<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
       avatarEl.style.background = 'none';
@@ -9094,10 +9094,20 @@ function totp2faRememberDevice(email){
   const key='dronehub_2fa_trusted_'+email.toLowerCase().replace(/[^a-z0-9]/g,'_');
   const expiry=Date.now()+(30*24*60*60*1000); // 30 days
   localStorage.setItem(key,expiry.toString());
+  // Cookie backup — iOS Safari can evict localStorage; cookies with an
+  // explicit expiry survive longer, so trust holds if either store does
+  try{ document.cookie=key+'='+expiry+';max-age='+(30*24*60*60)+';path=/;SameSite=Lax'; }catch(e){}
 }
 function totp2faIsDeviceTrusted(email){
   const key='dronehub_2fa_trusted_'+email.toLowerCase().replace(/[^a-z0-9]/g,'_');
-  const expiry=parseInt(localStorage.getItem(key)||'0');
+  let expiry=parseInt(localStorage.getItem(key)||'0');
+  if(!(expiry>Date.now())){
+    try{
+      const m=document.cookie.match(new RegExp('(?:^|; )'+key+'=(\\d+)'));
+      if(m) expiry=parseInt(m[1]);
+      if(expiry>Date.now()) localStorage.setItem(key,expiry.toString()); // resync
+    }catch(e){}
+  }
   return expiry>Date.now();
 }
 
@@ -9320,6 +9330,10 @@ function gateShow2faVerify(session){
         style="width:100%;box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--white);font-size:28px;font-weight:700;text-align:center;letter-spacing:.25em;font-family:monospace;margin-bottom:12px"
         onkeydown="if(event.key==='Enter')gateSubmit2fa()">
       <div id="totp-verify-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none"></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;font-size:12.5px;color:var(--offwhite);text-align:left">
+        <input type="checkbox" id="totp-trust-device" checked style="width:17px;height:17px;accent-color:var(--blue);flex-shrink:0">
+        Don't ask for a code on this device for 30 days
+      </label>
       <button onclick="gateSubmit2fa()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#2B5FC7);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">Verify →</button>
       <button onclick="location.reload()" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;margin-bottom:8px">← Back to sign in</button>
       <div style="text-align:center;margin-top:4px">
@@ -9335,7 +9349,8 @@ function gateSubmit2fa(){
   const err=document.getElementById('totp-verify-error');
   if(!code||code.length!==6){if(err){err.textContent='Enter the 6-digit code.';err.style.display='block';}return;}
   if(totp2faVerifyCode(_pending2faSession.email,code)){
-    totp2faRememberDevice(_pending2faSession.email); // trust this device for 30 days
+    if(document.getElementById('totp-trust-device')?.checked!==false)
+      totp2faRememberDevice(_pending2faSession.email); // trust this device for 30 days
     gateEnterApp(_pending2faSession);
   } else {
     if(err){err.textContent='Incorrect code. Codes refresh every 30 seconds — try again.';err.style.display='block';}

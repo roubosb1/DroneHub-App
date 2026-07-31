@@ -452,6 +452,25 @@ function _iconHydrate(root){
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>_iconHydrate());
 else _iconHydrate();
 
+// The login email and the roster email for the same person can differ —
+// try both when resolving "my" photo.
+function _photoLookupEmails(){
+  const s=gateGetSession&&gateGetSession();
+  const out=[];
+  if(s?.email) out.push(s.email.toLowerCase());
+  try{
+    const ms=typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[];
+    const m=ms.find(x=>(x.email&&s?.email&&x.email.toLowerCase()===s.email.toLowerCase())
+                     ||(x.name&&s?.name&&x.name.toLowerCase()===s.name.toLowerCase()));
+    if(m?.email&&!out.includes(m.email.toLowerCase())) out.push(m.email.toLowerCase());
+  }catch(e){}
+  return out;
+}
+function getMyProfilePhoto(){
+  for(const e of _photoLookupEmails()){ const p=getProfilePhoto(e); if(p) return p; }
+  return null;
+}
+
 let _hdrPhotoTried={};
 function renderAppHeader(){
   const session=gateGetSession&&gateGetSession();
@@ -461,14 +480,18 @@ function renderAppHeader(){
   // Header only reads the localStorage photo cache; on a fresh device that
   // cache is empty until the profile page is opened. Pull the photo from
   // Firebase once per session, then re-render with it.
-  if(session.email && !getProfilePhoto(session.email) && !_hdrPhotoTried[session.email]
+  if(session.email && !getMyProfilePhoto() && !_hdrPhotoTried[session.email]
      && typeof loadProfilePhotoFromFirebase==='function' && typeof _fbToken==='function' && _fbToken()){
     _hdrPhotoTried[session.email]=true;
-    loadProfilePhotoFromFirebase(session.email).then(p=>{ if(p) renderAppHeader(); }).catch(()=>{});
+    Promise.allSettled(_photoLookupEmails().map(e=>loadProfilePhotoFromFirebase(e)))
+      .then(rs=>{ if(rs.some(r=>r.value)) renderAppHeader(); });
   }
   const isAdmin=session.type==='admin'||session.role==='admin';
   const displayName=session.email==='roubosb1@gmail.com'?'Bailey Roubos':(session.name||session.email);
-  const avatarHtml=getAvatarHtml(displayName,session.email,28,10);
+  const _myPhoto=getMyProfilePhoto();
+  const avatarHtml=_myPhoto
+    ? `<img src="${_myPhoto}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+    : getAvatarHtml(displayName,session.email,28,10);
   if(isAdmin){
     const PRESET_JOB_TITLES_local=typeof PRESET_JOB_TITLES!=='undefined'?PRESET_JOB_TITLES:{};
     const title=session.jobTitle||PRESET_JOB_TITLES_local[session.email]?.title||'Admin';
