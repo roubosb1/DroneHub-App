@@ -622,7 +622,7 @@ function renderEmployeePayroll(){
     const member=_findLinkedTeamMember(name);
     const anyLinked=data.stubs.some(s=>s.linkedEmail)||member;
     const linkBadge=anyLinked
-      ?`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--green);margin-left:8px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>${member?.email||data.stubs[0]?.linkedEmail||'linked'}</span>`
+      ?`<span class="emp-link-badge" style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,217,122,.1);border:1px solid var(--green);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--green);margin-left:8px"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>${member?.email||data.stubs[0]?.linkedEmail||'linked'}</span>`
       :'';
     const uid='epd_'+name.replace(/[^a-zA-Z0-9]/g,'_');
     data.stubs.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -641,7 +641,7 @@ function renderEmployeePayroll(){
     return `<div style="margin-bottom:8px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
       <div onclick="(function(el){var b=document.getElementById('${uid}');var arr=el.querySelector('.ep-arrow');if(b.style.display==='none'){b.style.display='block';arr.style.transform='rotate(90deg)';}else{b.style.display='none';arr.style.transform='rotate(0deg)';}})(this)" class="emp-group-hdr" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:var(--navy-lift);user-select:none;flex-wrap:wrap;gap:4px" onmouseover="this.style.background='var(--navy-border)'" onmouseout="this.style.background='var(--navy-lift)'">
         <div style="display:flex;align-items:center;gap:8px"><span class="ep-arrow" style="color:var(--muted);font-size:12px;transition:transform .2s;display:inline-block;transform:rotate(0deg)">&#9654;</span><span style="font-size:15px;font-weight:700;color:var(--white)">${name}</span>${linkBadge}</div>
-        <div class="emp-group-meta" style="font-size:11px;color:var(--muted)">${data.stubs.length} stubs · <span style="color:var(--green)">$${data.totalGross.toFixed(2)}</span> gross · <span style="color:var(--blue-bright)">$${data.totalNet.toFixed(2)}</span> net${data.totalRemit?` · <span style="color:var(--orange)">$${data.totalRemit.toFixed(2)}</span> remit`:''}</div>
+        <div class="emp-group-meta" style="font-size:11px;color:var(--muted)">${data.stubs.length} stubs · <span class="emp-meta-gross"><span style="color:var(--green)">$${data.totalGross.toFixed(2)}</span> gross · </span><span style="color:var(--blue-bright)">$${data.totalNet.toFixed(2)}</span> net${data.totalRemit?` · <span style="color:var(--orange)">$${data.totalRemit.toFixed(2)}</span> remit`:''}</div>
       </div>
       <div id="${uid}" style="display:none;padding:12px 16px 16px">
         <div class="emp-stub-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
@@ -1484,6 +1484,7 @@ function _openPayrollCalc(){
   var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:(_provCfg2026[defProv]||_provCfg2026.ON).bpa;
   var provOpts=_provOrder.map(function(code){var pc=_provCfg2026[code];return'<option value="'+code+'"'+(code===defProv?' selected':'')+'>'+pc.name+'</option>';}).join('');
   window._pcCountry='CA';window._pcNameOpts=opts;window._pcDefProv=defProv;window._pcDefTD1F=defTD1F;window._pcDefTD1P=defTD1P;window._pcProvOpts=provOpts;
+  setTimeout(()=>{ if(window.innerWidth<=768) document.getElementById('emp-modal-overlay')?.classList.add('modal-fullpage'); },0);
   openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="display:flex;gap:8px;margin-top:8px"><button id="pc-tab-ca" onclick="_pcSwitchCountry(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇨🇦 Canada</button><button id="pc-tab-us" onclick="_pcSwitchCountry(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇺🇸 United States</button></div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px"><div id="pc-subtitle" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center">CRA 2026 · T4127 formulas · All provinces &amp; territories</div><div id="pc-form-body">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
@@ -2395,13 +2396,27 @@ function renderRemittanceSummary(){
   populateRemittanceMonths();
   const el=document.getElementById('remittance-summary-content');
   if(!el)return;
-  const month=document.getElementById('remittance-month-select')?.value;
-  if(!month){el.innerHTML='';return;}
+  const sel=document.getElementById('remittance-month-select');
+  // Default to the latest month that actually has stubs
+  if(sel&&(!sel.value||!employeePayroll.some(p=>p.date&&p.date.startsWith(sel.value)))){
+    const months=[...new Set(employeePayroll.filter(p=>p.date).map(p=>p.date.slice(0,7)))].sort();
+    if(months.length) sel.value=months[months.length-1];
+  }
+  const month=sel?.value;
+  const hdr=document.getElementById('remit-hdr-sum');
+  if(!month){el.innerHTML='';if(hdr)hdr.textContent='No pay stubs yet';return;}
 
   const stubs=employeePayroll.filter(p=>p.date&&p.date.startsWith(month));
+  const _mLabel=new Date(month+'-15T12:00:00').toLocaleString('en',{month:'long',year:'numeric'});
   if(!stubs.length){
     el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">No pay stubs for this month</div>';
+    if(hdr)hdr.textContent=_mLabel+' · no stubs';
     return;
+  }
+  if(hdr){
+    const _r=stubs.reduce((t,x)=>t+(x.dhRemittance||0),0);
+    const _e=new Set(stubs.map(x=>x.employee)).size;
+    hdr.innerHTML=_mLabel+' · <span style="color:var(--orange)">$'+_r.toFixed(2)+'</span> to remit · '+_e+' employee'+(_e===1?'':'s');
   }
 
   // Group by pay date to find pay periods
@@ -2598,16 +2613,22 @@ function renderT4Summary(){
   const el=document.getElementById('t4-summary-content');
   if(!el)return;
   const year=document.getElementById('t4-year-select')?.value;
-  if(!year){el.innerHTML='';return;}
+  const t4hdr=document.getElementById('t4-hdr-sum');
+  if(!year){el.innerHTML='';if(t4hdr)t4hdr.textContent='No pay stubs yet';return;}
 
   const emps=new Set();
   employeePayroll.forEach(p=>{if(p.date&&p.date.startsWith(year))emps.add(p.employee);});
   if(!emps.size){
     el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">No pay stubs for '+year+'</div>';
+    if(t4hdr)t4hdr.textContent=year+' · no stubs';
     return;
   }
 
   const t4s=[...emps].sort().map(name=>_calcT4(name,year)).filter(Boolean);
+  if(t4hdr){
+    const _tr=t4s.reduce((t,x)=>t+(x.totalRemit||0),0);
+    t4hdr.innerHTML=year+' · '+t4s.length+' employee'+(t4s.length===1?'':'s')+' · <span style="color:var(--orange)">$'+_tr.toFixed(2)+'</span> total remit';
+  }
 
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">

@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=84">
+<link rel="stylesheet" href="css/styles.css?v=86">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -1631,7 +1631,7 @@
     <!-- Employee Payroll Section -->
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <div>
+        <div class="emp-pay-title">
           <div style="font-size:16px;font-weight:700;color:var(--white)">Employee Payroll</div>
         </div>
         <div class="emp-pay-actions" style="display:flex;gap:8px">
@@ -1655,26 +1655,29 @@
 
       <!-- Monthly Remittance Summary -->
       <div class="card" style="margin-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-          <div class="section-label" style="margin-bottom:0;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none" onclick="finToggleSection('remittance-summary-content',this.querySelector('.fin-arr'))"><span class="fin-arr" style="display:inline-block;transition:transform .2s;font-size:11px">&#9654;</span>Monthly CRA Remittance Summary</div>
-          <select id="remittance-month-select" onchange="renderRemittanceSummary()" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+        <div style="cursor:pointer;user-select:none" onclick="finToggleSection('remittance-body',this.querySelector('.fin-arr'))">
+          <div class="section-label" style="margin-bottom:0;display:flex;align-items:center;gap:8px"><span class="fin-arr" style="display:inline-block;transition:transform .2s;font-size:11px">&#9654;</span>Monthly CRA Remittance</div>
+          <div id="remit-hdr-sum" class="fin-hdr-sum"></div>
         </div>
-        <div id="remittance-summary-content" class="fin-start-collapsed"></div>
+        <div id="remittance-body" class="fin-start-collapsed">
+          <select id="remittance-month-select" onchange="renderRemittanceSummary()" style="margin:10px 0;padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+          <div id="remittance-summary-content"></div>
+        </div>
       </div>
     </div>
 
       <!-- Year-End T4 Generation -->
       <div class="card" style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-          <div style="cursor:pointer;user-select:none" onclick="finToggleSection('t4-summary-content',this.querySelector('.fin-arr'))">
-            <div class="section-label" style="margin-bottom:2px;display:flex;align-items:center;gap:8px"><span class="fin-arr" style="display:inline-block;transition:transform .2s;font-size:11px">&#9654;</span>Year-End T4 Summary</div>
-            <div style="font-size:11px;color:var(--muted)">Auto-generate T4 slips from pay stub data for CRA filing</div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="t4-year-select" onchange="renderT4Summary()" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+          <div style="cursor:pointer;user-select:none;flex:1" onclick="finToggleSection('t4-body',this.querySelector('.fin-arr'))">
+            <div class="section-label" style="margin-bottom:0;display:flex;align-items:center;gap:8px"><span class="fin-arr" style="display:inline-block;transition:transform .2s;font-size:11px">&#9654;</span>Year-End T4 Summary</div>
+            <div id="t4-hdr-sum" class="fin-hdr-sum"></div>
           </div>
         </div>
-        <div id="t4-summary-content" class="fin-start-collapsed"></div>
+        <div id="t4-body" class="fin-start-collapsed">
+          <select id="t4-year-select" onchange="renderT4Summary()" style="margin:10px 0;padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--navy-mid);color:var(--offwhite)"></select>
+          <div id="t4-summary-content"></div>
+        </div>
       </div>
   </div><!-- end finance-sub-payroll -->
 
@@ -4501,7 +4504,7 @@
 <script src="js/louchat.js?v=66"></script>
 <script src="js/tracker.js?v=52"></script>
 <script src="js/admin.js"></script>
-<script src="js/finance.js?v=7"></script>
+<script src="js/finance.js?v=8"></script>
 <script src="js/calendar.js?v=62"></script>
 <script src="js/team.js?v=52"></script>
 <script src="js/jobs.js?v=10"></script>
@@ -11186,13 +11189,10 @@ function initGoogleMaps(){
 <!-- Mobile Finance + action sheet -->
 <div id="mob-fin-plus-overlay" onclick="mobFinPlusClose()" style="display:none;position:fixed;inset:0;z-index:948;background:transparent"></div>
 <div id="mob-fin-plus-sheet" style="display:none;position:fixed;top:62px;left:12px;right:12px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;z-index:949;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.55)">
-  <button onclick="mobFinPlusClose();openAddEmployeePayStub()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left">
-    <span style="width:32px;height:32px;border-radius:8px;background:rgba(91,141,239,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue-bright)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-    <div><div style="color:var(--offwhite)">Add Pay Stub</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Record a new employee payment</div></div>
-  </button>
+
   <button onclick="mobFinPlusClose();_openPayrollCalc()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left">
     <span style="width:32px;height:32px;border-radius:8px;background:rgba(34,217,122,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></span>
-    <div><div style="color:var(--offwhite)">Payroll Calculator</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Gross-to-net with tax deductions</div></div>
+    <div><div style="color:var(--offwhite)">Add Pay Stub</div><div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:1px">Auto-calculates CRA deductions, then adds to payroll</div></div>
   </button>
   <button onclick="mobFinPlusClose();_openComplianceGuide()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left">
     <span style="width:32px;height:32px;border-radius:8px;background:rgba(255,152,56,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--orange)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
