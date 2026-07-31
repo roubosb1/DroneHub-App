@@ -1696,3 +1696,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 @media (max-width:768px){
   .fin-start-collapsed{display:none;}
 }
+
+/* payroll group headers: uniform two-row layout, meta clamped to one line */
+@media (max-width:768px){
+  .emp-group-hdr{flex-direction:column;align-items:flex-start!important;gap:3px!important;}
+  .emp-group-meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+}
