@@ -774,6 +774,11 @@ async function lcRenderMessages(){
   let prevAuthor='', prevTime=0;
   // Mobile: your own messages sit left; the other person mirrors to the right
   const _viewSess=gateGetSession&&gateGetSession();
+  const _mobView=window.innerWidth<=768;
+  // iMessage-style bubbles on mobile: mine = blue (left tail), theirs = navy (right tail)
+  const _bub=(inner,mine)=>_mobView
+    ?`<div class="lc-bub" style="display:inline-block;max-width:82%;padding:8px 13px;border-radius:18px;${mine?'border-bottom-left-radius:6px;background:linear-gradient(135deg,#2E63C9,#2452A8);color:#fff':'border-bottom-right-radius:6px;background:var(--navy-lift);color:var(--offwhite)'};font-size:14px;line-height:1.45;word-break:break-word;text-align:left">${inner}</div>`
+    :`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${inner}</div>`;
 
   msgs.forEach((m,i)=>{
     const d=new Date(m.ts);
@@ -811,7 +816,7 @@ async function lcRenderMessages(){
             <span style="font-size:13px;font-weight:700;color:var(--white)">${m.author}</span>${getUserJobTitle(m.author)?`<span style="font-size:10px;color:var(--muted);margin-left:5px">${getUserJobTitle(m.author)}</span>`:''}
             <span class="lc-ts" style="font-size:10px;color:var(--muted);opacity:0;transition:opacity .15s">${isToday?timeStr:dateStr+' '+timeStr}</span>
           </div>
-          ${m.text?`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${lcFormatText(m.text)}</div>`:''}
+          ${m.text?_bub(lcFormatText(m.text),_isMine):''}
           ${m.isMeeting?`<a href="${m.meetUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:8px 16px;border-radius:10px;background:linear-gradient(135deg,#1a73e8,#1557b0);color:#fff;text-decoration:none;font-size:13px;font-weight:700">📹 Join Google Meet</a>`:''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
           ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${channelId}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
@@ -824,7 +829,7 @@ async function lcRenderMessages(){
       html+=`<div style="padding:1px ${_flip?'46px':'0'} 1px ${_flip?'0':'46px'};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
         <span class="lc-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right">${timeStr}</span>
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
-          ${m.text?`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${lcFormatText(m.text)}</div>`:''}
+          ${m.text?_bub(lcFormatText(m.text),_isMine):''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
         </div>
         <div class="lc-msg-actions2" style="opacity:0;transition:opacity .15s;flex-shrink:0">

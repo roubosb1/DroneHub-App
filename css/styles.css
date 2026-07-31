@@ -1645,7 +1645,7 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     left:10px!important;right:10px!important;width:auto!important;
     bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;
     border:1px solid var(--border)!important;border-radius:28px!important;
-    background:rgba(28,35,51,.92)!important;
+    background:rgba(13,19,33,.95)!important;
     backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;
     box-shadow:0 10px 30px rgba(0,0,0,.45)!important;
     padding:7px 10px!important;
