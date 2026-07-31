@@ -1691,3 +1691,8 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 @media (max-width:768px){
   .lc-ts,.lc-ts2{display:none!important;}
 }
+
+/* payroll heavy sections start collapsed on mobile (tap header to expand) */
+@media (max-width:768px){
+  .fin-start-collapsed{display:none;}
+}

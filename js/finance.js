@@ -2585,6 +2585,14 @@ function _calcT4(empName,year){
   return t4;
 }
 
+function finToggleSection(id,arrow){
+  const el=document.getElementById(id);
+  if(!el) return;
+  const hidden=getComputedStyle(el).display==='none';
+  el.style.display=hidden?'block':'none';
+  if(arrow) arrow.style.transform=hidden?'rotate(90deg)':'rotate(0deg)';
+}
+
 function renderT4Summary(){
   populateT4Years();
   const el=document.getElementById('t4-summary-content');
@@ -2614,6 +2622,21 @@ function renderT4Summary(){
             </div>
             <div style="font-size:11px;font-weight:600;color:var(--muted);background:var(--navy-mid);border-radius:6px;padding:3px 8px">T4 — ${t.year}</div>
           </div>
+          <div style="display:flex;gap:10px;margin-bottom:10px">
+            <div style="flex:1;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:9px 10px;text-align:center">
+              <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Income</div>
+              <div style="font-size:14px;font-weight:800;color:var(--green)">$${t.box14.toFixed(2)}</div>
+            </div>
+            <div style="flex:1;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:9px 10px;text-align:center">
+              <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Net paid</div>
+              <div style="font-size:14px;font-weight:800;color:var(--blue-bright)">$${t.netPaid.toFixed(2)}</div>
+            </div>
+            <div style="flex:1;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:9px 10px;text-align:center">
+              <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Remit</div>
+              <div style="font-size:14px;font-weight:800;color:var(--orange)">$${t.totalRemit.toFixed(2)}</div>
+            </div>
+          </div>
+          <div class="t4-details" style="display:none">
           <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:11px">
             <span style="color:var(--muted);font-weight:600">Box 14</span><span style="color:var(--green)">$${t.box14.toFixed(2)} <span style="color:var(--muted);font-weight:400">Employment income</span></span>
             <span style="color:var(--muted);font-weight:600">Box 16</span><span style="color:var(--red)">$${t.box16.toFixed(2)} <span style="color:var(--muted);font-weight:400">CPP contributions</span></span>
@@ -2633,7 +2656,9 @@ function renderT4Summary(){
             <div>Total Remittance: <span style="color:var(--orange)">$${t.totalRemit.toFixed(2)}</span></div>
             <div>Net Paid: <span style="color:var(--blue-bright)">$${t.netPaid.toFixed(2)}</span></div>
           </div>
+          </div>
           <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+            <button onclick="const d=this.closest('.card').querySelector('.t4-details');const open=d.style.display!=='none';d.style.display=open?'none':'block';this.textContent=open?'Details ▾':'Details ▴';" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">Details ▾</button>
             <button onclick="openCRAT4Form('${t.employee}','${t.year}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">Generate CRA T4</button>
             <button onclick="viewT4Detail('${t.employee}','${t.year}')" style="padding:8px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:600;cursor:pointer">Summary</button>
             <button onclick="exportT4CSV('${t.employee}','${t.year}')" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer">CSV</button>
