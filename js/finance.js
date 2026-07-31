@@ -365,12 +365,18 @@ function openModal(html,opts){
   // app's other secondary pages
   if(window.innerWidth<=768){
     ov.classList.add('modal-fullpage');
-    const back=document.createElement('button');
-    back.setAttribute('aria-label','Back');
-    back.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
-    back.onclick=closeModal;
-    back.style.cssText='position:fixed;top:8px;left:8px;z-index:10001;display:flex;align-items:center;gap:2px;padding:8px 12px 8px 6px;border:none;background:transparent;color:var(--blue-bright);cursor:pointer;-webkit-tap-highlight-color:transparent';
-    ov.appendChild(back);
+    // Standard secondary-page header: back chevron left, centered title —
+    // pull the modal's own title text up into the bar and hide the original
+    let titleTxt='';
+    const titleEl=[...box.querySelectorAll('div')].find(d=>!d.children.length&&/font-weight:\s*700/.test(d.getAttribute('style')||'')&&/font-size:\s*1[5-7]px/.test(d.getAttribute('style')||'')&&d.textContent.trim());
+    if(titleEl){ titleTxt=titleEl.textContent.trim(); titleEl.style.display='none'; }
+    const bar=document.createElement('div');
+    bar.className='modal-page-bar';
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;height:52px;z-index:10001;display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 8px;background:var(--navy)';
+    bar.innerHTML='<button aria-label="Back" onclick="closeModal()" style="width:40px;height:40px;border:none;background:transparent;color:var(--blue-bright);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>'
+      +'<div style="text-align:center;font-size:15px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+titleTxt.replace(/</g,'&lt;')+'</div>'
+      +'<div style="width:40px"></div>';
+    ov.appendChild(bar);
   }
   ov.appendChild(box);
   document.body.appendChild(ov);

@@ -1724,10 +1724,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   .emp-link-badge{display:none!important;}
   .emp-meta-gross{display:none!important;}
   #emp-modal-overlay.modal-fullpage{padding:0!important;align-items:stretch!important;background:var(--navy)!important;}
-  #emp-modal-overlay.modal-fullpage>div{
+  #emp-modal-overlay.modal-fullpage>div:not(.modal-page-bar){
     max-width:none!important;width:100%!important;height:100%!important;max-height:none!important;
     border-radius:0!important;border:none!important;overflow-y:auto!important;
-    padding-top:44px;box-sizing:border-box;
+    padding-top:52px;box-sizing:border-box;
     padding-bottom:env(safe-area-inset-bottom,0px);
   }
 }
