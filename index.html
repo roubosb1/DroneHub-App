@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=68">
+<link rel="stylesheet" href="css/styles.css?v=69">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -4499,7 +4499,7 @@
 <script src="js/social.js?v=56"></script>
 <script src="js/social-analytics.js?v=10"></script>
 <script src="js/sales.js"></script>
-<script src="js/louchat.js?v=57"></script>
+<script src="js/louchat.js?v=58"></script>
 <script src="js/tracker.js?v=52"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=4"></script>
@@ -4706,7 +4706,7 @@ function mobChatNewMessage(){
 }
 function mobChatVideoCall(){
   mobChatPlusClose();
-  lcStartGoogleMeet?.();
+  lcOpenVideoCall?.();
 }
 function mobChatCreateClose(){
   document.getElementById('mob-chat-create-modal').style.display='none';

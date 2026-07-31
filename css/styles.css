@@ -1591,3 +1591,13 @@ button{font-family:var(--font);}
 
 /* video-call screen: hide the chat input bar (it wins over inline styles) */
 body.lc-vc-mode #lc-mob-ig-bar{display:none!important;}
+
+/* mobile video-call screen — LouChat navy, no cutoff; entry moves to + menu */
+@media (max-width:768px){
+  .lc-vc-entry{display:none!important;}
+  #lc-video-call-view{background:var(--navy)!important;}
+  #lc-vc-lobby{
+    padding:22px 16px calc(96px + env(safe-area-inset-bottom,0px))!important;
+  }
+  #lc-invite-list{grid-template-columns:1fr!important;}
+}

@@ -357,8 +357,8 @@ function renderLouChat(){
   });
   // Video Call entry — pinned below all channels
   const isVCActive=lcActiveChannel==='__video_call__';
-  html+=`<div style="height:1px;background:var(--border);margin:8px 8px 4px"></div>
-  <div onclick="lcOpenVideoCall()" style="padding:7px 12px;cursor:pointer;border-radius:6px;margin:1px 6px;display:flex;align-items:center;gap:9px;background:${isVCActive?'rgba(91,141,239,.18)':'transparent'};transition:background .12s" onmouseover="if(!${isVCActive})this.style.background='rgba(255,255,255,.05)'" onmouseout="if(!${isVCActive})this.style.background='${isVCActive?'rgba(91,141,239,.18)':'transparent'}'">
+  html+=`<div class="lc-vc-entry" style="height:1px;background:var(--border);margin:8px 8px 4px"></div>
+  <div class="lc-vc-entry" onclick="lcOpenVideoCall()" style="padding:7px 12px;cursor:pointer;border-radius:6px;margin:1px 6px;display:flex;align-items:center;gap:9px;background:${isVCActive?'rgba(91,141,239,.18)':'transparent'};transition:background .12s" onmouseover="if(!${isVCActive})this.style.background='rgba(255,255,255,.05)'" onmouseout="if(!${isVCActive})this.style.background='${isVCActive?'rgba(91,141,239,.18)':'transparent'}'">
     <span style="display:flex;align-items:center;color:${isVCActive?'var(--blue-bright)':'var(--muted)'}">${LC_SVG.video}</span>
     <span style="font-size:13px;font-weight:${isVCActive?'700':'400'};color:${isVCActive?'var(--white)':'var(--muted)'}">Video Call</span>
   </div>`;
