@@ -360,6 +360,7 @@ function renderLouChat(){
             <span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:6px">${lastTime}</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
+            ${_mobFlat?`<span style="font-size:10.5px;font-weight:700;color:${(LC_TYPE_META[ch.type]||meta).color};flex-shrink:0">${(LC_TYPE_META[ch.type]||meta).label}</span><span style="color:var(--muted);font-size:10px;flex-shrink:0">·</span>`:''}
             <span style="font-size:12px;color:${u>0?'var(--offwhite)':'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${preview}</span>
             ${u>0?`<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;flex-shrink:0">${u>9?'9+':u}</span>`:''}
           </div>
