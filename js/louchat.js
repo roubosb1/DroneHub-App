@@ -844,7 +844,7 @@ async function lcRenderMessages(){
     if(!collapsed){
       const _showAvatar=!_mobView||!_isMine;
       const _showName=!_mobView;
-      html+=`<div style="display:flex;flex-direction:${_flip?'row-reverse':'row'};gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
+      html+=`<div class="lc-msg-row" style="display:flex;flex-direction:${_flip?'row-reverse':'row'};gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
         ${_showAvatar?getAvatarHtml(m.author,_lcAuthorEmail,36,12):''}
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
           ${_showName?`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;${_flip?'justify-content:flex-end;':''}">
@@ -856,17 +856,19 @@ async function lcRenderMessages(){
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
           ${m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;gap:4px;margin-top:4px">'+Object.entries(m.reactions).map(([e,n])=>`<span onclick="lcReact('${channelId}',${m.id},'${e}')" style="padding:2px 7px;border-radius:10px;background:rgba(91,141,239,.12);border:1px solid var(--border);color:var(--offwhite);font-size:12px;cursor:pointer">${e} ${n}</span>`).join('')+'</div>':''}
         </div>
+        ${_mobView?`<span class="lc-drag-ts">${timeStr}</span>`:''}
         <div class="lc-msg-actions" style="opacity:0;transition:opacity .15s;display:flex;gap:4px;align-items:flex-start;flex-shrink:0">
           ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${channelId}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
         </div>
       </div>`;
     } else {
-      html+=`<div style="padding:${_mobView?(_flip?'1px 46px 1px 0':'1px 0'):(_flip?'1px 46px 1px 0':'1px 0 1px 46px')};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
+      html+=`<div class="lc-msg-row" style="padding:${_mobView?(_flip?'1px 46px 1px 0':'1px 0'):(_flip?'1px 46px 1px 0':'1px 0 1px 46px')};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
         <span class="lc-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right">${timeStr}</span>
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
           ${m.text?_bub(lcFormatText(m.text),_isMine):''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
         </div>
+        ${_mobView?`<span class="lc-drag-ts">${timeStr}</span>`:''}
         <div class="lc-msg-actions2" style="opacity:0;transition:opacity .15s;flex-shrink:0">
           ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="lcDeleteMessage('${channelId}',${m.id})" title="Delete message" style="padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
         </div>
@@ -893,6 +895,30 @@ async function lcRenderMessages(){
   lcScrollToBottom();
   // Init drag-drop
   lcInitDragDrop();
+  lcInitDragTimestamps();
+}
+
+// Drag the thread left (iMessage-style) to peek at per-message send times
+let _lcDragTsInit=false;
+function lcInitDragTimestamps(){
+  if(_lcDragTsInit||window.innerWidth>768) return;
+  const el=document.getElementById('lc-messages');
+  if(!el) return;
+  _lcDragTsInit=true;
+  let sx=0,sy=0,drag=null; // null=undecided, true=horizontal, false=vertical
+  const rows=()=>el.querySelectorAll('.lc-msg-row');
+  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=null;},{passive:true});
+  el.addEventListener('touchmove',e=>{
+    const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+    if(drag===null&&(Math.abs(dx)>8||Math.abs(dy)>8)) drag=Math.abs(dx)>Math.abs(dy)*1.2&&dx<0;
+    if(!drag) return;
+    e.preventDefault();
+    const x=Math.max(-72,Math.min(0,dx));
+    rows().forEach(r=>{r.classList.add('dragging');r.style.transform='translateX('+x+'px)';});
+  },{passive:false});
+  const release=()=>{rows().forEach(r=>{r.classList.remove('dragging');r.style.transform='';});drag=null;};
+  el.addEventListener('touchend',release,{passive:true});
+  el.addEventListener('touchcancel',release,{passive:true});
 }
 
 // ─── LOUCHAT ATTACHMENTS & EMOJI ─────────────────────────────────────────────
