@@ -1687,3 +1687,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   -webkit-appearance:none!important;appearance:none!important;
 }
 .lc-ig-pill:focus-within{outline:none!important;box-shadow:none!important;}
+
+/* collapsed follow-up messages: no hover-timestamp gutter on mobile —
+   text aligns exactly under the first message */
+@media (max-width:768px){
+  .lc-ts2{display:none!important;}
+}
