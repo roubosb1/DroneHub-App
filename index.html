@@ -4656,7 +4656,7 @@ function mobNavPlus(){
   const pane = localStorage.getItem('dronehub_active_pane') || 'tracker';
   if(pane === 'tracker')  { mobTrkAdd?.(); return; }
   if(pane === 'calendar') { openCalEventModal?.(); return; }
-  if(pane === 'louchat')  { mobChatPlusOpen(); return; }
+  if(pane === 'louchat')  { mobNewMsgOpen(); return; }
   if(pane === 'social')   { openSocialWorkspaceModal?.(); return; }
   // Default: open the hamburger for more options
   toggleMobTopDropdown?.();
@@ -4707,6 +4707,92 @@ function mobChatNewMessage(){
 function mobChatVideoCall(){
   mobChatPlusClose();
   lcOpenVideoCall?.();
+}
+
+// ── Instagram-style New Message page ────────────────────────────────────────
+function _nmCandidates(){
+  const me=(gateGetSession()?.email||'').toLowerCase();
+  const out=[];
+  (typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]).forEach(m=>{
+    if(!m.name) return;
+    if(m.email&&m.email.toLowerCase()===me) return;
+    out.push({name:m.name,email:m.email||'',sub:m.role||m.title||'Team',kind:'team'});
+  });
+  (typeof getPortalAccounts==='function'?getPortalAccounts():[]).forEach(a=>{
+    const c=(typeof clients!=='undefined'?clients:[]).find(x=>x.id===a.clientId);
+    const nm=c?.name||a.name||a.email;
+    if(!nm) return;
+    if(out.find(o=>o.name.toLowerCase()===String(nm).toLowerCase())) return;
+    out.push({name:nm,email:a.email||c?.email||'',sub:'Client',kind:'client'});
+  });
+  return out;
+}
+function mobNewMsgOpen(){
+  const s=gateGetSession();
+  if(s?.type!=='admin'&&s?.role!=='admin'){alert('Only admins can start conversations.');return;}
+  const pg=document.getElementById('mob-newmsg-page');
+  if(!pg) return;
+  const inp=document.getElementById('mob-newmsg-search');
+  if(inp) inp.value='';
+  mobNewMsgFilter('');
+  pg.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{pg.style.transform='translateX(0)';}));
+}
+function mobNewMsgClose(){
+  const pg=document.getElementById('mob-newmsg-page');
+  if(!pg) return;
+  pg.style.transform='translateX(100%)';
+  setTimeout(()=>{pg.style.display='none';},300);
+}
+function mobNewMsgFilter(q){
+  const body=document.getElementById('mob-newmsg-body');
+  if(!body) return;
+  q=(q||'').trim().toLowerCase();
+  const av=p=>(typeof getAvatarHtml==='function')?getAvatarHtml(p.name,p.email,44,15):'';
+  const row=p=>`
+    <button onclick="mobNewMsgPick('${p.name.replace(/'/g,"\\'")}','${p.kind}')" style="display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:10px 6px;border:none;background:transparent;cursor:pointer;text-align:left;font-family:var(--font);-webkit-tap-highlight-color:transparent">
+      ${av(p)}
+      <span style="min-width:0;flex:1">
+        <span style="display:block;font-size:14px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+        <span style="display:block;font-size:11.5px;color:var(--muted);margin-top:1px;text-transform:capitalize">${p.sub}</span>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+  const all=_nmCandidates();
+  // Rank: name-word prefix matches first (K → Katrina), substring matches after
+  const pre=p=>p.name.toLowerCase().split(/\s+/).some(w=>w.startsWith(q));
+  const hits=q
+    ? all.filter(p=>p.name.toLowerCase().includes(q)||p.email.toLowerCase().includes(q))
+         .sort((a,b)=>(pre(b)?1:0)-(pre(a)?1:0))
+    : all;
+  const opts=q?'':`
+    <button onclick="mobNewMsgClose();setTimeout(()=>mobChatNewChannel(),250)" class="mob2-row" style="margin-bottom:8px">
+      <span class="mob2-row-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+      <span style="min-width:0;flex:1"><span class="mob2-row-title">New Channel</span><span class="mob2-row-sub" style="display:block">Create a topic, project, or team channel</span></span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <button onclick="mobNewMsgClose();setTimeout(()=>{showPane('louchat');lcOpenVideoCall();},250)" class="mob2-row" style="margin-bottom:14px">
+      <span class="mob2-row-icon" style="background:rgba(255,69,58,.1);color:#FF6B60"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span>
+      <span style="min-width:0;flex:1"><span class="mob2-row-title">Video Call</span><span class="mob2-row-sub" style="display:block">Start a Google Meet with your team</span></span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+  const head=`<div style="font-size:14px;font-weight:800;color:var(--white);margin:6px 6px 8px">${q?'Results':'Suggested'}</div>`;
+  body.innerHTML=opts+head+(hits.length?hits.map(row).join(''):`<div style="padding:24px 6px;color:var(--muted);font-size:13px">No matches for "${q.replace(/</g,'&lt;')}"</div>`);
+}
+function mobNewMsgPick(name,kind){
+  const slug=name.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  if(!slug) return;
+  const channels=getLcChannels();
+  let ch=channels.find(c=>c.name===slug);
+  if(!ch){
+    ch={id:'lc_'+Date.now(),name:slug,type:kind==='client'?'client':'general',topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]};
+    channels.push(ch);
+    saveLcChannels(channels);
+  }
+  mobNewMsgClose();
+  showPane('louchat');
+  renderLouChat();
+  lcOpenChannel(ch.id);
 }
 function mobChatCreateClose(){
   document.getElementById('mob-chat-create-modal').style.display='none';
@@ -11052,6 +11138,22 @@ function initGoogleMaps(){
 
 <!-- ── Mobile Chat + action sheet ───────────────────────────────────────── -->
 <div id="mob-chat-plus-overlay" onclick="mobChatPlusClose()" style="display:none;position:fixed;inset:0;z-index:948;"></div>
+<!-- ── Mobile New Message page (Instagram-style) ─────────────────────── -->
+<div id="mob-newmsg-page" style="display:none;position:fixed;inset:0;z-index:960;background:var(--navy);flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)">
+  <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;height:52px;padding:0 8px;flex-shrink:0">
+    <button onclick="mobNewMsgClose()" aria-label="Back" style="width:40px;height:40px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div style="text-align:center;font-size:15px;font-weight:800;color:var(--white)">New Message</div>
+    <div style="width:40px"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding:6px 16px 14px;flex-shrink:0">
+    <span style="font-size:15px;color:var(--muted);font-weight:600">To:</span>
+    <input id="mob-newmsg-search" type="text" placeholder="Search" autocomplete="off"
+      oninput="mobNewMsgFilter(this.value)"
+      style="flex:1;border:none;background:transparent;color:var(--white);font-size:15px;outline:none;padding:6px 0">
+  </div>
+  <div id="mob-newmsg-body" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:0 12px calc(90px + env(safe-area-inset-bottom,0px))"></div>
+</div>
+
 <div id="mob-chat-plus-sheet" style="display:none;position:fixed;top:62px;left:12px;right:12px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;z-index:949;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4);">
   <button onclick="mobChatNewChannel()" style="width:100%;padding:13px 14px;border:none;background:transparent;color:var(--offwhite);cursor:pointer;display:flex;align-items:center;gap:12px;border-radius:10px;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;text-align:left" onmousedown="this.style.background='rgba(255,255,255,.06)'" onmouseup="this.style.background='transparent'" ontouchstart="this.style.background='rgba(255,255,255,.06)'" ontouchend="this.style.background='transparent'">
     <span style="width:32px;height:32px;border-radius:8px;background:rgba(91,141,239,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue-bright)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
