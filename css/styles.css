@@ -1825,3 +1825,7 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   .lc-msg-actions,.lc-msg-actions2{display:none!important;}
   .lc-bub{-webkit-user-select:none;user-select:none;}
 }
+
+/* long-press focus view: elements pop in like Instagram */
+.lc-sheet-pop{animation:lcSheetPop .18s cubic-bezier(.2,.9,.3,1.2);}
+@keyframes lcSheetPop{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}

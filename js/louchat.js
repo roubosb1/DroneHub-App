@@ -950,29 +950,42 @@ function lcInitDragTimestamps(){
 
 // ── Long-press message sheet: react / reply / copy / delete-for-you ─────────
 function lcOpenMsgSheet(mid){
-  let msgs=getLcMessages(lcActiveChannel)||[];
+  const msgs=getLcMessages(lcActiveChannel)||[];
   const m=msgs.find(x=>String(x.id)===String(mid));
   if(!m) return;
   document.getElementById('lc-msg-sheet-ov')?.remove();
-  const snippet=(m.text||'').replace(/<[^>]+>/g,'').slice(0,60).replace(/"/g,'&quot;');
+  const sess=gateGetSession&&gateGetSession();
+  const mine=(m.authorEmail&&sess?.email&&m.authorEmail.toLowerCase()===sess.email.toLowerCase())
+           ||(m.author&&sess?.name&&m.author===sess.name);
+  const isAdmin=sess?.type==='admin'||sess?.role==='admin';
   const emojis=['❤️','😂','😮','😢','😡','👍'];
+  const midJs=JSON.stringify(m.id).replace(/"/g,'&quot;');
+  const txt=(m.text||'').replace(/<[^>]+>/g,'');
+  const align=mine?'flex-start':'flex-end';
+  const bubStyle=mine
+    ?'border-bottom-left-radius:6px;background:linear-gradient(135deg,#2E63C9,#2452A8);color:#fff'
+    :'border-bottom-right-radius:6px;background:var(--navy-lift);color:var(--offwhite)';
+
   const ov=document.createElement('div');
   ov.id='lc-msg-sheet-ov';
-  ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center';
-  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  const midJs=JSON.stringify(m.id).replace(/"/g,'&quot;');
-  ov.innerHTML=`<div style="width:100%;max-width:500px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:22px 22px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom,0px))">
-    <div style="width:36px;height:4px;border-radius:2px;background:var(--border-bright);margin:0 auto 14px"></div>
-    <div style="display:flex;justify-content:space-between;gap:6px;background:var(--navy-mid);border:1px solid var(--border);border-radius:26px;padding:8px 12px;margin-bottom:12px">
-      ${emojis.map(e=>`<button onclick="lcReact(lcActiveChannel,${midJs},'${e}');document.getElementById('lc-msg-sheet-ov').remove()" style="border:none;background:transparent;font-size:26px;cursor:pointer;-webkit-tap-highlight-color:transparent">${e}</button>`).join('')}
+  ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(5,8,15,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)';
+  ov.onclick=e=>{ if(e.target===ov||e.target.id==='lc-sheet-col') ov.remove(); };
+  ov.innerHTML=`<div id="lc-sheet-col" style="display:flex;flex-direction:column;align-items:${align};padding:0 14px;margin-top:11vh;gap:10px">
+    <div class="lc-sheet-pop" style="display:flex;gap:4px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:26px;padding:8px 10px;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+      ${emojis.map(e=>`<button onclick="lcReact(lcActiveChannel,${midJs},'${e}');document.getElementById('lc-msg-sheet-ov').remove()" style="border:none;background:transparent;font-size:25px;cursor:pointer;padding:0 4px;-webkit-tap-highlight-color:transparent">${e}</button>`).join('')}
     </div>
-    <button onclick="lcSheetReply(${midJs})" class="lc-sheet-act">↩︎&nbsp;&nbsp;Reply</button>
-    <button onclick="lcSheetCopy(${midJs})" class="lc-sheet-act">⧉&nbsp;&nbsp;Copy</button>
-    <button onclick="lcSheetHide(${midJs})" class="lc-sheet-act" style="color:var(--red)">🗑&nbsp;&nbsp;Delete for you</button>
-    ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="document.getElementById('lc-msg-sheet-ov').remove();lcDeleteMessage(lcActiveChannel,${midJs})" class="lc-sheet-act" style="color:var(--red)">⌫&nbsp;&nbsp;Delete for everyone</button>`:''}
+    <div class="lc-sheet-pop" style="max-width:80%;padding:10px 14px;border-radius:20px;${bubStyle};font-size:15px;line-height:1.45;word-break:break-word;box-shadow:0 10px 30px rgba(0,0,0,.45)">${lcFormatText(m.text||'')}</div>
+    <div class="lc-sheet-pop" style="min-width:200px;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+      <div style="padding:11px 14px 7px;font-size:11px;color:var(--muted);font-weight:600">${new Date(m.ts||m.sentAt||0).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</div>
+      <button onclick="lcSheetReply(${midJs})" class="lc-sheet-act" style="margin:0;border-radius:0;border-bottom:1px solid var(--border)">↩︎&nbsp;&nbsp;Reply</button>
+      <button onclick="lcSheetCopy(${midJs})" class="lc-sheet-act" style="margin:0;border-radius:0;border-bottom:1px solid var(--border)">⧉&nbsp;&nbsp;Copy</button>
+      <button onclick="lcSheetHide(${midJs})" class="lc-sheet-act" style="margin:0;border-radius:0${(mine||isAdmin)?';border-bottom:1px solid var(--border)':''};color:var(--red)">🗑&nbsp;&nbsp;Delete for you</button>
+      ${(mine||isAdmin)?`<button onclick="document.getElementById('lc-msg-sheet-ov').remove();lcDeleteMessage(lcActiveChannel,${midJs})" class="lc-sheet-act" style="margin:0;border-radius:0;color:var(--red)">⌫&nbsp;&nbsp;${mine?'Unsend':'Delete for everyone'}</button>`:''}
+    </div>
   </div>`;
   document.body.appendChild(ov);
 }
+
 function lcSheetReply(mid){
   document.getElementById('lc-msg-sheet-ov')?.remove();
   const m=(getLcMessages(lcActiveChannel)||[]).find(x=>String(x.id)===String(mid));
