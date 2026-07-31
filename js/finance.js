@@ -373,8 +373,8 @@ function openModal(html,opts){
     const bar=document.createElement('div');
     bar.className='modal-page-bar';
     bar.style.cssText='position:fixed;top:0;left:0;right:0;height:52px;z-index:10001;display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 8px;background:var(--navy)';
-    bar.innerHTML='<button aria-label="Back" onclick="closeModal()" style="width:40px;height:40px;border:none;background:transparent;color:var(--blue-bright);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>'
-      +'<div style="text-align:center;font-size:15px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+titleTxt.replace(/</g,'&lt;')+'</div>'
+    bar.innerHTML='<button aria-label="Back" onclick="closeModal()" style="width:40px;height:40px;border:none;background:transparent;color:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>'
+      +'<div style="text-align:center;font-size:13.5px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+titleTxt.replace(/</g,'&lt;')+'</div>'
       +'<div style="width:40px"></div>';
     ov.appendChild(bar);
   }
