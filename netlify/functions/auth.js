@@ -34,7 +34,7 @@ function getFirestore() {
 }
 
 // ── Token helpers ─────────────────────────────────────────────────────────
-const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days — matches the 2FA device-trust window so users aren't forced to re-login weekly
 
 function signToken(payload) {
   const secret = process.env.JWT_SECRET || 'change-me-set-JWT_SECRET-env-var';
