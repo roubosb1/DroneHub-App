@@ -540,7 +540,7 @@ button{font-family:var(--font);}
   #lc-flex-container{
     position:fixed!important;
     top:52px!important;
-    bottom:calc(66px + env(safe-area-inset-bottom,0px))!important;
+    bottom:0!important; /* list runs under the floating nav; nav overlays it */
     left:0!important;right:0!important;
     height:auto!important;min-height:0!important;
     border:none!important;border-radius:0!important;
