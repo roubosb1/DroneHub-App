@@ -755,7 +755,7 @@ async function lcRenderMessages(){
   if(!msgs.length){
     container.innerHTML=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
       <div style="margin-bottom:12px;color:var(--blue-bright);display:flex;justify-content:center;opacity:.5">${meta.icon||LC_SVG.general}</div>
-      <div style="font-size:16px;font-weight:700;color:var(--white)">Start a conversation below</div>
+      <div style="font-size:14px;font-weight:500;color:var(--muted)">Start a conversation below</div>
     </div>`;
     return;
   }
