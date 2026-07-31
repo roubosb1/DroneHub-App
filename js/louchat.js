@@ -990,8 +990,23 @@ async function lcStartGoogleMeet(){
 
   // Collect invited members (checkbox value = email when the profile has one)
   const checks=[...document.querySelectorAll('.lc-invite-check:checked')];
-  const invitedNames=checks.map(c=>c.dataset.name||c.value).filter(Boolean);
-  const invitedEmails=checks.map(c=>c.value).filter(v=>/@/.test(v));
+  let invitedNames=checks.map(c=>c.dataset.name||c.value).filter(Boolean);
+  let invitedEmails=checks.map(c=>c.value).filter(v=>/@/.test(v));
+
+  // Started from inside a chat thread (camera button): auto-invite the person
+  // this conversation is with and post the call into THIS chat
+  const _threadCh=lcActiveChannel&&lcActiveChannel!=='__video_call__'
+    ? getLcChannels().find(c=>c.id===lcActiveChannel) : null;
+  if(_threadCh&&!invitedEmails.length){
+    const pretty=_threadCh.name.replace(/-/g,' ').toLowerCase();
+    const _m=(typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]).find(m=>m.name&&m.name.toLowerCase()===pretty);
+    const _c=(typeof clients!=='undefined'?clients:[]).find(c=>c.name&&c.name.toLowerCase()===pretty);
+    const _pa=(typeof getPortalAccounts==='function'?getPortalAccounts():[]).find(a=>_c&&a.clientId===_c.id);
+    const email=_m?.email||_pa?.email||_c?.email||'';
+    const nm=_m?.name||_c?.name||'';
+    if(nm) invitedNames=[nm];
+    if(email) invitedEmails=[email];
+  }
   const inviteNote=invitedNames.length?`\nInvited: ${invitedNames.join(', ')}`:'';
 
   // With a connected Google account we create a REAL calendar event with a
@@ -1027,9 +1042,9 @@ async function lcStartGoogleMeet(){
 
   const emailNote=real&&invitedEmails.length?`\n📧 Calendar invites sent to ${invitedEmails.length} ${invitedEmails.length===1?'person':'people'}.`:'';
 
-  // Post link to general (or first) channel
+  // Post link into the thread it was started from, else general
   const channels=getLcChannels();
-  const postCh=channels.find(c=>c.type==='general')||channels[0];
+  const postCh=_threadCh||channels.find(c=>c.type==='general')||channels[0];
   if(postCh){
     const msg={
       id:Date.now(),

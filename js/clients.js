@@ -3638,6 +3638,20 @@ function cpGetNotifItems(){
   cJobs.filter(j=>j.status==='confirmed'&&j.date>=today&&j.date<=week).forEach(j=>{
     items.push({icon:'calendar',color:'var(--green)',bg:'rgba(34,217,122,.12)',title:'Upcoming shoot · '+j.date+(j.shootTime?' at '+j.shootTime:''),sub:esc(j.name),action:"cpShowTab('booking')"});
   });
+  // Video-call invites targeted at this client (last 48h) — tap to join
+  try{
+    const cpEmail=(JSON.parse(sessionStorage.getItem('dronehub_cp_session')||'{}').email||'').toLowerCase();
+    if(cpEmail){
+      JSON.parse(localStorage.getItem('dh_social_notifs')||'[]').forEach(n=>{
+        if(n.type!=='meet_invite'||!Array.isArray(n.forEmails)) return;
+        if(!n.forEmails.some(e=>String(e).toLowerCase()===cpEmail)) return;
+        if(Date.now()-new Date(n.at||0).getTime()>48*3600000) return;
+        items.unshift({icon:'video',color:'#1a73e8',bg:'rgba(26,115,232,.12)',
+          title:'Video call — tap to join',sub:esc(n.text||''),
+          action:n.meetUrl?"window.open('"+n.meetUrl+"','_blank')":"cpShowTab('overview')"});
+      });
+    }
+  }catch(e){}
   return items;
 }
 
