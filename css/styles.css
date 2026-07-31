@@ -1792,7 +1792,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   .lc-drag-ts{
     position:absolute;right:-66px;top:50%;transform:translateY(-50%);
     font-size:10.5px;color:var(--muted);white-space:nowrap;width:62px;text-align:left;
+    opacity:0;transition:opacity .15s;
   }
+  .lc-msg-row.dragging .lc-drag-ts{opacity:1;}
 }
 
 /* long-press sheet action rows */
@@ -1803,3 +1805,23 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   -webkit-tap-highlight-color:transparent;
 }
 .lc-sheet-act:active{background:rgba(255,255,255,.06);}
+
+/* mobile invoice cards */
+@media (max-width:768px){
+  .inv-card{
+    background:var(--navy-lift);border:1px solid var(--border);border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;transition:transform .12s ease;
+  }
+  .inv-card:active{transform:scale(.99);}
+  .inv-card .inv-card-body{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .inv-card.open .inv-card-body{display:block;}
+  .inv-card.open .inv-chev{transform:rotate(90deg);}
+}
+
+/* mobile chat: no hover action buttons (long-press sheet replaces them),
+   and bubbles aren't text-selectable so press-and-hold fires reliably */
+@media (max-width:768px){
+  .lc-msg-actions,.lc-msg-actions2{display:none!important;}
+  .lc-bub{-webkit-user-select:none;user-select:none;}
+}

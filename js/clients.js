@@ -4422,6 +4422,34 @@ function renderInvoiceTracker(){
     const invoiceBtn=`<button onclick="openInvoice(${j.id})" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:11px;cursor:pointer;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Invoice</button>`;
     const editBtn=`<button onclick="openInvoiceJob('${j.id}')" style="padding:4px 10px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:11px;cursor:pointer;font-weight:600">✏ View &amp; edit</button>`;
 
+    const amtColor=st==='overdue'?'var(--red)':st==='paid'?'var(--green)':'var(--amber)';
+    if(window.innerWidth<=768){
+      // Mobile: each invoice is its own card — amount + client up front,
+      // tap to expand for dates, interest, and actions
+      return `<div class="inv-card" onclick="this.classList.toggle('open')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
+              <span style="font-size:14px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${j.name}</span>
+              ${stBadge}
+            </div>
+            <div style="font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${client?client.name:j.clientName||'—'}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:15px;font-weight:800;color:${amtColor}">${fmtN(st==='overdue'?owed:j.grand)}</div>
+            ${st==='overdue'?`<div style="font-size:9.5px;color:var(--muted)">orig. ${fmtN(j.grand)}</div>`:''}
+          </div>
+          <svg class="inv-chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .2s"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="inv-card-body" onclick="event.stopPropagation()">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">${j.date||''} · Due ${dueDateStr}</div>
+          ${interestNote}
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+            ${paidBtn}${reminderBtn}${editBtn}${invoiceBtn}
+          </div>
+        </div>
+      </div>`;
+    }
     return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
@@ -4432,7 +4460,7 @@ function renderInvoiceTracker(){
         ${interestNote}
       </div>
       <div style="text-align:right;min-width:0;max-width:100%">
-        <div style="font-size:14px;font-weight:700;color:${st==='overdue'?'var(--red)':st==='paid'?'var(--green)':'var(--amber)'}">${fmtN(st==='overdue'?owed:j.grand)}</div>
+        <div style="font-size:14px;font-weight:700;color:${amtColor}">${fmtN(st==='overdue'?owed:j.grand)}</div>
         ${st==='overdue'?`<div style="font-size:10px;color:var(--muted)">orig. ${fmtN(j.grand)}</div>`:''}
         <div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end;flex-wrap:wrap">
           ${paidBtn}${reminderBtn}${editBtn}${invoiceBtn}

@@ -969,6 +969,7 @@ function lcOpenMsgSheet(mid){
     <button onclick="lcSheetReply(${midJs})" class="lc-sheet-act">↩︎&nbsp;&nbsp;Reply</button>
     <button onclick="lcSheetCopy(${midJs})" class="lc-sheet-act">⧉&nbsp;&nbsp;Copy</button>
     <button onclick="lcSheetHide(${midJs})" class="lc-sheet-act" style="color:var(--red)">🗑&nbsp;&nbsp;Delete for you</button>
+    ${(gateGetSession()?.type==='admin'||gateGetSession()?.role==='admin')?`<button onclick="document.getElementById('lc-msg-sheet-ov').remove();lcDeleteMessage(lcActiveChannel,${midJs})" class="lc-sheet-act" style="color:var(--red)">⌫&nbsp;&nbsp;Delete for everyone</button>`:''}
   </div>`;
   document.body.appendChild(ov);
 }
