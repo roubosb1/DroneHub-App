@@ -429,6 +429,29 @@ function getAvatarHtml(name,email,size=36,fontSize=12){
   const bg=colors[(name||'').charCodeAt(0)%colors.length];
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;color:#fff;flex-shrink:0">${initials}</div>`;
 }
+// Static HTML can't run template literals, so `${_icon('x',N)}` written in
+// index.html markup shows as raw text. This pass swaps those tokens for the
+// real SVG on load (and can be re-run on any container).
+function _iconHydrate(root){
+  try{
+    const re=/\$\{_icon\('([a-z_]+)',\s*(\d+)\)\}/g;
+    const walker=document.createTreeWalker(root||document.body,NodeFilter.SHOW_TEXT);
+    const hits=[];
+    while(walker.nextNode()){
+      const n=walker.currentNode;
+      if(n.nodeValue&&n.nodeValue.indexOf('${_icon(')!==-1) hits.push(n);
+    }
+    hits.forEach(n=>{
+      const span=document.createElement('span');
+      span.style.cssText='display:inline-flex;align-items:center;gap:inherit';
+      span.innerHTML=n.nodeValue.replace(re,(m,name,size)=>_icon(name,parseInt(size,10)));
+      n.parentNode.replaceChild(span,n);
+    });
+  }catch(e){}
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>_iconHydrate());
+else _iconHydrate();
+
 let _hdrPhotoTried={};
 function renderAppHeader(){
   const session=gateGetSession&&gateGetSession();
