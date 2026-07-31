@@ -778,7 +778,10 @@ async function lcRenderMessages(){
     const timeStr=d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'});
     const dateStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
     const isToday=new Date().toDateString()===d.toDateString();
-    const collapsed=(m.author===prevAuthor)&&(d.getTime()-prevTime<5*60*1000)&&(i>0);
+    // Collapse any consecutive run by the same author on the same day —
+    // name/avatar shown once, following messages just stack below
+    const _samePrevDay=i>0&&new Date(msgs[i-1].ts).toDateString()===d.toDateString();
+    const collapsed=(m.author===prevAuthor)&&_samePrevDay&&(i>0);
 
     // Day divider
     if(i===0||(new Date(msgs[i-1].ts).toDateString()!==d.toDateString())){
