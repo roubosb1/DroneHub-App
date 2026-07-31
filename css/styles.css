@@ -1562,7 +1562,7 @@ button{font-family:var(--font);}
   html,body{overflow-x:hidden;}
   #mob-trk-dv-body,#mob-trk-add-body,#mob-trk-list,
   #mob-cal-upcoming,#mob-cal-dv-events,#mob-pf-content,
-  #mob-profile-pane>div,#dh-notif-page,#mob-top-dropdown,
+  #mob-profile-pane>div:not(#mob-pf-header),#dh-notif-page,#mob-top-dropdown,
   .pane{overflow-x:hidden!important;}
   #mob-trk-dv-body>*,#mob-trk-add-body>*{max-width:100%;box-sizing:border-box;}
 }
@@ -1616,3 +1616,8 @@ body.lc-vc-mode #lc-main>div{background:var(--navy)!important;}
 body.lc-chat-full.lc-vc-mode #lc-main > div:first-child{
   background:var(--navy)!important;border-bottom:none!important;
 }
+
+
+/* vc-mode: title sits right, next to the camera logo */
+body.lc-vc-mode #lc-chat-header > div:has(#lc-channel-title){margin-left:auto;margin-right:2px;}
+body.lc-vc-mode #lc-channel-title{text-align:right;}
