@@ -1735,3 +1735,13 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 @media (max-width:768px){
   .emp-pay-title{display:none!important;}
 }
+
+/* payroll filter selects: compact, tucked up under the sub-tabs */
+@media (max-width:768px){
+  div:has(> #emp-pay-filter-employee){margin:-6px 0 10px!important;gap:8px!important;}
+  #emp-pay-filter-employee,#emp-pay-filter-year{
+    padding:6px 11px!important;font-size:12px!important;font-weight:600!important;
+    border-radius:10px!important;-webkit-appearance:none;appearance:none;
+    color:var(--white)!important;
+  }
+}
