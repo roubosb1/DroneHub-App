@@ -361,6 +361,16 @@ function openModal(html,opts){
   var df=(opts&&opts.flex)?';display:flex;flex-direction:column':'';
   box.style.cssText='background:var(--navy-card);border-radius:16px;width:100%;max-width:'+mw+'px;border:1px solid var(--border-bright);overflow:hidden'+mh+df;
   box.innerHTML=html;
+  // Mobile: every finance modal is a full page, not a floating popup
+  if(window.innerWidth<=768){
+    ov.classList.add('modal-fullpage');
+    const x=document.createElement('button');
+    x.setAttribute('aria-label','Close');
+    x.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    x.onclick=closeModal;
+    x.style.cssText='position:fixed;top:10px;right:12px;z-index:10001;width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:rgba(28,35,51,.92);color:var(--offwhite);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent';
+    ov.appendChild(x);
+  }
   ov.appendChild(box);
   document.body.appendChild(ov);
 }
@@ -1484,7 +1494,6 @@ function _openPayrollCalc(){
   var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:(_provCfg2026[defProv]||_provCfg2026.ON).bpa;
   var provOpts=_provOrder.map(function(code){var pc=_provCfg2026[code];return'<option value="'+code+'"'+(code===defProv?' selected':'')+'>'+pc.name+'</option>';}).join('');
   window._pcCountry='CA';window._pcNameOpts=opts;window._pcDefProv=defProv;window._pcDefTD1F=defTD1F;window._pcDefTD1P=defTD1P;window._pcProvOpts=provOpts;
-  setTimeout(()=>{ if(window.innerWidth<=768) document.getElementById('emp-modal-overlay')?.classList.add('modal-fullpage'); },0);
   openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="display:flex;gap:8px;margin-top:8px"><button id="pc-tab-ca" onclick="_pcSwitchCountry(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇨🇦 Canada</button><button id="pc-tab-us" onclick="_pcSwitchCountry(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇺🇸 United States</button></div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px"><div id="pc-subtitle" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center">CRA 2026 · T4127 formulas · All provinces &amp; territories</div><div id="pc-form-body">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
