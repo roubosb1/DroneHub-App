@@ -1661,3 +1661,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
   }
 }
+
+/* thread view: only the ongoing chat — no topic line, no pinned chip */
+@media (max-width:768px){
+  body.lc-chat-full:not(.lc-vc-mode) #lc-channel-desc{display:none!important;}
+  body.lc-chat-full:not(.lc-vc-mode) #lc-pinned-bar{display:none!important;}
+}

@@ -506,6 +506,15 @@ function lcOpenChannel(channelId){
   document.getElementById('lc-channel-icon').innerHTML=meta.icon;
   document.getElementById('lc-channel-title').textContent='# '+ch.name;
   document.getElementById('lc-channel-desc').textContent=ch.topic||'No description set';
+  // Mobile: person-style header — pretty name + profile avatar, no slug/topic
+  if(window.innerWidth<=768){
+    const pretty=ch.name.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    document.getElementById('lc-channel-title').textContent=pretty;
+    const _m=(typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]).find(m=>m.name&&m.name.toLowerCase()===pretty.toLowerCase());
+    const _c=(typeof clients!=='undefined'?clients:[]).find(c=>c.name&&c.name.toLowerCase()===pretty.toLowerCase());
+    if(typeof getAvatarHtml==='function')
+      document.getElementById('lc-channel-icon').innerHTML=getAvatarHtml(pretty,_m?.email||_c?.email||'',36,13);
+  }
   document.getElementById('lc-input-area').style.display='block';
   const actionsEl=document.getElementById('lc-channel-actions');
   if(actionsEl) actionsEl.style.display='flex';
@@ -746,8 +755,7 @@ async function lcRenderMessages(){
   if(!msgs.length){
     container.innerHTML=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
       <div style="margin-bottom:12px;color:var(--blue-bright);display:flex;justify-content:center;opacity:.5">${meta.icon||LC_SVG.general}</div>
-      <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:6px">Welcome to #${ch?.name||'channel'}</div>
-      <div style="font-size:13px;color:var(--muted)">${ch?.topic||'Start the conversation!'}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--white)">Start a conversation below</div>
     </div>`;
     return;
   }
