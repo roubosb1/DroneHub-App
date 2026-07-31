@@ -1760,3 +1760,19 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   #pane-finance .card:has(#remittance-month-select)>div:first-child,
   #pane-finance .card:has(#t4-year-select)>div:first-child{margin-bottom:0!important;}
 }
+
+/* finance modals: app-navy surface, kit-styled fields, one scroll */
+#emp-modal-overlay>div{background:var(--navy)!important;}
+.pc-scroll{max-height:70vh;overflow-y:auto;}
+#emp-modal-overlay input,#emp-modal-overlay select,#emp-modal-overlay textarea{
+  background:var(--navy-mid)!important;border:1px solid var(--border)!important;
+  border-radius:12px!important;padding:10px 12px!important;font-size:14px!important;
+  color:var(--white)!important;-webkit-appearance:none;appearance:none;
+}
+#emp-modal-overlay label{
+  font-size:10px!important;font-weight:700!important;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted)!important;
+}
+@media (max-width:768px){
+  #emp-modal-overlay.modal-fullpage .pc-scroll{max-height:none;overflow:visible;}
+}

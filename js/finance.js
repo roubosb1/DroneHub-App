@@ -460,7 +460,7 @@ function openAddEmployeePayStub(){
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:16px">
-      <button onclick="submitEmployeePayStub()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer">Save Pay Stub</button>
+      <button onclick="submitEmployeePayStub()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(91,141,239,.22);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Save Pay Stub</button>
       <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Cancel</button>
     </div>`;
 
@@ -513,7 +513,7 @@ function openAddEmployeePayStub(){
   const html=`<div style="padding:16px 20px;border-bottom:1px solid var(--border)">
     <div style="font-size:16px;font-weight:700;color:var(--white)">Add Pay Stub</div>
     <div style="display:flex;gap:6px;margin-top:10px">
-      <button id="ps-tab-manual" onclick="_psTab('manual')" style="${tabStyle};background:var(--green);color:#000">Manual Entry</button>
+      <button id="ps-tab-manual" onclick="_psTab('manual')" style="${tabStyle};background:rgba(91,141,239,.22);color:var(--blue-bright)">Manual Entry</button>
       <button id="ps-tab-import" onclick="_psTab('import')" style="${tabStyle};background:var(--navy-mid);color:var(--muted)">Import Excel/CSV</button>
       <button id="ps-tab-scan" onclick="_psTab('scan')" style="${tabStyle};background:var(--navy-mid);color:var(--muted)">Scan Screenshots</button>
     </div>
@@ -532,7 +532,7 @@ function _psTab(tab){
   tabs.forEach(function(t){
     var btn=document.getElementById('ps-tab-'+t);
     if(!btn)return;
-    if(t===tab){btn.style.background='var(--green)';btn.style.color='#000';}
+    if(t===tab){btn.style.background='rgba(91,141,239,.22)';btn.style.color='var(--blue-bright)';}
     else{btn.style.background='var(--navy-mid)';btn.style.color='var(--muted)';}
   });
 }
@@ -1494,7 +1494,7 @@ function _openPayrollCalc(){
   var defTD1P=lastEmp&&lastEmp._provTd1?lastEmp._provTd1:(_provCfg2026[defProv]||_provCfg2026.ON).bpa;
   var provOpts=_provOrder.map(function(code){var pc=_provCfg2026[code];return'<option value="'+code+'"'+(code===defProv?' selected':'')+'>'+pc.name+'</option>';}).join('');
   window._pcCountry='CA';window._pcNameOpts=opts;window._pcDefProv=defProv;window._pcDefTD1F=defTD1F;window._pcDefTD1P=defTD1P;window._pcProvOpts=provOpts;
-  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="display:flex;gap:8px;margin-top:8px"><button id="pc-tab-ca" onclick="_pcSwitchCountry(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇨🇦 Canada</button><button id="pc-tab-us" onclick="_pcSwitchCountry(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇺🇸 United States</button></div></div><div style="max-height:70vh;overflow-y:auto;padding:16px 20px"><div id="pc-subtitle" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center">CRA 2026 · T4127 formulas · All provinces &amp; territories</div><div id="pc-form-body">'
+  openModal('<div style="padding:16px 20px;border-bottom:1px solid var(--border)"><div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Calculator</div><div style="display:flex;gap:8px;margin-top:8px"><button id="pc-tab-ca" onclick="_pcSwitchCountry(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(91,141,239,.22);color:var(--blue-bright)">🇨🇦 Canada</button><button id="pc-tab-us" onclick="_pcSwitchCountry(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇺🇸 United States</button></div></div><div class="pc-scroll" style="padding:16px 20px"><div id="pc-subtitle" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-align:center">CRA 2026 · T4127 formulas · All provinces &amp; territories</div><div id="pc-form-body">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Employee Name</label>'
     +'<input id="pc-name" list="pc-names-list" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px" placeholder="e.g. Alex Shewan">'
@@ -1509,7 +1509,7 @@ function _openPayrollCalc(){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
     +'<div><label style="font-size:12px;color:var(--muted)">Federal TD1 Claim</label><input id="pc-td1f" type="number" step="0.01" value="'+defTD1F+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div>'
     +'<div><label style="font-size:12px;color:var(--muted)">Provincial TD1 Claim</label><input id="pc-td1p" type="number" step="0.01" value="'+defTD1P+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--navy-mid);color:var(--offwhite);margin-top:3px;text-align:right"></div></div>'
-    +'</div><div style="text-align:center;margin:14px 0 10px"><button onclick="_pcCalc()" style="padding:9px 30px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--green),#1aae5f);color:#000;font-size:13px;font-weight:700;cursor:pointer">Calculate Deductions</button></div>'
+    +'</div><div style="text-align:center;margin:14px 0 10px"><button onclick="_pcCalc()" style="padding:9px 30px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Calculate Deductions</button></div>'
     +'<div id="pc-results" style="display:none"></div>'
     +'</div>');
 }
@@ -1598,12 +1598,12 @@ function _pcSwitchCountry(c){
   res.style.display='none';res.innerHTML='';
   if(c==='US'){
     caTab.style.background='var(--navy-mid)';caTab.style.color='var(--muted)';
-    usTab.style.background='var(--green)';usTab.style.color='#000';
+    usTab.style.background='rgba(91,141,239,.22)';usTab.style.color='var(--blue-bright)';
     sub.textContent='IRS Pub 15-T · 2024–2026 rates by pay date · All 50 states + DC';
     body.innerHTML=_pcBuildUSForm();
   }else{
     usTab.style.background='var(--navy-mid)';usTab.style.color='var(--muted)';
-    caTab.style.background='var(--green)';caTab.style.color='#000';
+    caTab.style.background='rgba(91,141,239,.22)';caTab.style.color='var(--blue-bright)';
     sub.innerHTML='CRA 2026 · T4127 formulas · All provinces &amp; territories';
     body.innerHTML=window._pcCAFormCache;
   }
@@ -1774,7 +1774,7 @@ function _openComplianceGuide(){
     +'<div style="font-size:16px;font-weight:700;color:var(--white)">Payroll Filing Guide</div>'
     +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Step-by-step instructions for remitting taxes and filing reports</div>'
     +'<div style="display:flex;gap:8px;margin-top:10px">'
-    +'<button id="cg-tab-us" onclick="_cgSwitch(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#000">🇺🇸 United States</button>'
+    +'<button id="cg-tab-us" onclick="_cgSwitch(\'US\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(91,141,239,.22);color:var(--blue-bright)">🇺🇸 United States</button>'
     +'<button id="cg-tab-ca" onclick="_cgSwitch(\'CA\')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--navy-mid);color:var(--muted)">🇨🇦 Canada</button>'
     +'</div></div>'
     +'<div id="cg-body" style="flex:1;overflow-y:auto;padding:16px 20px;min-height:0;overscroll-behavior:contain"></div>'
@@ -1848,8 +1848,8 @@ function _cgSwitch(c){
   if(c===window._cgCountry)return;
   window._cgCountry=c;
   var us=document.getElementById('cg-tab-us'),ca=document.getElementById('cg-tab-ca');
-  if(c==='US'){us.style.background='var(--green)';us.style.color='#000';ca.style.background='var(--navy-mid)';ca.style.color='var(--muted)';_cgRenderUS();}
-  else{ca.style.background='var(--green)';ca.style.color='#000';us.style.background='var(--navy-mid)';us.style.color='var(--muted)';_cgRenderCA();}
+  if(c==='US'){us.style.background='rgba(91,141,239,.22)';us.style.color='var(--blue-bright)';ca.style.background='var(--navy-mid)';ca.style.color='var(--muted)';_cgRenderUS();}
+  else{ca.style.background='rgba(91,141,239,.22)';ca.style.color='var(--blue-bright)';us.style.background='var(--navy-mid)';us.style.color='var(--muted)';_cgRenderCA();}
 }
 var _cgIcons={
   building:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 14V3a1 1 0 011-1h6a1 1 0 011 1v11M6 14V11h2v3M4 4.5h1.5M4 6.5h1.5M4 8.5h1.5M8 4.5H6.5M8 6.5H6.5M8 8.5H6.5M10 14V7h3a1 1 0 011 1v6M11.5 9H13M11.5 11H13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="1" y1="14" x2="15" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
@@ -2242,7 +2242,7 @@ function _showPaystubScanPreview(d){
         <div style="font-size:15px;font-weight:700;color:var(--white)">${d.employeeName||'Unknown'}</div>
         <div style="font-size:11px;color:var(--muted)">${d.payDate||''} · ${d.payFrequency||'Biweekly'} · ${d.province||'Ontario'}</div>
       </div>
-      <div style="background:var(--green);color:#000;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">AI Scanned</div>
+      <div style="background:rgba(91,141,239,.22);color:var(--blue-bright);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">AI Scanned</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div style="background:var(--navy-lift);border-radius:8px;padding:10px">
@@ -2273,7 +2273,7 @@ function _showPaystubScanPreview(d){
     </div>
     ${(cppER||eiER)?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Employer: CPP $${cppER.toFixed(2)}${cpp2ER?' + CPP2 $'+cpp2ER.toFixed(2):''} · EI $${eiER.toFixed(2)}</div>`:''}
     <div style="display:flex;gap:10px">
-      <button onclick="_acceptPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer">Add Pay Stub</button>
+      <button onclick="_acceptPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(91,141,239,.22);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Add Pay Stub</button>
       <button onclick="_dismissPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Discard</button>
     </div>
   </div>`;
@@ -2318,7 +2318,7 @@ function _showBatchPaystubPreview(records){
   var preview=document.getElementById('paystub-scan-preview');
   spinner.style.display='none';preview.style.display='';
   window._scannedBatch=records;
-  var html='<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700;color:var(--white)">'+records.length+' Pay Stubs Found</div><div style="background:var(--green);color:#000;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">AI Scanned</div></div>';
+  var html='<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:15px;font-weight:700;color:var(--white)">'+records.length+' Pay Stubs Found</div><div style="background:rgba(91,141,239,.22);color:var(--blue-bright);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700">AI Scanned</div></div>';
   records.forEach(function(d,i){
     var gross=d.totalCashIncome||((d.salaryOrWages||0)+(d.vacationPay||0));
     var net=d.netAmount||0;
@@ -2333,7 +2333,7 @@ function _showBatchPaystubPreview(records){
     html+='</div></div></div>';
   });
   html+='<div style="display:flex;gap:10px;margin-top:12px">';
-  html+='<button onclick="_acceptBatchPaystubs()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--green);color:#000;font-size:13px;font-weight:700;cursor:pointer">Add All '+records.length+' Pay Stubs</button>';
+  html+='<button onclick="_acceptBatchPaystubs()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(91,141,239,.22);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Add All '+records.length+' Pay Stubs</button>';
   html+='<button onclick="_dismissPaystubScan()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer">Discard</button>';
   html+='</div></div>';
   preview.innerHTML=html;
