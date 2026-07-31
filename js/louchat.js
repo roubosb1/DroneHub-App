@@ -124,6 +124,37 @@ function deleteLcChannelMessages(channelId){
 
 // Unread counts
 function getLcUnread(){return JSON.parse(localStorage.getItem('dronehub_lc_unread')||'{}');}
+
+// ── Read receipts: shared per-channel last-read timestamps (email → ts) ──────
+function lcGetReads(){try{return JSON.parse(localStorage.getItem('dronehub_lc_reads')||'{}');}catch(e){return {};}}
+function lcMarkChannelRead(channelId){
+  try{
+    const me=(gateGetSession&&gateGetSession()?.email||'').toLowerCase();
+    if(!me||!channelId) return;
+    const reads=lcGetReads();
+    if(!reads[channelId]) reads[channelId]={};
+    reads[channelId][me]=Date.now();
+    localStorage.setItem('dronehub_lc_reads',JSON.stringify(reads));
+    if(typeof _fbToken==='function'&&_fbToken())
+      fbSet('orgs',ORG_ID+':lc_reads',{data:JSON.stringify(reads),updatedAt:Date.now()}).catch(()=>{});
+  }catch(e){}
+}
+// Pull the org read map so "Seen" reflects the other person's device
+async function lcRefreshReads(channelId){
+  try{
+    if(typeof _fbToken!=='function'||!_fbToken()) return;
+    const doc=await fbGet('orgs',ORG_ID+':lc_reads');
+    if(!doc?.data) return;
+    const remote=JSON.parse(doc.data);
+    const local=lcGetReads();
+    Object.keys(remote).forEach(ch=>{
+      if(!local[ch]) local[ch]={};
+      Object.entries(remote[ch]).forEach(([e,t])=>{ if(!local[ch][e]||t>local[ch][e]) local[ch][e]=t; });
+    });
+    localStorage.setItem('dronehub_lc_reads',JSON.stringify(local));
+    if(channelId&&lcActiveChannel===channelId) renderLcMessages&&renderLcMessages(channelId);
+  }catch(e){}
+}
 function refreshLcNavBadge(){
   const u=getLcUnread();
   const total=Object.values(u).reduce((s,v)=>s+(v||0),0);
@@ -512,6 +543,8 @@ function lcOpenChannel(channelId){
   if(!ch.members) ch.members=[];
   const meta=LC_TYPE_META[ch.type]||{icon:_icon('chat',16),color:'var(--blue-bright)'};
 
+  lcMarkChannelRead(channelId);
+  lcRefreshReads(channelId);
   document.getElementById('lc-channel-icon').innerHTML=meta.icon;
   document.getElementById('lc-channel-title').textContent='# '+ch.name;
   document.getElementById('lc-channel-desc').textContent=ch.topic||'No description set';
@@ -777,7 +810,7 @@ async function lcRenderMessages(){
   const _mobView=window.innerWidth<=768;
   // iMessage-style bubbles on mobile: mine = blue (left tail), theirs = navy (right tail)
   const _bub=(inner,mine)=>_mobView
-    ?`<div class="lc-bub" style="display:inline-block;max-width:82%;padding:8px 13px;border-radius:18px;${mine?'border-bottom-left-radius:6px;background:linear-gradient(135deg,#2E63C9,#2452A8);color:#fff':'border-bottom-right-radius:6px;background:var(--navy-lift);color:var(--offwhite)'};font-size:14px;line-height:1.45;word-break:break-word;text-align:left">${inner}</div>`
+    ?`<div class="lc-bub" style="display:inline-block;max-width:78%;padding:10px 14px;border-radius:20px;${mine?'border-bottom-left-radius:6px;background:linear-gradient(135deg,#2E63C9,#2452A8);color:#fff':'border-bottom-right-radius:6px;background:var(--navy-lift);color:var(--offwhite)'};font-size:15px;line-height:1.45;word-break:break-word;text-align:left">${inner}</div>`
     :`<div style="font-size:13px;color:var(--offwhite);line-height:1.55;word-break:break-word">${inner}</div>`;
 
   msgs.forEach((m,i)=>{
@@ -809,13 +842,15 @@ async function lcRenderMessages(){
     const _flip=window.innerWidth<=768&&!_isMine;
 
     if(!collapsed){
+      const _showAvatar=!_mobView||!_isMine;
+      const _showName=!_mobView;
       html+=`<div style="display:flex;flex-direction:${_flip?'row-reverse':'row'};gap:10px;padding:6px 0;margin-top:4px;position:relative" onmouseover="this.querySelector('.lc-msg-actions').style.opacity=1;this.querySelector('.lc-ts').style.opacity=1" onmouseout="this.querySelector('.lc-msg-actions').style.opacity=0;this.querySelector('.lc-ts').style.opacity=0">
-        ${getAvatarHtml(m.author,_lcAuthorEmail,36,12)}
+        ${_showAvatar?getAvatarHtml(m.author,_lcAuthorEmail,36,12):''}
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
-          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;${_flip?'justify-content:flex-end;':''}">
+          ${_showName?`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;${_flip?'justify-content:flex-end;':''}">
             <span style="font-size:13px;font-weight:700;color:var(--white)">${m.author}</span>${getUserJobTitle(m.author)?`<span style="font-size:10px;color:var(--muted);margin-left:5px">${getUserJobTitle(m.author)}</span>`:''}
             <span class="lc-ts" style="font-size:10px;color:var(--muted);opacity:0;transition:opacity .15s">${isToday?timeStr:dateStr+' '+timeStr}</span>
-          </div>
+          </div>`:''}
           ${m.text?_bub(lcFormatText(m.text),_isMine):''}
           ${m.isMeeting?`<a href="${m.meetUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:8px 16px;border-radius:10px;background:linear-gradient(135deg,#1a73e8,#1557b0);color:#fff;text-decoration:none;font-size:13px;font-weight:700">📹 Join Google Meet</a>`:''}
           ${(m.attachments||[]).map(a=>lcRenderAttachment(a)).join('')}
@@ -826,7 +861,7 @@ async function lcRenderMessages(){
         </div>
       </div>`;
     } else {
-      html+=`<div style="padding:1px ${_flip?'46px':'0'} 1px ${_flip?'0':'46px'};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
+      html+=`<div style="padding:${_mobView?(_flip?'1px 46px 1px 0':'1px 0'):(_flip?'1px 46px 1px 0':'1px 0 1px 46px')};display:flex;flex-direction:${_flip?'row-reverse':'row'};align-items:baseline;gap:8px;position:relative" onmouseover="this.querySelector('.lc-ts2').style.opacity=1;this.querySelector('.lc-msg-actions2').style.opacity=1" onmouseout="this.querySelector('.lc-ts2').style.opacity=0;this.querySelector('.lc-msg-actions2').style.opacity=0">
         <span class="lc-ts2" style="font-size:9px;color:var(--muted);opacity:0;transition:opacity .15s;min-width:38px;text-align:right">${timeStr}</span>
         <div style="flex:1;min-width:0;${_flip?'text-align:right;':''}">
           ${m.text?_bub(lcFormatText(m.text),_isMine):''}
@@ -841,6 +876,19 @@ async function lcRenderMessages(){
     prevAuthor=m.author; prevTime=d.getTime();
   });
 
+  // Read receipt: "Seen" under my last bubble once the other side has opened
+  if(_mobView&&msgs.length){
+    const last=msgs[msgs.length-1];
+    const lastMine=(last.authorEmail&&_viewSess?.email&&last.authorEmail.toLowerCase()===_viewSess.email.toLowerCase())
+                 ||(last.author&&_viewSess?.name&&last.author===_viewSess.name);
+    if(lastMine){
+      const reads=lcGetReads()[channelId]||{};
+      const me=(_viewSess?.email||'').toLowerCase();
+      const lastTs=new Date(last.ts||last.sentAt||0).getTime();
+      if(Object.entries(reads).some(([e,t])=>e!==me&&t>lastTs))
+        html+='<div style="font-size:10.5px;color:var(--muted);margin:3px 0 0 4px">Seen</div>';
+    }
+  }
   container.innerHTML=html;
   lcScrollToBottom();
   // Init drag-drop

@@ -1777,3 +1777,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 @media (max-width:768px){
   #emp-modal-overlay.modal-fullpage .pc-scroll{max-height:none;overflow:visible;}
 }
+
+/* chat bubbles pop in */
+@media (max-width:768px){
+  .lc-bub{animation:lcBubIn .18s ease-out;}
+}
+@keyframes lcBubIn{from{opacity:0;transform:translateY(8px) scale(.96);}to{opacity:1;transform:none;}}
