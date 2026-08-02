@@ -452,6 +452,10 @@ function lcIgSend(){
   lcSendMessage();
 }
 
+function lcAttachSheetToggle(){
+  const sh=document.getElementById('lc-attach-sheet');
+  if(sh) sh.style.display=sh.style.display==='none'?'block':'none';
+}
 function lcIgToggleEmoji(){
   // Reuse the existing emoji picker (positioned inside lc-input-area)
   // Temporarily show lc-input-area just to show the emoji picker, then hide again

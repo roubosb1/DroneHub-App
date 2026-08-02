@@ -1855,9 +1855,28 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 }
 @keyframes lcSendPop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
 
-/* deterministic minimal-bar layout: field at 56%, icons breathe evenly
-   in the remaining space (was flex-stretching differently per device) */
+/* iMessage layout: + button left, full-width field with the mic inside */
 @media (max-width:768px){
-  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill{flex:0 1 auto!important;width:56%!important;}
-  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-right{flex:1!important;justify-content:space-evenly!important;gap:0!important;}
+  body.lc-chat-full:not(.lc-vc-mode) #lc-mob-ig-bar{position:fixed;}
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill{
+    flex:1 1 auto!important;position:relative!important;
+    padding:8px 40px 8px 14px!important;border-radius:22px!important;
+  }
+  .lc-ig-inpill-mic{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    width:30px;height:30px;border:none;background:transparent;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .lc-att-row{
+    display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;
+    border:none;background:transparent;color:var(--offwhite);
+    font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;text-align:left;
+    border-radius:14px;-webkit-tap-highlight-color:transparent;
+  }
+  .lc-att-row:active{background:rgba(255,255,255,.07);}
+  .lc-att-ic{
+    width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:17px;flex-shrink:0;
+  }
 }
