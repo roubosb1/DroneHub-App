@@ -5232,8 +5232,37 @@ function mobPfRenderPortfolio(member){
   <div style="padding:60px 20px;text-align:center;color:var(--muted)">
     <div style="margin-bottom:8px;color:var(--muted)">${isCinema||isReels?_icon('video',32):_icon('camera',32)}</div>
     <div style="font-size:13px">No ${emptyLabel} yet.</div>
-  </div>` : `
-  <div class="${isCinema?'mob-pf-grid-2':'mob-pf-grid-3'}">
+  </div>` : isCinema ? (()=>{
+    // YouTube-channel layout: featured video big on top, the rest as
+    // thumbnail-left rows below
+    const esc1=v=>String(v||'').replace(/'/g,"\\'");
+    const featured=items[0], rest=items.slice(1);
+    const fThumb=featured.thumb||tpGetAutoThumb(featured.url);
+    const del=(item)=>_mobPfDeleteMode&&canEdit?`<button onclick="event.stopPropagation();mobPfDeletePortfolioItem('${member.id}','${esc1(item.url)}')" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(240,82,82,.9);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>`:'';
+    const featHtml=`
+      <div onclick="tpPlayVideo('${esc1(featured.url)}','${esc1(featured.title)}',false)" style="position:relative;cursor:pointer;padding:12px 12px 0">
+        ${del(featured)}
+        <div style="position:relative;border-radius:14px;overflow:hidden;background:var(--navy-mid);aspect-ratio:16/9" ${featured.url&&!fThumb?`data-og-url="${(featured.url||'').replace(/"/g,'&quot;')}"`:''}>
+          ${fThumb?`<img src="${fThumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`:`<div class="mob-pf-tile-placeholder" style="height:100%"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`}
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.12)"><svg width="44" height="44" viewBox="0 0 24 24" fill="rgba(255,255,255,.92)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:var(--white);line-height:1.35;margin:10px 2px 0">${featured.title||'Featured video'}</div>
+      </div>`;
+    const rowHtml=(item)=>{
+      const th=item.thumb||tpGetAutoThumb(item.url);
+      return `<div onclick="tpPlayVideo('${esc1(item.url)}','${esc1(item.title)}',false)" style="position:relative;display:flex;gap:12px;align-items:flex-start;padding:8px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent">
+        ${del(item)}
+        <div style="position:relative;width:150px;flex-shrink:0;border-radius:10px;overflow:hidden;background:var(--navy-mid);aspect-ratio:16/9" ${item.url&&!th?`data-og-url="${(item.url||'').replace(/"/g,'&quot;')}"`:''}>
+          ${th?`<img src="${th}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`:`<div class="mob-pf-tile-placeholder" style="height:100%"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`}
+        </div>
+        <div style="min-width:0;flex:1;padding-top:2px">
+          <div style="font-size:13.5px;font-weight:600;color:var(--white);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${item.title||'Untitled video'}</div>
+        </div>
+      </div>`;
+    };
+    return featHtml+(rest.length?`<div style="font-size:14px;font-weight:800;color:var(--white);margin:16px 14px 8px">Videos</div>${rest.map(rowHtml).join('')}`:'')+'<div style="height:16px"></div>';
+  })() : `
+  <div class="mob-pf-grid-3">
     ${items.map(tileHtml).join('')}
   </div>`}`;
 
