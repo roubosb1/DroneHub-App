@@ -679,6 +679,9 @@ function switchClientsSubtab(tab){
   document.getElementById('clients-subtab-list').style.color = isLeaderboard ? 'var(--muted)' : 'var(--white)';
   document.getElementById('clients-subtab-leaderboard').style.background = isLeaderboard ? 'rgba(255,255,255,.08)' : 'transparent';
   document.getElementById('clients-subtab-leaderboard').style.color = isLeaderboard ? 'var(--white)' : 'var(--muted)';
+  // Search / Add / Clear / alphabet label belong to the list view only —
+  // leaving them visible made the leaderboard look glitched
+  document.querySelectorAll('.clients-list-only').forEach(el=>{el.style.display=isLeaderboard?'none':'';});
   if(isLeaderboard) renderClientLeaderboard();
 }
 
