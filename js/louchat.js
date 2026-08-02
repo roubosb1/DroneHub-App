@@ -545,6 +545,7 @@ function lcOpenChannel(channelId){
 
   lcMarkChannelRead(channelId);
   lcRefreshReads(channelId);
+  if(window.innerWidth<=768){ lcInitDragTimestamps(); }
   document.getElementById('lc-channel-icon').innerHTML=meta.icon;
   document.getElementById('lc-channel-title').textContent='# '+ch.name;
   document.getElementById('lc-channel-desc').textContent=ch.topic||'No description set';
@@ -905,12 +906,43 @@ async function lcRenderMessages(){
 }
 
 // Drag the thread left (iMessage-style) to peek at per-message send times
+// Keep the input bar glued just above the iOS keyboard: Safari scrolls the
+// page when the keyboard opens, which floats fixed elements to mid-screen.
+// visualViewport tells us the real keyboard height; we pin to it and undo
+// Safari's auto-scroll.
+let _lcKbInited=false;
+function _lcKbInit(){
+  if(_lcKbInited||!window.visualViewport||window.innerWidth>768) return;
+  _lcKbInited=true;
+  const vv=window.visualViewport;
+  const apply=()=>{
+    const bar=document.getElementById('lc-mob-ig-bar');
+    if(!bar) return;
+    const kb=Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    if(kb>60){
+      bar.style.bottom=(kb+8)+'px';
+      window.scrollTo(0,0);
+      document.documentElement.scrollTop=0;
+    } else {
+      bar.style.bottom='';
+    }
+    const msgs=document.getElementById('lc-messages');
+    if(msgs){
+      msgs.style.paddingBottom=kb>60?(kb+90)+'px':'';
+      msgs.scrollTop=msgs.scrollHeight;
+    }
+  };
+  vv.addEventListener('resize',apply);
+  vv.addEventListener('scroll',apply);
+}
+
 let _lcDragTsInit=false;
 function lcInitDragTimestamps(){
   if(_lcDragTsInit||window.innerWidth>768) return;
   const el=document.getElementById('lc-messages');
   if(!el) return;
   _lcDragTsInit=true;
+  _lcKbInit();
   let sx=0,sy=0,drag=null,lp=null,lastTap=0,lastTapMid=null;
   const rows=()=>el.querySelectorAll('.lc-msg-row');
   el.addEventListener('touchstart',e=>{
