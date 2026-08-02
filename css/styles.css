@@ -1426,19 +1426,24 @@ button{font-family:var(--font);}
   }
   .mob2-fab:active{transform:scale(.92)}
 
-  /* Profile sub-tabs → segmented pills (markup keeps .mob-pf-tab classes) */
+  /* Profile sub-tabs → YouTube-style text tabs with underline */
   #mob-profile-pane .mob-pf-tabbar{
-    display:flex;gap:4px;margin:12px 14px;padding:4px;
-    background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;
-    border-bottom:1px solid var(--border);position:sticky;top:8px;z-index:10;
+    display:flex;margin:6px 0 0;padding:0 6px;
+    background:var(--navy);border:none;border-radius:0;
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;
   }
   #mob-profile-pane .mob-pf-tab{
     flex:1 1 0;min-width:0;justify-content:center;
-    flex-direction:row;gap:6px;padding:9px 4px;border-radius:10px;
-    border-bottom:none;font-size:10.5px;letter-spacing:.03em;
-    transition:background .18s,color .18s;
+    flex-direction:row;gap:6px;padding:12px 4px 11px;border-radius:0;
+    background:transparent;font-size:12px;font-weight:700;letter-spacing:.02em;
+    text-transform:none;color:var(--muted);
+    border-bottom:2.5px solid transparent;
+    transition:color .18s,border-color .18s;
   }
-  #mob-profile-pane .mob-pf-tab.active{background:rgba(91,141,239,.18);color:var(--blue-bright);border-bottom:none}
+  #mob-profile-pane .mob-pf-tab svg{display:none;}
+  #mob-profile-pane .mob-pf-tab.active{
+    background:transparent;color:var(--white);border-bottom-color:var(--white);
+  }
 }
 
 /* tracker list mini progress bar */
