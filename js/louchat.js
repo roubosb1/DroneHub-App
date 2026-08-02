@@ -452,6 +452,28 @@ function lcIgSend(){
   lcSendMessage();
 }
 
+// Mobile emoji panel — the desktop picker lives in a container the immersive
+// chat CSS hides, so mobile gets its own grid that types into the field
+function lcMobEmojiToggle(){
+  let p=document.getElementById('lc-mob-emoji');
+  if(p){ p.remove(); return; }
+  const EMOJIS=['😀','😂','🤣','😊','😍','😘','😎','🤩','🥳','😅','🙃','😉','🤔','🙄','😴','🤯','😳','🥺','😢','😭','😤','😱','🤗','🤫','👍','👎','👏','🙌','🤝','💪','🙏','✌️','🤞','👌','✋','🖐️','❤️','🧡','💛','💚','💙','💜','🖤','�b','💯','🔥','✨','⭐','🎉','🎊','🚁','📷','🎥','🏠','🏡','🌅','🌄','☀️','🌙','⚡'];
+  p=document.createElement('div');
+  p.id='lc-mob-emoji';
+  p.style.cssText='position:fixed;left:8px;right:8px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:9;background:rgba(28,35,51,.97);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border-bright);border-radius:20px;padding:12px;box-shadow:0 16px 44px rgba(0,0,0,.6);max-height:240px;overflow-y:auto';
+  p.innerHTML='<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px">'
+    +EMOJIS.filter(e=>e!=='�b').map(e=>'<button onclick="lcMobEmojiPick(\''+e+'\')" style="border:none;background:transparent;font-size:26px;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;border-radius:10px">'+e+'</button>').join('')
+    +'</div>';
+  document.body.appendChild(p);
+}
+function lcMobEmojiPick(e){
+  const inp=document.getElementById('lc-ig-input');
+  if(!inp) return;
+  inp.value+=e;
+  if(typeof lcIgInputChange==='function') lcIgInputChange(inp);
+  inp.focus();
+}
+
 function lcAttachSheetToggle(){
   const sh=document.getElementById('lc-attach-sheet');
   if(sh) sh.style.display=sh.style.display==='none'?'block':'none';
