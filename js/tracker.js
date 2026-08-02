@@ -394,16 +394,15 @@ function mobTrkRenderCards(){
       barHtml=`<div class="mob-trk-card-bar"><div style="width:${Math.max(sPct,4)}%;background:${sDot}"></div></div>`;
     }
 
+    const _nm=j.name||j.address||'Unnamed';
+    const _meta=[clientName,j.date,pid].filter(v=>v&&v!==_nm).join(' · ');
     return `<div class="mob-trk-card" onclick="mobTrkOpenProject('${j.id}')">
-      <div class="mob-trk-card-num">
-        ${numContent}
-        <span class="mob-trk-card-num-label">${numLabel}</span>
-      </div>
       <div class="mob-trk-card-body">
-        <div class="mob-trk-card-name">${isRush?'🚨 ':isOverdue?'⚠ ':''}${j.name||j.address||'Unnamed'}</div>
-        <div class="mob-trk-card-meta">${[clientName,j.date,pid].filter(Boolean).join(' · ')}</div>
-        <span class="mob-trk-card-status" style="background:${ss.bg};color:${ss.color}">${ss.label}</span>
-        ${isDhOrEmpty?'<span style="margin-left:6px;font-size:10px;color:#ef4444;font-weight:700">⚠ Unassigned</span>':''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <div class="mob-trk-card-name" style="margin-bottom:0;flex:1">${isRush?'🚨 ':isOverdue?'⚠ ':''}${_nm}</div>
+          <span class="mob-trk-card-status" style="background:${ss.bg};color:${ss.color};flex-shrink:0">${ss.label}</span>
+        </div>
+        <div class="mob-trk-card-meta">${_meta||'—'}${isDhOrEmpty?' · <span style="color:#ef4444;font-weight:700">Unassigned</span>':''}</div>
         ${barHtml}
       </div>
       <svg class="mob-trk-card-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>

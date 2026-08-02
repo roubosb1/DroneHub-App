@@ -813,10 +813,10 @@ button{font-family:var(--font);}
   /* Individual project card */
   .mob-trk-card{
     display:flex;align-items:center;gap:0;
-    padding:0;margin:0;
-    background:transparent;border:none;border-bottom:1px solid var(--border);
+    padding:0 14px;margin:0;
+    background:transparent;border:none;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
-    transition:background .15s;
+    transition:background .15s;border-radius:14px;
   }
   .mob-trk-card:active{background:rgba(91,141,239,.06);}
   .mob-trk-card-num{
@@ -826,7 +826,7 @@ button{font-family:var(--font);}
   }
   .mob-trk-card-num-label{font-size:8px;font-weight:700;text-transform:uppercase;
     letter-spacing:.06em;color:var(--muted);margin-top:2px;}
-  .mob-trk-card-body{flex:1;min-width:0;padding:12px 0;}
+  .mob-trk-card-body{flex:1;min-width:0;padding:13px 0;}
   .mob-trk-card-name{font-size:14px;font-weight:700;color:var(--white);margin-bottom:2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mob-trk-card-meta{font-size:11px;color:var(--muted);margin-bottom:5px;
