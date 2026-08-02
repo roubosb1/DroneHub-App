@@ -334,7 +334,8 @@ async function dhDecrypt(payload){
     }
     const fromHex=h=>new Uint8Array(h.match(/.{2}/g).map(b=>parseInt(b,16)));
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromHex(iv)},key,fromHex(ct));
-    return new TextDecoder().decode(plain);
+    const out=new TextDecoder().decode(plain);
+    return out==='[Decrypting…]'?'(message unavailable)':out;
   }catch(e){return '[Could not decrypt]';}
 }
 

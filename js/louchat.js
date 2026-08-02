@@ -885,6 +885,12 @@ async function lcRenderMessages(){
     prevAuthor=m.author; prevTime=d.getTime();
   });
 
+  // Key arrived late? One retry re-render so [Decrypting…] resolves itself
+  if(msgs.some(m=>m.text==='[Decrypting…]')&&typeof _fbToken==='function'&&_fbToken()&&!window._lcDecRetry){
+    window._lcDecRetry=true;
+    setTimeout(()=>{ _loadMsgKey().then(k=>{ window._lcDecRetry=false; if(k) lcRenderMessages(); }).catch(()=>{window._lcDecRetry=false;}); },1200);
+  }
+
   // Read receipt: "Seen" under my last bubble once the other side has opened
   if(_mobView&&msgs.length){
     const last=msgs[msgs.length-1];
