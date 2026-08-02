@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=106">
+<link rel="stylesheet" href="css/styles.css?v=107">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -2321,7 +2321,7 @@
           <button onclick="document.getElementById('lc-file-image').click()" aria-label="Photo"></button>
         </div>
         <!-- iMessage-style attach menu -->
-        <div id="lc-attach-sheet" style="display:none;position:absolute;bottom:56px;left:8px;min-width:230px;background:rgba(28,35,51,.97);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border-bright);border-radius:20px;padding:8px 6px;box-shadow:0 16px 44px rgba(0,0,0,.6);z-index:9">
+        <div id="lc-attach-sheet" style="display:none;position:absolute;bottom:56px;left:8px;min-width:170px;background:rgba(28,35,51,.97);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border-bright);border-radius:20px;padding:8px 6px;box-shadow:0 16px 44px rgba(0,0,0,.6);z-index:9">
           <button class="lc-att-row" onclick="lcAttachSheetToggle();document.getElementById('lc-file-camera').click()"><span class="lc-att-ic" style="background:rgba(255,255,255,.1);color:var(--offwhite)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>Camera</button>
           <button class="lc-att-row" onclick="lcAttachSheetToggle();document.getElementById('lc-file-image').click()"><span class="lc-att-ic" style="background:rgba(91,141,239,.18);color:var(--blue-bright)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>Photos</button>
         </div>

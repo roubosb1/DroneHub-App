@@ -1869,14 +1869,14 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     -webkit-tap-highlight-color:transparent;
   }
   .lc-att-row{
-    display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;
+    display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;
     border:none;background:transparent;color:var(--offwhite);
     font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;text-align:left;
     border-radius:14px;-webkit-tap-highlight-color:transparent;
   }
   .lc-att-row:active{background:rgba(255,255,255,.07);}
   .lc-att-ic{
-    width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
-    justify-content:center;font-size:17px;flex-shrink:0;
+    width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:15px;flex-shrink:0;
   }
 }
