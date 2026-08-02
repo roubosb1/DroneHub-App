@@ -4174,8 +4174,10 @@ async function cpSendMessage(){
   const _cpClientRec=(typeof clients!=='undefined'?clients:[]).find(c=>String(c.id)===String(cpActiveClientId));
   const clientDisplayName=cpSess?.name||_cpClientRec?.name||'Client';
 
-  // 1. Save to portal_msgs (client-side thread the client can read)
-  savePortalMessage(cpActiveClientId,'client',text,{to:chatTo,by:clientDisplayName});
+  // 1. Save to portal_msgs (client-side thread the client can read).
+  // Await it — the thread re-renders right after, and an un-awaited async
+  // save loses the race, making sent messages vanish until the next visit
+  await savePortalMessage(cpActiveClientId,'client',text,{to:chatTo,by:clientDisplayName});
 
   // 2. Mirror into ops-side LouChat so the team sees it immediately.
   // Team messages go to the shared client channel; DMs to an admin get
@@ -4205,7 +4207,7 @@ async function cpSendMessage(){
     existingCh.topic='Direct messages from '+clientDisplayName;
     saveLcChannels(channels);
   }
-  saveLcMessage(lcChannelId,{
+  await saveLcMessage(lcChannelId,{
     id:Date.now(),
     author:clientDisplayName,
     text,
