@@ -1854,3 +1854,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   body.lc-chat-full:not(.lc-vc-mode) .lc-ig-cam:active{transform:scale(.82);transition:transform .1s;}
 }
 @keyframes lcSendPop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* deterministic minimal-bar layout: field at 56%, icons breathe evenly
+   in the remaining space (was flex-stretching differently per device) */
+@media (max-width:768px){
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill{flex:0 1 auto!important;width:56%!important;}
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-right{flex:1!important;justify-content:space-evenly!important;gap:0!important;}
+}
