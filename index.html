@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=108">
+<link rel="stylesheet" href="css/styles.css?v=109">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -1338,26 +1338,26 @@
     <div id="mob-trk-wrap">
       <!-- SCREEN 1: List -->
       <div id="mob-trk-list">
-        <!-- Top tab bar: My Projects | All Projects (finance-style underline) -->
-        <div id="mob-trk-toggle" class="no-scrollbar">
-          <button id="mob-trk-mine-btn" class="mob-trk-tog-btn active" onclick="mobTrkSetMine(true)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21v-1a6 6 0 0112 0v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            My Projects
-          </button>
-          <button id="mob-trk-all-btn" class="mob-trk-tog-btn" onclick="mobTrkSetVideo()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-            Video
-          </button>
-          <button id="mob-trk-photo-btn" class="mob-trk-tog-btn" onclick="mobTrkSetMode('photo')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Photo
-          </button>
-        </div>
-        <!-- Status tabs: Upcoming | Active | Done -->
+        <!-- Primary status tabs (YouTube-style underline) -->
         <div id="mob-trk-tabs">
           <button id="mob-trk-tab-upcoming" class="mob-trk-tab active-upcoming" onclick="mobTrkSetTab('upcoming')">Upcoming</button>
           <button id="mob-trk-tab-active" class="mob-trk-tab" onclick="mobTrkSetTab('active')">In Progress</button>
           <button id="mob-trk-tab-completed" class="mob-trk-tab" onclick="mobTrkSetTab('completed')">Completed</button>
+        </div>
+        <!-- Quiet filter chips: mode + mine -->
+        <div id="mob-trk-chips">
+          <div class="mob-trk-seg">
+            <button id="mob-trk-all-btn" class="active" onclick="mobTrkSetVideo()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Video
+            </button>
+            <button id="mob-trk-photo-btn" onclick="mobTrkSetMode('photo')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Photo
+            </button>
+          </div>
+          <button id="mob-trk-mine-btn" class="mob-trk-chip" onclick="mobTrkToggleMine()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21v-1a6 6 0 0112 0v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Mine
+          </button>
         </div>
         <div id="mob-trk-cards"></div>
       </div>
@@ -4502,7 +4502,7 @@
 <script src="js/social-analytics.js?v=10"></script>
 <script src="js/sales.js"></script>
 <script src="js/louchat.js?v=81"></script>
-<script src="js/tracker.js?v=53"></script>
+<script src="js/tracker.js?v=54"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=15"></script>
 <script src="js/calendar.js?v=62"></script>

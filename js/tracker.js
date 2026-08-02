@@ -239,16 +239,15 @@ function mobTrkSetTab(tab){
   _mobTrkRenderCardsSafe();
 }
 
-function mobTrkSetMine(mine){
-  _mobTrkMineOnly = mine;
-  _trackerMode = 'video';
-  trackerSetMode('video');
-  _mobTrkUpdateTopTabs('mine');
+function mobTrkToggleMine(){
+  _mobTrkMineOnly = !_mobTrkMineOnly;
+  document.getElementById('mob-trk-mine-btn')?.classList.toggle('active', _mobTrkMineOnly);
   _mobTrkRenderCardsSafe();
 }
+// kept for any older callers
+function mobTrkSetMine(mine){ _mobTrkMineOnly=!mine; mobTrkToggleMine(); }
 
 function mobTrkSetVideo(){
-  _mobTrkMineOnly = false;
   _trackerMode = 'video';
   trackerSetMode('video');
   _mobTrkUpdateTopTabs('video');
@@ -256,7 +255,6 @@ function mobTrkSetVideo(){
 }
 
 function mobTrkSetMode(mode){
-  _mobTrkMineOnly = false;
   _trackerMode = mode;
   trackerSetMode(mode);
   _mobTrkUpdateTopTabs(mode==='photo'?'photo':'video');
@@ -264,7 +262,6 @@ function mobTrkSetMode(mode){
 }
 
 function _mobTrkUpdateTopTabs(active){
-  document.getElementById('mob-trk-mine-btn')?.classList.toggle('active', active==='mine');
   document.getElementById('mob-trk-all-btn')?.classList.toggle('active', active==='video');
   document.getElementById('mob-trk-photo-btn')?.classList.toggle('active', active==='photo');
 }

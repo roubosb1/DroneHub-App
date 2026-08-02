@@ -1880,3 +1880,37 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     justify-content:center;font-size:15px;flex-shrink:0;
   }
 }
+
+/* tracker filters: underline status tabs + quiet mode/mine chips; card rows */
+@media (max-width:768px){
+  #mob-trk-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 6px;}
+  #mob-trk-tabs .mob-trk-tab{
+    flex:1 1 0;min-width:0;padding:12px 4px 11px;border:none;background:transparent;
+    font-size:12.5px;font-weight:700;color:var(--muted);font-family:var(--font);
+    border-bottom:2.5px solid transparent;cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:color .18s,border-color .18s;border-radius:0;
+  }
+  #mob-trk-tabs .mob-trk-tab.active-upcoming{color:var(--amber);border-bottom-color:var(--amber);}
+  #mob-trk-tabs .mob-trk-tab.active-active{color:var(--blue-bright);border-bottom-color:var(--blue-bright);}
+  #mob-trk-tabs .mob-trk-tab.active-completed{color:var(--green);border-bottom-color:var(--green);}
+  #mob-trk-chips{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 4px;}
+  .mob-trk-seg{display:flex;gap:3px;background:var(--navy-mid);border:1px solid var(--border);border-radius:11px;padding:3px;}
+  .mob-trk-seg button{
+    display:flex;align-items:center;gap:5px;padding:6px 12px;border:none;border-radius:8px;
+    background:transparent;color:var(--muted);font-size:11.5px;font-weight:700;font-family:var(--font);
+    cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s;
+  }
+  .mob-trk-seg button.active{background:rgba(91,141,239,.2);color:var(--blue-bright);}
+  .mob-trk-chip{
+    display:flex;align-items:center;gap:5px;padding:7px 13px;border:1px solid var(--border);
+    border-radius:11px;background:var(--navy-mid);color:var(--muted);font-size:11.5px;font-weight:700;
+    font-family:var(--font);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s;
+  }
+  .mob-trk-chip.active{background:rgba(91,141,239,.2);color:var(--blue-bright);border-color:rgba(91,141,239,.5);}
+  /* rows become cards like invoices/payroll */
+  #mob-trk-cards{padding:8px 14px calc(90px + env(safe-area-inset-bottom,0px));}
+  .mob-trk-card{
+    background:var(--navy-lift)!important;border:1px solid var(--border)!important;
+    border-radius:14px!important;margin:0 0 8px!important;padding:0 14px!important;
+  }
+}
