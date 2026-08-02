@@ -266,6 +266,21 @@ function _mobTrkUpdateTopTabs(active){
   document.getElementById('mob-trk-photo-btn')?.classList.toggle('active', active==='photo');
 }
 
+// "2026-06-24" → "Today" / "Tomorrow" / "Jun 24" (+ year when not this year)
+function _trkFmtDate(ds){
+  if(!ds) return '';
+  const d=new Date(ds+'T12:00:00');
+  if(isNaN(d)) return ds;
+  const today=new Date(); today.setHours(12,0,0,0);
+  const diff=Math.round((d-today)/86400000);
+  if(diff===0) return 'Today';
+  if(diff===1) return 'Tomorrow';
+  if(diff===-1) return 'Yesterday';
+  const opts={month:'short',day:'numeric'};
+  if(d.getFullYear()!==today.getFullYear()) opts.year='numeric';
+  return d.toLocaleDateString('en-US',opts);
+}
+
 function mobTrkRenderCards(){
   const el = document.getElementById('mob-trk-cards');
   if(!el) return;
@@ -392,7 +407,7 @@ function mobTrkRenderCards(){
     }
 
     const _nm=j.name||j.address||'Unnamed';
-    const _meta=[clientName,j.date,pid].filter(v=>v&&v!==_nm).join(' · ');
+    const _meta=[clientName,_trkFmtDate(j.date),pid].filter(v=>v&&v!==_nm).join(' · ');
     return `<div class="mob-trk-card" onclick="mobTrkOpenProject('${j.id}')">
       <div class="mob-trk-card-body">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
@@ -657,7 +672,7 @@ function mobTrkBuildDetail(jobId){
       <div class="mtrk2-hero-name">${job.name||job.address||'—'}</div>
       <div class="mtrk2-chips">
         ${clientName?`<span class="mtrk2-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</span>`:''}
-        ${job.date?`<span class="mtrk2-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${job.date}</span>`:''}
+        ${job.date?`<span class="mtrk2-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Shoot: ${_trkFmtDate(job.date)}</span>`:''}
         ${ts.rush?`<span class="mtrk2-chip" style="border-color:rgba(240,82,82,.5);color:#FF8A8A">⚡ Rush</span>`:''}
       </div>
       ${!_isPhoto?`
