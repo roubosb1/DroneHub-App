@@ -1644,16 +1644,19 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))!important;
   }
 
-  /* Input bar becomes a floating rounded bubble like the bottom nav */
+  /* Input bar: minimal iMessage style — no outer card, bare field + icons */
   body.lc-chat-full:not(.lc-vc-mode) #lc-mob-ig-bar{
     position:fixed!important;z-index:7!important;
-    left:10px!important;right:10px!important;width:auto!important;
-    bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;
-    border:1px solid var(--border)!important;border-radius:28px!important;
-    background:rgba(13,19,33,.95)!important;
-    backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;
-    box-shadow:0 10px 30px rgba(0,0,0,.45)!important;
-    padding:7px 10px!important;
+    left:0!important;right:0!important;width:auto!important;
+    bottom:calc(6px + env(safe-area-inset-bottom,0px))!important;
+    border:none!important;border-radius:0!important;
+    background:transparent!important;
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
+    padding:6px 12px!important;
+  }
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-cam{
+    background:rgba(255,255,255,.08)!important;width:38px!important;height:38px!important;
   }
   /* Pinned bar rides just above the floating input, subtle */
   body.lc-chat-full:not(.lc-vc-mode) #lc-pinned-bar{
@@ -1675,11 +1678,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 /* chat input bubble: single clean outline — no inner borders */
 @media (max-width:768px){
   body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill{
-    border:none!important;background:rgba(255,255,255,.06)!important;
+    border:1px solid rgba(168,180,208,.22)!important;background:rgba(255,255,255,.06)!important;
+    border-radius:22px!important;
   }
-  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-cam{
-    border:none!important;background:rgba(255,255,255,.06)!important;
-  }
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-cam{border:none!important;}
 }
 
 /* iOS focus ring on the chat textarea — no inner outline ever */
@@ -1834,3 +1836,21 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 /* long-press focus view: elements pop in like Instagram */
 .lc-sheet-pop{animation:lcSheetPop .18s cubic-bezier(.2,.9,.3,1.2);}
 @keyframes lcSheetPop{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+
+/* minimal-but-fun input touches */
+@media (max-width:768px){
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill{transition:border-color .2s, box-shadow .25s;}
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill:focus-within{
+    border-color:rgba(91,141,239,.65)!important;
+    box-shadow:0 0 14px rgba(91,141,239,.25);
+  }
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-pill textarea{caret-color:var(--blue-bright)!important;}
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-send{
+    background:linear-gradient(135deg,#5B8DEF,#3B6FD4)!important;
+    box-shadow:0 4px 14px rgba(91,141,239,.45)!important;
+    animation:lcSendPop .22s cubic-bezier(.2,.9,.3,1.4);
+  }
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-right button:active,
+  body.lc-chat-full:not(.lc-vc-mode) .lc-ig-cam:active{transform:scale(.82);transition:transform .1s;}
+}
+@keyframes lcSendPop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
