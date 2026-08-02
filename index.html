@@ -4501,14 +4501,14 @@
 <script src="js/social.js?v=56"></script>
 <script src="js/social-analytics.js?v=10"></script>
 <script src="js/sales.js"></script>
-<script src="js/louchat.js?v=74"></script>
+<script src="js/louchat.js?v=75"></script>
 <script src="js/tracker.js?v=52"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=15"></script>
 <script src="js/calendar.js?v=62"></script>
 <script src="js/team.js?v=52"></script>
 <script src="js/jobs.js?v=10"></script>
-<script src="js/clients.js?v=82"></script>
+<script src="js/clients.js?v=83"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>
@@ -4800,11 +4800,28 @@ function mobNewMsgPick(name,kind){
   const slug=name.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
   if(!slug) return;
   const channels=getLcChannels();
-  let ch=channels.find(c=>c.name===slug);
+  let ch;
+  if(kind==='client'){
+    // Clients get ONE linked channel shared with their portal thread
+    const c=(typeof clients!=='undefined'?clients:[]).find(x=>x.name&&x.name.toLowerCase()===name.toLowerCase());
+    if(c){
+      ch=channels.find(x=>x.clientId===c.id&&(x.type==='client'||x.type==='client_dm'))
+       ||channels.find(x=>x.name===slug);
+      if(ch&&!ch.clientId){ ch.clientId=c.id; ch.clientName=c.name; saveLcChannels(channels); }
+      if(!ch){
+        ch={id:'lc_client_'+c.id,name:slug,type:'client_dm',topic:'Direct messages from '+c.name,
+          clientId:c.id,clientName:c.name,adminName:'',createdAt:new Date().toISOString().slice(0,10),members:[]};
+        channels.push(ch); saveLcChannels(channels);
+      }
+    }
+  }
   if(!ch){
-    ch={id:'lc_'+Date.now(),name:slug,type:kind==='client'?'client':'general',topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]};
-    channels.push(ch);
-    saveLcChannels(channels);
+    ch=channels.find(c=>c.name===slug);
+    if(!ch){
+      ch={id:'lc_'+Date.now(),name:slug,type:kind==='client'?'client':'general',topic:'',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]};
+      channels.push(ch);
+      saveLcChannels(channels);
+    }
   }
   mobNewMsgClose();
   showPane('louchat');

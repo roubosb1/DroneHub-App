@@ -1534,9 +1534,18 @@ async function lcSendMessage(){
   // If replying in a client DM channel → mirror back to portal_msgs
   // so the client sees the reply in the matching portal conversation,
   // signed with the replying admin's name
-  if(ch.type==='client_dm' && ch.clientId){
-    const _replyBy=gateGetSession()?.name||'DroneHub Media';
-    savePortalMessage(ch.clientId,'team',text,{to:ch.adminName||'team',by:_replyBy}); // fire-and-forget
+  if(ch.type==='client_dm'||ch.type==='client'){
+    let _cid=ch.clientId;
+    if(!_cid){
+      // Older client channels store only a name slug — link them on first send
+      const pretty=ch.name.replace(/-/g,' ').toLowerCase();
+      const _c=(typeof clients!=='undefined'?clients:[]).find(x=>x.name&&x.name.toLowerCase()===pretty);
+      if(_c){ _cid=_c.id; ch.clientId=_c.id; saveLcChannels(channels); }
+    }
+    if(_cid){
+      const _replyBy=gateGetSession()?.name||'DroneHub Media';
+      savePortalMessage(_cid,'team',text,{to:ch.adminName||'team',by:_replyBy}); // fire-and-forget
+    }
   }
 
   if(input){input.value='';input.style.height='auto';}

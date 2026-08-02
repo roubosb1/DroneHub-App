@@ -4312,11 +4312,28 @@ async function adminReplyMessage(clientId, text){
   savePortalMessage(clientId,'team',text);
 }
 
-function adminSendReply(clientId){
+async function adminSendReply(clientId){
   const input=document.getElementById('admin-msg-input-'+clientId);
   const text=input?.value.trim();
   if(!text) return;
-  savePortalMessage(clientId,'team',text);
+  await savePortalMessage(clientId,'team',text);
+  // Mirror into LouChat so it's ONE conversation everywhere (profile tab,
+  // portal, and the main chat list all share the same thread)
+  try{
+    const lcId='lc_client_'+clientId;
+    const c=clients.find(x=>String(x.id)===String(clientId));
+    let channels=getLcChannels();
+    let ch=channels.find(x=>x.id===lcId)||channels.find(x=>x.clientId===clientId&&(x.type==='client'||x.type==='client_dm'));
+    if(!ch){
+      ch={id:lcId,name:(c?.name||'client').split(' ')[0].toLowerCase(),type:'client_dm',
+        topic:'Direct messages from '+(c?.name||'client'),clientId:clientId,clientName:c?.name||'',
+        adminName:'',createdAt:new Date().toISOString().slice(0,10),members:[]};
+      channels.push(ch); saveLcChannels(channels);
+    }
+    const s2=gateGetSession();
+    await saveLcMessage(ch.id,{id:Date.now(),author:s2?.name||'DroneHub team',authorEmail:s2?.email||'',
+      text,ts:new Date().toISOString(),reactions:{},attachments:[]});
+  }catch(e){}
   input.value='';
   renderClientPortal(clientId,'messages');
 }
