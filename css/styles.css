@@ -2036,3 +2036,17 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
     letter-spacing:0;
   }
 }
+
+/* date ribbon: free horizontal scroll */
+@media (max-width:768px){
+  #mob-cal-week-strip{
+    display:flex!important;overflow-x:auto;gap:0;padding:4px 8px 8px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-shrink:0;
+  }
+  #mob-cal-week-strip::-webkit-scrollbar{display:none;}
+  #mob-cal-week-strip .mc-ws-cell{flex:0 0 46px;}
+  .mc-ws-mo{
+    flex:0 0 auto;display:flex;align-items:center;padding:0 6px;
+    font-size:10px;font-weight:800;color:var(--blue-bright);text-transform:uppercase;
+  }
+}

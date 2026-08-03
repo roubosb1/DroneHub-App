@@ -2239,7 +2239,6 @@ function _mcInitDaySwipes(){
       drag=null;
     },{passive:true});
   };
-  attach(strip,7);  // week strip pages by week
   attach(tl,1);     // timeline pages by day
 }
 
@@ -2256,26 +2255,49 @@ function _mcBuildDayScreen(dateStr){
   _mcInitDaySwipes();
 }
 
-// Render the compact 7-day week strip
+// Free-scrolling date ribbon (not paged by week): ±45 days around the
+// selection; rebuilds only when the selection leaves the rendered range
+let _mcRibbonStart=null;
 function _mcRenderWeekStrip(dateStr){
   const strip=document.getElementById('mob-cal-week-strip');
   if(!strip) return;
-  const d=new Date(dateStr+'T12:00:00');
-  const dow=d.getDay();
-  const weekStart=new Date(d); weekStart.setDate(d.getDate()-dow);
   const todayStr=new Date().toISOString().slice(0,10);
+  const sel=new Date(dateStr+'T12:00:00');
+
+  const inRange=_mcRibbonStart&&(()=>{
+    const s0=new Date(_mcRibbonStart+'T12:00:00');
+    const diff=Math.round((sel-s0)/86400000);
+    return diff>=5&&diff<=84; // stay a few days clear of the edges
+  })();
+
+  if(inRange&&strip.children.length){
+    // just move the selection highlight — scroll position stays where the user left it
+    [...strip.children].forEach(c=>{
+      c.classList.toggle('mc-ws-sel',c.dataset.ds===dateStr);
+      c.classList.toggle('mc-ws-today',c.dataset.ds===todayStr);
+    });
+    return;
+  }
+
+  const start=new Date(sel); start.setDate(sel.getDate()-45);
+  _mcRibbonStart=start.toISOString().slice(0,10);
   const letters=['S','M','T','W','T','F','S'];
   let html='';
-  for(let i=0;i<7;i++){
-    const dd=new Date(weekStart); dd.setDate(weekStart.getDate()+i);
-    const ds=dd.toISOString().slice(0,10);
-    const isToday=ds===todayStr, isSel=ds===dateStr;
-    html+=`<div class="mc-ws-cell${isToday?' mc-ws-today':''}${isSel?' mc-ws-sel':''}" onclick="mobCalSwitchDay('${ds}')">
-      <span class="mc-ws-letter">${letters[i]}</span>
-      <span class="mc-ws-num">${dd.getDate()}</span>
+  for(let i=0;i<91;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const ds=d.toISOString().slice(0,10);
+    const first=d.getDate()===1;
+    html+=`${first?`<div class="mc-ws-mo">${d.toLocaleDateString('en-US',{month:'short'})}</div>`:''}<div class="mc-ws-cell${ds===todayStr?' mc-ws-today':''}${ds===dateStr?' mc-ws-sel':''}" data-ds="${ds}" onclick="mobCalSwitchDay('${ds}')">
+      <span class="mc-ws-letter">${letters[d.getDay()]}</span>
+      <span class="mc-ws-num">${d.getDate()}</span>
     </div>`;
   }
   strip.innerHTML=html;
+  // center the selected day
+  requestAnimationFrame(()=>{
+    const selEl=strip.querySelector('.mc-ws-sel');
+    if(selEl) strip.scrollLeft=selEl.offsetLeft-strip.clientWidth/2+selEl.offsetWidth/2;
+  });
 }
 
 // Apple-style day timeline: all-day chips + hour rails with positioned events
