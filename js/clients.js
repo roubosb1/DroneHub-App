@@ -3042,7 +3042,9 @@ async function cpShowTab(tab){
     </div>`;
   }
 
+  if(tab==='community'){ html='<div id="cp-forum-root"></div>'; }
   document.getElementById('cp-content').innerHTML=html;
+  if(tab==='community'&&typeof renderForum==='function') renderForum('cp-forum-root');
   if(tab==='booking') setTimeout(()=>{if(typeof cpCalRender==='function')cpCalRender(true);},100);
 }
 
