@@ -1219,6 +1219,7 @@ button{font-family:var(--font);}
   #mob-cal-dv-nav{
     display:flex;align-items:center;padding:10px 14px 8px;
     flex-shrink:0;gap:4px;border-bottom:1px solid var(--border);
+    position:relative;
   }
   #mob-cal-dv-back{
     display:flex;align-items:center;gap:3px;border:none;background:none;
@@ -1226,7 +1227,8 @@ button{font-family:var(--font);}
     -webkit-tap-highlight-color:transparent;flex-shrink:0;padding:0;
   }
   #mob-cal-dv-title{
-    flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--white);
+    position:absolute;left:0;right:0;text-align:center;
+    font-size:14px;font-weight:700;color:var(--white);pointer-events:none;
   }
   #mob-cal-dv-add{
     width:32px;height:32px;border:none;background:none;color:var(--blue-bright);
@@ -2172,3 +2174,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 .mc-iconbtn svg{width:22px;height:22px;}
 #mob-cal-today-btn{padding:8px 20px;font-size:14px;border-radius:18px;}
 #mc-inbox-badge{top:3px;right:3px;}
+
+/* Ribbon: tiny dot under dates that have events */
+.mc-ws-dot{
+  width:4.5px;height:4.5px;border-radius:50%;background:var(--blue-bright);
+  opacity:0;margin-top:-1px;
+}
+.mc-ws-cell.mc-ws-has .mc-ws-dot{opacity:1;}

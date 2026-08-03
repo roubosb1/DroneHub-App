@@ -2259,6 +2259,25 @@ function _mcBuildDayScreen(dateStr){
 // Free-scrolling date ribbon (not paged by week): ±45 days around the
 // selection; rebuilds only when the selection leaves the rendered range
 let _mcRibbonStart=null;
+function _mcRibbonEventDates(startDs,days){
+  const set=new Set();
+  const end=new Date(startDs+'T12:00:00');end.setDate(end.getDate()+days);
+  const endDs=end.toISOString().slice(0,10);
+  (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{
+    if(j.date&&j.date>=startDs&&j.date<=endDs&&_mcJobMatch(j)) set.add(j.date);
+  });
+  _calVisibleEvents().forEach(ev=>{
+    if(_calTypeFilters!==null&&!_calTypeFilters.has(ev.type)) return;
+    if(ev.memberName&&!_mcMatchesFilter(ev.memberName)) return;
+    const s=ev.date,e=ev.endDate||ev.date;
+    if(e<startDs||s>endDs) return;
+    const d0=new Date((s>startDs?s:startDs)+'T12:00:00');
+    const d1=new Date((e<endDs?e:endDs)+'T12:00:00');
+    for(let d=new Date(d0);d<=d1;d.setDate(d.getDate()+1)) set.add(d.toISOString().slice(0,10));
+  });
+  return set;
+}
+
 function _mcRenderWeekStrip(dateStr){
   const strip=document.getElementById('mob-cal-week-strip');
   if(!strip) return;
@@ -2273,24 +2292,28 @@ function _mcRenderWeekStrip(dateStr){
 
   if(inRange&&strip.children.length){
     // just move the selection highlight — scroll position stays where the user left it
+    const dots=_mcRibbonEventDates(_mcRibbonStart,91);
     [...strip.children].forEach(c=>{
       c.classList.toggle('mc-ws-sel',c.dataset.ds===dateStr);
       c.classList.toggle('mc-ws-today',c.dataset.ds===todayStr);
+      c.classList.toggle('mc-ws-has',dots.has(c.dataset.ds));
     });
     return;
   }
 
   const start=new Date(sel); start.setDate(sel.getDate()-45);
   _mcRibbonStart=start.toISOString().slice(0,10);
+  const dots=_mcRibbonEventDates(_mcRibbonStart,91);
   const letters=['S','M','T','W','T','F','S'];
   let html='';
   for(let i=0;i<91;i++){
     const d=new Date(start); d.setDate(start.getDate()+i);
     const ds=d.toISOString().slice(0,10);
     const first=d.getDate()===1;
-    html+=`${first?`<div class="mc-ws-mo">${d.toLocaleDateString('en-US',{month:'short'})}</div>`:''}<div class="mc-ws-cell${ds===todayStr?' mc-ws-today':''}${ds===dateStr?' mc-ws-sel':''}" data-ds="${ds}" onclick="mobCalSwitchDay('${ds}')">
+    html+=`${first?`<div class="mc-ws-mo">${d.toLocaleDateString('en-US',{month:'short'})}</div>`:''}<div class="mc-ws-cell${ds===todayStr?' mc-ws-today':''}${ds===dateStr?' mc-ws-sel':''}${dots.has(ds)?' mc-ws-has':''}" data-ds="${ds}" onclick="mobCalSwitchDay('${ds}')">
       <span class="mc-ws-letter">${letters[d.getDay()]}</span>
       <span class="mc-ws-num">${d.getDate()}</span>
+      <span class="mc-ws-dot"></span>
     </div>`;
   }
   strip.innerHTML=html;
