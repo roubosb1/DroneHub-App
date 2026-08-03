@@ -1147,13 +1147,14 @@ button{font-family:var(--font);}
   #mob-cal-day-screen{
     width:100%;position:absolute;inset:0;
     display:flex;flex-direction:column;
-    background:var(--navy-card);
-    transform:translateX(100%);
-    transition:transform .32s cubic-bezier(.4,0,.2,1);
+    background:var(--navy);
+    transform:scale(.9);opacity:0;pointer-events:none;
+    transition:transform .3s cubic-bezier(.2,.8,.3,1),opacity .28s ease;
   }
-  /* Slide in/out when day open */
-  #mob-cal-main.mc-day-open #mob-cal-month-screen{transform:translateX(-100%);}
-  #mob-cal-main.mc-day-open #mob-cal-day-screen{transform:translateX(0);}
+  /* Apple-style zoom: month scales away, day scales in */
+  #mob-cal-month-screen{transition:transform .3s cubic-bezier(.2,.8,.3,1),opacity .28s ease;}
+  #mob-cal-main.mc-day-open #mob-cal-month-screen{transform:scale(1.1);opacity:0;pointer-events:none;}
+  #mob-cal-main.mc-day-open #mob-cal-day-screen{transform:scale(1);opacity:1;pointer-events:auto;}
 
   /* ── Month nav ── */
   #mob-cal-nav{
@@ -1918,4 +1919,84 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 /* mobile leaderboard polish: stacked title, tidy chips, tighter cards */
 @media (max-width:768px){
   #clients-leaderboard-body .lb-title-row{flex-direction:column;align-items:flex-start!important;gap:2px!important;}
+}
+
+/* calendar employee filter chips */
+@media (max-width:768px){
+  #mob-cal-filter{
+    display:flex;gap:8px;overflow-x:auto;padding:2px 16px 10px;flex-shrink:0;
+    scrollbar-width:none;
+  }
+  #mob-cal-filter::-webkit-scrollbar{display:none;}
+  .mc-fchip{
+    display:flex;align-items:center;gap:6px;flex-shrink:0;
+    padding:7px 14px;border-radius:18px;border:1px solid var(--border);
+    background:var(--navy-mid);color:var(--muted);font-size:12px;font-weight:700;
+    font-family:var(--font);cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:all .15s;
+  }
+  .mc-fchip.active{background:rgba(91,141,239,.2);color:var(--blue-bright);border-color:rgba(91,141,239,.5);}
+  /* + event form: full page like other secondary pages */
+  #cal-event-modal.cal-modal-fullpage{padding:0!important;align-items:stretch!important;background:var(--navy)!important;}
+  #cal-event-modal.cal-modal-fullpage>div{
+    max-width:none!important;width:100%!important;border-radius:0!important;border:none!important;
+    overflow-y:auto!important;background:var(--navy)!important;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  #cal-event-modal.cal-modal-fullpage>div>div:first-child{
+    background:var(--navy)!important;border-bottom:none!important;border-radius:0!important;
+    position:sticky;top:0;z-index:2;
+  }
+}
+
+/* Apple-style day timeline */
+@media (max-width:768px){
+  .mc-allday{display:flex;gap:8px;align-items:flex-start;padding:10px 14px 8px;border-bottom:1px solid var(--border);}
+  .mc-ad-lbl{font-size:10px;color:var(--muted);font-weight:700;flex-shrink:0;padding-top:6px;}
+  .mc-ad-wrap{display:flex;flex-wrap:wrap;gap:6px;min-width:0;}
+  .mc-ad-chip{
+    border-radius:9px;padding:5px 10px;font-size:12px;font-weight:700;font-family:var(--font);
+    cursor:pointer;-webkit-tap-highlight-color:transparent;max-width:100%;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .mc-timeline{position:relative;margin:8px 0 0;}
+  .mc-hr{position:absolute;left:0;right:0;display:flex;align-items:center;gap:8px;padding:0 14px;}
+  .mc-hr span{font-size:10.5px;color:var(--muted);font-weight:600;width:44px;text-align:right;flex-shrink:0;}
+  .mc-hr i{flex:1;height:1px;background:rgba(255,255,255,.07);}
+  .mc-tl-evt{
+    position:absolute;border-radius:10px;padding:7px 10px;
+    overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .mc-tl-t{font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mc-tl-s{font-size:10.5px;color:var(--offwhite);opacity:.75;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+}
+
+/* Apple month cells: event title pills + taller rows */
+@media (max-width:768px){
+  .mc-cell{align-items:stretch!important;min-height:84px;padding:3px 1px!important;border-top:1px solid rgba(255,255,255,.05);}
+  .mc-cell .mc-num{margin:0 auto;width:28px;height:28px;font-size:14px;}
+  .mc-pills{display:flex;flex-direction:column;gap:2px;margin-top:2px;min-width:0;}
+  .mc-pill{
+    font-size:8.5px;font-weight:700;padding:2px 4px;border-radius:5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;line-height:1.3;
+  }
+  .mc-more{font-size:9px;color:var(--muted);font-weight:700;text-align:center;}
+  /* Year view */
+  #mob-cal-year-screen{
+    position:absolute;inset:0;z-index:5;background:var(--navy);
+    transform:scale(1.12);opacity:0;pointer-events:none;
+    transition:transform .3s cubic-bezier(.2,.8,.3,1),opacity .28s ease;
+    overflow-y:auto;padding:12px 14px calc(90px + env(safe-area-inset-bottom,0px));
+  }
+  #mob-cal-year-screen.open{transform:scale(1);opacity:1;pointer-events:auto;}
+  .mc-year-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .mc-year-nav>button:not([style]){width:36px;height:36px;border-radius:50%;border:none;background:var(--navy-mid);color:var(--offwhite);font-size:18px;cursor:pointer;}
+  .mc-year-t{font-size:26px;font-weight:800;color:var(--white);}
+  .mc-year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 12px;}
+  .mc-mini{border:none;background:transparent;cursor:pointer;text-align:left;padding:0;font-family:var(--font);-webkit-tap-highlight-color:transparent;}
+  .mc-mini-t{font-size:14px;font-weight:800;color:var(--white);margin-bottom:4px;}
+  .mc-mini-t.cur{color:var(--blue-bright);}
+  .mc-mini-g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .mc-mini-g i{font-style:normal;font-size:7.5px;color:var(--offwhite);text-align:center;line-height:1.7;}
+  .mc-mini-g i.ty{background:var(--blue-bright);color:#fff;border-radius:50%;font-weight:700;}
 }

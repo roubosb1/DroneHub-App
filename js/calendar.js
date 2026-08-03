@@ -765,6 +765,7 @@ function openCalEventModal(prefillDate){
   modal.id='cal-event-modal';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  if(window.innerWidth<=768) modal.classList.add('cal-modal-fullpage');
   modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:480px;border:1px solid var(--border-bright)" onclick="event.stopPropagation()">
     <div style="background:var(--navy-mid);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0">
       <div style="font-size:14px;font-weight:700;color:var(--white)">Add Calendar Event</div>
@@ -1873,6 +1874,7 @@ function _mcBuildJobsByDate(){
   if(showShoots){
     savedJobs.forEach(j=>{
       if(!j.date) return;
+      if(window.innerWidth<=768&&!_mcJobMatch(j)) return;
       const primary=getJobCreator(j)||'Unknown';
       if(!jobsByDate[j.date]) jobsByDate[j.date]=[];
       if(!jobsByDate[j.date].find(e=>e.id===j.id))
@@ -1880,6 +1882,7 @@ function _mcBuildJobsByDate(){
     });
     getGcalLinks().forEach(link=>{
       if(link.enabled===false) return;
+      if(window.innerWidth<=768&&!_mcMatchesFilter(link.creatorName)) return;
       (link.events||[]).forEach(ev=>{
         if(!ev.date) return;
         if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
@@ -1898,6 +1901,13 @@ function _mcBuildJobsByDate(){
       jobsByDate[dStr].push({_customEvt:true,id:e.id,name:e.title,_creator:e.memberName,date:dStr,_evtType:e.type,_typeDef:typeDef,_eventId:e.id});
     }
   });
+  // Employee filter chips: custom events by member (shoots already filtered)
+  if(typeof _mcFilterMember!=='undefined'&&_mcFilterMember){
+    Object.keys(jobsByDate).forEach(d=>{
+      jobsByDate[d]=jobsByDate[d].filter(e=>e._evtType==='shoot'?true:_mcMatchesFilter(e._creator));
+      if(!jobsByDate[d].length) delete jobsByDate[d];
+    });
+  }
   return jobsByDate;
 }
 
@@ -1909,27 +1919,28 @@ function _mcBuildGridHtml(jobsByDate){
   let html='';
   // Leading blank cells (previous month)
   for(let i=firstDay-1;i>=0;i--)
-    html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${daysInPrev-i}</span><div class="mob-cal-dots"></div></div>`;
+    html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${daysInPrev-i}</span><div class="mc-pills"></div></div>`;
   // Current month cells
   for(let d=1;d<=daysInMonth;d++){
     const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isToday=ds===todayStr;
     const isSel=ds===_mobCalSelDate;
     const items=jobsByDate[ds]||[];
-    const dots=items.slice(0,3).map(j=>{
-      if(j._customEvt) return `<span class="mob-cal-dot" style="background:${j._typeDef.color}"></span>`;
+    const pills=items.slice(0,2).map(j=>{
+      if(j._customEvt) return `<span class="mc-pill" style="background:${j._typeDef.bg};color:${j._typeDef.color}">${j.name}</span>`;
       const col=getCreatorColor(j._creator);
-      return `<span class="mob-cal-dot" style="background:${col.border}"></span>`;
+      return `<span class="mc-pill" style="background:${col.bg};color:${col.text||col.border}">${j.name}</span>`;
     }).join('');
+    const more=items.length>2?`<span class="mc-more">+${items.length-2}</span>`:'';
     html+=`<div class="mc-cell${isToday?' mc-today':''}${isSel?' mc-sel':''}" onclick="mobCalSelectDay('${ds}')">
       <span class="mc-num">${d}</span>
-      <div class="mob-cal-dots">${dots}</div>
+      <div class="mc-pills">${pills}${more}</div>
     </div>`;
   }
   // Trailing blank cells (next month)
   const total=Math.ceil((firstDay+daysInMonth)/7)*7;
   for(let d=1;d<=total-firstDay-daysInMonth;d++)
-    html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${d}</span><div class="mob-cal-dots"></div></div>`;
+    html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${d}</span><div class="mc-pills"></div></div>`;
   return html;
 }
 
@@ -1937,7 +1948,7 @@ function renderMobCal(dir){
   if(window.innerWidth>768) return;
   const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const ml=document.getElementById('mob-cal-nav-month');
-  if(ml) ml.textContent=months[calMonth]+' '+calYear;
+  if(ml){ ml.textContent=months[calMonth]+' '+calYear; ml.onclick=_mcOpenYear; ml.style.cursor='pointer'; }
 
   // If selected date is outside current month, reset to today or 1st
   const curMY=calYear+'-'+String(calMonth+1).padStart(2,'0');
@@ -1981,8 +1992,86 @@ function renderMobCal(dir){
     g.innerHTML=newHtml;clip.appendChild(g);
   }
   // Day-view event list is rendered by _mcBuildDayScreen when a day is opened
+  _mcRenderFilterChips();
   _mcRenderUpcoming();
   _mcInitSwipe();
+}
+
+// ── Year view (Apple-style): 12 mini-months, tap one to open it ─────────────
+function _mcOpenYear(){
+  let yr=document.getElementById('mob-cal-year-screen');
+  if(!yr){
+    yr=document.createElement('div');
+    yr.id='mob-cal-year-screen';
+    document.getElementById('mob-cal-main')?.appendChild(yr);
+  }
+  _mcRenderYear(calYear);
+  requestAnimationFrame(()=>yr.classList.add('open'));
+}
+function _mcCloseYear(month){
+  const yr=document.getElementById('mob-cal-year-screen');
+  if(month!=null){ calMonth=month; renderMobCal(0); }
+  yr?.classList.remove('open');
+}
+function _mcRenderYear(year){
+  const yr=document.getElementById('mob-cal-year-screen');
+  if(!yr) return;
+  calYear=year;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+  const mini=(mi)=>{
+    const first=new Date(year,mi,1).getDay();
+    const days=new Date(year,mi+1,0).getDate();
+    let cells='';
+    for(let i=0;i<first;i++) cells+='<i></i>';
+    for(let d=1;d<=days;d++){
+      const isToday=year===now.getFullYear()&&mi===now.getMonth()&&d===now.getDate();
+      cells+=`<i class="${isToday?'ty':''}">${d}</i>`;
+    }
+    const cur=year===now.getFullYear()&&mi===now.getMonth();
+    return `<button class="mc-mini" onclick="_mcCloseYear(${mi})">
+      <div class="mc-mini-t${cur?' cur':''}">${months[mi]}</div>
+      <div class="mc-mini-g">${cells}</div>
+    </button>`;
+  };
+  yr.innerHTML=`
+    <div class="mc-year-nav">
+      <button onclick="_mcRenderYear(${year-1})" aria-label="Previous year">‹</button>
+      <div class="mc-year-t">${year}</div>
+      <button onclick="_mcRenderYear(${year+1})" aria-label="Next year">›</button>
+      <button onclick="_mcCloseYear()" style="margin-left:auto;font-size:13px;padding:6px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy-mid);color:var(--offwhite)">Done</button>
+    </div>
+    <div class="mc-year-grid">${Array.from({length:12},(_,i)=>mini(i)).join('')}</div>`;
+}
+
+// ── Per-employee calendar filter (mobile chips) ─────────────────────────────
+let _mcFilterMember='';
+function _mcSetFilter(name){
+  _mcFilterMember=name===_mcFilterMember?'':name; // tap active chip to clear
+  renderMobCal(0);
+  if(document.getElementById('mob-cal-main')?.classList.contains('mc-day-open'))
+    _mcRenderDayEvents(_mobCalSelDate);
+}
+function _mcMatchesFilter(creatorName){
+  if(!_mcFilterMember) return true;
+  return (creatorName||'').toLowerCase().includes(_mcFilterMember.toLowerCase());
+}
+// A job "belongs" to a member if they hold ANY role on it
+function _mcJobMatch(j){
+  if(!_mcFilterMember) return true;
+  const ts=typeof getTrackerStage==='function'?getTrackerStage(j.id):{};
+  const names=[typeof getJobCreator==='function'?getJobCreator(j):'',ts.videographer,ts.photographer,ts.claimedBy,j.videographer,j.photographer].filter(Boolean);
+  return names.some(n=>_mcMatchesFilter(n));
+}
+function _mcRenderFilterChips(){
+  const el=document.getElementById('mob-cal-filter');
+  if(!el) return;
+  const members=(typeof getAdminTeamMembers==='function'?getAdminTeamMembers():[]).filter(m=>m.name);
+  const chip=(label,name,color)=>`<button onclick="_mcSetFilter('${name.replace(/'/g,"\\'")}')" class="mc-fchip${(_mcFilterMember===name||( !_mcFilterMember&&!name))?' active':''}">${color?`<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>`:''}${label}</button>`;
+  el.innerHTML=chip('All','')+members.map(m=>{
+    const col=typeof getCreatorColor==='function'?getCreatorColor(m.name):{border:'var(--blue)'};
+    return chip(m.name.split(' ')[0],m.name,col.border);
+  }).join('');
 }
 
 // ── "Upcoming" schedule list under the month grid (Apple Calendar list feel) ─
@@ -1995,12 +2084,14 @@ function _mcRenderUpcoming(){
     if(!j.date||j.date<todayStr) return;
     if(!(j.status==='confirmed'||j.status==='completed'||j.status==='booked')) return;
     const creator=typeof getJobCreator==='function'?getJobCreator(j):'';
+    if(!_mcJobMatch(j)) return;
     const col=typeof getCreatorColor==='function'?getCreatorColor(creator):{border:'var(--blue)'};
     items.push({date:j.date,time:j.shootTime||'',title:j.name||j.address||'Shoot',sub:creator||j.clientName||'',color:col.border,onclick:`mobCalSelectDay('${j.date}')`});
   });
   (typeof _calVisibleEvents==='function'?_calVisibleEvents():[]).forEach(ev=>{
     const end=ev.endDate||ev.date;
     if(end<todayStr) return;
+    if(ev.memberName&&!_mcMatchesFilter(ev.memberName)) return;
     const td=(typeof CAL_EVENT_TYPES!=='undefined'&&CAL_EVENT_TYPES.find(t=>t.id===ev.type))||{color:'var(--amber)',icon:''};
     items.push({date:ev.date<todayStr?todayStr:ev.date,time:'',title:(td.icon?td.icon+' ':'')+ev.title,sub:ev.memberName||'',color:td.color,onclick:`mobCalSelectDay('${ev.date<todayStr?todayStr:ev.date}')`});
   });
@@ -2114,50 +2205,77 @@ function _mcRenderWeekStrip(dateStr){
   strip.innerHTML=html;
 }
 
-// Render the event list for a day with time-sorted layout
+// Apple-style day timeline: all-day chips + hour rails with positioned events
 function _mcRenderDayEvents(dateStr){
   const body=document.getElementById('mob-cal-dv-events');
   if(!body) return;
-  const dayJobs=savedJobs.filter(j=>j.date===dateStr)
+  const dayJobs=savedJobs.filter(j=>j.date===dateStr&&_mcJobMatch(j))
     .sort((a,b)=>(a.shootTime||'').localeCompare(b.shootTime||''));
-  const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date));
-  let html='';
-  // All-day custom events first
-  dayEvts.forEach(ev=>{
-    const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
-    html+=`<div class="mc-ev-row" style="background:${td.bg};border-left-color:${td.color}"
-        onclick="mcShowEventDetail('custom','${ev.id}','${dateStr}')">
-      <div class="mc-ev-time" style="color:${td.color}">all-day</div>
-      <div class="mc-ev-body">
-        <div class="mc-ev-title">${td.icon} ${ev.title}</div>
-        ${ev.memberName?`<div class="mc-ev-sub">${ev.memberName}</div>`:''}
-        ${ev.notes?`<div class="mc-ev-sub" style="font-style:italic">${ev.notes}</div>`:''}
-      </div>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;align-self:center"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>`;
+  const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date)&&(!ev.memberName||_mcMatchesFilter(ev.memberName)));
+
+  // All-day row: custom events + untimed shoots
+  const untimed=dayJobs.filter(j=>!j.shootTime);
+  const alldayChips=[
+    ...dayEvts.map(ev=>{
+      const td=CAL_EVENT_TYPES.find(t=>t.id===ev.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+      return `<button class="mc-ad-chip" style="background:${td.bg};color:${td.color};border:1px solid ${td.color}55" onclick="mcShowEventDetail('custom','${ev.id}','${dateStr}')">${td.icon} ${ev.title}${ev.memberName?' · '+ev.memberName.split(' ')[0]:''}</button>`;
+    }),
+    ...untimed.map(j=>{
+      const col=getCreatorColor(getJobCreator(j));
+      return `<button class="mc-ad-chip" style="background:${col.bg};color:${col.text||col.border};border:1px solid ${col.border}66" onclick="mcShowEventDetail('job',${j.id},'${dateStr}')">🎥 ${j.name}</button>`;
+    })
+  ];
+
+  // Timeline 6 AM – 9 PM, 64px per hour
+  const H0=6,H1=21,PX=64;
+  const rails=[];
+  for(let h=H0;h<=H1;h++){
+    const lbl=h===12?'Noon':(h%12||12)+(h<12?' AM':' PM');
+    rails.push(`<div class="mc-hr" style="top:${(h-H0)*PX}px"><span>${lbl}</span><i></i></div>`);
+  }
+  // Layout: overlapping events share the width side-by-side (like Apple)
+  const timed=dayJobs.filter(j=>j.shootTime).map(j=>{
+    const [hh,mm]=(j.shootTime||'9:00').split(':').map(Number);
+    const startH=Math.min(Math.max(hh+(mm||0)/60,H0),H1);
+    const durH=Math.max(parseFloat(j.duration)||1,0.75);
+    return {j,start:startH,end:Math.min(startH+durH,H1)};
+  }).sort((a,b)=>a.start-b.start);
+  // cluster overlaps → assign columns
+  timed.forEach((e,i)=>{
+    e.col=0;e.cols=1;
+    const overl=timed.filter(o=>o!==e&&o.start<e.end&&o.end>e.start);
+    const used=new Set(overl.filter(o=>o.col!=null&&timed.indexOf(o)<i).map(o=>o.col));
+    while(used.has(e.col)) e.col++;
+    e.cols=Math.max(e.col+1,...overl.map(o=>(o.col||0)+1),1);
   });
-  // Timed job shoots
-  dayJobs.forEach(j=>{
+  timed.forEach(e=>{ // widen cols to cluster max
+    const overl=timed.filter(o=>o.start<e.end&&o.end>e.start);
+    e.cols=Math.max(...overl.map(o=>o.cols));
+  });
+  const blocks=timed.map(({j,start,end,col:ci,cols})=>{
+    const col=getCreatorColor(getJobCreator(j));
     const creator=getJobCreator(j);
-    const col=getCreatorColor(creator);
-    const timeDisp=j.shootTime?_mcFmtTime(j.shootTime):'—';
-    html+=`<div class="mc-ev-row" style="background:${col.bg};border-left-color:${col.border}"
-        onclick="mcShowEventDetail('job',${j.id},'${dateStr}')">
-      <div class="mc-ev-time">${timeDisp}</div>
-      <div class="mc-ev-body">
-        <div class="mc-ev-title">${j.name}</div>
-        ${creator?`<div class="mc-ev-sub" style="color:${col.text}">${creator}</div>`:''}
-        ${j.address?`<div class="mc-ev-sub">${j.address}</div>`:''}
-        <span class="status-badge status-${j.status||'quoted'}" style="margin-top:4px;display:inline-block">${j.status||'quoted'}</span>
-      </div>
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;align-self:center"><polyline points="9 18 15 12 9 6"/></svg>
+    const wPct=100/cols, lPct=ci*wPct;
+    return `<div class="mc-tl-evt" style="top:${(start-H0)*PX+2}px;height:${(end-start)*PX-4}px;left:calc(72px + (100% - 86px)*${(lPct/100).toFixed(3)});width:calc((100% - 86px)*${(wPct/100).toFixed(3)} - 4px);background:${col.bg};border-left:3px solid ${col.border}" onclick="mcShowEventDetail('job',${j.id},'${dateStr}')">
+      <div class="mc-tl-t">${j.name}</div>
+      <div class="mc-tl-s">${_mcFmtTime(j.shootTime)}${creator?' · '+creator.split(' ')[0]:''}${j.address?' · '+j.address:''}</div>
     </div>`;
   });
-  if(!html) html=`<div style="padding:36px 0;text-align:center;color:var(--muted);font-size:13px">No events<br><button onclick="openCalEventModal('${dateStr}')" style="margin-top:12px;border:1px solid var(--blue);border-radius:10px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-size:13px;padding:6px 18px;font-weight:600">+ Add Event</button></div>`;
+
+  const empty=!alldayChips.length&&!blocks.length;
+  body.innerHTML=`
+    ${alldayChips.length?`<div class="mc-allday"><span class="mc-ad-lbl">all-day</span><div class="mc-ad-wrap">${alldayChips.join('')}</div></div>`:''}
+    ${empty?`<div style="padding:30px 0 8px;text-align:center;color:var(--muted);font-size:13px">Nothing scheduled<br><button onclick="openCalEventModal('${dateStr}')" style="margin-top:12px;border:1px solid var(--blue);border-radius:10px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-size:13px;padding:6px 18px;font-weight:600">+ Add Event</button></div>`:''}
+    <div class="mc-timeline" style="height:${(H1-H0)*PX+20}px">
+      ${rails.join('')}
+      ${blocks.join('')}
+    </div>`;
   body.style.opacity='0';
-  body.innerHTML=html;
-  body.scrollTop=0;
   requestAnimationFrame(()=>{body.style.transition='opacity .18s';body.style.opacity='1';});
+  // Scroll to first event or 8 AM
+  const first=dayJobs.find(j=>j.shootTime);
+  const target=first?((parseInt(first.shootTime)||8)-H0-1)*PX:(8-H0)*PX;
+  setTimeout(()=>{body.scrollTop=Math.max(target,0);},60);
 }
 
 // Format "09:30" → "9:30 AM"
