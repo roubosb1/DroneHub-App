@@ -2148,3 +2148,15 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   padding:7px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);
   color:var(--blue-bright);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;
 }
+
+/* New Event: beat the global input styling so Title/Location/Notes sit flat in their cards */
+#mc-add-page .mca-in,
+#mc-add-page textarea.mca-in{
+  border:none!important;background:none!important;border-radius:0!important;
+  box-shadow:none!important;padding:14px!important;
+}
+#mc-add-page .mca-in-sub{padding:12px 14px!important;}
+#mc-add-page .mca-dt{
+  border:none!important;background:rgba(255,255,255,.08)!important;border-radius:9px!important;
+  padding:7px 9px!important;
+}
