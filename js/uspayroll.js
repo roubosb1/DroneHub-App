@@ -97,6 +97,103 @@ const USP_STATES = [
   {code:'WI',name:'Wisconsin',type:'brackets',yr:2026,stdDed:13960,exemptAmt:700,brackets:[[15110,.035],[51950,.044],[332720,.053],[Infinity,.0765]],sui:{base:14000,agency:'WI DWD'},guide:{reg:'My Tax Account + DWD',wth:'WT-6 deposits + WT-7 annual',ui:'Quarterly UCT-101',notes:''}},
 ];
 
+
+// ── Local / city taxes (Tier 1 — audited 2026-08-03 vs official sources) ────
+// kind: 'wage' (% of gross) | 'taxable' (% of state-taxable wages) |
+//       'stateTaxPct' (% of the state income-tax amount) |
+//       'flatMonthly' ($ per month) | 'brackets' (annual brackets on wages)
+// byStatus: optional {single:[...],married:[...]} bracket sets (MD tiered counties)
+const USP_LOCALS = {
+  NY: {label:'Locality', opts:[
+    {id:'nyc',name:'New York City (resident)',kind:'brackets',base:'taxable',brackets:[[12000,.03078],[25000,.03762],[50000,.03819],[Infinity,.03876]]},
+    {id:'yonkers_r',name:'Yonkers (resident)',kind:'stateTaxPct',rate:0.1675},
+    {id:'yonkers_nr',name:'Yonkers (nonresident worker)',kind:'wage',rate:0.005},
+  ]},
+  MD: {label:'County of residence', opts:[
+    {id:'allegany',name:'Allegany',kind:'taxable',rate:.032},
+    {id:'annearundel',name:'Anne Arundel',kind:'brackets',base:'taxable',byStatus:{single:[[50000,.027],[400000,.0294],[Infinity,.032]],married:[[75000,.027],[480000,.0294],[Infinity,.032]]}},
+    {id:'baltco',name:'Baltimore County',kind:'taxable',rate:.032},
+    {id:'baltcity',name:'Baltimore City',kind:'taxable',rate:.032},
+    {id:'calvert',name:'Calvert',kind:'taxable',rate:.032},
+    {id:'caroline',name:'Caroline',kind:'taxable',rate:.032},
+    {id:'carroll',name:'Carroll',kind:'taxable',rate:.0303},
+    {id:'cecil',name:'Cecil',kind:'taxable',rate:.0274},
+    {id:'charles',name:'Charles',kind:'taxable',rate:.0303},
+    {id:'dorchester',name:'Dorchester',kind:'taxable',rate:.033},
+    {id:'frederick',name:'Frederick',kind:'brackets',base:'taxable',byStatus:{single:[[25000,.0225],[50000,.0275],[150000,.0296],[Infinity,.032]],married:[[25000,.0225],[100000,.0275],[250000,.0296],[Infinity,.032]]}},
+    {id:'garrett',name:'Garrett',kind:'taxable',rate:.0265},
+    {id:'harford',name:'Harford',kind:'taxable',rate:.0306},
+    {id:'howard',name:'Howard',kind:'taxable',rate:.032},
+    {id:'kent',name:'Kent',kind:'taxable',rate:.033},
+    {id:'montgomery',name:'Montgomery',kind:'taxable',rate:.032},
+    {id:'princegeorges',name:"Prince George's",kind:'taxable',rate:.032},
+    {id:'queenannes',name:"Queen Anne's",kind:'taxable',rate:.032},
+    {id:'stmarys',name:"St. Mary's",kind:'taxable',rate:.032},
+    {id:'somerset',name:'Somerset',kind:'taxable',rate:.032},
+    {id:'talbot',name:'Talbot',kind:'taxable',rate:.024},
+    {id:'washington',name:'Washington',kind:'taxable',rate:.0295},
+    {id:'wicomico',name:'Wicomico',kind:'taxable',rate:.032},
+    {id:'worcester',name:'Worcester',kind:'taxable',rate:.0225},
+  ]},
+  IN: {label:'County', opts:[
+    ['Adams',.016],['Allen',.0159],['Bartholomew',.0175],['Benton',.0179],['Blackford',.025],['Boone',.017],['Brown',.025234],['Carroll',.024733],['Cass',.0295],['Clark',.02],['Clay',.0235],['Clinton',.0265],['Crawford',.0165],['Daviess',.015],['Dearborn',.014],['Decatur',.0245],['DeKalb',.0213],['Delaware',.015],['Dubois',.012],['Elkhart',.02],['Fayette',.0282],['Floyd',.0189],['Fountain',.021],['Franklin',.017],['Fulton',.0288],['Gibson',.013],['Grant',.0275],['Greene',.0235],['Hamilton',.011],['Hancock',.0194],['Harrison',.01],['Hendricks',.017],['Henry',.0202],['Howard',.0235],['Huntington',.0195],['Jackson',.021],['Jasper',.02864],['Jay',.025],['Jefferson',.0103],['Jennings',.025],['Johnson',.014],['Knox',.017],['Kosciusko',.01],['LaGrange',.0165],['Lake',.015],['LaPorte',.0145],['Lawrence',.0175],['Madison',.0225],['Marion',.0202],['Marshall',.0125],['Martin',.025],['Miami',.0254],['Monroe',.0214],['Montgomery',.0265],['Morgan',.0272],['Newton',.01],['Noble',.0175],['Ohio',.02],['Orange',.0175],['Owen',.025],['Parke',.0265],['Perry',.014],['Pike',.012],['Porter',.005],['Posey',.0145],['Pulaski',.0285],['Putnam',.023],['Randolph',.03],['Ripley',.0238],['Rush',.0215],['St. Joseph',.0175],['Scott',.0216],['Shelby',.017],['Spencer',.008],['Starke',.0171],['Steuben',.0199],['Sullivan',.017],['Switzerland',.0145],['Tippecanoe',.0128],['Tipton',.026],['Union',.0275],['Vanderburgh',.0125],['Vermillion',.015],['Vigo',.02],['Wabash',.029],['Warren',.0212],['Warrick',.01],['Washington',.02],['Wayne',.0125],['Wells',.021],['White',.0232],['Whitley',.016829]
+  ].map(function(c){return {id:c[0].toLowerCase().replace(/[^a-z]/g,''),name:c[0],kind:'taxable',rate:c[1]};})},
+  MI: {label:'City', opts:(function(){
+    var cities=[['Detroit',.024,.012],['Grand Rapids',.015,.0075],['Highland Park',.02,.01],['Saginaw',.015,.0075],['Albion',.01,.005],['Battle Creek',.01,.005],['Benton Harbor',.01,.005],['Big Rapids',.01,.005],['East Lansing',.01,.005],['Flint',.01,.005],['Grayling',.01,.005],['Hamtramck',.01,.005],['Hudson',.01,.005],['Ionia',.01,.005],['Jackson',.01,.005],['Lansing',.01,.005],['Lapeer',.01,.005],['Muskegon',.01,.005],['Muskegon Heights',.01,.005],['Pontiac',.01,.005],['Port Huron',.01,.005],['Portland',.01,.005],['Springfield',.01,.005],['Walker',.01,.005]];
+    var o=[];
+    cities.forEach(function(c){
+      var slug=c[0].toLowerCase().replace(/[^a-z]/g,'');
+      o.push({id:slug+'_r',name:c[0]+' (resident)',kind:'wage',rate:c[1]});
+      o.push({id:slug+'_n',name:c[0]+' (nonresident worker)',kind:'wage',rate:c[2]});
+    });
+    return o;
+  })()},
+  MO: {label:'City', opts:[
+    {id:'kc',name:'Kansas City (1% earnings tax)',kind:'wage',rate:.01},
+    {id:'stl',name:'St. Louis (1% earnings tax)',kind:'wage',rate:.01},
+  ]},
+  CO: {label:'Occupational privilege tax (work city)', opts:[
+    {id:'denver',name:'Denver ($5.75/mo employee)',kind:'flatMonthly',amt:5.75},
+    {id:'aurora',name:'Aurora ($2/mo employee)',kind:'flatMonthly',amt:2},
+    {id:'glendale',name:'Glendale ($5/mo employee)',kind:'flatMonthly',amt:5},
+    {id:'greenwood',name:'Greenwood Village ($2/mo employee)',kind:'flatMonthly',amt:2},
+    {id:'sheridan',name:'Sheridan ($3/mo employee)',kind:'flatMonthly',amt:3},
+  ]},
+  AL: {label:'Occupational tax (work city)', opts:[
+    {id:'birmingham',name:'Birmingham (1%)',kind:'wage',rate:.01},
+    {id:'bessemer',name:'Bessemer (1%)',kind:'wage',rate:.01},
+    {id:'gadsden',name:'Gadsden (2%)',kind:'wage',rate:.02},
+  ]},
+  OR: {label:'Portland-metro taxes (residents/workers)', opts:[
+    {id:'mult',name:'Multnomah Co. Preschool for All',kind:'brackets',base:'wage',byStatus:{single:[[125000,0],[250000,.015],[Infinity,.03]],married:[[200000,0],[400000,.015],[Infinity,.03]]}},
+    {id:'metro',name:'Metro Supportive Housing (SHS)',kind:'brackets',base:'wage',byStatus:{single:[[125000,0],[Infinity,.01]],married:[[200000,0],[Infinity,.01]]}},
+    {id:'both',name:'Both Multnomah PFA + Metro SHS',kind:'combo',ids:['mult','metro']},
+  ]},
+};
+
+function _uspLocalCalc(st,localId,ctx){
+  const cfg=USP_LOCALS[st?.code||''];
+  if(!cfg||!localId||localId==='none') return null;
+  const opt=cfg.opts.find(o=>o.id===localId);
+  if(!opt) return null;
+  if(opt.kind==='combo'){
+    let total=0,names=[];
+    opt.ids.forEach(id=>{const r=_uspLocalCalc(st,id,ctx);if(r){total+=r.amt;}});
+    return {label:opt.name,amt:total};
+  }
+  let annual=0;
+  if(opt.kind==='wage') annual=ctx.annual*opt.rate;
+  else if(opt.kind==='taxable') annual=ctx.stTaxable*opt.rate;
+  else if(opt.kind==='stateTaxPct') annual=ctx.stAnnualTax*opt.rate;
+  else if(opt.kind==='flatMonthly') return {label:opt.name,amt:opt.amt*12/ctx.periods};
+  else if(opt.kind==='brackets'){
+    const br=opt.byStatus?(opt.byStatus[ctx.status==='married'?'married':'single']):opt.brackets;
+    const base=opt.base==='taxable'?ctx.stTaxable:ctx.annual;
+    annual=_uspBracketTax(base,br);
+  }
+  return {label:opt.name,amt:annual/ctx.periods};
+}
+
 // ── Calculation engine ───────────────────────────────────────────────────────
 function _uspBracketTax(taxable, brackets){
   let tax=0, prev=0;
@@ -143,14 +240,15 @@ function uspCalc(input){
   }
 
   // ── State income tax ──
-  let stateWH=0, stateLines=[];
+  let stateWH=0, stateLines=[], _stTaxable=0, _stAnnualTax=0;
   if(st){
     if(st.type==='flat'||st.type==='brackets'){
-      let stTaxable=annual-(st.stdDed||0)-(st.exemptAmt||0)-(st.exemptFirst||0);
-      stTaxable=Math.max(stTaxable,0);
-      const stAnnual=st.type==='flat'?stTaxable*st.rate:_uspBracketTax(stTaxable,st.brackets);
-      stateWH=stAnnual/periods;
+      _stTaxable=Math.max(annual-(st.stdDed||0)-(st.exemptAmt||0)-(st.exemptFirst||0),0);
+      _stAnnualTax=st.type==='flat'?_stTaxable*st.rate:_uspBracketTax(_stTaxable,st.brackets);
+      stateWH=_stAnnualTax/periods;
     }
+    const _loc=_uspLocalCalc(st,input.local,{annual,periods,status,stTaxable:_stTaxable,stAnnualTax:_stAnnualTax});
+    if(_loc&&_loc.amt>0.004) stateLines.push({label:_loc.label,amt:_loc.amt});
     (st.extras||[]).forEach(x=>{
       const capLeft=x.cap===Infinity?gross:Math.max(Math.min(ytd+gross,x.cap)-Math.min(ytd,x.cap),0);
       const amt=Math.min(capLeft,gross)*x.rate;
@@ -194,6 +292,8 @@ function uspOpenCalc(){
           <select id="usp-state" class="mca-dt" style="min-width:150px" onchange="uspRun()">
             ${USP_STATES.map(s=>`<option value="${s.code}"${s.code==='CA'?' selected':''}>${s.name}</option>`).join('')}
           </select></div>
+        <div class="mca-row" id="usp-local-row" style="display:none"><span class="mca-lbl" id="usp-local-lbl">Locality</span>
+          <select id="usp-local" class="mca-dt" style="min-width:150px;max-width:180px" onchange="uspRun()"></select></div>
         <div class="mca-row"><span class="mca-lbl">Pay frequency</span>
           <select id="usp-freq" class="mca-dt" onchange="uspRun()">
             <option value="weekly">Weekly</option><option value="biweekly" selected>Bi-weekly</option>
@@ -217,16 +317,32 @@ function uspOpenCalc(){
       <div id="usp-result"></div>
       <button class="fr-newbtn" style="width:100%;margin-top:4px" onclick="uspOpenGuide(document.getElementById('usp-state').value)">📋 Filing guide for this state</button>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:14px">
-        Federal: ${USP_FED.year} Pub 15-T percentage method (SS wage base ${_uspF(USP_FED.ssWageBase)}). State rates carry their own year tag — verify against the state's current withholding tables before filing. Local/city taxes are flagged in each filing guide but not computed here.
+        Federal: ${USP_FED.year} Pub 15-T percentage method (SS wage base ${_uspF(USP_FED.ssWageBase)}). State rates carry their own year tag — verify against the state's current withholding tables before filing. Local taxes computed for NY (NYC/Yonkers), MD counties, IN counties, MI cities, KC/St. Louis, Denver-metro head taxes, AL cities and Portland-metro; Ohio municipalities, PA locals and KY occupational taxes are flagged in the guides and coming next.
       </div>
     </div>`;
   document.body.appendChild(page);
   uspRun();
 }
+function _uspSyncLocalRow(){
+  const stCode=document.getElementById('usp-state')?.value;
+  const row=document.getElementById('usp-local-row');
+  const sel=document.getElementById('usp-local');
+  if(!row||!sel) return;
+  const cfg=USP_LOCALS[stCode];
+  if(!cfg){row.style.display='none';sel.innerHTML='';return;}
+  if(sel.dataset.st!==stCode){
+    sel.dataset.st=stCode;
+    document.getElementById('usp-local-lbl').textContent=cfg.label;
+    sel.innerHTML='<option value="none">None</option>'+cfg.opts.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
+  }
+  row.style.display='';
+}
 function uspRun(){
   const box=document.getElementById('usp-result'); if(!box) return;
+  _uspSyncLocalRow();
   const r=uspCalc({
     state:document.getElementById('usp-state').value,
+    local:document.getElementById('usp-local')?.value,
     freq:document.getElementById('usp-freq').value,
     gross:document.getElementById('usp-gross').value,
     ytdGross:document.getElementById('usp-ytd').value,
