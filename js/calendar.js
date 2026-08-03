@@ -1911,10 +1911,11 @@ function _mcBuildJobsByDate(){
   return jobsByDate;
 }
 
-function _mcBuildGridHtml(jobsByDate){
-  const firstDay=new Date(calYear,calMonth,1).getDay();
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const daysInPrev=new Date(calYear,calMonth,0).getDate();
+function _mcBuildGridHtml(jobsByDate,gy,gm){
+  const Y=gy!=null?gy:calYear, M=gm!=null?gm:calMonth;
+  const firstDay=new Date(Y,M,1).getDay();
+  const daysInMonth=new Date(Y,M+1,0).getDate();
+  const daysInPrev=new Date(Y,M,0).getDate();
   const todayStr=new Date().toISOString().slice(0,10);
   let html='';
   // Leading blank cells (previous month)
@@ -1922,7 +1923,7 @@ function _mcBuildGridHtml(jobsByDate){
     html+=`<div class="mc-cell mc-other"><span class="mc-num" style="font-size:12px">${daysInPrev-i}</span><div class="mc-pills"></div></div>`;
   // Current month cells
   for(let d=1;d<=daysInMonth;d++){
-    const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const ds=Y+'-'+String(M+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isToday=ds===todayStr;
     const isSel=ds===_mobCalSelDate;
     const items=jobsByDate[ds]||[];
@@ -1950,51 +1951,86 @@ function renderMobCal(dir){
   const ml=document.getElementById('mob-cal-nav-month');
   if(ml){ ml.textContent=months[calMonth]+' '+calYear; ml.onclick=_mcOpenYear; ml.style.cursor='pointer'; }
 
-  // If selected date is outside current month, reset to today or 1st
   const curMY=calYear+'-'+String(calMonth+1).padStart(2,'0');
   if(_mobCalSelDate.slice(0,7)!==curMY){
     const todayStr=new Date().toISOString().slice(0,10);
     _mobCalSelDate=todayStr.slice(0,7)===curMY?todayStr:curMY+'-01';
   }
 
-  const jobsByDate=_mcBuildJobsByDate();
-  const newHtml=_mcBuildGridHtml(jobsByDate);
   const clip=document.getElementById('mob-cal-grid-clip');
   if(!clip) return;
-  const oldGrid=document.getElementById('mob-cal-grid');
+  const jobsByDate=_mcBuildJobsByDate();
+  const block=(y,m)=>`<div class="mc-month" data-y="${y}" data-m="${m}">
+    <div class="mc-month-title">${months[m]} ${y}</div>
+    <div class="mc-grid">${_mcBuildGridHtml(jobsByDate,y,m)}</div>
+  </div>`;
+  // Render prev, current, next — scroll extends the list seamlessly
+  const around=[-1,0,1].map(off=>{
+    const d=new Date(calYear,calMonth+off,1);
+    return block(d.getFullYear(),d.getMonth());
+  });
+  clip.innerHTML=around.join('');
+  clip.classList.add('mc-months');
+  _mcInitMonthScroll();
+  // Start scrolled to the current month
+  const cur=clip.querySelector(`.mc-month[data-y="${calYear}"][data-m="${calMonth}"]`);
+  const scroller=document.getElementById('mob-cal-month-screen');
+  if(cur&&scroller) requestAnimationFrame(()=>{ scroller.scrollTop=cur.offsetTop-52; });
 
-  if(dir!==0 && oldGrid){
-    // Slide old grid out, new grid in
-    const newGrid=document.createElement('div');
-    newGrid.id='mob-cal-grid';newGrid.className='mc-grid';
-    newGrid.innerHTML=newHtml;
-    newGrid.style.cssText=`position:absolute;top:0;left:${dir>0?'100%':'-100%'};width:100%;`;
-    clip.style.position='relative';
-    clip.appendChild(newGrid);
-    newGrid.getBoundingClientRect(); // force reflow
-    const dur='0.32s cubic-bezier(.4,0,.2,1)';
-    oldGrid.style.transition=`transform ${dur}`;
-    newGrid.style.transition=`transform ${dur}`;
-    requestAnimationFrame(()=>{
-      oldGrid.style.transform=`translateX(${dir>0?'-100%':'100%'})`;
-      newGrid.style.transform='translateX(0)';
-    });
-    setTimeout(()=>{
-      if(oldGrid.parentNode) oldGrid.remove();
-      newGrid.style.cssText='';
-      clip.style.position='';
-    },330);
-  } else if(oldGrid){
-    oldGrid.innerHTML=newHtml;
-  } else {
-    const g=document.createElement('div');
-    g.id='mob-cal-grid';g.className='mc-grid';
-    g.innerHTML=newHtml;clip.appendChild(g);
-  }
-  // Day-view event list is rendered by _mcBuildDayScreen when a day is opened
   _mcRenderFilterChips();
-  _mcRenderUpcoming();
-  _mcInitSwipe();
+}
+
+// Seamless month scroll: append/prepend months as you reach the edges
+let _mcMonthScrollInit=false;
+function _mcInitMonthScroll(){
+  if(_mcMonthScrollInit) return;
+  const scroller=document.getElementById('mob-cal-month-screen');
+  const clip=document.getElementById('mob-cal-grid-clip');
+  if(!scroller||!clip) return;
+  _mcMonthScrollInit=true;
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const jb=()=>_mcBuildJobsByDate();
+  const block=(y,m,jobsByDate)=>{
+    const div=document.createElement('div');
+    div.className='mc-month';div.dataset.y=y;div.dataset.m=m;
+    div.innerHTML=`<div class="mc-month-title">${months[m]} ${y}</div><div class="mc-grid">${_mcBuildGridHtml(jobsByDate,y,m)}</div>`;
+    return div;
+  };
+  let busy=false;
+  scroller.addEventListener('scroll',()=>{
+    if(busy) return;
+    const nearBottom=scroller.scrollTop+scroller.clientHeight>scroller.scrollHeight-260;
+    const nearTop=scroller.scrollTop<160;
+    if(nearBottom){
+      busy=true;
+      const last=clip.lastElementChild;
+      const d=new Date(+last.dataset.y,+last.dataset.m+1,1);
+      clip.appendChild(block(d.getFullYear(),d.getMonth(),jb()));
+      if(clip.children.length>8) { const h=clip.firstElementChild.offsetHeight; clip.firstElementChild.remove(); scroller.scrollTop-=h; }
+      busy=false;
+    } else if(nearTop){
+      busy=true;
+      const first=clip.firstElementChild;
+      const d=new Date(+first.dataset.y,+first.dataset.m-1,1);
+      const nb=block(d.getFullYear(),d.getMonth(),jb());
+      clip.insertBefore(nb,first);
+      scroller.scrollTop+=nb.offsetHeight;
+      if(clip.children.length>8) clip.lastElementChild.remove();
+      busy=false;
+    }
+    // Header label follows the month in view
+    const mid=scroller.scrollTop+scroller.clientHeight/3;
+    let vis=null;
+    [...clip.children].forEach(mo=>{ if(mo.offsetTop<=mid) vis=mo; });
+    if(vis){
+      const y=+vis.dataset.y,m=+vis.dataset.m;
+      if(y!==calYear||m!==calMonth){
+        calYear=y;calMonth=m;
+        const ml=document.getElementById('mob-cal-nav-month');
+        if(ml) ml.textContent=months[m]+' '+y;
+      }
+    }
+  },{passive:true});
 }
 
 // ── Year view (Apple-style): 12 mini-months, tap one to open it ─────────────

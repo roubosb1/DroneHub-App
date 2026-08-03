@@ -1973,7 +1973,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 
 /* Apple month cells: event title pills + taller rows */
 @media (max-width:768px){
-  .mc-cell{align-items:stretch!important;min-height:84px;padding:3px 1px!important;border-top:1px solid rgba(255,255,255,.05);}
+  .mc-cell{align-items:stretch!important;min-height:84px;min-width:0;overflow:hidden;padding:3px 1px!important;border-top:1px solid rgba(255,255,255,.05);}
+  .mc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))!important;}
+  .mc-months .mc-month-title{font-size:17px;font-weight:800;color:var(--white);padding:16px 16px 6px;}
+  .mc-pill{max-width:100%;display:block;}
   .mc-cell .mc-num{margin:0 auto;width:28px;height:28px;font-size:14px;}
   .mc-pills{display:flex;flex-direction:column;gap:2px;margin-top:2px;min-width:0;}
   .mc-pill{
@@ -1999,4 +2002,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   .mc-mini-g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
   .mc-mini-g i{font-style:normal;font-size:7.5px;color:var(--offwhite);text-align:center;line-height:1.7;}
   .mc-mini-g i.ty{background:var(--blue-bright);color:#fff;border-radius:50%;font-weight:700;}
+}
+
+/* calendar sits on the flat dark navy like everything else */
+@media (max-width:768px){
+  #pane-calendar,#mob-cal-main,#mob-cal-view-wrap,
+  #mob-cal-month-screen,#mob-cal-grid-clip,.mc-month{background:var(--navy)!important;}
 }
