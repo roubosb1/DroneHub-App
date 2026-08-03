@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=130">
+<link rel="stylesheet" href="css/styles.css?v=131">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -620,6 +620,10 @@
     <button class="app-gnav-item" id="app-gnav-files" onclick="showPane('files')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
       <span class="app-gnav-label">Files</span>
+    </button>
+    <button class="app-gnav-item" id="app-gnav-community" onclick="showPane('community')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="app-gnav-label">Community</span>
     </button>
   </div>
   <div style="border-top:1px solid rgba(255,255,255,.07);padding:8px 0;flex-shrink:0">
@@ -1637,6 +1641,7 @@
         </div>
         <div class="emp-pay-actions" style="display:flex;gap:8px">
           <button onclick="_openPayrollCalc()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--green);background:rgba(34,217,122,.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Calculator</button>
+          <button onclick="uspOpenCalc()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">🇺🇸 US Payroll</button>
           <button onclick="_openComplianceGuide()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(255,152,56,.1);color:var(--orange);font-size:12px;font-weight:700;cursor:pointer">Filing Guide</button>
           <button onclick="openAddEmployeePayStub()" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">+ Add Pay Stub</button>
         </div>
