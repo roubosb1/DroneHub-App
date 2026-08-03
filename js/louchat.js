@@ -387,7 +387,7 @@ function renderLouChat(){
         <!-- Name + preview -->
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-            <span style="font-size:14px;font-weight:${u>0?'700':'600'};color:${isActive||u>0?'var(--white)':'var(--offwhite)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%">${ch.name}</span>
+            <span style="font-size:${_mobFlat?'16.5px':'14px'};font-weight:${u>0?'700':'600'};color:${isActive||u>0?'var(--white)':'var(--offwhite)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%">${ch.name}</span>
             <span style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:6px">${lastTime}</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
