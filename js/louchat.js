@@ -254,11 +254,77 @@ function lcEnsureDefaults(){
     {id:'lc_general',name:'Team',type:'general',topic:'Team-wide announcements and chat',createdAt:new Date().toISOString().slice(0,10),pinned:'Welcome to LouChat! This is your team hub.',members:[]},
     {id:'lc_projects',name:'projects',type:'project',topic:'Project updates, shoot notes, and delivery tracking',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]},
     {id:'lc_social',name:'social-media',type:'social',topic:'Social media content, scheduling, and strategy',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]},
-    {id:'lc_katrina',name:'katrina-barrett',type:'client',topic:'Katrina Barrett — social media management & shoots',createdAt:new Date().toISOString().slice(0,10),pinned:'Ongoing client — social media + regular shoots',members:[]},
     {id:'lc_admin',name:'admin-only',type:'admin',topic:'DroneHub admin — finances, contracts, planning',createdAt:new Date().toISOString().slice(0,10),pinned:'',members:[]},
   ];
   saveLcChannels(defaults);
   lcEnsureWelcomeMsg();
+}
+
+// ── One chat per client: merge legacy/duplicate client channels ──────────────
+// Finds every channel tied to the same client (by clientId or by name slug),
+// folds their messages into the canonical lc_client_<id> channel, and removes
+// the duplicates. Safe to run repeatedly — does nothing when there's one each.
+async function lcDedupeClientChannels(){
+  try{
+    if(typeof clients==='undefined'||!clients.length) return;
+    let channels=getLcChannels();
+    let changed=false;
+    for(const c of clients){
+      if(!c.name) continue;
+      const full=c.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+      const first=c.name.split(' ')[0].toLowerCase();
+      const canonId='lc_client_'+c.id;
+      const related=channels.filter(ch=>ch.id!=='lc_welcome'&&(
+        String(ch.clientId||'')===String(c.id)||
+        ((ch.type==='client'||ch.type==='client_dm')&&(ch.name===full||ch.name===first))
+      ));
+      if(!related.length) continue;
+      let canon=channels.find(ch=>ch.id===canonId);
+      if(!canon){
+        canon={id:canonId,name:first,type:'client_dm',topic:'Direct messages from '+c.name,clientId:c.id,clientName:c.name,adminName:'',createdAt:new Date().toISOString().slice(0,10),members:[]};
+        channels.push(canon);changed=true;
+      }
+      if(String(canon.clientId||'')!==String(c.id)||canon.name!==first){
+        canon.clientId=c.id;canon.clientName=c.name;canon.name=first;canon.type='client_dm';changed=true;
+      }
+      const dupes=related.filter(ch=>ch.id!==canon.id);
+      if(!dupes.length) continue;
+      // Pull messages from local + Firebase for a channel, deduped by id
+      const pull=async chId=>{
+        let arr=[];
+        try{arr=JSON.parse(localStorage.getItem('dronehub_lc_msgs_'+chId)||'[]');}catch(e){}
+        if(typeof _fbToken==='function'&&_fbToken()){
+          try{
+            const fb=await fbGet('orgs',ORG_ID+':lc_msgs_'+chId);
+            if(fb?.msgs){JSON.parse(fb.msgs).forEach(m=>{if(!arr.some(x=>String(x.id)===String(m.id)))arr.push(m);});}
+          }catch(e){}
+        }
+        return arr;
+      };
+      const target=await pull(canon.id);
+      const seen=new Set(target.map(m=>String(m.id)));
+      for(const d of dupes){
+        (await pull(d.id)).forEach(m=>{
+          if(seen.has(String(m.id))) return;
+          m.channelId=canon.id;target.push(m);seen.add(String(m.id));
+        });
+        localStorage.removeItem('dronehub_lc_msgs_'+d.id);
+      }
+      target.sort((x,y)=>new Date(x.ts||x.sentAt||0)-new Date(y.ts||y.sentAt||0));
+      target.forEach(m=>m.channelId=canon.id);
+      try{localStorage.setItem('dronehub_lc_msgs_'+canon.id,JSON.stringify(target));}catch(e){}
+      if(typeof _fbToken==='function'&&_fbToken()){
+        fbSetStrict('orgs',ORG_ID+':lc_msgs_'+canon.id,{channelId:canon.id,msgs:JSON.stringify(target),updatedAt:Date.now()}).catch(()=>{});
+      }
+      if(lcActiveChannel&&dupes.some(d=>d.id===lcActiveChannel)) lcActiveChannel=canon.id;
+      channels=channels.filter(ch=>!dupes.some(d=>d.id===ch.id));
+      changed=true;
+    }
+    if(changed){
+      saveLcChannels(channels);
+      if(typeof renderLouChat==='function') renderLouChat();
+    }
+  }catch(e){console.warn('[lcDedupeClientChannels]',e.message);}
 }
 
 // Always keep the welcome message fresh — re-writes it every time so photo never disappears

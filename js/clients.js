@@ -4186,19 +4186,20 @@ async function cpSendMessage(){
   // Team messages go to the shared client channel; DMs to an admin get
   // their own channel so that person knows it's addressed to them.
   const isDm=chatTo!=='team';
-  const dmSlug=isDm?chatTo.toLowerCase().replace(/[^a-z0-9]+/g,'_'):'';
-  const lcChannelId=isDm?('lc_client_'+cpActiveClientId+'_dm_'+dmSlug):('lc_client_'+cpActiveClientId);
+  // ONE channel per client — DMs to a specific person land in the same thread
+  // tagged with @name so they know it's addressed to them.
+  const lcChannelId='lc_client_'+cpActiveClientId;
   let channels=getLcChannels();
   const existingCh=channels.find(c=>c.id===lcChannelId);
   if(!existingCh){
     channels.push({
       id:lcChannelId,
-      name:isDm?(clientDisplayName.split(' ')[0]+' → '+chatTo.split(' ')[0]).toLowerCase():clientDisplayName.split(' ')[0].toLowerCase(),
+      name:clientDisplayName.split(' ')[0].toLowerCase(),
       type:'client_dm',
-      topic:isDm?('Private — '+clientDisplayName+' ↔ '+chatTo):('Direct messages from '+clientDisplayName),
+      topic:'Direct messages from '+clientDisplayName,
       clientId:cpActiveClientId,
       clientName:clientDisplayName,
-      adminName:isDm?chatTo:'',
+      adminName:'',
       createdAt:new Date().toISOString().slice(0,10),
       members:[],
     });
@@ -4213,7 +4214,7 @@ async function cpSendMessage(){
   await saveLcMessage(lcChannelId,{
     id:Date.now(),
     author:clientDisplayName,
-    text,
+    text:isDm?('@'+chatTo.split(' ')[0]+' '+text):text,
     ts:new Date().toISOString(),
     from:'client',
     clientId:cpActiveClientId,
