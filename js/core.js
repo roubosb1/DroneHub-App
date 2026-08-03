@@ -79,7 +79,12 @@ async function lookupUserOrg(email){
 // All Firestore operations go through the server-side proxy.
 // If no session token is available (not logged in, or offline) the calls
 // are silently skipped — localStorage remains the primary data store.
-function _fbToken(){ return _dhToken||sessionStorage.getItem('dh_token')||null; }
+function _fbToken(){
+  if(_dhToken) return _dhToken;
+  // localStorage is the durable store (survives Safari closing); sessionStorage is legacy fallback
+  try{const t=localStorage.getItem('dh_token');if(t){_dhToken=t;return t;}}catch(e){}
+  try{return sessionStorage.getItem('dh_token');}catch(e){return null;}
+}
 async function _fbCall(body, _attempt=0){
   const tok=_fbToken(); if(!tok) return null;
   try{
@@ -88,7 +93,7 @@ async function _fbCall(body, _attempt=0){
       // Token expired/invalid — clear stale token and surface the prompt here
       // (not just signal the caller) so a 401 can never go unnoticed just
       // because a particular call site forgot to check _fbAuthExpired().
-      _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+      _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){} try{localStorage.removeItem('dh_token');}catch(e){}
       _fbShowSessionExpired();
       return {__authExpired:true};
     }
@@ -174,7 +179,7 @@ async function fbSetStrict(col,docId,data,_attempt=0){
   }
   if(r.status===401){
     // Token invalid/expired — clear it and show the session-expired screen
-    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){} try{localStorage.removeItem('dh_token');}catch(e){}
     _fbShowSessionExpired();
     throw new Error('Session expired — please sign in again');
   }
@@ -249,7 +254,7 @@ async function fbSubSetStrict(subCol,docId,data,_attempt=0){
     throw new Error(netErr.message||'Network error');
   }
   if(r.status===401){
-    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){}
+    _dhToken=null; try{sessionStorage.removeItem('dh_token');}catch(e){} try{localStorage.removeItem('dh_token');}catch(e){}
     _fbShowSessionExpired();
     throw new Error('Session expired — please sign in again');
   }
