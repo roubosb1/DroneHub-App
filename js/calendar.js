@@ -759,13 +759,13 @@ function calQuickAddSave(){
 
 // Open add-event modal
 function openCalEventModal(prefillDate){
+  if(window.innerWidth<=768){_mcOpenAddEvent(prefillDate);return;}
   const members=getAdminTeamMembers();
   const session=gateGetSession();
   const modal=document.createElement('div');
   modal.id='cal-event-modal';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.onclick=e=>{if(e.target===modal)modal.remove();};
-  if(window.innerWidth<=768) modal.classList.add('cal-modal-fullpage');
   modal.innerHTML=`<div style="background:var(--navy-card);border-radius:16px;width:100%;max-width:480px;border:1px solid var(--border-bright)" onclick="event.stopPropagation()">
     <div style="background:var(--navy-mid);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0">
       <div style="font-size:14px;font-weight:700;color:var(--white)">Add Calendar Event</div>
@@ -1978,6 +1978,7 @@ function renderMobCal(dir){
   if(cur&&scroller) requestAnimationFrame(()=>{ scroller.scrollTop=cur.offsetTop-52; });
 
   _mcRenderFilterChips();
+  _mcUpdateInboxBadge();
 }
 
 // Seamless month scroll: append/prepend months as you reach the edges
@@ -2306,7 +2307,7 @@ function _mcRenderDayEvents(dateStr){
   if(!body) return;
   const dayJobs=savedJobs.filter(j=>j.date===dateStr&&_mcJobMatch(j))
     .sort((a,b)=>(a.shootTime||'').localeCompare(b.shootTime||''));
-  const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date)&&(!ev.memberName||_mcMatchesFilter(ev.memberName)));
+  const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date)&&(!ev.memberName||_mcMatchesFilter(ev.memberName))&&(_calTypeFilters===null||_calTypeFilters.has(ev.type)));
 
   // All-day row: custom events + untimed shoots
   const untimed=dayJobs.filter(j=>!j.shootTime);
@@ -2360,7 +2361,7 @@ function _mcRenderDayEvents(dateStr){
   const empty=!alldayChips.length&&!blocks.length;
   body.innerHTML=`
     ${alldayChips.length?`<div class="mc-allday"><span class="mc-ad-lbl">all-day</span><div class="mc-ad-wrap">${alldayChips.join('')}</div></div>`:''}
-    ${empty?`<div style="padding:30px 0 8px;text-align:center;color:var(--muted);font-size:13px">Nothing scheduled<br><button onclick="openCalEventModal('${dateStr}')" style="margin-top:12px;border:1px solid var(--blue);border-radius:10px;background:rgba(91,141,239,.12);color:var(--blue-bright);cursor:pointer;font-size:13px;padding:6px 18px;font-weight:600">+ Add Event</button></div>`:''}
+    ${empty?`<div style="padding:34px 0 8px;text-align:center;color:var(--muted);font-size:13px">Nothing scheduled</div>`:''}
     <div class="mc-timeline" style="height:${(H1-H0)*PX+20}px">
       ${rails.join('')}
       ${blocks.join('')}
@@ -2679,4 +2680,267 @@ async function gcalDisconnect(memberId,memberName){
   }catch(e){
     showDhToast('Error',e.message,'⚠️','var(--red)',4000);
   }
+}
+
+// ══ MOBILE: Apple-style New Event page + Search / Invites / Calendars ═══════
+function _mcOpenAddEvent(prefillDate){
+  document.getElementById('mc-add-page')?.remove();
+  const dayOpen=document.getElementById('mob-cal-main')?.classList.contains('mc-day-open');
+  const d0=prefillDate||(dayOpen&&typeof _mobCalSelDate!=='undefined'&&_mobCalSelDate)||new Date().toISOString().slice(0,10);
+  const members=getAdminTeamMembers();
+  const session=gateGetSession();
+  const t0=CAL_EVENT_TYPES[0];
+  const page=document.createElement('div');
+  page.id='mc-add-page';
+  page.className='mc-page';
+  page.innerHTML=`
+    <div class="mca-hdr">
+      <button class="mca-circle" onclick="_mcCloseAddEvent()" aria-label="Cancel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div class="mca-title">New Event</div>
+      <button class="mca-circle mca-ok" onclick="_mcSaveNewEvent()" aria-label="Save"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+    </div>
+    <div class="mca-scroll">
+      <input type="hidden" id="cae-type" value="${t0.id}">
+      <div class="mca-card">
+        <input id="cae-title" class="mca-in" type="text" placeholder="Title" autocomplete="off">
+        <div class="mca-div"></div>
+        <input id="cae-notes" class="mca-in mca-in-sub" type="text" placeholder="Notes or location" autocomplete="off">
+      </div>
+      <div class="mca-card">
+        <div class="mca-row">
+          <span class="mca-lbl">All-day</span>
+          <label class="mca-sw"><input type="checkbox" id="mca-allday" onchange="_mcAddAllDay(this)"><i></i></label>
+        </div>
+        <div class="mca-row">
+          <span class="mca-lbl">Starts</span>
+          <span class="mca-dts">
+            <input type="date" class="mca-dt" id="cae-start" value="${d0}">
+            <input type="time" class="mca-dt mca-time" id="mca-start-t" value="09:00">
+          </span>
+        </div>
+        <div class="mca-row">
+          <span class="mca-lbl">Ends</span>
+          <span class="mca-dts">
+            <input type="date" class="mca-dt" id="cae-end" value="${d0}">
+            <input type="time" class="mca-dt mca-time" id="mca-end-t" value="10:00">
+          </span>
+        </div>
+      </div>
+      <div class="mca-card">
+        <div class="mca-row" onclick="_mcAddTypeToggle()">
+          <span class="mca-lbl">Calendar</span>
+          <span class="mca-val"><span class="mca-dot" id="mca-type-dot" style="background:${t0.color}"></span><span id="mca-type-lbl">${t0.label}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </div>
+        <div class="mca-typelist" id="mca-typelist">
+          ${CAL_EVENT_TYPES.map(t=>`<div class="mca-typerow" data-t="${t.id}" onclick="_mcAddTypePick('${t.id}')"><span class="mca-dot" style="background:${t.color}"></span>${t.label}<span class="mca-tcheck">${t.id===t0.id?'✓':''}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="mca-card">
+        <div class="mca-row" style="padding-bottom:8px"><span class="mca-lbl">Invite team</span></div>
+        <div style="display:flex;gap:6px;padding:0 14px 10px">
+          <select id="cae-team-sel" class="mca-sel">
+            <option value="">Select team member</option>
+            ${[{name:session?.name||session?.email||'Me'},...members].map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+          </select>
+          <button type="button" onclick="_calInviteAddTeam('cae')" class="mca-addbtn">+ Add</button>
+        </div>
+        <div id="cae-team-chips" style="display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 12px"></div>
+        <div class="mca-div"></div>
+        <div class="mca-row" style="padding-bottom:8px"><span class="mca-lbl">Invite clients</span></div>
+        <div style="position:relative;padding:0 14px 12px">
+          <input id="cae-client-search" type="text" placeholder="Search clients…" oninput="_calInviteClientSearch('cae',event)" autocomplete="off" class="mca-sel" style="width:100%;box-sizing:border-box">
+          <div id="cae-client-dd" style="display:none;position:absolute;left:14px;right:14px;top:calc(100% - 6px);background:var(--navy-card);border:1px solid var(--border-bright);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:10;max-height:160px;overflow-y:auto"></div>
+          <div id="cae-client-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"></div>
+        </div>
+      </div>
+      <div id="cae-overlap-warn" style="display:none;margin:0 16px 14px;padding:10px 12px;border-radius:12px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.4);font-size:11.5px;color:#F97316"></div>
+    </div>`;
+  document.body.appendChild(page);
+  ['cae-start','cae-end'].forEach(id=>document.getElementById(id)?.addEventListener('change',calEventCheckOverlap));
+  document.getElementById('cae-start')?.addEventListener('change',e=>{
+    const end=document.getElementById('cae-end');
+    if(end&&end.value<e.target.value) end.value=e.target.value;
+  });
+}
+function _mcCloseAddEvent(){document.getElementById('mc-add-page')?.remove();}
+function _mcAddAllDay(cb){
+  document.querySelectorAll('#mc-add-page .mca-time').forEach(el=>el.style.display=cb.checked?'none':'');
+}
+function _mcAddTypeToggle(){
+  const l=document.getElementById('mca-typelist');
+  if(l) l.style.display=l.style.display==='block'?'none':'block';
+}
+function _mcAddTypePick(id){
+  const t=CAL_EVENT_TYPES.find(x=>x.id===id);if(!t)return;
+  document.getElementById('cae-type').value=id;
+  document.getElementById('mca-type-dot').style.background=t.color;
+  document.getElementById('mca-type-lbl').textContent=t.label;
+  document.querySelectorAll('#mca-typelist .mca-typerow').forEach(r=>{
+    r.querySelector('.mca-tcheck').textContent=r.dataset.t===id?'✓':'';
+  });
+  document.getElementById('mca-typelist').style.display='none';
+  calEventCheckOverlap();
+}
+function _mcSaveNewEvent(){
+  const title=(document.getElementById('cae-title')?.value||'').trim();
+  if(!title){showDhToast('Add a title','Give the event a name before saving','','var(--orange)',2500);return;}
+  const type=document.getElementById('cae-type')?.value||'other';
+  const start=document.getElementById('cae-start')?.value;
+  if(!start){showDhToast('Pick a date','','','var(--orange)',2000);return;}
+  let end=document.getElementById('cae-end')?.value||start;
+  if(end<start) end=start;
+  const allday=document.getElementById('mca-allday')?.checked;
+  let startTime='',endTime='';
+  if(!allday){
+    startTime=document.getElementById('mca-start-t')?.value||'';
+    endTime=document.getElementById('mca-end-t')?.value||'';
+    if(startTime&&endTime&&start===end&&endTime<startTime){showDhToast('Check times','End time is before start time','⚠','var(--orange)',3000);return;}
+  }
+  const invitedTeam=_calGetInvitedTeam('cae');
+  const invitedClients=_calGetInvitedClients('cae');
+  const notes=(document.getElementById('cae-notes')?.value||'').trim();
+  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,startTime,endTime,memberName:invitedTeam[0]||'',invitees:invitedTeam,clientInvitees:invitedClients,notes,createdBy:_calMe(),rsvp:{},createdAt:new Date().toISOString()};
+  const arr=calEventsLoad();arr.push(evt);calEventsSave(arr);
+  _mcCloseAddEvent();
+  calViewRefresh();
+  if(typeof renderVacationTracker==='function') renderVacationTracker();
+  const totalInv=invitedTeam.length+invitedClients.length;
+  showDhToast('Event added',totalInv>1?totalInv+' people invited':'','','var(--green)',3000);
+  _gcalPush('create',evt);
+}
+
+// ── Search page ──────────────────────────────────────────────────────────────
+function _mcOpenSearch(){
+  document.getElementById('mc-search-page')?.remove();
+  const page=document.createElement('div');
+  page.id='mc-search-page';
+  page.className='mc-page';
+  page.innerHTML=`
+    <div class="mc-page-bar" style="gap:10px">
+      <button class="mc-page-back" onclick="document.getElementById('mc-search-page').remove()"><svg width="10" height="17" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 1 2 7.5 8 14"/></svg></button>
+      <input id="mc-search-in" type="text" placeholder="Search events" oninput="_mcSearchRun()" autocomplete="off">
+    </div>
+    <div class="mc-page-body" id="mc-search-res"><div class="mc-page-hint">Search titles, people, clients and notes</div></div>`;
+  document.body.appendChild(page);
+  setTimeout(()=>document.getElementById('mc-search-in')?.focus(),80);
+}
+function _mcSearchRun(){
+  const q=(document.getElementById('mc-search-in')?.value||'').trim().toLowerCase();
+  const box=document.getElementById('mc-search-res');
+  if(!box) return;
+  if(q.length<2){box.innerHTML='<div class="mc-page-hint">Search titles, people, clients and notes</div>';return;}
+  const fmt=ds=>{const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:d.getFullYear()!==new Date().getFullYear()?'numeric':undefined});};
+  const rows=[];
+  calEventsLoad().forEach(e=>{
+    const hay=[e.title,e.notes,e.memberName,...(e.invitees||[]),...(e.clientInvitees||[])].join(' ').toLowerCase();
+    if(!hay.includes(q)) return;
+    const td=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    rows.push({date:e.date,html:`<div class="mc-sr-row" onclick="_mcSearchGo('${e.date}')"><span class="mca-dot" style="background:${td.color}"></span><div class="mc-sr-tx"><div class="mc-sr-t">${e.title}</div><div class="mc-sr-s">${fmt(e.date)}${e.startTime?' · '+_mcFmtTime(e.startTime):''}${e.memberName?' · '+e.memberName:''}</div></div></div>`});
+  });
+  (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{
+    if(!j.date) return;
+    const hay=[j.name,j.address,j.clientName,j.notes,getJobCreator(j)].join(' ').toLowerCase();
+    if(!hay.includes(q)) return;
+    rows.push({date:j.date,html:`<div class="mc-sr-row" onclick="_mcSearchGo('${j.date}')"><span class="mca-dot" style="background:var(--green)"></span><div class="mc-sr-tx"><div class="mc-sr-t">${j.name}</div><div class="mc-sr-s">${fmt(j.date)}${j.shootTime?' · '+_mcFmtTime(j.shootTime):''} · Shoot</div></div></div>`});
+  });
+  rows.sort((a,b)=>a.date<b.date?1:-1);
+  box.innerHTML=rows.length?rows.map(r=>r.html).join(''):'<div class="mc-page-hint">No matches</div>';
+}
+function _mcSearchGo(dateStr){
+  document.getElementById('mc-search-page')?.remove();
+  const d=new Date(dateStr+'T12:00:00');
+  calYear=d.getFullYear();calMonth=d.getMonth();
+  renderMobCal();
+  mobCalSelectDay(dateStr);
+}
+
+// ── Invites inbox ────────────────────────────────────────────────────────────
+function _mcPendingInvites(){
+  const me=_calMe();if(!me) return [];
+  return calEventsLoad().filter(e=>e.createdBy&&e.createdBy!==me&&(e.invitees||[]).includes(me)&&_calRsvpStatus(e,me)==='pending');
+}
+function _mcUpdateInboxBadge(){
+  const b=document.getElementById('mc-inbox-badge');if(!b)return;
+  const n=_mcPendingInvites().length;
+  b.textContent=n>9?'9+':n;
+  b.style.display=n?'flex':'none';
+}
+function _mcOpenInbox(){
+  document.getElementById('mc-inbox-page')?.remove();
+  const page=document.createElement('div');
+  page.id='mc-inbox-page';
+  page.className='mc-page';
+  page.innerHTML=`
+    <div class="mc-page-bar">
+      <button class="mc-page-back" onclick="document.getElementById('mc-inbox-page').remove()"><svg width="10" height="17" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 1 2 7.5 8 14"/></svg></button>
+      <div class="mc-page-title">Invites</div>
+    </div>
+    <div class="mc-page-body" id="mc-inbox-body"></div>`;
+  document.body.appendChild(page);
+  _mcRenderInboxBody();
+}
+function _mcRenderInboxBody(){
+  const box=document.getElementById('mc-inbox-body');if(!box)return;
+  const fmt=ds=>{const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});};
+  const pend=_mcPendingInvites();
+  const me=_calMe();
+  const replied=calEventsLoad().filter(e=>e.createdBy&&e.createdBy!==me&&(e.invitees||[]).includes(me)&&_calRsvpStatus(e,me)!=='pending').slice(-5).reverse();
+  let html='';
+  if(!pend.length) html+='<div class="mc-page-hint" style="padding-top:34px">No pending invites — you\'re all caught up</div>';
+  else html+=pend.map(e=>{
+    const td=CAL_EVENT_TYPES.find(t=>t.id===e.type)||CAL_EVENT_TYPES[CAL_EVENT_TYPES.length-1];
+    return `<div class="mc-inv-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span class="mca-dot" style="background:${td.color}"></span><span style="font-size:14.5px;font-weight:700;color:var(--white)">${e.title}</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${fmt(e.date)}${e.date!==(e.endDate||e.date)?' – '+fmt(e.endDate):''}${e.startTime?' · '+_mcFmtTime(e.startTime):''} · from ${e.createdBy}</div>
+      <div style="display:flex;gap:8px">
+        <button class="mc-inv-acc" onclick="_mcInboxRsvp('${e.id}','accepted')">Accept</button>
+        <button class="mc-inv-dec" onclick="_mcInboxRsvp('${e.id}','declined')">Decline</button>
+      </div>
+    </div>`;
+  }).join('');
+  if(replied.length){
+    html+='<div class="mc-sec-lbl" style="margin-top:20px">Replied</div>'+replied.map(e=>{
+      const st=_calRsvpStatus(e,me);
+      return `<div class="mc-sr-row" style="cursor:default"><span class="mca-dot" style="background:${st==='accepted'?'var(--green)':'var(--muted)'}"></span><div class="mc-sr-tx"><div class="mc-sr-t">${e.title}</div><div class="mc-sr-s">${fmt(e.date)} · ${st==='accepted'?'Going':'Declined'}</div></div></div>`;
+    }).join('');
+  }
+  box.innerHTML=html;
+}
+function _mcInboxRsvp(id,status){
+  calEventRsvp(id,status);
+  _mcRenderInboxBody();
+  _mcUpdateInboxBadge();
+}
+
+// ── Calendars page (type toggles + connected accounts) ───────────────────────
+function _mcOpenCals(){
+  document.getElementById('mc-cals-page')?.remove();
+  const page=document.createElement('div');
+  page.id='mc-cals-page';
+  page.className='mc-page';
+  page.innerHTML=`
+    <div class="mc-page-bar">
+      <button class="mc-page-back" onclick="document.getElementById('mc-cals-page').remove()"><svg width="10" height="17" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 1 2 7.5 8 14"/></svg></button>
+      <div class="mc-page-title">Calendars</div>
+    </div>
+    <div class="mc-page-body" id="mc-cals-body"></div>`;
+  document.body.appendChild(page);
+  _mcRenderCalsBody();
+}
+function _mcRenderCalsBody(){
+  const box=document.getElementById('mc-cals-body');if(!box)return;
+  const gc=_gcalIsConnected();
+  box.innerHTML=`
+    <div class="mc-sec-lbl">My calendars</div>
+    ${CAL_EVENT_TYPES.map(t=>{
+      const on=_calTypeFilters===null||_calTypeFilters.has(t.id);
+      return `<div class="mc-cal-row${on?' on':''}" onclick="_mcCalsToggle('${t.id}')"><span class="mc-cal-check">✓</span><span class="mca-dot" style="background:${t.color}"></span><span class="mc-cal-name">${t.label}</span></div>`;
+    }).join('')}
+    <div class="mc-sec-lbl" style="margin-top:22px">Accounts</div>
+    <div class="mc-cal-row on" style="cursor:default"><span class="mc-cal-check">✓</span><span class="mc-cal-name">DroneHub Cloud</span><span class="mc-cal-st" style="color:var(--green)">Synced</span></div>
+    <div class="mc-cal-row${gc?' on':''}" style="cursor:default"><span class="mc-cal-check">${gc?'✓':''}</span><span class="mc-cal-name">Google Calendar</span><span class="mc-cal-st" style="color:${gc?'var(--green)':'var(--muted)'}">${gc?'Connected':'Connect from Profile'}</span></div>`;
+}
+function _mcCalsToggle(id){
+  calToggleTypeFilter(id);
+  _mcRenderCalsBody();
 }
