@@ -935,7 +935,7 @@ async function _gcalPush(action,evt){
     const res=await gcalApiCall(action,mid,{
       title:evt.title,date:evt.date,endDate:evt.endDate,
       startTime:evt.startTime,endTime:evt.endTime,
-      description:evt.notes||'',gcalEventId:evt.gcalEventId,
+      description:(evt.location?'Location: '+evt.location+'\n':'')+(evt.notes||''),gcalEventId:evt.gcalEventId,
     });
     if(action==='create'&&res.gcalEventId){
       const arr=calEventsLoad();
@@ -2419,6 +2419,7 @@ function mcShowEventDetail(type,idOrEvtId,dateStr){
     const body=`<div style="padding:4px 0">
       <div style="font-size:17px;font-weight:800;color:var(--white);margin-bottom:14px">${td.icon} ${ev.title}</div>
       ${isMultiDay?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${ev.date} → ${ev.endDate}</div>`:''}
+      ${ev.location?`<div style="font-size:12.5px;color:var(--offwhite);margin-bottom:8px">📍 ${ev.location}</div>`:''}
       ${_mcInv.length?`<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px">
         ${_mcInv.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:600;color:${td.color}">${n}</span>${_calRsvpChipHtml(ev,n)}</div>`).join('')}
       </div>`:''}
@@ -2704,7 +2705,7 @@ function _mcOpenAddEvent(prefillDate){
       <div class="mca-card">
         <input id="cae-title" class="mca-in" type="text" placeholder="Title" autocomplete="off">
         <div class="mca-div"></div>
-        <input id="cae-notes" class="mca-in mca-in-sub" type="text" placeholder="Notes or location" autocomplete="off">
+        <input id="cae-loc" class="mca-in mca-in-sub" type="text" placeholder="Location" autocomplete="off">
       </div>
       <div class="mca-card">
         <div class="mca-row">
@@ -2753,6 +2754,9 @@ function _mcOpenAddEvent(prefillDate){
           <div id="cae-client-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"></div>
         </div>
       </div>
+      <div class="mca-card">
+        <textarea id="cae-notes" class="mca-in mca-in-sub" placeholder="Notes" rows="3" style="resize:none"></textarea>
+      </div>
       <div id="cae-overlap-warn" style="display:none;margin:0 16px 14px;padding:10px 12px;border-radius:12px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.4);font-size:11.5px;color:#F97316"></div>
     </div>`;
   document.body.appendChild(page);
@@ -2799,7 +2803,8 @@ function _mcSaveNewEvent(){
   const invitedTeam=_calGetInvitedTeam('cae');
   const invitedClients=_calGetInvitedClients('cae');
   const notes=(document.getElementById('cae-notes')?.value||'').trim();
-  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,startTime,endTime,memberName:invitedTeam[0]||'',invitees:invitedTeam,clientInvitees:invitedClients,notes,createdBy:_calMe(),rsvp:{},createdAt:new Date().toISOString()};
+  const location=(document.getElementById('cae-loc')?.value||'').trim();
+  const evt={id:'cale_'+Date.now(),type,title,date:start,endDate:end,startTime,endTime,memberName:invitedTeam[0]||'',invitees:invitedTeam,clientInvitees:invitedClients,notes,location,createdBy:_calMe(),rsvp:{},createdAt:new Date().toISOString()};
   const arr=calEventsLoad();arr.push(evt);calEventsSave(arr);
   _mcCloseAddEvent();
   calViewRefresh();
