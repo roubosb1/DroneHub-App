@@ -747,7 +747,7 @@ button{font-family:var(--font);}
   /* Screen 2: detail */
   #mob-trk-detail{
     width:100%;position:absolute;inset:0;display:flex;flex-direction:column;
-    background:var(--navy-card);
+    background:var(--navy);
     transform:translateX(100%);
     transition:transform .3s cubic-bezier(.4,0,.2,1);
     overflow:hidden;
@@ -844,7 +844,7 @@ button{font-family:var(--font);}
     padding:0 max(12px,env(safe-area-inset-right,12px)) 0 4px;
     height:54px;box-sizing:border-box;
     border-bottom:1px solid var(--border);flex-shrink:0;
-    background:var(--navy-card);
+    background:var(--navy);
   }
   #mob-trk-dv-back{
     display:flex;align-items:center;gap:2px;
