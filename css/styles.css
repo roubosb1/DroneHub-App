@@ -2009,3 +2009,17 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   #pane-calendar,#mob-cal-main,#mob-cal-view-wrap,
   #mob-cal-month-screen,#mob-cal-grid-clip,.mc-month{background:var(--navy)!important;}
 }
+
+/* calendar flows underneath the floating bottom nav (was clipped 66px high) */
+@media (max-width:768px){
+  #pane-calendar.active #mob-cal-main{
+    position:fixed!important;left:0!important;right:0!important;
+    top:52px!important;bottom:0!important;height:auto!important;
+  }
+  #mob-cal-month-screen{
+    padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important;
+  }
+  #mob-cal-day-screen #mob-cal-dv-events{
+    padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important;
+  }
+}
