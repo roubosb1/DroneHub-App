@@ -2160,3 +2160,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   border:none!important;background:rgba(255,255,255,.08)!important;border-radius:9px!important;
   padding:7px 9px!important;
 }
+
+/* New Event: bigger client-name suggestions */
+#mc-add-page #cae-client-dd > div{
+  font-size:15px!important;font-weight:600;padding:13px 14px!important;
+}
+#mc-add-page #cae-client-dd > div + div{border-top:1px solid var(--border);}
