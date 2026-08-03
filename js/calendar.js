@@ -2171,6 +2171,42 @@ function mobCalSwitchDay(dateStr){
   _mcRenderDayEvents(dateStr);
 }
 
+// Swipe the week strip → jump a week; swipe the timeline → adjacent day
+let _mcDaySwipesInit=false;
+function _mcInitDaySwipes(){
+  if(_mcDaySwipesInit) return;
+  const strip=document.getElementById('mob-cal-week-strip');
+  const tl=document.getElementById('mob-cal-dv-events');
+  if(!strip||!tl) return;
+  _mcDaySwipesInit=true;
+  const shift=(days,el)=>{
+    const d=new Date(_mobCalSelDate+'T12:00:00');
+    d.setDate(d.getDate()+days);
+    if(el){
+      el.style.transition='transform .18s ease, opacity .18s ease';
+      el.style.transform='translateX('+(days>0?'-14px':'14px')+')';el.style.opacity='.4';
+      setTimeout(()=>{el.style.transform='';el.style.opacity='';},190);
+    }
+    mobCalSwitchDay(d.toISOString().slice(0,10));
+  };
+  const attach=(el,days)=>{
+    let sx=0,sy=0,drag=null;
+    el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;drag=null;},{passive:true});
+    el.addEventListener('touchmove',e=>{
+      const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+      if(drag===null&&(Math.abs(dx)>10||Math.abs(dy)>10)) drag=Math.abs(dx)>Math.abs(dy)*1.3;
+    },{passive:true});
+    el.addEventListener('touchend',e=>{
+      if(!drag) return;
+      const dx=e.changedTouches[0].clientX-sx;
+      if(Math.abs(dx)>52) shift(dx<0?days:-days,el);
+      drag=null;
+    },{passive:true});
+  };
+  attach(strip,7);  // week strip pages by week
+  attach(tl,1);     // timeline pages by day
+}
+
 // Build & populate the entire day screen for a given date
 function _mcBuildDayScreen(dateStr){
   const d=new Date(dateStr+'T12:00:00');
@@ -2181,6 +2217,7 @@ function _mcBuildDayScreen(dateStr){
   if(tl) tl.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
   _mcRenderWeekStrip(dateStr);
   _mcRenderDayEvents(dateStr);
+  _mcInitDaySwipes();
 }
 
 // Render the compact 7-day week strip
