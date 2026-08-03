@@ -58,11 +58,11 @@ const USP_STATES = [
   {code:'IL',name:'Illinois',type:'flat',rate:0.0495,yr:2026,stdDed:0,exemptAmt:2925,sui:{base:14250,agency:'IL IDES'},guide:{reg:'MyTax Illinois (IDOR + IDES together)',wth:'IL-941 quarterly, deposits semi-weekly/monthly by size',ui:'Quarterly UI-3/40 via MyTax',notes:'Personal exemption allowance ($2,925 for 2026) reduces taxable wages per employee.'}},
   {code:'IN',name:'Indiana',type:'flat',rate:0.0295,yr:2026,stdDed:0,exemptAmt:1000,sui:{base:9500,agency:'IN DWD'},guide:{reg:'INTIME withholding account + DWD (Uplink)',wth:'WH-1 remittances + WH-3 annual',ui:'Quarterly UC-1 via Uplink',notes:'State rate fell to 2.95% for 2026. County income taxes apply on top — withhold at the employee\'s county rate.'}},
   {code:'IA',name:'Iowa',type:'flat',rate:0.038,yr:2026,stdDed:16100,sui:{base:20400,agency:'Iowa Workforce Development'},guide:{reg:'GovConnectIowa + IWD myIowaUI',wth:'Quarterly withholding return via GovConnectIowa',ui:'Quarterly myIowaUI report',notes:'Iowa couples to the federal standard deduction.'}},
-  {code:'KY',name:'Kentucky',type:'flat',rate:0.035,yr:2026,stdDed:3360,sui:{base:12000,agency:'KY Office of Unemployment Insurance'},guide:{reg:'Kentucky OneStop + KEWES for UI',wth:'K-1/K-3 returns (frequency by size)',ui:'Quarterly UI-3 via KEWES',notes:'Rate fell to 3.5% for 2026. Many Kentucky cities/counties levy occupational license taxes on wages — check the work location.'}},
+  {code:'KY',name:'Kentucky',type:'flat',rate:0.035,yr:2026,stdDed:3360,sui:{base:12000,agency:'KY Office of Unemployment Insurance'},guide:{reg:'Kentucky OneStop + KEWES for UI',wth:'K-1/K-3 returns (frequency by size)',ui:'Quarterly UI-3 via KEWES',notes:'Rate fell to 3.5% for 2026. Occupational taxes: Louisville, Lexington, Covington and Bowling Green are built into the calculator; ~200 other cities/counties levy 0.5–2.5% — pick Other and enter the work location\'s rate from its occupational license office.'}},
   {code:'LA',name:'Louisiana',type:'flat',rate:0.03,yr:2026,stdDed:12875,sui:{base:7000,agency:'LA Workforce Commission'},guide:{reg:'LaTAP + LWC',wth:'L-1 quarterly + L-3 annual',ui:'Quarterly wage report via LAWATS',notes:'Louisiana switched to a 3% flat tax in 2025 with a $12,875 standard deduction (2026).'}},
   {code:'MI',name:'Michigan',type:'flat',rate:0.0425,yr:2026,stdDed:0,exemptAmt:5900,sui:{base:9500,agency:'MI UIA'},guide:{reg:'MTO (Michigan Treasury Online) + UIA (MiWAM)',wth:'Form 5080 monthly/quarterly + 5081 annual',ui:'Quarterly UIA 1028 via MiWAM',notes:'Personal exemption $5,900 for 2026. Several Michigan cities (Detroit, Grand Rapids…) have their own city income tax withholding.'}},
   {code:'NC',name:'North Carolina',type:'flat',rate:0.0399,yr:2026,stdDed:12750,sui:{base:34200,agency:'NC DES'},guide:{reg:'NCDOR online + DES',wth:'NC-5 returns (frequency by size) + NC-3 annual',ui:'Quarterly NCUI 101',notes:'Rate fell to 3.99% for 2026. DOR withholding tables run slightly above the tax rate by design.'}},
-  {code:'PA',name:'Pennsylvania',type:'flat',rate:0.0307,yr:2026,stdDed:0,sui:{base:10000,agency:'PA Dept. of L&I (UC)'},extras:[{label:'PA UC employee share',rate:0.0007,cap:Infinity}],guide:{reg:'myPATH + UCMS',wth:'PA-501 deposits + PA-W3 quarterly reconciliation',ui:'Quarterly UC-2/2A via UCMS',notes:'Local Earned Income Tax (typically 1–2%+) must be withheld by work municipality — register with the local collector (e.g. Berkheimer/Keystone).'}},
+  {code:'PA',name:'Pennsylvania',type:'flat',rate:0.0307,yr:2026,stdDed:0,sui:{base:10000,agency:'PA Dept. of L&I (UC)'},extras:[{label:'PA UC employee share',rate:0.0007,cap:Infinity}],guide:{reg:'myPATH + UCMS',wth:'PA-501 deposits + PA-W3 quarterly reconciliation',ui:'Quarterly UC-2/2A via UCMS',notes:'Local EIT: withhold the higher of the employee\'s resident rate vs the work-site nonresident rate (get PSD codes via the Residency Certification Form; look rates up on the DCED register). Philadelphia and Pittsburgh presets are built in; other municipalities enter their rate. Most workers also owe the $52/yr Local Services Tax, prorated per pay.'}},
   {code:'UT',name:'Utah',type:'flat',rate:0.045,yr:2026,stdDed:0,sui:{base:50700,agency:'UT DWS'},guide:{reg:'Utah TAP + DWS',wth:'TC-941 returns quarterly + annual reconciliation',ui:'Quarterly UI report via DWS',notes:'Rate is 4.5% for 2026. Utah gives a taxpayer tax credit (~$966) instead of a standard deduction — the state tables handle it; this calculator slightly over-withholds at low incomes.'}},
 
   // ── Progressive / bracket states (single-filer annual brackets) ──
@@ -86,7 +86,7 @@ const USP_STATES = [
   {code:'NM',name:'New Mexico',type:'brackets',yr:2026,stdDed:16100,brackets:[[5500,.015],[16500,.032],[33500,.043],[66500,.047],[210000,.049],[Infinity,.059]],sui:{base:34800,agency:'NM DWS'},guide:{reg:'NM TAP + DWS',wth:'TRD-41414 quarterly',ui:'Quarterly via NM DWS portal',notes:''}},
   {code:'NY',name:'New York',type:'brackets',yr:2026,stdDed:8000,brackets:[[8500,.039],[11700,.044],[13900,.0515],[80650,.054],[215400,.059],[1077550,.0685],[5000000,.0965],[25000000,.103],[Infinity,.109]],extras:[{label:'NY Paid Family Leave',rate:0.00432,cap:95349},{label:'NY SDI (max $0.60/wk)',rate:0.005,cap:6240}],sui:{base:13000,agency:'NY DOL'},guide:{reg:'NY Business Express (Tax Dept + DOL joint NYS-100)',wth:'NYS-1 deposits + NYS-45 quarterly (combined WH + UI + wage reporting)',ui:'Included in NYS-45',notes:'2026 cut the bottom rates (3.9%/4.4% start). PFL is 0.432% (max $411.91/yr). NYC and Yonkers residents need city withholding on top of state.'}},
   {code:'ND',name:'North Dakota',type:'brackets',yr:2026,stdDed:16100,brackets:[[48475,0],[244825,.0195],[Infinity,.025]],sui:{base:46600,agency:'Job Service ND'},guide:{reg:'ND TAP + Job Service ND',wth:'Form 306 quarterly',ui:'Quarterly via UI EASY',notes:'A large zero bracket means many employees owe no ND withholding.'}},
-  {code:'OH',name:'Ohio',type:'brackets',yr:2026,stdDed:0,exemptAmt:2400,brackets:[[26050,0],[Infinity,.0275]],sui:{base:9000,agency:'ODJFS'},guide:{reg:'Ohio Business Gateway + ODJFS (The SOURCE)',wth:'IT-501 deposits + IT-941 annual',ui:'Quarterly via The SOURCE',notes:'Ohio became a flat 2.75% state in 2026 (first ~$26k exempt). Municipal income taxes (RITA/CCA or city-direct) are a separate withholding obligation for the work city.'}},
+  {code:'OH',name:'Ohio',type:'brackets',yr:2026,stdDed:0,exemptAmt:2400,brackets:[[26050,0],[Infinity,.0275]],sui:{base:9000,agency:'ODJFS'},guide:{reg:'Ohio Business Gateway + ODJFS (The SOURCE)',wth:'IT-501 deposits + IT-941 annual',ui:'Quarterly via The SOURCE',notes:'Ohio became a flat 2.75% state in 2026 (first ~$26k exempt). This calculator includes all 667 municipal taxes and 214 school-district taxes from the official state Finder tables — withhold the work city\'s rate, plus SDIT for the employee\'s home district. Remit municipal tax to RITA/CCA or the city directly.'}},
   {code:'OK',name:'Oklahoma',type:'brackets',yr:2026,stdDed:6350,exemptAmt:1000,brackets:[[3750,0],[4900,.025],[7200,.035],[Infinity,.045]],sui:{base:25000,agency:'OESC'},guide:{reg:'OkTAP + OESC EZ Tax Express',wth:'WTH-10001 quarterly',ui:'Quarterly via EZ Tax Express',notes:'2026 quarter-point cut across brackets (top 4.5%).'}},
   {code:'OR',name:'Oregon',type:'brackets',yr:2026,stdDed:2910,brackets:[[4550,.0475],[11400,.0675],[125000,.0875],[Infinity,.099]],extras:[{label:'OR Paid Leave (employee 60% of 1%)',rate:0.006,cap:184500},{label:'OR Statewide Transit Tax',rate:0.001,cap:Infinity}],sui:{base:56700,agency:'OR Employment Dept.'},guide:{reg:'Frances Online (combined payroll: WH + UI + Paid Leave + transit)',wth:'OQ quarterly combined return; deposits follow federal schedule',ui:'Included in Form OQ',notes:'Paid Leave total is 1% for 2026 (employee 0.6%, cap $184,500). Portland-metro employees may owe Multnomah PFA / Metro SHS local taxes.'}},
   {code:'RI',name:'Rhode Island',type:'brackets',yr:2026,stdDed:11200,exemptAmt:5250,brackets:[[82050,.0375],[186450,.0475],[Infinity,.0599]],extras:[{label:'RI TDI',rate:0.011,cap:100000}],sui:{base:30800,agency:'RI DLT'},guide:{reg:'RI Division of Taxation + DLT combined registration',wth:'RI-941 quarterly; deposits by schedule',ui:'Quarterly TX-17 (includes TDI)',notes:'TDI dropped to 1.1% for 2026 on a $100,000 wage base.'}},
@@ -164,6 +164,21 @@ const USP_LOCALS = {
     {id:'bessemer',name:'Bessemer (1%)',kind:'wage',rate:.01},
     {id:'gadsden',name:'Gadsden (2%)',kind:'wage',rate:.02},
   ]},
+  PA: {label:'Local EIT (work municipality)', opts:[
+    {id:'philly_r',name:'Philadelphia (resident, 3.74%)',kind:'wage',rate:.0374},
+    {id:'philly_n',name:'Philadelphia (nonresident worker, 3.43%)',kind:'wage',rate:.0343},
+    {id:'pgh_r',name:'Pittsburgh (resident, 3%)',kind:'wage',rate:.03},
+    {id:'pgh_n',name:'Pittsburgh (nonresident worker, 1%)',kind:'wage',rate:.01},
+    {id:'custom',name:'Other municipality — enter EIT rate',kind:'custom'},
+  ]},
+  KY: {label:'Occupational tax (work location)', opts:[
+    {id:'louisville_r',name:'Louisville Metro (resident, 2.2%)',kind:'wage',rate:.022},
+    {id:'louisville_n',name:'Louisville Metro (nonresident, 1.45%)',kind:'wage',rate:.0145},
+    {id:'lexington',name:'Lexington-Fayette (2.25%)',kind:'wage',rate:.0225},
+    {id:'covington',name:'Covington (2.45%)',kind:'wage',rate:.0245},
+    {id:'bowlinggreen',name:'Bowling Green (1.85%)',kind:'wage',rate:.0185},
+    {id:'custom',name:'Other city/county — enter rate',kind:'custom'},
+  ]},
   OR: {label:'Portland-metro taxes (residents/workers)', opts:[
     {id:'mult',name:'Multnomah Co. Preschool for All',kind:'brackets',base:'wage',byStatus:{single:[[125000,0],[250000,.015],[Infinity,.03]],married:[[200000,0],[400000,.015],[Infinity,.03]]}},
     {id:'metro',name:'Metro Supportive Housing (SHS)',kind:'brackets',base:'wage',byStatus:{single:[[125000,0],[Infinity,.01]],married:[[200000,0],[Infinity,.01]]}},
@@ -182,7 +197,8 @@ function _uspLocalCalc(st,localId,ctx){
     return {label:opt.name,amt:total};
   }
   let annual=0;
-  if(opt.kind==='wage') annual=ctx.annual*opt.rate;
+  if(opt.kind==='custom') annual=ctx.annual*(ctx.customRate||0);
+  else if(opt.kind==='wage') annual=ctx.annual*opt.rate;
   else if(opt.kind==='taxable') annual=ctx.stTaxable*opt.rate;
   else if(opt.kind==='stateTaxPct') annual=ctx.stAnnualTax*opt.rate;
   else if(opt.kind==='flatMonthly') return {label:opt.name,amt:opt.amt*12/ctx.periods};
@@ -247,8 +263,17 @@ function uspCalc(input){
       _stAnnualTax=st.type==='flat'?_stTaxable*st.rate:_uspBracketTax(_stTaxable,st.brackets);
       stateWH=_stAnnualTax/periods;
     }
-    const _loc=_uspLocalCalc(st,input.local,{annual,periods,status,stTaxable:_stTaxable,stAnnualTax:_stAnnualTax});
+    const _loc=_uspLocalCalc(st,input.local,{annual,periods,status,stTaxable:_stTaxable,stAnnualTax:_stAnnualTax,customRate:Number(input.customRate)||0});
     if(_loc&&_loc.amt>0.004) stateLines.push({label:_loc.label,amt:_loc.amt});
+    // Ohio: work-city municipal tax + residence school-district tax (official Finder tables)
+    if(st.code==='OH'&&typeof USP_OH_MUNI!=='undefined'){
+      const mm=USP_OH_MUNI.find(x=>x[0]===input.ohMuni);
+      if(mm) stateLines.push({label:mm[0]+' municipal tax ('+(mm[1]*100).toFixed(2).replace(/\.?0+$/,'')+'%)',amt:gross*mm[1]});
+      const sdm=USP_OH_SD.find(x=>x[0]===input.ohSd);
+      if(sdm) stateLines.push({label:sdm[0]+' school district ('+(sdm[1]*100).toFixed(2).replace(/\.?0+$/,'')+'%)',amt:gross*sdm[1]});
+    }
+    // PA: Local Services Tax, prorated per pay period
+    if(st.code==='PA'&&Number(input.lst)>0) stateLines.push({label:'Local Services Tax',amt:Number(input.lst)/periods});
     (st.extras||[]).forEach(x=>{
       const capLeft=x.cap===Infinity?gross:Math.max(Math.min(ytd+gross,x.cap)-Math.min(ytd,x.cap),0);
       const amt=Math.min(capLeft,gross)*x.rate;
@@ -294,6 +319,14 @@ function uspOpenCalc(){
           </select></div>
         <div class="mca-row" id="usp-local-row" style="display:none"><span class="mca-lbl" id="usp-local-lbl">Locality</span>
           <select id="usp-local" class="mca-dt" style="min-width:150px;max-width:180px" onchange="uspRun()"></select></div>
+        <div class="mca-row" id="usp-custom-row" style="display:none"><span class="mca-lbl">Local rate (%)</span>
+          <input id="usp-custom-rate" class="mca-dt" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 1.5" style="width:90px;text-align:right" oninput="uspRun()"></div>
+        <div class="mca-row" id="usp-lst-row" style="display:none"><span class="mca-lbl">Local Services Tax ($/yr)</span>
+          <input id="usp-lst" class="mca-dt" type="number" inputmode="decimal" value="52" style="width:80px;text-align:right" oninput="uspRun()"></div>
+        <div class="mca-row" id="usp-ohmuni-row" style="display:none"><span class="mca-lbl">Work city</span>
+          <input id="usp-ohmuni" class="mca-dt" list="usp-ohmuni-list" placeholder="Search city…" style="width:160px" oninput="uspRun()"><datalist id="usp-ohmuni-list"></datalist></div>
+        <div class="mca-row" id="usp-ohsd-row" style="display:none"><span class="mca-lbl">School district (home)</span>
+          <input id="usp-ohsd" class="mca-dt" list="usp-ohsd-list" placeholder="Search district…" style="width:160px" oninput="uspRun()"><datalist id="usp-ohsd-list"></datalist></div>
         <div class="mca-row"><span class="mca-lbl">Pay frequency</span>
           <select id="usp-freq" class="mca-dt" onchange="uspRun()">
             <option value="weekly">Weekly</option><option value="biweekly" selected>Bi-weekly</option>
@@ -317,7 +350,7 @@ function uspOpenCalc(){
       <div id="usp-result"></div>
       <button class="fr-newbtn" style="width:100%;margin-top:4px" onclick="uspOpenGuide(document.getElementById('usp-state').value)">📋 Filing guide for this state</button>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:14px">
-        Federal: ${USP_FED.year} Pub 15-T percentage method (SS wage base ${_uspF(USP_FED.ssWageBase)}). State rates carry their own year tag — verify against the state's current withholding tables before filing. Local taxes computed for NY (NYC/Yonkers), MD counties, IN counties, MI cities, KC/St. Louis, Denver-metro head taxes, AL cities and Portland-metro; Ohio municipalities, PA locals and KY occupational taxes are flagged in the guides and coming next.
+        Federal: ${USP_FED.year} Pub 15-T percentage method (SS wage base ${_uspF(USP_FED.ssWageBase)}). State rates carry their own year tag — verify against the state's current withholding tables before filing. Local taxes computed: NYC/Yonkers, MD + IN counties, MI cities, all 667 Ohio municipalities + 214 school districts (official state tables), Philadelphia/Pittsburgh + custom PA EIT with LST, KY occupational taxes, KC/St. Louis, Denver-metro head taxes, AL cities and Portland-metro.
       </div>
     </div>`;
   document.body.appendChild(page);
@@ -329,13 +362,27 @@ function _uspSyncLocalRow(){
   const sel=document.getElementById('usp-local');
   if(!row||!sel) return;
   const cfg=USP_LOCALS[stCode];
-  if(!cfg){row.style.display='none';sel.innerHTML='';return;}
+  // Ohio uses searchable city/school-district inputs instead of a preset list
+  const isOH=stCode==='OH'&&typeof USP_OH_MUNI!=='undefined';
+  document.getElementById('usp-ohmuni-row').style.display=isOH?'':'none';
+  document.getElementById('usp-ohsd-row').style.display=isOH?'':'none';
+  if(isOH){
+    const dl=document.getElementById('usp-ohmuni-list');
+    if(dl&&!dl.children.length){
+      dl.innerHTML=USP_OH_MUNI.map(x=>`<option value="${x[0]}">`).join('');
+      document.getElementById('usp-ohsd-list').innerHTML=USP_OH_SD.map(x=>`<option value="${x[0]}">`).join('');
+    }
+  }
+  document.getElementById('usp-lst-row').style.display=stCode==='PA'?'':'none';
+  if(!cfg){row.style.display='none';sel.innerHTML='';sel.dataset.st='';document.getElementById('usp-custom-row').style.display='none';return;}
   if(sel.dataset.st!==stCode){
     sel.dataset.st=stCode;
     document.getElementById('usp-local-lbl').textContent=cfg.label;
     sel.innerHTML='<option value="none">None</option>'+cfg.opts.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
   }
   row.style.display='';
+  const opt=cfg.opts.find(o=>o.id===sel.value);
+  document.getElementById('usp-custom-row').style.display=(opt&&opt.kind==='custom')?'':'none';
 }
 function uspRun(){
   const box=document.getElementById('usp-result'); if(!box) return;
@@ -343,6 +390,10 @@ function uspRun(){
   const r=uspCalc({
     state:document.getElementById('usp-state').value,
     local:document.getElementById('usp-local')?.value,
+    customRate:(parseFloat(document.getElementById('usp-custom-rate')?.value)||0)/100,
+    lst:document.getElementById('usp-state').value==='PA'?document.getElementById('usp-lst')?.value:0,
+    ohMuni:document.getElementById('usp-ohmuni')?.value,
+    ohSd:document.getElementById('usp-ohsd')?.value,
     freq:document.getElementById('usp-freq').value,
     gross:document.getElementById('usp-gross').value,
     ytdGross:document.getElementById('usp-ytd').value,
