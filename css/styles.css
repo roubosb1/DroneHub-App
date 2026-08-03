@@ -1158,11 +1158,11 @@ button{font-family:var(--font);}
 
   /* ── Month nav ── */
   #mob-cal-nav{
-    display:flex;align-items:center;padding:10px 16px 6px;
-    flex-shrink:0;gap:2px;
+    display:flex;align-items:center;justify-content:space-evenly;
+    padding:8px 10px 6px;flex-shrink:0;gap:6px;
     position:sticky;top:0;z-index:6;background:var(--navy);
   }
-  #mob-cal-nav-month{flex:1;font-size:20px;font-weight:700;color:var(--white);}
+  #mob-cal-nav-month{display:none;}
   .mc-nav-btn{
     width:36px;height:36px;border:none;background:none;color:var(--offwhite);
     font-size:22px;cursor:pointer;display:flex;align-items:center;
@@ -2028,7 +2028,7 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 /* single-letter weekday header, pinned while months scroll (Apple-style) */
 @media (max-width:768px){
   #mob-cal-dow{
-    position:sticky;top:50px;z-index:4;background:var(--navy);
+    position:sticky;top:58px;z-index:4;background:var(--navy);
     display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
     padding:6px 0 4px;border-bottom:1px solid rgba(255,255,255,.06);
   }
@@ -2166,3 +2166,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   font-size:15px!important;font-weight:600;padding:13px 14px!important;
 }
 #mc-add-page #cae-client-dd > div + div{border-top:1px solid var(--border);}
+
+/* Calendar toolbar: bigger tap targets now that the month label lives in the scroll */
+.mc-iconbtn{width:44px;height:44px;}
+.mc-iconbtn svg{width:22px;height:22px;}
+#mob-cal-today-btn{padding:8px 20px;font-size:14px;border-radius:18px;}
+#mc-inbox-badge{top:3px;right:3px;}
