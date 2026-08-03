@@ -5635,11 +5635,14 @@ function showPane(id,ev){
       if(window.innerWidth>768) lcOpenChannel('lc_welcome');
       // else: mobile stays on channel list view — no auto-open
     } else {
-      lcRenderMessages();
-      // On mobile, if we have an active channel make sure the chat panel is visible
       if(window.innerWidth<=768){
-        document.getElementById('lc-flex-container')?.classList.add('lc-mob-chat-open');
-        document.body.classList.add('lc-chat-full');
+        // Mobile: entering the pane always lands on the chat list — pick a convo from there
+        lcActiveChannel=null;
+        document.getElementById('lc-flex-container')?.classList.remove('lc-mob-chat-open');
+        document.body.classList.remove('lc-chat-full');
+        document.body.classList.remove('lc-vc-mode');
+      } else {
+        lcRenderMessages();
       }
     }
     // Check for unread @mentions on each visit (async, non-blocking)
