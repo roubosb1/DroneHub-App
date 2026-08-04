@@ -156,7 +156,7 @@ function forumProfilesSave(map){
   if(typeof _fbToken==='function'&&_fbToken())
     fbSet('orgs',ORG_ID+':forum_profiles',{data:JSON.stringify(map),updatedAt:Date.now()}).catch(()=>{});
 }
-function forumPickCover(email){
+function forumPickCover(email,onDone){
   const inp=document.createElement('input');
   inp.type='file'; inp.accept='image/*';
   inp.onchange=()=>{
@@ -172,7 +172,8 @@ function forumPickCover(email){
       (map[email]=map[email]||{}).cover=data;
       forumProfilesSave(map);
       showDhToast('Cover updated','Looking sharp','','var(--green)',2000);
-      forumOpenProfile(email,document.getElementById('fr-profile-page')?.dataset.rootId);
+      if(onDone) onDone();
+      else forumOpenProfile(email,document.getElementById('fr-profile-page')?.dataset.rootId);
     };
     img.src=URL.createObjectURL(f);
   };
