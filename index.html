@@ -2535,15 +2535,17 @@
         <div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:3px">Following</div>
       </div>
     </div>
+    <!-- Quick actions -->
+    <div style="display:flex;gap:10px;padding:14px 36px 0;flex-shrink:0">
+      <button onclick="dskPfSwitchTab('timeoff')" style="display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer">Request Time Off</button>
+      <button onclick="dskPfSwitchTab('portfolio')" style="display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Add Portfolio Work</button>
+      <button onclick="dskHideMyProfile();showPane('tracker')" style="display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">View My Projects</button>
+    </div>
     <!-- Tabs -->
-    <div style="margin-top:22px;flex-shrink:0">
+    <div style="margin-top:18px;flex-shrink:0">
       <!-- Tab bar -->
       <div style="display:flex;border-bottom:1px solid var(--border);background:var(--navy-mid);flex-shrink:0;overflow-x:auto">
-        <button class="dsk-pf-tab active" id="dsk-pf-tab-overview" onclick="dskPfSwitchTab('overview')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Overview
-        </button>
-        <button class="dsk-pf-tab" id="dsk-pf-tab-portfolio" onclick="dskPfSwitchTab('portfolio')">
+        <button class="dsk-pf-tab active" id="dsk-pf-tab-portfolio" onclick="dskPfSwitchTab('portfolio')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           Portfolio
         </button>
@@ -6423,9 +6425,9 @@ function dskShowMyProfile(){
   const resolvedId=tpResolveMemberId('me');
   if(!resolvedId){ showDhToast('Profile','Team profile not found.','⚠️','var(--amber)',3000); return; }
   _tpMemberId=resolvedId;
-  _tpTab='overview';
+  _tpTab='portfolio';
   _tpContentTarget='dsk-tp-content';
-  setTimeout(()=>{dskPfApplyCover();dskPfApplyFollowStats();},50);
+  setTimeout(()=>{dskPfApplyCover();dskPfApplyFollowStats();dskPfSwitchTab('portfolio');},50);
   const member=getAdminTeamMembers().find(m=>m.id===_tpMemberId);
   if(!member) return;
   // Avatar
