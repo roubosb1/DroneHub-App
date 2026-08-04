@@ -7,9 +7,11 @@
    ══════════════════════════════════════════════════════════════════ */
 
 const FORUM_CATS = [
-  {id:'feature', label:'Feature Requests', color:'#5B8DEF', bg:'rgba(91,141,239,.14)'},
-  {id:'work',    label:'Show Your Work',   color:'#22D97A', bg:'rgba(34,217,122,.14)'},
-  {id:'general', label:'General',          color:'#F5A623', bg:'rgba(245,166,35,.14)'},
+  {id:'feature',  label:'Suggestions',    color:'#5B8DEF', bg:'rgba(91,141,239,.14)'},
+  {id:'work',     label:'Show Your Work', color:'#22D97A', bg:'rgba(34,217,122,.14)'},
+  {id:'question', label:'Questions',      color:'#A78BFA', bg:'rgba(167,139,250,.14)'},
+  {id:'announce', label:'Announcements',  color:'#F5C842', bg:'rgba(245,200,66,.14)', adminPost:true},
+  {id:'general',  label:'General',        color:'#F5A623', bg:'rgba(245,166,35,.14)'},
 ];
 const FORUM_STATUSES = [
   {id:'',            label:'No status',   color:'var(--muted)'},
@@ -98,6 +100,15 @@ function _frHot(p){
   const ageH=(Date.now()-new Date(p.createdAt).getTime())/3600000;
   return (votes+1)/Math.pow(ageH+2,1.4)+(p.pinned?1e6:0);
 }
+function _frDesktop(){ return window.innerWidth>768; }
+// Mobile: full-page overlay. Desktop: render inline where the feed was.
+function _frMount(page,rootId){
+  if(_frDesktop()){
+    const root=document.getElementById(rootId||'forum-root');
+    if(root){ root.innerHTML=''; root.appendChild(page); return; }
+  }
+  document.body.appendChild(page);
+}
 function _frRoleTag(role){
   if(role==='admin') return '<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:7px;background:rgba(91,141,239,.2);color:var(--blue-bright)">TEAM</span>';
   if(role==='team') return '<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:7px;background:rgba(91,141,239,.2);color:var(--blue-bright)">TEAM</span>';
@@ -108,7 +119,11 @@ function _frRoleTag(role){
 function renderForum(containerId){
   const root=document.getElementById(containerId||'forum-root');
   if(!root) return;
-  forumSyncFirebase().then(()=>{ _frRenderList(root); });
+  forumSyncFirebase().then(()=>{
+    // Don't clobber an open composer/post view with the refreshed feed
+    if(document.getElementById('fr-compose-page')||document.getElementById('fr-post-page')) return;
+    _frRenderList(root);
+  });
   _frRenderList(root);
 }
 function _frRenderList(root){
@@ -209,8 +224,8 @@ function forumOpenPost(postId,rootId,keepScroll){
   if(!page){
     page=document.createElement('div');
     page.id='fr-post-page';
-    page.className='mc-page';
-    document.body.appendChild(page);
+    page.className=_frDesktop()?'fr-inline-page':'mc-page';
+    _frMount(page,rootId);
   }
   page.dataset.rootId=rootId||'forum-root';
   page.innerHTML=`
@@ -336,17 +351,17 @@ function forumOpenComposer(rootId){
   document.getElementById('fr-compose-page')?.remove();
   const page=document.createElement('div');
   page.id='fr-compose-page';
-  page.className='mc-page';
+  page.className=_frDesktop()?'fr-inline-page':'mc-page';
   page.dataset.rootId=rootId||'forum-root';
   page.innerHTML=`
     <div class="mca-hdr">
-      <button class="mca-circle" onclick="document.getElementById('fr-compose-page').remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <button class="mca-circle" onclick="forumCloseComposer()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       <div class="mca-title">New Post</div>
       <button class="mca-circle mca-ok" onclick="forumSubmitPost()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
     </div>
     <div class="mca-scroll">
-      <div style="display:flex;gap:8px;padding:2px 16px 14px" id="fr-compose-cats">
-        ${FORUM_CATS.map((c,i)=>`<button data-cat="${c.id}" class="fr-cat${i===0?' on':''}" style="${i===0?`background:${c.bg};color:${c.color};border-color:${c.color}55`:''}" onclick="_frComposePickCat('${c.id}')">${c.label}</button>`).join('')}
+      <div style="display:flex;gap:8px;padding:2px 16px 14px;flex-wrap:wrap" id="fr-compose-cats">
+        ${FORUM_CATS.filter(c=>!c.adminPost||forumIsAdmin()).map((c,i)=>`<button data-cat="${c.id}" class="fr-cat${i===0?' on':''}" style="${i===0?`background:${c.bg};color:${c.color};border-color:${c.color}55`:''}" onclick="_frComposePickCat('${c.id}')">${c.label}</button>`).join('')}
       </div>
       <div class="mca-card">
         <input id="fr-compose-title" class="mca-in" type="text" placeholder="Title" maxlength="120" autocomplete="off">
@@ -356,9 +371,15 @@ function forumOpenComposer(rootId){
       </div>
       <div style="padding:0 18px;font-size:11.5px;color:var(--muted);line-height:1.5">Everyone in the DroneHub community — team and clients — can see, upvote, and comment on your post.</div>
     </div>`;
-  document.body.appendChild(page);
+  _frMount(page,page.dataset.rootId);
   page.dataset.cat=FORUM_CATS[0].id;
   setTimeout(()=>document.getElementById('fr-compose-title')?.focus(),80);
+}
+function forumCloseComposer(){
+  const page=document.getElementById('fr-compose-page');
+  const rootId=page?.dataset.rootId||'forum-root';
+  page?.remove();
+  if(_frDesktop()) renderForum(rootId);
 }
 function _frComposePickCat(catId){
   const page=document.getElementById('fr-compose-page');
