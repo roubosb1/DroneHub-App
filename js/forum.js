@@ -19,6 +19,7 @@ const FORUM_STATUSES = [
   {id:'planned',     label:'Planned',     color:'#5B8DEF'},
   {id:'inprogress',  label:'In Progress', color:'#F5A623'},
   {id:'shipped',     label:'Shipped',     color:'#22D97A'},
+  {id:'notplanned',  label:'Not Planned', color:'#E85D5D'},
 ];
 const FORUM_Q_STATUSES = [
   {id:'',         label:'Unanswered', color:'var(--muted)'},
@@ -28,6 +29,7 @@ function _frStatusMeta(id){ return [...FORUM_STATUSES,...FORUM_Q_STATUSES].find(
 // Mini pipeline for suggestion posts: Submitted → … → Shipped
 function _frPipelineHtml(p){
   if(p.category!=='feature') return '';
+  if(p.status==='notplanned') return `<div class="fr-pipe" style="justify-content:center;padding:12px"><span style="font-size:12px;font-weight:700;color:#E85D5D">Closed — not planned right now. Thanks for the idea; it can always be reopened.</span></div>`;
   const steps=[['','Submitted'],['considering','Considering'],['planned','Planned'],['inprogress','In Progress'],['shipped','Shipped']];
   const cur=Math.max(steps.findIndex(x=>x[0]===(p.status||'')),0);
   return `<div class="fr-pipe">${steps.map((st,i)=>{
@@ -528,7 +530,7 @@ function forumSetStatus(postId,status){
   const meta=_frStatusMeta(status);
   (p.comments=p.comments||[]).push({id:'fs_'+Date.now(),isSystem:true,statusId:status,author:me?.name||'Admin',authorEmail:me?.email||'',text:(me?.name?me.name.split(' ')[0]:'Admin')+' moved this to '+(status?meta.label:'no status'),at:new Date().toISOString()});
   forumSave(posts);
-  try{ if(status&&typeof addSocialNotification==='function') addSocialNotification(null,'"'+String(p.title).slice(0,50)+'" is now '+meta.label+' 🎉','mention'); }catch(e){}
+  try{ if(status&&typeof addSocialNotification==='function') addSocialNotification(null,'"'+String(p.title).slice(0,50)+'" is now '+meta.label+(status==='shipped'?' 🎉':''),'mention'); }catch(e){}
   showDhToast('Status updated',meta.label||'','','var(--green)',2000);
   const page=document.getElementById('fr-post-page');
   forumOpenPost(postId,page?.dataset.rootId,true);
