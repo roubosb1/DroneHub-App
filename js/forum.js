@@ -262,7 +262,7 @@ function _frRenderList(root){
 
   const sorts=[['hot','Hot'],['new','New'],['top','Top']];
   const rail=_frDesktop()?_frRailHtml(root.id):'';
-  root.innerHTML=`${rail?'<div class="fr-cols"><div class="fr-main">':''}
+  root.innerHTML=`
     <div class="fr-head">
       <div class="fr-title-row">
         <div class="fr-sorts">${sorts.map(([id,l])=>`<button class="fr-sort${_forumSort===id?' on':''}" onclick="_forumSort='${id}';renderForum('${root.id}')">${l}</button>`).join('')}</div>
@@ -275,7 +275,21 @@ function _frRenderList(root){
     </div>
     <div class="fr-list">
       ${posts.length?posts.map(p=>_frCardHtml(p,me,root.id)).join(''):_frEmptyHtml(root.id)}
-    </div>${rail?'</div>'+rail+'</div>':''}`;
+    </div>`;
+  // Desktop: head spans full width; feed + rail start on the same grid row
+  if(rail){
+    const head=root.querySelector('.fr-head');
+    const list=root.querySelector('.fr-list');
+    const cols=document.createElement('div');
+    cols.className='fr-cols';
+    const main=document.createElement('div');
+    main.className='fr-main';
+    main.appendChild(list);
+    cols.appendChild(main);
+    cols.insertAdjacentHTML('beforeend',rail);
+    root.appendChild(cols);
+    root.insertBefore(head,cols);
+  }
 }
 
 // ── Desktop right rail: follows, trending, roadmap ───────────────────────────
