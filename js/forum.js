@@ -75,6 +75,15 @@ async function forumSyncFirebase(){
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function _frEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Pull the first YouTube video id out of a block of text (watch/youtu.be/shorts/embed links)
+function _frYtId(text){
+  const m=String(text||'').match(/(?:youtube\.com\/(?:watch\?[^\s]*?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:null;
+}
+// Escape, then turn bare URLs into clickable links
+function _frRich(text){
+  return _frEsc(text).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--blue-bright);word-break:break-all" onclick="event.stopPropagation()">$1</a>');
+}
 function _frAgo(iso){
   if(!iso) return '';
   const diff=Date.now()-new Date(iso).getTime();
@@ -150,6 +159,7 @@ function _frCardHtml(p,me,rootId){
       </div>
       <div class="fr-card-title">${_frEsc(p.title)}</div>
       ${p.body?`<div class="fr-card-snip">${_frEsc(p.body).slice(0,110)}${p.body.length>110?'…':''}</div>`:''}
+      ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-thumb"><img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="fr-yt-play">▶</span></div>`:'';})()}
       <div class="fr-card-sub">${_frEsc(p.author)} ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)} · ${nComments} comment${nComments===1?'':'s'}</div>
     </div>
   </div>`;
@@ -218,7 +228,8 @@ function forumOpenPost(postId,rootId,keepScroll){
         </div>
         <div style="font-size:19px;font-weight:800;color:var(--white);line-height:1.3">${_frEsc(p.title)}</div>
         <div class="fr-card-sub" style="margin-top:6px">${_frEsc(p.author)} ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)}</div>
-        ${p.body?`<div style="font-size:14.5px;color:var(--offwhite);line-height:1.55;margin-top:12px;white-space:pre-wrap">${_frEsc(p.body)}</div>`:''}
+        ${p.body?`<div style="font-size:14.5px;color:var(--offwhite);line-height:1.55;margin-top:12px;white-space:pre-wrap">${_frRich(p.body)}</div>`:''}
+        ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-embed"><iframe src="https://www.youtube-nocookie.com/embed/${yt}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`:'';})()}
         <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
           <button class="fr-vote fr-vote-lg${voted?' on':''}" onclick="forumVote('${p.id}','${page.dataset.rootId}')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="${voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 12H4z"/></svg>
@@ -240,7 +251,7 @@ function forumOpenPost(postId,rootId,keepScroll){
           const cDel=admin||(me&&me.email===c.authorEmail);
           return `<div class="fr-comment">
             <div class="fr-card-sub" style="margin-bottom:3px">${_frEsc(c.author)} ${_frRoleTag(c.role)} · ${_frAgo(c.at)}</div>
-            <div style="font-size:14px;color:var(--offwhite);line-height:1.5;white-space:pre-wrap">${_frEsc(c.text)}</div>
+            <div style="font-size:14px;color:var(--offwhite);line-height:1.5;white-space:pre-wrap">${_frRich(c.text)}</div>
             <div style="display:flex;gap:12px;margin-top:6px;align-items:center">
               <button class="fr-cvote${cVoted?' on':''}" onclick="forumVoteComment('${p.id}','${c.id}','${page.dataset.rootId}')">▲ ${cVotes||''}</button>
               ${cDel?`<button class="fr-cvote" onclick="forumDeleteComment('${p.id}','${c.id}')">Delete</button>`:''}
@@ -341,7 +352,7 @@ function forumOpenComposer(rootId){
         <input id="fr-compose-title" class="mca-in" type="text" placeholder="Title" maxlength="120" autocomplete="off">
       </div>
       <div class="mca-card">
-        <textarea id="fr-compose-body" class="mca-in mca-in-sub" placeholder="Details — what's the idea, or what are you sharing?" rows="7" style="resize:none"></textarea>
+        <textarea id="fr-compose-body" class="mca-in mca-in-sub" placeholder="Details — paste a YouTube link to embed the video" rows="7" style="resize:none"></textarea>
       </div>
       <div style="padding:0 18px;font-size:11.5px;color:var(--muted);line-height:1.5">Everyone in the DroneHub community — team and clients — can see, upvote, and comment on your post.</div>
     </div>`;
