@@ -247,7 +247,7 @@ function renderForum(containerId){
   if(!root) return;
   forumSyncFirebase().then(()=>{
     // Don't clobber an open composer/post view with the refreshed feed
-    if(document.getElementById('fr-compose-page')||document.getElementById('fr-post-page')) return;
+    if(document.getElementById('fr-compose-page')||document.getElementById('fr-post-page')||document.getElementById('fr-profile-page')) return;
     _frRenderList(root);
   });
   _frRenderList(root);
@@ -344,7 +344,7 @@ function _frRailHtml(rootId){
     </div>`).join(''));
   html+=sec('People',roster.length?roster.map(u=>`
     <div class="fr-rail-row" style="cursor:default">
-      <div style="flex:1;min-width:0"><div style="color:var(--white);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_frEsc(u.name)}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="forumOpenProfile('${_frEsc(u.email)}','${rootId}')"><div style="color:var(--white);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_frEsc(u.name)}</div>
       <div style="font-size:10.5px;color:var(--muted)">${u.n} contribution${u.n===1?'':'s'}</div></div>
       ${_frRoleTag(u.role)}
       <button class="fr-follow${follows.includes(u.email)?' on':''}" onclick="forumToggleFollow('${u.email}')">${follows.includes(u.email)?'Following':'Follow'}</button>
@@ -391,7 +391,7 @@ function _frCardHtml(p,me,rootId){
       <div class="fr-card-title">${_frEsc(p.title)}</div>
       ${p.body?`<div class="fr-card-snip">${_frEsc(p.body).slice(0,110)}${p.body.length>110?'…':''}</div>`:''}
       ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-thumb"><img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="fr-yt-play"><svg width="34" height="34" viewBox="0 0 24 24" fill="rgba(255,255,255,.95)" stroke="none"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.45)"/><path d="M10 8l7 4-7 4z"/></svg></span></div>`:'';})()}
-      <div class="fr-card-sub">${_frEsc(p.author)} ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)} · ${nComments} comment${nComments===1?'':'s'}</div>
+      <div class="fr-card-sub"><span class="fr-author" onclick="event.stopPropagation();forumOpenProfile('${_frEsc(p.authorEmail||'')}','${rootId}')">${_frEsc(p.author)}</span> ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)} · ${nComments} comment${nComments===1?'':'s'}</div>
     </div>
   </div>`;
 }
@@ -458,7 +458,7 @@ function forumOpenPost(postId,rootId,keepScroll){
           ${p.status&&st?`<span class="fr-cat-pill" style="background:${st.color}22;color:${st.color}">${st.label}</span>`:''}
         </div>
         <div style="font-size:19px;font-weight:800;color:var(--white);line-height:1.3">${_frEsc(p.title)}</div>
-        <div class="fr-card-sub" style="margin-top:6px">${_frEsc(p.author)} ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)}</div>
+        <div class="fr-card-sub" style="margin-top:6px"><span class="fr-author" onclick="forumOpenProfile('${_frEsc(p.authorEmail||'')}','${page.dataset.rootId}')">${_frEsc(p.author)}</span> ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)}</div>
         ${_frPipelineHtml(p)}
         ${p.body?`<div style="font-size:14.5px;color:var(--offwhite);line-height:1.55;margin-top:12px;white-space:pre-wrap">${_frRich(p.body)}</div>`:''}
         ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-embed"><iframe src="https://www.youtube-nocookie.com/embed/${yt}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`:'';})()}
@@ -486,7 +486,7 @@ function forumOpenPost(postId,rootId,keepScroll){
           const cVoted=me&&(c.upvotes||[]).includes(me.email);
           const cDel=admin||(me&&me.email===c.authorEmail);
           return `<div class="fr-comment">
-            <div class="fr-card-sub" style="margin-bottom:3px">${_frEsc(c.author)} ${_frRoleTag(c.role)} · ${_frAgo(c.at)}</div>
+            <div class="fr-card-sub" style="margin-bottom:3px"><span class="fr-author" onclick="forumOpenProfile('${_frEsc(c.authorEmail||'')}','${page.dataset.rootId}')">${_frEsc(c.author)}</span> ${_frRoleTag(c.role)} · ${_frAgo(c.at)}</div>
             <div style="font-size:14px;color:var(--offwhite);line-height:1.5;white-space:pre-wrap">${_frRich(c.text)}</div>
             <div style="display:flex;gap:12px;margin-top:6px;align-items:center">
               <button class="fr-cvote${cVoted?' on':''}" onclick="this.classList.add('pop');setTimeout(()=>forumVoteComment('${p.id}','${c.id}','${page.dataset.rootId}'),140)"><svg width="11" height="11" viewBox="0 0 24 24" fill="${cVoted?'currentColor':'none'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l8 12H4z"/></svg> ${cVotes||''}</button>
@@ -658,4 +658,83 @@ function _frConfetti(){
   }
   document.body.appendChild(wrap);
   setTimeout(()=>wrap.remove(),3600);
+}
+
+// ── Creator profile page: person's stats, follow, and their posts ────────────
+function forumOpenProfile(email,rootId){
+  if(!email) return;
+  email=email.toLowerCase();
+  const posts=forumLoad().filter(p=>!p.deleted);
+  // who are they?
+  let name='',role='team',photo='';
+  posts.forEach(p=>{
+    if((p.authorEmail||'').toLowerCase()===email){name=p.author;role=p.role;}
+    (p.comments||[]).forEach(c=>{ if(!c.isSystem&&(c.authorEmail||'').toLowerCase()===email){name=name||c.author;role=role||c.role;} });
+  });
+  try{ const m=(getAdminTeamMembers()||[]).find(x=>(x.email||'').toLowerCase()===email); if(m){name=name||m.name;photo=m.photo||'';role='team';} }catch(e){}
+  try{ const cl=(typeof clients!=='undefined'?clients:[]).find(x=>(x.email||'').toLowerCase()===email); if(cl){name=name||cl.name;role=posts.some(p=>(p.authorEmail||'').toLowerCase()===email&&p.role)?role:'client';} }catch(e){}
+  if(!name) name=email.split('@')[0];
+  const mine=posts.filter(p=>(p.authorEmail||'').toLowerCase()===email);
+  const myComments=posts.reduce((n,p)=>n+((p.comments||[]).filter(c=>!c.isSystem&&(c.authorEmail||'').toLowerCase()===email).length),0);
+  const upsEarned=mine.reduce((n,p)=>n+(p.upvotes||[]).length,0)
+    +posts.reduce((n,p)=>n+((p.comments||[]).filter(c=>!c.isSystem&&(c.authorEmail||'').toLowerCase()===email).reduce((m,c)=>m+(c.upvotes||[]).length,0)),0);
+  const me=forumMe();
+  const isMe=me&&me.email===email;
+  const following=forumMyFollows().includes(email);
+  const initials=name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const followMap=forumFollowsLoad();
+  const followers=Object.values(followMap).filter(arr=>(arr||[]).includes(email)).length;
+  const theyFollow=(followMap[email]||[]).length;
+  const firstAt=[...mine.map(p=>p.createdAt)].sort()[0];
+
+  document.getElementById('fr-profile-page')?.remove();
+  document.getElementById('fr-post-page')?.remove();
+  const page=document.createElement('div');
+  page.id='fr-profile-page';
+  page.className=_frDesktop()?'fr-inline-page':'mc-page';
+  page.dataset.rootId=rootId||'forum-root';
+  page.innerHTML=`
+    <div class="mc-page-bar">
+      <button class="mc-page-back" onclick="forumCloseProfile()"><svg width="10" height="17" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 1 2 7.5 8 14"/></svg></button>
+      <div class="mc-page-title">Profile</div>
+    </div>
+    <div class="fr-post-body" style="padding:0 0 120px">
+      <div class="fr-prof-hero"></div>
+      <div class="fr-prof-head">
+        <div class="fr-prof-avatar">${photo?`<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover">`:initials}</div>
+        <div class="fr-prof-headmain">
+          <div class="fr-prof-name">${_frEsc(name)}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:5px">${_frRoleTag(role)}${firstAt?`<span style="font-size:11px;color:var(--muted)">In the community since ${new Date(firstAt).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</span>`:''}</div>
+        </div>
+        ${!isMe?`<button class="fr-follow-big${following?' on':''}" onclick="_frProfileFollow('${email}')">${following?'✓ Following':'+ Follow'}</button>`:''}
+      </div>
+      <div class="fr-prof-stats">
+        <div><b>${followers}</b><span>Follower${followers===1?'':'s'}</span></div>
+        <div><b>${theyFollow}</b><span>Following</span></div>
+        <div><b>${mine.length}</b><span>Post${mine.length===1?'':'s'}</span></div>
+        <div><b>${upsEarned}</b><span>Upvote${upsEarned===1?'':'s'}</span></div>
+      </div>
+      <div class="fr-prof-posts">
+        <div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 10px">${isMe?'Your posts':'Posts'}</div>
+        ${mine.length?mine.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(p=>_frCardHtml(p,me,page.dataset.rootId)).join(''):`<div style="padding:20px 0;color:var(--muted);font-size:13px">No posts yet.</div>`}
+      </div>
+    </div>`;
+  _frMount(page,page.dataset.rootId);
+}
+function forumCloseProfile(){
+  const page=document.getElementById('fr-profile-page');
+  const rootId=page?.dataset.rootId||'forum-root';
+  page?.remove();
+  renderForum(rootId);
+}
+function _frProfileFollow(email){
+  const me=forumMe(); if(!me){showDhToast('Sign in','Sign in to follow people','','var(--orange)',2500);return;}
+  const map=forumFollowsLoad();
+  const mine=map[me.email]||[];
+  const i=mine.indexOf(email);
+  if(i>-1) mine.splice(i,1); else mine.push(email);
+  map[me.email]=mine;
+  forumFollowsSave(map);
+  const rootId=document.getElementById('fr-profile-page')?.dataset.rootId;
+  forumOpenProfile(email,rootId);
 }

@@ -2300,3 +2300,25 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 .fr-cat.on{transform:scale(1.04);}
 @keyframes frConfetti{to{transform:translateY(105vh) rotate(720deg);opacity:.9}}
 .fr-pipe-dot{transition:background .3s ease,border-color .3s ease,box-shadow .3s ease;}
+
+/* Forum creator profiles */
+.fr-author{cursor:pointer;font-weight:700;color:var(--offwhite);transition:color .12s;}
+.fr-author:hover{color:var(--blue-bright);text-decoration:underline;}
+.fr-prof-hero{height:110px;background:linear-gradient(120deg,#22345C,#3B6FD4 55%,#5B8DEF);border-radius:0 0 18px 18px;}
+.fr-prof-head{display:flex;align-items:flex-end;gap:16px;padding:0 20px;margin-top:-38px;}
+.fr-prof-avatar{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:27px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:4px solid var(--navy);box-shadow:0 4px 16px rgba(0,0,0,.4);}
+.fr-prof-headmain{flex:1;min-width:0;padding-bottom:4px;}
+.fr-prof-name{font-size:21px;font-weight:800;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fr-follow-big{border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:13px;font-weight:800;padding:10px 20px;border-radius:13px;cursor:pointer;flex-shrink:0;margin-bottom:6px;transition:transform .12s,opacity .15s;box-shadow:0 4px 14px rgba(91,141,239,.35);}
+.fr-follow-big:active{transform:scale(.95);}
+.fr-follow-big.on{background:var(--navy-lift);border:1px solid var(--border-bright);color:var(--offwhite);box-shadow:none;}
+.fr-prof-stats{display:flex;gap:10px;padding:18px 20px 0;}
+.fr-prof-stats>div{flex:1;background:var(--navy-card);border:1px solid var(--border);border-radius:12px;padding:12px 6px;text-align:center;}
+.fr-prof-stats b{display:block;font-size:18px;color:var(--white);}
+.fr-prof-stats span{font-size:10px;color:var(--muted);font-weight:700;}
+.fr-prof-posts{padding:0 20px;}
+@media (min-width:769px){
+  #fr-profile-page .fr-prof-hero{height:140px;border-radius:14px;margin:8px 4px 0;}
+  #fr-profile-page .fr-prof-head{padding:0 28px;}
+  #fr-profile-page .fr-prof-stats,#fr-profile-page .fr-prof-posts{padding-left:28px;padding-right:28px;}
+}
