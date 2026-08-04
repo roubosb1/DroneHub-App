@@ -2276,3 +2276,27 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 .fr-pipe-step.now .fr-pipe-lbl{color:var(--white);}
 .fr-pipe-line{flex:1;height:2px;background:var(--border);margin-top:5px;min-width:8px;}
 .fr-pipe-line.on{background:var(--pc,var(--blue));}
+
+/* Forum polish: animations + fun */
+.fr-empty{padding:56px 20px 40px;text-align:center;animation:frFadeUp .35s ease;}
+.fr-empty-art{width:96px;height:96px;border-radius:28px;display:flex;align-items:center;justify-content:center;margin:0 auto;animation:frFloat 3.2s ease-in-out infinite;}
+@keyframes frFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes frFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.fr-list .fr-card{animation:frFadeUp .3s ease backwards;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;}
+.fr-list .fr-card:nth-child(1){animation-delay:.02s}.fr-list .fr-card:nth-child(2){animation-delay:.06s}
+.fr-list .fr-card:nth-child(3){animation-delay:.1s}.fr-list .fr-card:nth-child(4){animation-delay:.14s}
+.fr-list .fr-card:nth-child(5){animation-delay:.18s}.fr-list .fr-card:nth-child(6){animation-delay:.22s}
+@media (hover:hover){
+  .fr-card:hover{transform:translateY(-2px);border-color:rgba(91,141,239,.45);box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .fr-vote:hover{border-color:var(--blue);color:var(--blue-bright);}
+}
+.fr-vote.pop,.fr-cvote.pop{animation:frVotePop .32s cubic-bezier(.3,1.6,.5,1);}
+@keyframes frVotePop{0%{transform:scale(1)}45%{transform:scale(1.28)}100%{transform:scale(1)}}
+.fr-cvote{display:inline-flex;align-items:center;gap:4px;}
+.fr-yt-play svg{filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));transition:transform .15s ease;}
+.fr-yt-thumb:hover .fr-yt-play svg{transform:scale(1.12);}
+.fr-cat{transition:transform .12s ease,background .15s,color .15s,border-color .15s;}
+.fr-cat:active{transform:scale(.94);}
+.fr-cat.on{transform:scale(1.04);}
+@keyframes frConfetti{to{transform:translateY(105vh) rotate(720deg);opacity:.9}}
+.fr-pipe-dot{transition:background .3s ease,border-color .3s ease,box-shadow .3s ease;}

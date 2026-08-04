@@ -274,12 +274,7 @@ function _frRenderList(root){
       </div>
     </div>
     <div class="fr-list">
-      ${posts.length?posts.map(p=>_frCardHtml(p,me,root.id)).join(''):`
-        <div style="padding:60px 20px;text-align:center;color:var(--muted)">
-          <div style="font-size:34px;margin-bottom:10px">💬</div>
-          <div style="font-size:14px;font-weight:700;color:var(--offwhite);margin-bottom:4px">Nothing here yet</div>
-          <div style="font-size:12.5px">Start the conversation — request a feature, share your work, or say hi.</div>
-        </div>`}
+      ${posts.length?posts.map(p=>_frCardHtml(p,me,root.id)).join(''):_frEmptyHtml(root.id)}
     </div>${rail?'</div>'+rail+'</div>':''}`;
 }
 
@@ -343,6 +338,25 @@ function _frRailHtml(rootId){
   html+='</aside>';
   return html;
 }
+// Themed SVG empty states per category
+function _frEmptyHtml(rootId){
+  const sw='stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const art={
+    all:      {color:'#5B8DEF',svg:`<svg width="54" height="54" viewBox="0 0 24 24" ${sw}><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/><path d="M5 16l.6 1.4L7 18l-1.4.6L5 20l-.6-1.4L3 18l1.4-.6z"/></svg>`,t:'A blank canvas',d:'Be the first — drop an idea, a video, or a question.'},
+    feature:  {color:'#5B8DEF',svg:`<svg width="54" height="54" viewBox="0 0 24 24" ${sw}><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.7.6 1 1.3 1.2 2.1h4.6c.2-.8.5-1.5 1.2-2.1A6 6 0 0 0 12 3z"/><line x1="12" y1="7" x2="12" y2="9"/></svg>`,t:'No suggestions yet',d:'Got an idea that would make this app better? Pitch it here.'},
+    work:     {color:'#22D97A',svg:`<svg width="54" height="54" viewBox="0 0 24 24" ${sw}><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6.5 6l2.5 4M12.5 6l2.5 4M18.5 6l2.4 4"/><path d="M10.5 13.5l4 2.25-4 2.25z"/></svg>`,t:'Nothing showing yet',d:'Share a shoot, an edit, or a YouTube link — embeds play right here.'},
+    question: {color:'#A78BFA',svg:`<svg width="54" height="54" viewBox="0 0 24 24" ${sw}><path d="M21 12a8 8 0 1 0-3.1 6.3L21 19l-.7-2.8A8 8 0 0 0 21 12z"/><path d="M9.6 9.5a2.5 2.5 0 0 1 4.8 1c0 1.6-2.4 2-2.4 3.2"/><line x1="12" y1="16.5" x2="12.01" y2="16.5"/></svg>`,t:'No questions yet',d:'Stuck on something? Ask — the whole community can chime in.'},
+    announce: {color:'#F5C842',svg:`<svg width="54" height="54" viewBox="0 0 24 24" ${sw}><path d="M3 11l14-6v14L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/><path d="M17 8a4 4 0 0 1 0 8"/></svg>`,t:'No announcements yet',d:'Updates from the DroneHub team will land here.'},
+    general:  {color:'#F5A623',svg:`<svg width="54" height="54" viewBox="0 0 24 24" ${sw}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="8.5" x2="16" y2="8.5"/><line x1="8" y1="12" x2="13" y2="12"/></svg>`,t:'All quiet in here',d:'Anything goes — say hi, share news, start a thread.'},
+  };
+  const e=art[_forumCat]||art.all;
+  return `<div class="fr-empty">
+    <div class="fr-empty-art" style="color:${e.color};background:${e.color}14;border:1px solid ${e.color}33">${e.svg}</div>
+    <div style="font-size:15px;font-weight:800;color:var(--white);margin:14px 0 4px">${e.t}</div>
+    <div style="font-size:12.5px;color:var(--muted);max-width:260px;margin:0 auto;line-height:1.5">${e.d}</div>
+    <button class="fr-newbtn" style="margin-top:16px" onclick="forumOpenComposer('${rootId}')">+ New Post</button>
+  </div>`;
+}
 function _frCardHtml(p,me,rootId){
   const cat=FORUM_CATS.find(c=>c.id===p.category)||FORUM_CATS[2];
   const st=_frStatusMeta(p.status);
@@ -350,19 +364,19 @@ function _frCardHtml(p,me,rootId){
   const voted=me&&(p.upvotes||[]).includes(me.email);
   const nComments=(p.comments||[]).length;
   return `<div class="fr-card" onclick="forumOpenPost('${p.id}','${rootId}')">
-    <button class="fr-vote${voted?' on':''}" onclick="event.stopPropagation();forumVote('${p.id}','${rootId}')">
+    <button class="fr-vote${voted?' on':''}" onclick="event.stopPropagation();this.classList.add('pop');setTimeout(()=>forumVote('${p.id}','${rootId}'),140)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="${voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 12H4z"/></svg>
       <span>${votes}</span>
     </button>
     <div class="fr-card-main">
       <div class="fr-card-meta">
-        ${p.pinned?'<span style="color:var(--amber);font-size:11px">📌</span>':''}
+        ${p.pinned?'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" style="color:var(--amber)"><path d="M16 3l5 5-6.5 2.5L12 14l-2-2-5.5 5.5L3 16 8.5 10.5l-2-2L10 6z"/></svg>':''}
         <span class="fr-cat-pill" style="background:${cat.bg};color:${cat.color}">${cat.label}</span>
         ${p.status?`<span class="fr-cat-pill" style="background:${st.color}22;color:${st.color}">${st.label}</span>`:''}
       </div>
       <div class="fr-card-title">${_frEsc(p.title)}</div>
       ${p.body?`<div class="fr-card-snip">${_frEsc(p.body).slice(0,110)}${p.body.length>110?'…':''}</div>`:''}
-      ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-thumb"><img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="fr-yt-play">▶</span></div>`:'';})()}
+      ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-thumb"><img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="fr-yt-play"><svg width="34" height="34" viewBox="0 0 24 24" fill="rgba(255,255,255,.95)" stroke="none"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.45)"/><path d="M10 8l7 4-7 4z"/></svg></span></div>`:'';})()}
       <div class="fr-card-sub">${_frEsc(p.author)} ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)} · ${nComments} comment${nComments===1?'':'s'}</div>
     </div>
   </div>`;
@@ -425,7 +439,7 @@ function forumOpenPost(postId,rootId,keepScroll){
     <div class="fr-post-body">
       <div style="padding:6px 18px 0">
         <div class="fr-card-meta" style="margin-bottom:8px">
-          ${p.pinned?'<span style="color:var(--amber)">📌</span>':''}
+          ${p.pinned?'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" style="color:var(--amber)"><path d="M16 3l5 5-6.5 2.5L12 14l-2-2-5.5 5.5L3 16 8.5 10.5l-2-2L10 6z"/></svg>':''}
           <span class="fr-cat-pill" style="background:${cat.bg};color:${cat.color}">${cat.label}</span>
           ${p.status&&st?`<span class="fr-cat-pill" style="background:${st.color}22;color:${st.color}">${st.label}</span>`:''}
         </div>
@@ -435,7 +449,7 @@ function forumOpenPost(postId,rootId,keepScroll){
         ${p.body?`<div style="font-size:14.5px;color:var(--offwhite);line-height:1.55;margin-top:12px;white-space:pre-wrap">${_frRich(p.body)}</div>`:''}
         ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-embed"><iframe src="https://www.youtube-nocookie.com/embed/${yt}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`:'';})()}
         <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
-          <button class="fr-vote fr-vote-lg${voted?' on':''}" onclick="forumVote('${p.id}','${page.dataset.rootId}')">
+          <button class="fr-vote fr-vote-lg${voted?' on':''}" onclick="this.classList.add('pop');setTimeout(()=>forumVote('${p.id}','${page.dataset.rootId}'),140)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="${voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 12H4z"/></svg>
             <span>${votes} upvote${votes===1?'':'s'}</span>
           </button>
@@ -461,7 +475,7 @@ function forumOpenPost(postId,rootId,keepScroll){
             <div class="fr-card-sub" style="margin-bottom:3px">${_frEsc(c.author)} ${_frRoleTag(c.role)} · ${_frAgo(c.at)}</div>
             <div style="font-size:14px;color:var(--offwhite);line-height:1.5;white-space:pre-wrap">${_frRich(c.text)}</div>
             <div style="display:flex;gap:12px;margin-top:6px;align-items:center">
-              <button class="fr-cvote${cVoted?' on':''}" onclick="forumVoteComment('${p.id}','${c.id}','${page.dataset.rootId}')">▲ ${cVotes||''}</button>
+              <button class="fr-cvote${cVoted?' on':''}" onclick="this.classList.add('pop');setTimeout(()=>forumVoteComment('${p.id}','${c.id}','${page.dataset.rootId}'),140)"><svg width="11" height="11" viewBox="0 0 24 24" fill="${cVoted?'currentColor':'none'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l8 12H4z"/></svg> ${cVotes||''}</button>
               ${cDel?`<button class="fr-cvote" onclick="forumDeleteComment('${p.id}','${c.id}')">Delete</button>`:''}
             </div>
           </div>`;
@@ -530,6 +544,7 @@ function forumSetStatus(postId,status){
   const meta=_frStatusMeta(status);
   (p.comments=p.comments||[]).push({id:'fs_'+Date.now(),isSystem:true,statusId:status,author:me?.name||'Admin',authorEmail:me?.email||'',text:(me?.name?me.name.split(' ')[0]:'Admin')+' moved this to '+(status?meta.label:'no status'),at:new Date().toISOString()});
   forumSave(posts);
+  if(status==='shipped') _frConfetti();
   try{ if(status&&typeof addSocialNotification==='function') addSocialNotification(null,'"'+String(p.title).slice(0,50)+'" is now '+meta.label+(status==='shipped'?' 🎉':''),'mention'); }catch(e){}
   showDhToast('Status updated',meta.label||'','','var(--green)',2000);
   const page=document.getElementById('fr-post-page');
@@ -614,4 +629,19 @@ function forumSubmitPost(){
   page?.remove();
   showDhToast('Posted','Your post is live in the community','','var(--green)',2500);
   renderForum(rootId);
+}
+
+// ── Confetti burst when a suggestion ships ───────────────────────────────────
+function _frConfetti(){
+  const colors=['#5B8DEF','#22D97A','#F5C842','#A78BFA','#F5A623','#E85D5D'];
+  const wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden';
+  for(let i=0;i<36;i++){
+    const c=document.createElement('span');
+    const size=5+Math.random()*6;
+    c.style.cssText=`position:absolute;top:-12px;left:${Math.random()*100}%;width:${size}px;height:${size*0.6}px;background:${colors[i%colors.length]};border-radius:2px;animation:frConfetti ${1.6+Math.random()*1.4}s ${Math.random()*0.5}s cubic-bezier(.2,.6,.4,1) forwards;transform:rotate(${Math.random()*360}deg)`;
+    wrap.appendChild(c);
+  }
+  document.body.appendChild(wrap);
+  setTimeout(()=>wrap.remove(),3600);
 }
