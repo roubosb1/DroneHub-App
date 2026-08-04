@@ -2322,3 +2322,9 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   #fr-profile-page .fr-prof-head{padding:0 28px;}
   #fr-profile-page .fr-prof-stats,#fr-profile-page .fr-prof-posts{padding-left:28px;padding-right:28px;}
 }
+
+/* Mobile: the global + button opens New Post — hide the in-feed one */
+@media (max-width:768px){
+  .fr-title-row .fr-newbtn{display:none;}
+  .fr-title-row{justify-content:flex-start;}
+}
