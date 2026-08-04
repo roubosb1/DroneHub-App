@@ -2444,58 +2444,31 @@
 <!-- TEAM MEMBER PROFILE MODAL -->
 <div id="team-profile-modal" onclick="if(event.target===this)closeTeamMemberProfile()">
   <div id="team-profile-box" onclick="event.stopPropagation()">
-    <!-- Header -->
     <div id="tp-header" style="background:linear-gradient(135deg,var(--navy-mid),#0D1438);padding:24px 28px;border-bottom:1px solid var(--border)"></div>
-    <!-- Tabs -->
     <div style="display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:var(--navy-mid)">
-      <button class="tp-tab-btn active" id="tp-tab-overview" onclick="tpSwitchTab('overview')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Overview
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-timeoff" onclick="tpSwitchTab('timeoff')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
-        Time Off
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-portfolio" onclick="tpSwitchTab('portfolio')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        Portfolio
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-work" onclick="tpSwitchTab('work')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-        My Work
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-calendar" onclick="tpSwitchTab('calendar')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Calendar
-      </button>
-      <button onclick="closeTeamMemberProfile()" style="margin-left:auto;border:none;background:none;color:var(--muted);cursor:pointer;padding:0 4px;align-self:center;display:flex;align-items:center">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button class="tp-tab-btn active" id="tp-tab-portfolio" onclick="tpSwitchTab('portfolio')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg> Portfolio</button>
+      <button class="tp-tab-btn" id="tp-tab-timeoff" onclick="tpSwitchTab('timeoff')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg> Time Off</button>
+      <button class="tp-tab-btn" id="tp-tab-work" onclick="tpSwitchTab('work')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> My Work</button>
+      <button class="tp-tab-btn" id="tp-tab-calendar" onclick="tpSwitchTab('calendar')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar</button>
+      <button onclick="closeTeamMemberProfile()" style="margin-left:auto;border:none;background:none;color:var(--muted);cursor:pointer;padding:0 4px;align-self:center;display:flex;align-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
-    <!-- Content -->
     <div id="tp-modal-content" style="padding:24px 28px;min-height:300px;max-height:70vh;overflow-y:auto"></div>
   </div>
 </div>
 
-<!-- ── DESKTOP MY PROFILE PANE ─────────────────────────────────────────── -->
+<!-- DESKTOP MY PROFILE PANE (creator page) -->
 <div id="dsk-profile-pane" style="display:none;position:fixed;left:72px;top:0;right:0;bottom:0;z-index:150;background:var(--navy);flex-direction:column;overflow:hidden">
-  <!-- Header bar -->
   <div style="height:64px;background:var(--navy-card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0">
-    <button onclick="dskHideMyProfile()" style="width:32px;height:32px;border:none;background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
+    <button onclick="dskHideMyProfile()" style="width:32px;height:32px;border:none;background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
     <span style="font-size:15px;font-weight:800;color:var(--white);letter-spacing:-.01em">My Profile</span>
   </div>
-  <!-- Body: creator-page layout — cover hero, identity, stats, tabs -->
   <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
-    <!-- Cover -->
     <div id="dsk-pf-cover" class="fr-prof-hero" style="height:210px;border-radius:0;flex-shrink:0">
       <div class="fr-cover-btns">
-        <button id="dsk-pf-cover-btn" onclick="dskPfPickCover()">📷 Add cover photo</button>
-        <button id="dsk-pf-cover-rm" onclick="dskPfRemoveCover()" style="display:none">✕</button>
+        <button id="dsk-pf-cover-btn" onclick="dskPfPickCover()">&#128247; Add cover photo</button>
+        <button id="dsk-pf-cover-rm" onclick="dskPfRemoveCover()" style="display:none">&#10005;</button>
       </div>
     </div>
-    <!-- Identity row: avatar · name · inline stats · sign out -->
     <div style="display:flex;align-items:flex-end;gap:20px;padding:0 36px;margin-top:-46px;flex-shrink:0;position:relative;z-index:2">
       <div id="dsk-pf-avatar" style="width:112px;height:112px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:#fff;border:4px solid var(--navy);overflow:hidden;flex-shrink:0;box-shadow:0 4px 18px rgba(0,0,0,.45)"></div>
       <div style="min-width:0;padding-bottom:8px">
@@ -2512,93 +2485,17 @@
         <div style="text-align:center"><div id="dsk-pf-stat-followers" style="font-size:20px;font-weight:800;color:var(--white);line-height:1.1">0</div><div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:2px">Followers</div></div>
         <div style="text-align:center"><div id="dsk-pf-stat-following" style="font-size:20px;font-weight:800;color:var(--white);line-height:1.1">0</div><div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:2px">Following</div></div>
       </div>
-      <button onclick="gateLogout()" style="padding:9px 16px;border-radius:11px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px;flex-shrink:0" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(240,82,82,.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border-bright)'">Sign out</button>
+      <button onclick="gateLogout()" style="padding:9px 16px;border-radius:11px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px;flex-shrink:0">Sign out</button>
     </div>
-    <!-- Tabs -->
-    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:var(--navy-mid)">
-      <button class="tp-tab-btn active" id="tp-tab-overview" onclick="tpSwitchTab('overview')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Overview
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-timeoff" onclick="tpSwitchTab('timeoff')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
-        Time Off
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-portfolio" onclick="tpSwitchTab('portfolio')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        Portfolio
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-work" onclick="tpSwitchTab('work')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-        My Work
-      </button>
-      <button class="tp-tab-btn" id="tp-tab-calendar" onclick="tpSwitchTab('calendar')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Calendar
-      </button>
-      <button onclick="closeTeamMemberProfile()" style="margin-left:auto;border:none;background:none;color:var(--muted);cursor:pointer;padding:0 4px;align-self:center;display:flex;align-items:center">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <!-- Content -->
-    <div id="tp-modal-content" style="padding:24px 28px;min-height:300px;max-height:70vh;overflow-y:auto"></div>
-  </div>
-</div>
-
-<!-- ── DESKTOP MY PROFILE PANE ─────────────────────────────────────────── -->
-<div id="dsk-profile-pane" style="display:none;position:fixed;left:72px;top:0;right:0;bottom:0;z-index:150;background:var(--navy);flex-direction:column;overflow:hidden">
-  <!-- Header bar -->
-  <div style="height:64px;background:var(--navy-card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0">
-    <button onclick="dskHideMyProfile()" style="width:32px;height:32px;border:none;background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    </button>
-    <span style="font-size:15px;font-weight:800;color:var(--white);letter-spacing:-.01em">My Profile</span>
-  </div>
-  <!-- Body: creator-page layout — cover hero, identity, stats, tabs -->
-  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
-    <!-- Cover -->
-    <div id="dsk-pf-cover" class="fr-prof-hero" style="height:210px;border-radius:0;flex-shrink:0">
-      <div class="fr-cover-btns">
-        <button id="dsk-pf-cover-btn" onclick="dskPfPickCover()">📷 Add cover photo</button>
-        <button id="dsk-pf-cover-rm" onclick="dskPfRemoveCover()" style="display:none">✕</button>
-      </div>
-    </div>
-    <!-- Identity row -->
-    <div style="display:flex;align-items:flex-end;gap:20px;padding:0 36px;margin-top:-46px;flex-shrink:0;position:relative;z-index:2">
-      <div id="dsk-pf-avatar" style="width:112px;height:112px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#A78BFA);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:#fff;border:4px solid var(--navy);overflow:hidden;flex-shrink:0;box-shadow:0 4px 18px rgba(0,0,0,.45)"></div>
-      <div style="flex:1;min-width:0;padding-bottom:8px">
-        <div id="dsk-pf-name" style="font-size:24px;font-weight:800;color:var(--white);line-height:1.2"></div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap">
-          <span id="dsk-pf-role-badge"></span>
-          <span id="dsk-pf-email" style="font-size:12px;color:var(--muted)"></span>
-          <span id="dsk-pf-phone" style="font-size:12px;color:var(--muted)"></span>
-        </div>
-      </div>
-      <button onclick="gateLogout()" style="padding:9px 16px;border-radius:11px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px;flex-shrink:0" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(240,82,82,.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border-bright)'">Sign out</button>
-    </div>
-    <!-- Tabs -->
     <div style="margin-top:10px;flex-shrink:0">
-      <!-- Tab bar -->
       <div style="display:flex;border-bottom:1px solid var(--border);background:var(--navy-mid);flex-shrink:0;overflow-x:auto;padding-left:18px">
-        <button class="dsk-pf-tab active" id="dsk-pf-tab-portfolio" onclick="dskPfSwitchTab('portfolio')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          Portfolio
-        </button>
-        <button class="dsk-pf-tab" id="dsk-pf-tab-timeoff" onclick="dskPfSwitchTab('timeoff')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg>
-          Time Off
-        </button>
-        <button class="dsk-pf-tab" id="dsk-pf-tab-calendar" onclick="dskPfSwitchTab('calendar')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          Calendar
-        </button>
-        <button class="dsk-pf-tab" id="dsk-pf-tab-work" onclick="dskPfSwitchTab('work')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-          My Projects
-        </button>
+        <button class="dsk-pf-tab active" id="dsk-pf-tab-portfolio" onclick="dskPfSwitchTab('portfolio')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg> Portfolio</button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-timeoff" onclick="dskPfSwitchTab('timeoff')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2 7.4 9 12l-2 3H4l-1 2 3 1 1 3 2-1v-3l3-2 4.9 7 2.1-1.9a1 1 0 0 0 .3-.9z"/></svg> Time Off</button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-calendar" onclick="dskPfSwitchTab('calendar')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar</button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-work" onclick="dskPfSwitchTab('work')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg> My Projects</button>
       </div>
     </div>
-      <div id="dsk-tp-content" style="padding:28px 36px"></div>
+    <div id="dsk-tp-content" style="padding:28px 36px"></div>
   </div>
 </div>
 
@@ -6403,8 +6300,13 @@ function openTeamMemberProfile(memberId){
   if((memberId==='me'||memberId===gateGetSession()?.email)&&window.innerWidth>768){ dskShowMyProfile(); return; }
   const resolvedId = tpResolveMemberId(memberId);
   if(!resolvedId){ showDhToast('Profile','Could not find your team profile.','⚠️','var(--amber)',3000); return; }
+  try{
+    const _selfEm=(gateGetSession()?.email||'').toLowerCase();
+    const _mm=getAdminTeamMembers().find(m=>m.id===resolvedId);
+    if(window.innerWidth>768&&_selfEm&&(_mm?.email||'').toLowerCase()===_selfEm){ dskShowMyProfile(); return; }
+  }catch(e){}
   _tpMemberId = resolvedId;
-  _tpTab = 'overview';
+  _tpTab = 'portfolio';
   _tpContentTarget = 'tp-modal-content';
   const modal = document.getElementById('team-profile-modal');
   if(modal) modal.classList.add('open');
@@ -6499,7 +6401,7 @@ function dskShowMyProfile(){
   // Show pane + reset tabs
   const pane=document.getElementById('dsk-profile-pane'); if(pane) pane.style.display='flex';
   document.querySelectorAll('.dsk-pf-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('dsk-pf-tab-overview')?.classList.add('active');
+  document.getElementById('dsk-pf-tab-portfolio')?.classList.add('active');
   // Render content
   tpRenderContent();
   // Mark sidebar active
@@ -6557,7 +6459,7 @@ function tpRender(){
   const isAdmin = !session || session.type==='admin' || session.role==='admin';
   const isOwn = (member.email&&(session?.email||'').toLowerCase()===member.email.toLowerCase()) ||
                 (member.name &&(session?.name ||'').toLowerCase()===member.name.toLowerCase());
-  const role = TEAM_ROLES.find(r=>r.key===member.role)||TEAM_ROLES[4];
+  const role = TEAM_ROLES.find(r=>r.key===member.role)||TEAM_ROLES[4]||{color:'#5B8DEF',icon:'',label:member.role||'Member'};
 
   // Header
   const header = document.getElementById('tp-header');
