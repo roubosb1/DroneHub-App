@@ -2535,14 +2535,8 @@
         <div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:3px">Following</div>
       </div>
     </div>
-    <!-- Quick actions -->
-    <div style="display:flex;gap:10px;padding:14px 36px 0;flex-shrink:0">
-      <button onclick="dskPfSwitchTab('timeoff')" style="display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer">Request Time Off</button>
-      <button onclick="dskPfSwitchTab('portfolio')" style="display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;border:1px solid rgba(34,217,122,.4);background:rgba(34,217,122,.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer">Add Portfolio Work</button>
-      <button onclick="dskHideMyProfile();showPane('tracker')" style="display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">View My Projects</button>
-    </div>
     <!-- Tabs -->
-    <div style="margin-top:18px;flex-shrink:0">
+    <div style="margin-top:10px;flex-shrink:0">
       <!-- Tab bar -->
       <div style="display:flex;border-bottom:1px solid var(--border);background:var(--navy-mid);flex-shrink:0;overflow-x:auto;padding-left:18px">
         <button class="dsk-pf-tab active" id="dsk-pf-tab-portfolio" onclick="dskPfSwitchTab('portfolio')">
@@ -2556,6 +2550,10 @@
         <button class="dsk-pf-tab" id="dsk-pf-tab-calendar" onclick="dskPfSwitchTab('calendar')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Calendar
+        </button>
+        <button class="dsk-pf-tab" id="dsk-pf-tab-work" onclick="dskPfSwitchTab('work')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          My Projects
         </button>
       </div>
     </div>
