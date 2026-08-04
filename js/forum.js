@@ -482,6 +482,9 @@ function forumOpenPost(postId,rootId,keepScroll){
             <svg width="15" height="15" viewBox="0 0 24 24" fill="${voted?'currentColor':'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 12H4z"/></svg>
             <span>${votes} upvote${votes===1?'':'s'}</span>
           </button>
+          ${(admin||(me&&me.email===p.authorEmail))?`<select class="fr-adminbtn" style="appearance:none" title="Change category" onchange="forumSetCategory('${p.id}',this.value)">
+            ${FORUM_CATS.filter(c=>!c.adminPost||admin).map(c=>`<option value="${c.id}"${p.category===c.id?' selected':''}>${c.label}</option>`).join('')}
+          </select>`:''}
           ${admin?`
           <button class="fr-adminbtn" onclick="forumTogglePin('${p.id}')">${p.pinned?'Unpin':'Pin'}</button>
           ${p.category==='feature'?`<select class="fr-adminbtn" style="appearance:none" onchange="forumSetStatus('${p.id}',this.value)">
@@ -581,6 +584,26 @@ function forumSetStatus(postId,status){
   const page=document.getElementById('fr-post-page');
   forumOpenPost(postId,page?.dataset.rootId,true);
 }
+// Recategorize a post — author or admin only
+function forumSetCategory(postId,catId){
+  const me=forumMe(); if(!me) return;
+  const posts=forumLoad();
+  const p=posts.find(x=>x.id===postId); if(!p) return;
+  if(!(forumIsAdmin()||me.email===p.authorEmail)) return;
+  const cat=FORUM_CATS.find(c=>c.id===catId); if(!cat||p.category===catId) return;
+  if(cat.adminPost&&!forumIsAdmin()) return;
+  p.category=catId;
+  // statuses belong to specific categories — clear if they no longer apply
+  if(catId!=='feature'&&FORUM_STATUSES.some(st=>st.id===p.status&&st.id)) p.status='';
+  if(catId!=='question'&&p.status==='answered') p.status='';
+  p.editedAt=new Date().toISOString();
+  (p.comments=p.comments||[]).push({id:'fs_'+Date.now(),isSystem:true,statusId:'',author:me.name,authorEmail:me.email,text:me.name.split(' ')[0]+' moved this to '+cat.label,at:new Date().toISOString()});
+  forumSave(posts);
+  showDhToast('Category changed',cat.label,'','var(--green)',2000);
+  const page=document.getElementById('fr-post-page');
+  forumOpenPost(postId,page?.dataset.rootId,true);
+}
+
 function forumDeletePost(postId){
   if(!confirm('Delete this post and its comments?')) return;
   const posts=forumLoad();
