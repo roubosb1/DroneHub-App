@@ -2196,6 +2196,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 /* ══ Community forum ══ */
 .fr-head{padding:10px 16px 4px;position:sticky;top:0;z-index:5;background:var(--navy);}
 .fr-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.fr-bar{display:flex;align-items:center;gap:10px;padding-bottom:8px;}
+.fr-bar .fr-sorts{flex-shrink:0;}
+.fr-bar .fr-cats{flex:1;min-width:0;padding-bottom:0;}
+.fr-bar .fr-newbtn{flex-shrink:0;}
 .fr-sorts{display:flex;gap:2px;background:rgba(255,255,255,.06);border-radius:11px;padding:3px;}
 .fr-sort{border:none;background:transparent;color:var(--muted);font-size:12.5px;font-weight:700;padding:6px 14px;border-radius:9px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .fr-sort.on{background:var(--navy-card);color:var(--white);}
@@ -2325,6 +2329,8 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 
 /* Mobile: the global + button opens New Post — hide the in-feed one */
 @media (max-width:768px){
-  .fr-title-row .fr-newbtn{display:none;}
-  .fr-title-row{justify-content:flex-start;}
+  /* Mobile keeps the stacked layout: sorts row above the category chips */
+  .fr-bar{display:block;}
+  .fr-bar .fr-sorts{display:inline-flex;margin-bottom:10px;}
+  .fr-bar .fr-newbtn{display:none;}
 }

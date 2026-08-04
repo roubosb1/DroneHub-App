@@ -279,13 +279,13 @@ function _frRenderList(root){
   const rail=_frDesktop()?_frRailHtml(root.id):'';
   root.innerHTML=`
     <div class="fr-head">
-      <div class="fr-title-row">
+      <div class="fr-bar">
         <div class="fr-sorts">${sorts.map(([id,l])=>`<button class="fr-sort${_forumSort===id?' on':''}" onclick="_forumSort='${id}';renderForum('${root.id}')">${l}</button>`).join('')}</div>
+        <div class="fr-cats no-scrollbar">
+          <button class="fr-cat${_forumCat==='all'?' on':''}" onclick="_forumCat='all';renderForum('${root.id}')">All</button>
+          ${FORUM_CATS.map(c=>`<button class="fr-cat${_forumCat===c.id?' on':''}" style="${_forumCat===c.id?`background:${c.bg};color:${c.color};border-color:${c.color}55`:''}" onclick="_forumCat='${c.id}';renderForum('${root.id}')">${c.label}</button>`).join('')}
+        </div>
         <button class="fr-newbtn" onclick="forumOpenComposer('${root.id}')">+ New Post</button>
-      </div>
-      <div class="fr-cats no-scrollbar">
-        <button class="fr-cat${_forumCat==='all'?' on':''}" onclick="_forumCat='all';renderForum('${root.id}')">All</button>
-        ${FORUM_CATS.map(c=>`<button class="fr-cat${_forumCat===c.id?' on':''}" style="${_forumCat===c.id?`background:${c.bg};color:${c.color};border-color:${c.color}55`:''}" onclick="_forumCat='${c.id}';renderForum('${root.id}')">${c.label}</button>`).join('')}
       </div>
     </div>
     <div class="fr-list">
