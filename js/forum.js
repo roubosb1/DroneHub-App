@@ -72,7 +72,38 @@ async function forumSyncFirebase(){
     });
     const merged=Object.values(byId).filter(p=>!p.deleted);
     localStorage.setItem('dronehub_forum',JSON.stringify(merged));
+    try{
+      const ff=await fbGet('orgs',ORG_ID+':forum_follows');
+      if(ff?.data){
+        const remote=JSON.parse(ff.data), local=forumFollowsLoad();
+        Object.keys(remote).forEach(k=>{ if(!(k in local)) local[k]=remote[k]; });
+        localStorage.setItem('dronehub_forum_follows',JSON.stringify(local));
+      }
+    }catch(e){}
   }catch(e){}
+}
+
+// ── Follows: keep tabs on people's posts + comments ──────────────────────────
+function forumFollowsLoad(){ try{return JSON.parse(localStorage.getItem('dronehub_forum_follows')||'{}');}catch(e){return{};} }
+function forumFollowsSave(map){
+  try{localStorage.setItem('dronehub_forum_follows',JSON.stringify(map));}catch(e){}
+  if(typeof _fbToken==='function'&&_fbToken())
+    fbSet('orgs',ORG_ID+':forum_follows',{data:JSON.stringify(map),updatedAt:Date.now()}).catch(()=>{});
+}
+function forumMyFollows(){
+  const me=forumMe(); if(!me) return [];
+  return forumFollowsLoad()[me.email]||[];
+}
+function forumToggleFollow(email){
+  const me=forumMe(); if(!me) return;
+  const map=forumFollowsLoad();
+  const mine=map[me.email]||[];
+  const i=mine.indexOf(email);
+  if(i>-1) mine.splice(i,1); else mine.push(email);
+  map[me.email]=mine;
+  forumFollowsSave(map);
+  const root=document.querySelector('#fr-rail')?.closest('[id]');
+  renderForum(root?.id||'forum-root');
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -208,7 +239,8 @@ function _frRenderList(root){
   else posts.sort((a,b)=>((b.pinned?1e6:0)+(b.upvotes||[]).length)-((a.pinned?1e6:0)+(a.upvotes||[]).length));
 
   const sorts=[['hot','Hot'],['new','New'],['top','Top']];
-  root.innerHTML=`
+  const rail=_frDesktop()?_frRailHtml(root.id):'';
+  root.innerHTML=`${rail?'<div class="fr-cols"><div class="fr-main">':''}
     <div class="fr-head">
       <div class="fr-title-row">
         <div class="fr-sorts">${sorts.map(([id,l])=>`<button class="fr-sort${_forumSort===id?' on':''}" onclick="_forumSort='${id}';renderForum('${root.id}')">${l}</button>`).join('')}</div>
@@ -226,7 +258,68 @@ function _frRenderList(root){
           <div style="font-size:14px;font-weight:700;color:var(--offwhite);margin-bottom:4px">Nothing here yet</div>
           <div style="font-size:12.5px">Start the conversation — request a feature, share your work, or say hi.</div>
         </div>`}
-    </div>`;
+    </div>${rail?'</div>'+rail+'</div>':''}`;
+}
+
+// ── Desktop right rail: follows, trending, roadmap ───────────────────────────
+function _frRailHtml(rootId){
+  const me=forumMe();
+  const posts=forumLoad().filter(p=>!p.deleted);
+  // distinct people from posts + comments
+  const people={};
+  const bump=(name,email,role)=>{
+    if(!email||!name) return;
+    if(me&&email===me.email) return;
+    (people[email]=people[email]||{name,email,role,n:0}).n++;
+  };
+  posts.forEach(p=>{ bump(p.author,p.authorEmail,p.role); (p.comments||[]).forEach(c=>bump(c.author,c.authorEmail,c.role)); });
+  const roster=Object.values(people).sort((a,b)=>b.n-a.n).slice(0,8);
+  const follows=forumMyFollows();
+
+  // activity by followed people (posts + comments), newest first
+  const acts=[];
+  posts.forEach(p=>{
+    if(follows.includes(p.authorEmail)) acts.push({at:p.createdAt,who:p.author,what:'posted',title:p.title,pid:p.id});
+    (p.comments||[]).forEach(c=>{ if(follows.includes(c.authorEmail)) acts.push({at:c.at,who:c.author,what:'commented on',title:p.title,pid:p.id}); });
+  });
+  acts.sort((x,y)=>new Date(y.at)-new Date(x.at));
+
+  // trending: top upvoted in the last 7 days
+  const weekAgo=Date.now()-7*86400000;
+  const trend=posts.filter(p=>new Date(p.createdAt)>weekAgo).sort((a,b)=>(b.upvotes||[]).length-(a.upvotes||[]).length).slice(0,3);
+
+  // roadmap: suggestion statuses
+  const feat=posts.filter(p=>p.category==='feature');
+  const stCount=id=>feat.filter(p=>(p.status||'')===id).length;
+
+  const sec=(title,body)=>`<div class="fr-rail-card"><div class="fr-rail-title">${title}</div>${body}</div>`;
+  let html='<aside id="fr-rail">';
+  html+=sec('Roadmap',`
+    ${[['considering','Considering','#F5C842'],['planned','Planned','#5B8DEF'],['shipped','Shipped','#22D97A']].map(([id,l,col])=>`
+      <div class="fr-rail-row" onclick="_forumCat='feature';renderForum('${rootId}')">
+        <span class="mca-dot" style="background:${col}"></span><span style="flex:1">${l}</span>
+        <span style="color:var(--muted);font-weight:700">${stCount(id)}</span>
+      </div>`).join('')}`);
+  if(trend.length) html+=sec('Trending this week',trend.map(p=>`
+    <div class="fr-rail-row" onclick="forumOpenPost('${p.id}','${rootId}')">
+      <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_frEsc(p.title)}</span>
+      <span style="color:var(--blue-bright);font-weight:800;font-size:11px">▲ ${(p.upvotes||[]).length}</span>
+    </div>`).join(''));
+  if(acts.length) html+=sec('Following',acts.slice(0,6).map(a=>`
+    <div class="fr-rail-row" onclick="forumOpenPost('${a.pid}','${rootId}')" style="align-items:flex-start">
+      <div style="flex:1;min-width:0"><b style="color:var(--white)">${_frEsc(a.who.split(' ')[0])}</b> <span style="color:var(--muted)">${a.what}</span>
+      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--offwhite)">${_frEsc(a.title)}</div></div>
+      <span style="color:var(--muted);font-size:10.5px;flex-shrink:0">${_frAgo(a.at)}</span>
+    </div>`).join(''));
+  html+=sec('People',roster.length?roster.map(u=>`
+    <div class="fr-rail-row" style="cursor:default">
+      <div style="flex:1;min-width:0"><div style="color:var(--white);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_frEsc(u.name)}</div>
+      <div style="font-size:10.5px;color:var(--muted)">${u.n} contribution${u.n===1?'':'s'}</div></div>
+      ${_frRoleTag(u.role)}
+      <button class="fr-follow${follows.includes(u.email)?' on':''}" onclick="forumToggleFollow('${u.email}')">${follows.includes(u.email)?'Following':'Follow'}</button>
+    </div>`).join(''):'<div style="font-size:12px;color:var(--muted);padding:4px 0">People show up here once they post or comment.</div>');
+  html+='</aside>';
+  return html;
 }
 function _frCardHtml(p,me,rootId){
   const cat=FORUM_CATS.find(c=>c.id===p.category)||FORUM_CATS[2];
