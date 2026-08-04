@@ -92,7 +92,20 @@ async function forumSyncFirebase(){
       (older.comments||[]).forEach(c=>{ if(!cIds.has(String(c.id))) (newer.comments=newer.comments||[]).push(c); });
       byId[p.id]=newer;
     });
-    const merged=Object.values(byId).filter(p=>!p.deleted);
+    let merged=Object.values(byId).filter(p=>!p.deleted);
+    // Collapse accidental double-taps: same author+title+body created within
+    // 2 minutes — keep the copy with the most activity
+    const groups={};
+    merged.forEach(p=>{
+      const k=(p.authorEmail||'')+'|'+p.title+'|'+(p.body||'');
+      (groups[k]=groups[k]||[]).push(p);
+    });
+    merged=Object.values(groups).flatMap(arr=>{
+      if(arr.length===1) return arr;
+      arr.sort((x,y)=>((y.upvotes||[]).length+(y.comments||[]).length)-((x.upvotes||[]).length+(x.comments||[]).length));
+      const best=arr[0];
+      return arr.filter((p,i)=>i===0||Math.abs(new Date(p.createdAt)-new Date(best.createdAt))>=120000);
+    });
     localStorage.setItem('dronehub_forum',JSON.stringify(merged));
     try{
       const ff=await fbGet('orgs',ORG_ID+':forum_follows');
@@ -206,8 +219,10 @@ function _frNotifyMentions(text,contextTitle){
   _frFindMentioned(text).forEach(p=>{
     if(p.name===me.name) return;
     try{
-      if(typeof addSocialNotification==='function')
-        addSocialNotification(null,me.name.split(' ')[0]+' tagged '+p.name.split(' ')[0]+' in Community: "'+String(contextTitle||'').slice(0,60)+'"','mention');
+      const msg=me.name.split(' ')[0]+' tagged '+p.name.split(' ')[0]+' in Community: "'+String(contextTitle||'').slice(0,60)+'"';
+      // dedupe: identical mention already in the feed → don't add another
+      if(typeof notificationsLoad==='function'&&notificationsLoad().some(n=>n.type==='mention'&&n.text===msg)) return;
+      if(typeof addSocialNotification==='function') addSocialNotification(null,msg,'mention');
     }catch(e){}
   });
 }
@@ -511,7 +526,9 @@ function forumClosePost(){
 }
 
 // ── Comments ─────────────────────────────────────────────────────────────────
+let _frCBusy=false;
 function forumAddComment(postId){
+  if(_frCBusy) return; _frCBusy=true; setTimeout(()=>_frCBusy=false,700);
   const me=forumMe(); if(!me){showDhToast('Sign in','Sign in to comment','','var(--orange)',2500);return;}
   const input=document.getElementById('fr-comment-in');
   const text=(input?.value||'').trim(); if(!text) return;
@@ -620,7 +637,9 @@ function _frComposePickCat(catId){
     b.style.cssText=on?`background:${c.bg};color:${c.color};border-color:${c.color}55`:'';
   });
 }
+let _frBusy=false;
 function forumSubmitPost(){
+  if(_frBusy) return; _frBusy=true; setTimeout(()=>_frBusy=false,900);
   const me=forumMe(); if(!me) return;
   const page=document.getElementById('fr-compose-page');
   const title=(document.getElementById('fr-compose-title')?.value||'').trim();
