@@ -2322,9 +2322,14 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 .fr-prof-stats span{font-size:10px;color:var(--muted);font-weight:700;}
 .fr-prof-posts{padding:0 20px;}
 @media (min-width:769px){
-  #fr-profile-page .fr-prof-hero{height:140px;border-radius:14px;margin:8px 4px 0;}
-  #fr-profile-page .fr-prof-head{padding:0 28px;}
-  #fr-profile-page .fr-prof-stats,#fr-profile-page .fr-prof-posts{padding-left:28px;padding-right:28px;}
+  /* Cover spans the full pane width; content sits in a centered column below */
+  #pane-community #fr-profile-page{max-width:none;}
+  #fr-profile-page .fr-prof-hero{height:200px;border-radius:0;margin:0;}
+  #fr-profile-page .fr-prof-head,
+  #fr-profile-page .fr-prof-stats,
+  #fr-profile-page .fr-prof-posts{max-width:900px;margin-left:auto;margin-right:auto;padding-left:28px;padding-right:28px;}
+  #fr-profile-page .fr-prof-head{margin-top:-42px;}
+  #fr-profile-page .fr-prof-avatar{width:96px;height:96px;font-size:30px;}
 }
 
 /* Mobile: the global + button opens New Post — hide the in-feed one */
@@ -2334,3 +2339,13 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   .fr-bar .fr-sorts{display:inline-flex;margin-bottom:10px;}
   .fr-bar .fr-newbtn{display:none;}
 }
+
+/* Profile cover photo controls */
+.fr-prof-hero{position:relative;}
+.fr-cover-btns{position:absolute;right:12px;bottom:10px;display:flex;gap:6px;}
+.fr-cover-btns button{
+  border:none;background:rgba(10,15,26,.62);backdrop-filter:blur(6px);color:#fff;
+  font-size:11px;font-weight:700;padding:7px 12px;border-radius:10px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.fr-cover-btns button:active{transform:scale(.95);}

@@ -108,6 +108,14 @@ async function forumSyncFirebase(){
     });
     localStorage.setItem('dronehub_forum',JSON.stringify(merged));
     try{
+      const fp=await fbGet('orgs',ORG_ID+':forum_profiles');
+      if(fp?.data){
+        const remote=JSON.parse(fp.data), local=forumProfilesLoad();
+        Object.keys(remote).forEach(k=>{ if(!(k in local)) local[k]=remote[k]; });
+        localStorage.setItem('dronehub_forum_profiles',JSON.stringify(local));
+      }
+    }catch(e){}
+    try{
       const ff=await fbGet('orgs',ORG_ID+':forum_follows');
       if(ff?.data){
         const remote=JSON.parse(ff.data), local=forumFollowsLoad();
@@ -139,6 +147,42 @@ function forumToggleFollow(email){
   forumFollowsSave(map);
   const root=document.querySelector('#fr-rail')?.closest('[id]');
   renderForum(root?.id||'forum-root');
+}
+
+// ── Profile extras: custom cover photos ──────────────────────────────────────
+function forumProfilesLoad(){ try{return JSON.parse(localStorage.getItem('dronehub_forum_profiles')||'{}');}catch(e){return{};} }
+function forumProfilesSave(map){
+  try{localStorage.setItem('dronehub_forum_profiles',JSON.stringify(map));}catch(e){}
+  if(typeof _fbToken==='function'&&_fbToken())
+    fbSet('orgs',ORG_ID+':forum_profiles',{data:JSON.stringify(map),updatedAt:Date.now()}).catch(()=>{});
+}
+function forumPickCover(email){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    const img=new Image();
+    img.onload=()=>{
+      // downscale to keep storage light
+      const w=Math.min(img.width,1200), h=Math.round(img.height*w/img.width);
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      const data=cv.toDataURL('image/jpeg',0.72);
+      const map=forumProfilesLoad();
+      (map[email]=map[email]||{}).cover=data;
+      forumProfilesSave(map);
+      showDhToast('Cover updated','Looking sharp','','var(--green)',2000);
+      forumOpenProfile(email,document.getElementById('fr-profile-page')?.dataset.rootId);
+    };
+    img.src=URL.createObjectURL(f);
+  };
+  inp.click();
+}
+function forumRemoveCover(email){
+  const map=forumProfilesLoad();
+  if(map[email]) delete map[email].cover;
+  forumProfilesSave(map);
+  forumOpenProfile(email,document.getElementById('fr-profile-page')?.dataset.rootId);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -741,7 +785,13 @@ function forumOpenProfile(email,rootId){
       <div class="mc-page-title">Profile</div>
     </div>
     <div class="fr-post-body" style="padding:0 0 120px">
-      <div class="fr-prof-hero"></div>
+      ${(()=>{const cover=forumProfilesLoad()[email]?.cover;
+        return `<div class="fr-prof-hero"${cover?` style="background-image:url(${cover});background-size:cover;background-position:center"`:''}>
+          ${isMe?`<div class="fr-cover-btns">
+            <button onclick="forumPickCover('${email}')">${cover?'Change cover':'📷 Add cover photo'}</button>
+            ${cover?`<button onclick="forumRemoveCover('${email}')">✕</button>`:''}
+          </div>`:''}
+        </div>`;})()}
       <div class="fr-prof-head">
         <div class="fr-prof-avatar">${photo?`<img src="${photo}" alt="" style="width:100%;height:100%;object-fit:cover">`:initials}</div>
         <div class="fr-prof-headmain">
