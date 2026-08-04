@@ -2506,7 +2506,7 @@
           <span id="dsk-pf-phone" style="font-size:12px;color:var(--muted)"></span>
         </div>
       </div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:34px;padding-bottom:10px">
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:34px;padding-bottom:10px;padding-right:26px">
         <div style="text-align:center"><div id="dsk-pf-stat-portfolio" style="font-size:20px;font-weight:800;color:#A78BFA;line-height:1.1">0</div><div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:2px">Videos</div></div>
         <div style="text-align:center"><div id="dsk-pf-stat-photos" style="font-size:20px;font-weight:800;color:var(--green);line-height:1.1">0</div><div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:2px">Photos</div></div>
         <div style="text-align:center"><div id="dsk-pf-stat-followers" style="font-size:20px;font-weight:800;color:var(--white);line-height:1.1">0</div><div style="font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:2px">Followers</div></div>
@@ -6459,6 +6459,7 @@ function dskPfApplyFollowStats(){
 }
 function dskShowMyProfile(){
   if(window.innerWidth<=768){ mobShowProfile(); return; }
+  document.getElementById('team-profile-modal')?.classList.remove('open');
   const s=gateGetSession();
   if(!s) return;
   const resolvedId=tpResolveMemberId('me');
