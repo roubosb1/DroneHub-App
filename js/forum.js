@@ -84,8 +84,81 @@ function _frYtId(text){
 }
 // Escape, then turn bare URLs into clickable links
 function _frRich(text){
-  return _frEsc(text).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--blue-bright);word-break:break-all" onclick="event.stopPropagation()">$1</a>');
+  const linked=_frEsc(text).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--blue-bright);word-break:break-all" onclick="event.stopPropagation()">$1</a>');
+  return _frMentions(linked);
 }
+// Everyone taggable: team members + clients + me
+function _frPeople(){
+  const out=[],seen=new Set();
+  const add=(name,role)=>{ if(name&&!seen.has(name.toLowerCase())){seen.add(name.toLowerCase());out.push({name,role});} };
+  try{ (getAdminTeamMembers()||[]).forEach(m=>add(m.name,'team')); }catch(e){}
+  try{ (typeof clients!=='undefined'?clients:[]).forEach(c=>add(c.name,'client')); }catch(e){}
+  const me=forumMe(); if(me) add(me.name,me.role);
+  return out;
+}
+// Highlight @Name tokens (longest names first so "Katrina Barrett" wins over "Katrina")
+function _frMentions(html){
+  const people=_frPeople().sort((a,b)=>b.name.length-a.name.length);
+  people.forEach(p=>{
+    const esc=p.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    html=html.replace(new RegExp('@('+esc+'|'+esc.split(' ')[0]+')(?![\\w])','gi'),
+      '<span style="color:var(--blue-bright);font-weight:700;background:rgba(91,141,239,.12);border-radius:6px;padding:0 4px">@$1</span>');
+  });
+  return html;
+}
+function _frFindMentioned(text){
+  const t=String(text||'').toLowerCase();
+  return _frPeople().filter(p=>{
+    const full='@'+p.name.toLowerCase();
+    const first='@'+p.name.split(' ')[0].toLowerCase();
+    return t.includes(full)||t.includes(first);
+  });
+}
+// @-autocomplete on an input/textarea — shows a small dropdown of matches
+function _frMentionInput(el){
+  let dd=document.getElementById('fr-mention-dd');
+  const val=el.value.slice(0,el.selectionStart??el.value.length);
+  const m=val.match(/@([A-Za-z]{1,20})$/);
+  if(!m){ dd?.remove(); return; }
+  const q=m[1].toLowerCase();
+  const hits=_frPeople().filter(p=>p.name.toLowerCase().startsWith(q)||p.name.split(' ')[0].toLowerCase().startsWith(q)).slice(0,5);
+  if(!hits.length){ dd?.remove(); return; }
+  if(!dd){
+    dd=document.createElement('div');
+    dd.id='fr-mention-dd';
+    dd.style.cssText='position:fixed;background:var(--navy-card);border:1px solid var(--border-bright);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:99999;overflow:hidden;min-width:200px';
+    document.body.appendChild(dd);
+  }
+  const r=el.getBoundingClientRect();
+  const above=r.bottom>window.innerHeight-180;
+  dd.style.left=Math.min(r.left,window.innerWidth-220)+'px';
+  if(above){ dd.style.bottom=(window.innerHeight-r.top+6)+'px'; dd.style.top='auto'; }
+  else { dd.style.top=(r.bottom+6)+'px'; dd.style.bottom='auto'; }
+  dd.innerHTML=hits.map(h=>`<div onmousedown="event.preventDefault();_frMentionPick('${el.id}','${h.name.replace(/'/g,"\\'")}')" style="padding:10px 14px;font-size:13.5px;font-weight:600;color:var(--white);cursor:pointer;display:flex;align-items:center;gap:8px" onmouseenter="this.style.background='rgba(91,141,239,.12)'" onmouseleave="this.style.background=''">${h.name} ${_frRoleTag(h.role)}</div>`).join('');
+}
+function _frMentionPick(elId,name){
+  const el=document.getElementById(elId); if(!el) return;
+  const pos=el.selectionStart??el.value.length;
+  const before=el.value.slice(0,pos).replace(/@[A-Za-z]{0,20}$/,'@'+name+' ');
+  el.value=before+el.value.slice(pos);
+  document.getElementById('fr-mention-dd')?.remove();
+  el.focus();
+  el.selectionStart=el.selectionEnd=before.length;
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('#fr-mention-dd')) document.getElementById('fr-mention-dd')?.remove(); });
+
+// Drop a notification in the org feed for each tagged person
+function _frNotifyMentions(text,contextTitle){
+  const me=forumMe(); if(!me) return;
+  _frFindMentioned(text).forEach(p=>{
+    if(p.name===me.name) return;
+    try{
+      if(typeof addSocialNotification==='function')
+        addSocialNotification(null,me.name.split(' ')[0]+' tagged '+p.name.split(' ')[0]+' in Community: "'+String(contextTitle||'').slice(0,60)+'"','mention');
+    }catch(e){}
+  });
+}
+
 function _frAgo(iso){
   if(!iso) return '';
   const diff=Date.now()-new Date(iso).getTime();
@@ -276,7 +349,7 @@ function forumOpenPost(postId,rootId,keepScroll){
       </div>
     </div>
     <div class="fr-comment-bar">
-      <input id="fr-comment-in" type="text" placeholder="Add a comment…" autocomplete="off" onkeydown="if(event.key==='Enter')forumAddComment('${p.id}')">
+      <input id="fr-comment-in" type="text" placeholder="Add a comment… (@ to tag)" autocomplete="off" oninput="_frMentionInput(this)" onkeydown="if(event.key==='Enter')forumAddComment('${p.id}')">
       <button onclick="forumAddComment('${p.id}')" aria-label="Send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>`;
   if(prevScroll) page.querySelector('.fr-post-body').scrollTop=prevScroll;
@@ -299,6 +372,7 @@ function forumAddComment(postId){
   (p.comments=p.comments||[]).push({id:'fc_'+Date.now(),author:me.name,authorEmail:me.email,role:me.role,text,at:new Date().toISOString(),upvotes:[]});
   p.editedAt=new Date().toISOString();
   forumSave(posts);
+  _frNotifyMentions(text,p.title);
   input.value='';
   const page=document.getElementById('fr-post-page');
   forumOpenPost(postId,page?.dataset.rootId,true);
@@ -367,7 +441,7 @@ function forumOpenComposer(rootId){
         <input id="fr-compose-title" class="mca-in" type="text" placeholder="Title" maxlength="120" autocomplete="off">
       </div>
       <div class="mca-card">
-        <textarea id="fr-compose-body" class="mca-in mca-in-sub" placeholder="Details — paste a YouTube link to embed the video" rows="7" style="resize:none"></textarea>
+        <textarea id="fr-compose-body" class="mca-in mca-in-sub" placeholder="Details — paste a YouTube link to embed it, @ to tag someone" rows="7" style="resize:none" oninput="_frMentionInput(this)"></textarea>
       </div>
       <div style="padding:0 18px;font-size:11.5px;color:var(--muted);line-height:1.5">Everyone in the DroneHub community — team and clients — can see, upvote, and comment on your post.</div>
     </div>`;
@@ -410,6 +484,7 @@ function forumSubmitPost(){
     status:'',pinned:false,
   });
   forumSave(posts);
+  _frNotifyMentions(title+' '+body,title);
   const rootId=page?.dataset.rootId||'forum-root';
   page?.remove();
   showDhToast('Posted','Your post is live in the community','','var(--green)',2500);
