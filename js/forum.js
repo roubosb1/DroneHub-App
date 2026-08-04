@@ -17,8 +17,28 @@ const FORUM_STATUSES = [
   {id:'',            label:'No status',   color:'var(--muted)'},
   {id:'considering', label:'Considering', color:'#F5C842'},
   {id:'planned',     label:'Planned',     color:'#5B8DEF'},
+  {id:'inprogress',  label:'In Progress', color:'#F5A623'},
   {id:'shipped',     label:'Shipped',     color:'#22D97A'},
 ];
+const FORUM_Q_STATUSES = [
+  {id:'',         label:'Unanswered', color:'var(--muted)'},
+  {id:'answered', label:'Answered',   color:'#22D97A'},
+];
+function _frStatusMeta(id){ return [...FORUM_STATUSES,...FORUM_Q_STATUSES].find(x=>x.id===(id||''))||FORUM_STATUSES[0]; }
+// Mini pipeline for suggestion posts: Submitted → … → Shipped
+function _frPipelineHtml(p){
+  if(p.category!=='feature') return '';
+  const steps=[['','Submitted'],['considering','Considering'],['planned','Planned'],['inprogress','In Progress'],['shipped','Shipped']];
+  const cur=Math.max(steps.findIndex(x=>x[0]===(p.status||'')),0);
+  return `<div class="fr-pipe">${steps.map((st,i)=>{
+    const done=i<=cur&&(cur>0||i===0);
+    const col=i===cur&&cur>0?_frStatusMeta(st[0]).color:'var(--blue)';
+    return `${i?`<div class="fr-pipe-line${i<=cur?' on':''}"></div>`:''}
+      <div class="fr-pipe-step${done?' on':''}${i===cur?' now':''}" ${i===cur&&cur>0?`style="--pc:${_frStatusMeta(st[0]).color}"`:''}>
+        <span class="fr-pipe-dot"></span><span class="fr-pipe-lbl">${st[1]}</span>
+      </div>`;
+  }).join('')}</div>`;
+}
 
 let _forumSort='hot';      // hot | new | top
 let _forumCat='all';       // all | feature | work | general
@@ -323,7 +343,7 @@ function _frRailHtml(rootId){
 }
 function _frCardHtml(p,me,rootId){
   const cat=FORUM_CATS.find(c=>c.id===p.category)||FORUM_CATS[2];
-  const st=FORUM_STATUSES.find(s=>s.id===(p.status||''));
+  const st=_frStatusMeta(p.status);
   const votes=(p.upvotes||[]).length;
   const voted=me&&(p.upvotes||[]).includes(me.email);
   const nComments=(p.comments||[]).length;
@@ -336,7 +356,7 @@ function _frCardHtml(p,me,rootId){
       <div class="fr-card-meta">
         ${p.pinned?'<span style="color:var(--amber);font-size:11px">📌</span>':''}
         <span class="fr-cat-pill" style="background:${cat.bg};color:${cat.color}">${cat.label}</span>
-        ${p.status&&st?`<span class="fr-cat-pill" style="background:${st.color}22;color:${st.color}">${st.label}</span>`:''}
+        ${p.status?`<span class="fr-cat-pill" style="background:${st.color}22;color:${st.color}">${st.label}</span>`:''}
       </div>
       <div class="fr-card-title">${_frEsc(p.title)}</div>
       ${p.body?`<div class="fr-card-snip">${_frEsc(p.body).slice(0,110)}${p.body.length>110?'…':''}</div>`:''}
@@ -379,7 +399,7 @@ function forumOpenPost(postId,rootId,keepScroll){
   const me=forumMe();
   const admin=forumIsAdmin();
   const cat=FORUM_CATS.find(c=>c.id===p.category)||FORUM_CATS[2];
-  const st=FORUM_STATUSES.find(s=>s.id===(p.status||''));
+  const st=_frStatusMeta(p.status);
   const votes=(p.upvotes||[]).length;
   const voted=me&&(p.upvotes||[]).includes(me.email);
   const canDelete=admin||(me&&me.email===p.authorEmail);
@@ -409,6 +429,7 @@ function forumOpenPost(postId,rootId,keepScroll){
         </div>
         <div style="font-size:19px;font-weight:800;color:var(--white);line-height:1.3">${_frEsc(p.title)}</div>
         <div class="fr-card-sub" style="margin-top:6px">${_frEsc(p.author)} ${_frRoleTag(p.role)} · ${_frAgo(p.createdAt)}</div>
+        ${_frPipelineHtml(p)}
         ${p.body?`<div style="font-size:14.5px;color:var(--offwhite);line-height:1.55;margin-top:12px;white-space:pre-wrap">${_frRich(p.body)}</div>`:''}
         ${(()=>{const yt=_frYtId(p.body||'');return yt?`<div class="fr-yt-embed"><iframe src="https://www.youtube-nocookie.com/embed/${yt}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`:'';})()}
         <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
@@ -420,6 +441,9 @@ function forumOpenPost(postId,rootId,keepScroll){
           <button class="fr-adminbtn" onclick="forumTogglePin('${p.id}')">${p.pinned?'Unpin':'Pin'}</button>
           ${p.category==='feature'?`<select class="fr-adminbtn" style="appearance:none" onchange="forumSetStatus('${p.id}',this.value)">
             ${FORUM_STATUSES.map(s=>`<option value="${s.id}"${(p.status||'')===s.id?' selected':''}>${s.label}</option>`).join('')}
+          </select>`:''}
+          ${p.category==='question'?`<select class="fr-adminbtn" style="appearance:none" onchange="forumSetStatus('${p.id}',this.value)">
+            ${FORUM_Q_STATUSES.map(s=>`<option value="${s.id}"${(p.status||'')===s.id?' selected':''}>${s.label}</option>`).join('')}
           </select>`:''}`:''}
         </div>
       </div>
@@ -427,6 +451,7 @@ function forumOpenPost(postId,rootId,keepScroll){
       <div style="padding:8px 18px 140px">
         <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${comments.length} comment${comments.length===1?'':'s'}</div>
         ${comments.map(c=>{
+          if(c.isSystem) return `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;font-size:11.5px;color:var(--muted)"><span class="mca-dot" style="background:${_frStatusMeta(c.statusId).color}"></span>${_frEsc(c.text)} · ${_frAgo(c.at)}</div>`;
           const cVotes=(c.upvotes||[]).length;
           const cVoted=me&&(c.upvotes||[]).includes(me.email);
           const cDel=admin||(me&&me.email===c.authorEmail);
@@ -497,9 +522,14 @@ function forumSetStatus(postId,status){
   if(!forumIsAdmin()) return;
   const posts=forumLoad();
   const p=posts.find(x=>x.id===postId); if(!p) return;
+  if((p.status||'')===(status||'')) return;
   p.status=status; p.editedAt=new Date().toISOString();
+  const me=forumMe();
+  const meta=_frStatusMeta(status);
+  (p.comments=p.comments||[]).push({id:'fs_'+Date.now(),isSystem:true,statusId:status,author:me?.name||'Admin',authorEmail:me?.email||'',text:(me?.name?me.name.split(' ')[0]:'Admin')+' moved this to '+(status?meta.label:'no status'),at:new Date().toISOString()});
   forumSave(posts);
-  showDhToast('Status updated',FORUM_STATUSES.find(s=>s.id===status)?.label||'','','var(--green)',2000);
+  try{ if(status&&typeof addSocialNotification==='function') addSocialNotification(null,'"'+String(p.title).slice(0,50)+'" is now '+meta.label+' 🎉','mention'); }catch(e){}
+  showDhToast('Status updated',meta.label||'','','var(--green)',2000);
   const page=document.getElementById('fr-post-page');
   forumOpenPost(postId,page?.dataset.rootId,true);
 }

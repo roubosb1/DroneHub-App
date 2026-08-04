@@ -2252,8 +2252,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 
 /* Forum desktop: two-column layout with right rail */
 @media (min-width:1000px){
-  #pane-community #forum-root{max-width:1060px!important;}
-  .fr-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start;}
+  #pane-community #forum-root{max-width:none!important;margin:0!important;}
+  .fr-cols{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start;}
+  .fr-list{padding-bottom:60px;}
+  #pane-community .fr-inline-page{max-width:900px;}
 }
 #fr-rail{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px;padding-top:12px;}
 .fr-rail-card{background:var(--navy-card);border:1px solid var(--border);border-radius:14px;padding:14px;}
@@ -2263,3 +2265,14 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
 .fr-follow{border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:11px;cursor:pointer;flex-shrink:0;}
 .fr-follow.on{border-color:var(--border);background:var(--navy-lift);color:var(--muted);}
 @media (max-width:999px){ #fr-rail{display:none;} .fr-cols{display:block;} }
+
+/* Suggestion progress pipeline */
+.fr-pipe{display:flex;align-items:flex-start;margin:16px 0 2px;padding:14px 10px 10px;background:var(--navy-card);border:1px solid var(--border);border-radius:12px;}
+.fr-pipe-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;min-width:52px;}
+.fr-pipe-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--border);background:var(--navy-mid);transition:all .2s;}
+.fr-pipe-step.on .fr-pipe-dot{background:var(--pc,var(--blue));border-color:var(--pc,var(--blue));}
+.fr-pipe-step.now .fr-pipe-dot{box-shadow:0 0 0 4px color-mix(in srgb,var(--pc,var(--blue)) 25%,transparent);}
+.fr-pipe-lbl{font-size:8.5px;font-weight:700;color:var(--muted);text-align:center;line-height:1.2;}
+.fr-pipe-step.now .fr-pipe-lbl{color:var(--white);}
+.fr-pipe-line{flex:1;height:2px;background:var(--border);margin-top:5px;min-width:8px;}
+.fr-pipe-line.on{background:var(--pc,var(--blue));}
