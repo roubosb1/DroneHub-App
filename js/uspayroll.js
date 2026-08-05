@@ -343,11 +343,15 @@ function uspOpenCalc(){
     </div>
     <div class="mc-page-body" style="padding-top:2px">
       <div class="mca-card" style="margin:0 0 12px">
+        <div class="mca-row"><span class="mca-lbl">Pay date</span>
+          <input type="date" id="usp-paydate" class="mca-dt" value="${new Date().toISOString().slice(0,10)}" onchange="_uspSyncYearFromDate();uspRun()"></div>
         <div class="mca-row"><span class="mca-lbl">Tax year</span>
           <select id="usp-year" class="mca-dt" onchange="uspRun()">
             <option value="2026" selected>2026 (current)</option>
             <option value="2025">2025 (prior-year stubs)</option>
           </select></div>
+        <div class="mca-row"><span class="mca-lbl">Employee (optional)</span>
+          <input type="text" id="usp-emp" class="mca-dt" placeholder="Name" style="width:140px"></div>
         <div class="mca-row"><span class="mca-lbl">State</span>
           <select id="usp-state" class="mca-dt" style="min-width:150px" onchange="uspRun()">
             ${USP_STATES.map(s=>`<option value="${s.code}"${s.code==='CA'?' selected':''}>${s.name}</option>`).join('')}
@@ -383,13 +387,29 @@ function uspOpenCalc(){
           <input id="usp-dep" class="mca-dt" type="number" inputmode="decimal" value="0" style="width:110px;text-align:right" oninput="uspRun()"></div>
       </div>
       <div id="usp-result"></div>
-      <button class="fr-newbtn" style="width:100%;margin-top:4px" onclick="uspOpenGuide(document.getElementById('usp-state').value)">📋 Filing guide for this state</button>
+      <button class="fr-newbtn" style="width:100%;margin-top:4px" onclick="uspSaveStub()">💾 Save pay stub to history</button>
+      <button class="fr-newbtn" style="width:100%;margin-top:8px;border-color:var(--border);background:var(--navy-lift);color:var(--offwhite)" onclick="uspOpenGuide(document.getElementById('usp-state').value)">📋 Filing guide for this state</button>
+      <div id="usp-history" style="margin-top:16px"></div>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:14px">
         Federal: ${USP_FED.year} Pub 15-T percentage method (SS wage base ${_uspF(USP_FED.ssWageBase)}). State rates carry their own year tag — verify against the state's current withholding tables before filing. Local taxes computed: NYC/Yonkers, MD + IN counties, MI cities, all 667 Ohio municipalities + 214 school districts (official state tables), Philadelphia/Pittsburgh + custom PA EIT with LST, KY occupational taxes, KC/St. Louis, Denver-metro head taxes, AL cities and Portland-metro.
       </div>
     </div>`;
   document.body.appendChild(page);
   uspRun();
+  uspRenderHistory();
+  // pull remote history so stubs saved on other devices appear
+  if(typeof _fbToken==='function'&&_fbToken()){
+    fbGet('orgs',ORG_ID+':us_stubs').then(fb=>{
+      if(fb?.data){
+        const remote=JSON.parse(fb.data), local=uspStubsLoad();
+        const ids=new Set(local.map(x=>x.id));
+        remote.forEach(x=>{ if(!ids.has(x.id)) local.push(x); });
+        local.sort((a,b)=>b.payDate.localeCompare(a.payDate));
+        localStorage.setItem('dronehub_us_stubs',JSON.stringify(local));
+        uspRenderHistory();
+      }
+    }).catch(()=>{});
+  }
 }
 function _uspSyncLocalRow(){
   const stCode=document.getElementById('usp-state')?.value;
@@ -482,4 +502,73 @@ function uspOpenGuide(code){
       <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:6px">This guide is a working checklist, not legal or tax advice — agencies, forms, and rates change. Confirm on the agency sites before your first filing.</div>
     </div>`;
   document.body.appendChild(page);
+}
+
+
+// ── US pay-stub history: date-aware records, backfill old periods anytime ────
+function _uspSyncYearFromDate(){
+  const d=document.getElementById('usp-paydate')?.value;
+  const sel=document.getElementById('usp-year');
+  if(!d||!sel) return;
+  const y=parseInt(d.slice(0,4),10);
+  sel.value=USP_FED_YEARS[y]?String(y):'2026';
+}
+function uspStubsLoad(){ try{return JSON.parse(localStorage.getItem('dronehub_us_stubs')||'[]');}catch(e){return[];} }
+function uspStubsSave(arr){
+  try{localStorage.setItem('dronehub_us_stubs',JSON.stringify(arr));}catch(e){}
+  if(typeof _fbToken==='function'&&_fbToken())
+    fbSet('orgs',ORG_ID+':us_stubs',{data:JSON.stringify(arr),updatedAt:Date.now()}).catch(()=>{});
+}
+function uspSaveStub(){
+  const payDate=document.getElementById('usp-paydate')?.value||new Date().toISOString().slice(0,10);
+  const r=uspCalc({
+    taxYear:document.getElementById('usp-year')?.value||2026,
+    state:document.getElementById('usp-state').value,
+    local:document.getElementById('usp-local')?.value,
+    customRate:(parseFloat(document.getElementById('usp-custom-rate')?.value)||0)/100,
+    lst:document.getElementById('usp-state').value==='PA'?document.getElementById('usp-lst')?.value:0,
+    ohMuni:document.getElementById('usp-ohmuni')?.value,
+    ohSd:document.getElementById('usp-ohsd')?.value,
+    freq:document.getElementById('usp-freq').value,
+    gross:document.getElementById('usp-gross').value,
+    ytdGross:document.getElementById('usp-ytd').value,
+    status:document.getElementById('usp-status').value,
+    step2:document.getElementById('usp-step2').checked,
+    depCredit:document.getElementById('usp-dep').value,
+  });
+  const stubs=uspStubsLoad();
+  stubs.push({
+    id:'uss_'+Date.now(),
+    employee:(document.getElementById('usp-emp')?.value||'').trim()||'Unnamed',
+    payDate,
+    taxYear:document.getElementById('usp-year')?.value||'2026',
+    state:document.getElementById('usp-state').value,
+    freq:document.getElementById('usp-freq').value,
+    gross:r.gross,fedWH:r.fedWH,ss:r.ss,medicare:r.medicare,stateWH:r.stateWH,
+    extras:r.stateLines.map(l=>({label:l.label,amt:l.amt})),
+    net:r.net,
+    savedAt:new Date().toISOString(),
+  });
+  stubs.sort((a,b)=>b.payDate.localeCompare(a.payDate));
+  uspStubsSave(stubs);
+  showDhToast('Pay stub saved',payDate+' · '+_uspF(r.net)+' net','','var(--green)',2500);
+  uspRenderHistory();
+}
+function uspDeleteStub(id){
+  uspStubsSave(uspStubsLoad().filter(x=>x.id!==id));
+  uspRenderHistory();
+}
+function uspRenderHistory(){
+  const box=document.getElementById('usp-history');
+  if(!box) return;
+  const stubs=uspStubsLoad();
+  if(!stubs.length){box.innerHTML='';return;}
+  box.innerHTML=`<div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Saved US pay stubs</div>`+
+    stubs.map(st=>`<div class="mca-card" style="margin:0 0 8px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:700;color:var(--white)">${st.employee} <span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;background:rgba(91,141,239,.14);color:var(--blue-bright)">${st.taxYear}</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${st.payDate} · ${st.state} · gross ${_uspF(st.gross)} → net <b style="color:var(--green)">${_uspF(st.net)}</b></div>
+      </div>
+      <button onclick="uspDeleteStub('${st.id}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('');
 }

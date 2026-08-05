@@ -1068,6 +1068,7 @@ let editingJobId=null;
 let _ejUsState={};   // tracks current US pricing selections in edit modal
 
 function openEditJob(jobId){
+  window._editJobId=jobId;
   const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
   editingJobId=jobId;
@@ -2676,4 +2677,34 @@ async function syncEditedJobToGcal(job){
     console.warn('[syncEditedJobToGcal]',e.message);
     showDhToast('Google sync failed',e.message||'Unknown error','⚠','var(--orange)',6000);
   }
+}
+
+
+// Explicit Google sync from the Edit Job modal — names the target calendar so
+// there's never a mystery about which account it's pushing to
+async function ejSyncToGoogle(){
+  const job=savedJobs.find(x=>String(x.id)===String(window._editJobId||_ejJobId||''))||null;
+  const j=job||savedJobs.find(x=>String(x.id)===String(document.getElementById('ej-job-id')?.value||''));
+  const target=j||window._ejCurrentJob;
+  if(!target){ showDhToast('Sync','Save the job first, then sync.','⚠','var(--orange)',3000); return; }
+  // resolve who we're pushing to and say it out loud
+  const members=getAdminTeamMembers();
+  const ts=typeof getTrackerStage==='function'?getTrackerStage(target.id):{};
+  const vName=target.videographer||ts.videographer||'';
+  const session=gateGetSession();
+  const member=members.find(m=>(m.name||'').toLowerCase()===vName.toLowerCase())
+    ||members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase())
+    ||members.find(m=>(m.name||'').toLowerCase()===(session?.name||'').toLowerCase());
+  if(!member){ showDhToast('Google sync','No matching team member found for this shoot.','⚠','var(--orange)',5000); return; }
+  const connected=!!(tpProfileLoad(member.id)?.googleCalConnected);
+  showDhToast('Syncing…','Target: '+member.name+' ('+(member.email||'no email')+') — Google '+(connected?'connected':'NOT connected'),'',connected?'var(--blue-bright)':'var(--orange)',4000);
+  if(!connected) return;
+  if(!target.shootTime&&target.preferredTime) target.shootTime=target.preferredTime;
+  if(target.shootTime&&!target.shootEndTime){
+    const [h,m]=target.shootTime.split(':').map(Number);
+    const em=h*60+m+Math.round((parseFloat(target.duration)||2)*60);
+    target.shootEndTime=String(Math.floor(em/60)%24).padStart(2,'0')+':'+String(em%60).padStart(2,'0');
+  }
+  saveJobsToStorage();
+  await syncEditedJobToGcal(target);
 }
