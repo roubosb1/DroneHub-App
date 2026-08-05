@@ -2609,11 +2609,19 @@ async function pushJobToGcal(job,videographerName){
     const members=getAdminTeamMembers();
     const byName=n=>members.find(m=>(m.name||'').toLowerCase()===(n||'').toLowerCase());
     const session=gateGetSession();
-    const me=members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase());
+    const me=members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase())
+      ||members.find(m=>(m.name||'').toLowerCase()===(session?.name||'').toLowerCase());
     // Prefer the assigned videographer's calendar; fall back to whoever saved the job
     let target=byName(videographerName)||me;
     if(target&&!(tpProfileLoad(target.id)?.googleCalConnected)&&me&&tpProfileLoad(me.id)?.googleCalConnected) target=me;
-    if(!target||!(tpProfileLoad(target.id)?.googleCalConnected)) return;
+    if(!target){
+      showDhToast('Google sync skipped','Could not match a team member for this shoot — check the videographer name.','⚠','var(--orange)',5000);
+      return;
+    }
+    if(!(tpProfileLoad(target.id)?.googleCalConnected)){
+      showDhToast('Google sync skipped',target.name+"'s Google Calendar isn't connected — connect it from their profile.",'⚠','var(--orange)',5000);
+      return;
+    }
     const res=await gcalApiCall('create',target.id,{
       title:job.name,
       date:job.date,endDate:job.date,
