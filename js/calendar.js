@@ -462,7 +462,31 @@ function _calBlockPos(e,idx){
 }
 function _calTimeRange(e){
   if(!e._time) return '';
-  return e._time.slice(0,5)+(e._endTime?' – '+e._endTime.slice(0,5):'');
+  return e._time.slice(0,5)+(e._endTime?' – '+e._endTime.slice(0,5):'')+_calTzSuffix(e);
+}
+// When a shoot's site timezone differs from the viewer's, append site tz +
+// what that moment is in the viewer's local time: "12:15 CT · 1:15 PM your time"
+function _calTzSuffix(e){
+  try{
+    if(!e._job||!e._time||typeof jobTimezone!=='function') return '';
+    const tz=jobTimezone(e._job);
+    const deviceTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if(tz===deviceTz) return '';
+    const dateStr=e._job.date||new Date().toISOString().slice(0,10);
+    // resolve the absolute instant of "shootTime in the site tz"
+    // device-independent: render the probe in the site tz, re-read AS UTC to
+    // get the exact zone offset, then shift
+    const probe=new Date(dateStr+'T'+e._time.slice(0,5)+':00Z');
+    const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+    const pp=Object.fromEntries(fmt.formatToParts(probe).map(x=>[x.type,x.value]));
+    const asUTC=Date.UTC(pp.year,pp.month-1,pp.day,pp.hour==='24'?0:pp.hour,pp.minute);
+    const instant=new Date(probe.getTime()+(probe.getTime()-asUTC));
+    const abbr=(new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'short'}).formatToParts(instant).find(p=>p.type==='timeZoneName')||{}).value||'';
+    const viewerAbbr=(new Intl.DateTimeFormat('en-US',{timeZone:deviceTz,timeZoneName:'short'}).formatToParts(instant).find(p=>p.type==='timeZoneName')||{}).value||'';
+    if(abbr===viewerAbbr) return '';
+    const viewer=instant.toLocaleTimeString('en-US',{timeZone:deviceTz,hour:'numeric',minute:'2-digit'});
+    return ' '+abbr+' · '+viewer+' your time';
+  }catch(err){ return ''; }
 }
 function calWeekEventChip(e,ei){
   const c=e._col;
