@@ -198,7 +198,9 @@ function calGetDayEvents(dateStr){
   const evts=[];
   // Jobs / shoots
   savedJobs.forEach(j=>{
-    if(j.date!==dateStr) return;
+    // timed shoots can land on a neighboring viewer-day after tz shift
+    const _dayDiff=Math.abs((new Date(j.date+'T12:00:00')-new Date(dateStr+'T12:00:00'))/86400000);
+    if(_dayDiff>1) return;
     const names=new Set();
     Object.values(j.payouts||{}).forEach(p=>{if(p.name&&!p.name.includes('unassigned'))names.add(p.name);});
     const ts=getTrackerStage(j.id);
@@ -215,7 +217,17 @@ function calGetDayEvents(dateStr){
       const _jem=_jh*60+_jm+Math.round((parseFloat(j.duration)||2)*60);
       _jend=String(Math.floor(_jem/60)%24).padStart(2,'0')+':'+String(_jem%60).padStart(2,'0');
     }
-    evts.push({_src:'shoot',_creator:creator,_time:_jt,_endTime:_jend,name:j.name,_job:j,_col:getCreatorColor(creator)});
+    if(!_jt){ if(j.date!==dateStr) return;
+      evts.push({_src:'shoot',_creator:creator,_time:null,_endTime:null,name:j.name,_job:j,_col:getCreatorColor(creator)});
+      return; }
+    // position in the VIEWER's timezone so the grid compares apples to apples
+    const tz=typeof jobTimezone==='function'?jobTimezone(j):null;
+    const ds=_calZoneShift(j.date,_jt,tz);
+    if(ds.date!==dateStr) return;
+    const de=_jend?_calZoneShift(j.date,_jend,tz):{time:null};
+    evts.push({_src:'shoot',_creator:creator,_time:ds.time,_endTime:de.time,
+      _siteTime:ds.shifted?_jt.slice(0,5):null,_siteAbbr:ds.siteAbbr||'',
+      name:j.name,_job:j,_col:getCreatorColor(creator)});
   });
   // GCal events
   getGcalLinks().forEach(link=>{
@@ -462,31 +474,24 @@ function _calBlockPos(e,idx){
 }
 function _calTimeRange(e){
   if(!e._time) return '';
-  return e._time.slice(0,5)+(e._endTime?' – '+e._endTime.slice(0,5):'')+_calTzSuffix(e);
+  const base=e._time.slice(0,5)+(e._endTime?' – '+e._endTime.slice(0,5):'');
+  return base+(e._siteTime&&e._siteTime!==e._time?' ('+e._siteTime+' '+(e._siteAbbr||'site')+')':'');
 }
-// When a shoot's site timezone differs from the viewer's, append site tz +
-// what that moment is in the viewer's local time: "12:15 CT · 1:15 PM your time"
-function _calTzSuffix(e){
+// Convert a site-local date+time to the viewer's timezone (DST-correct).
+function _calZoneShift(dateStr,timeStr,fromTz){
   try{
-    if(!e._job||!e._time||typeof jobTimezone!=='function') return '';
-    const tz=jobTimezone(e._job);
-    const deviceTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if(tz===deviceTz) return '';
-    const dateStr=e._job.date||new Date().toISOString().slice(0,10);
-    // resolve the absolute instant of "shootTime in the site tz"
-    // device-independent: render the probe in the site tz, re-read AS UTC to
-    // get the exact zone offset, then shift
-    const probe=new Date(dateStr+'T'+e._time.slice(0,5)+':00Z');
-    const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
-    const pp=Object.fromEntries(fmt.formatToParts(probe).map(x=>[x.type,x.value]));
+    const viewerTz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if(!timeStr||!fromTz||fromTz===viewerTz) return {date:dateStr,time:timeStr?timeStr.slice(0,5):timeStr,shifted:false};
+    const probe=new Date(dateStr+'T'+timeStr.slice(0,5)+':00Z');
+    const parts=tz=>Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(probe).map(x=>[x.type,x.value]));
+    const pp=parts(fromTz);
     const asUTC=Date.UTC(pp.year,pp.month-1,pp.day,pp.hour==='24'?0:pp.hour,pp.minute);
     const instant=new Date(probe.getTime()+(probe.getTime()-asUTC));
-    const abbr=(new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'short'}).formatToParts(instant).find(p=>p.type==='timeZoneName')||{}).value||'';
-    const viewerAbbr=(new Intl.DateTimeFormat('en-US',{timeZone:deviceTz,timeZoneName:'short'}).formatToParts(instant).find(p=>p.type==='timeZoneName')||{}).value||'';
-    if(abbr===viewerAbbr) return '';
-    const viewer=instant.toLocaleTimeString('en-US',{timeZone:deviceTz,hour:'numeric',minute:'2-digit'});
-    return ' '+abbr+' · '+viewer+' your time';
-  }catch(err){ return ''; }
+    const vf=new Intl.DateTimeFormat('en-CA',{timeZone:viewerTz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+    const vp=Object.fromEntries(vf.formatToParts(instant).map(x=>[x.type,x.value]));
+    const abbr=(new Intl.DateTimeFormat('en-US',{timeZone:fromTz,timeZoneName:'short'}).formatToParts(instant).find(x=>x.type==='timeZoneName')||{}).value||'';
+    return {date:vp.year+'-'+vp.month+'-'+vp.day,time:(vp.hour==='24'?'00':vp.hour)+':'+vp.minute,shifted:true,siteAbbr:abbr};
+  }catch(e){ return {date:dateStr,time:timeStr,shifted:false}; }
 }
 function calWeekEventChip(e,ei){
   const c=e._col;
@@ -2359,8 +2364,20 @@ function _mcRenderWeekStrip(dateStr){
 function _mcRenderDayEvents(dateStr){
   const body=document.getElementById('mob-cal-dv-events');
   if(!body) return;
-  const dayJobs=savedJobs.filter(j=>j.date===dateStr&&_mcJobMatch(j))
-    .map(j=>(!j.shootTime&&j.preferredTime)?Object.assign(Object.create(Object.getPrototypeOf(j)),j,{shootTime:j.preferredTime}):j)
+  const dayJobs=savedJobs
+    .filter(j=>Math.abs((new Date(j.date+'T12:00:00')-new Date(dateStr+'T12:00:00'))/86400000)<=1&&_mcJobMatch(j))
+    .map(j=>{
+      const jt=j.shootTime||j.preferredTime||'';
+      if(!jt) return j.date===dateStr?j:null;
+      const tz=typeof jobTimezone==='function'?jobTimezone(j):null;
+      const ds=_calZoneShift(j.date,jt,tz);
+      if(ds.date!==dateStr) return null;
+      if(!ds.shifted&&j.shootTime) return j;
+      const copy=Object.assign({},j,{shootTime:ds.time});
+      if(ds.shifted) copy._siteLabel=jt.slice(0,5)+' '+(ds.siteAbbr||'site');
+      return copy;
+    })
+    .filter(Boolean)
     .sort((a,b)=>(a.shootTime||'').localeCompare(b.shootTime||''));
   const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date)&&(!ev.memberName||_mcMatchesFilter(ev.memberName))&&(_calTypeFilters===null||_calTypeFilters.has(ev.type)));
 
@@ -2409,7 +2426,7 @@ function _mcRenderDayEvents(dateStr){
     const wPct=100/cols, lPct=ci*wPct;
     return `<div class="mc-tl-evt" style="top:${(start-H0)*PX+2}px;height:${(end-start)*PX-4}px;left:calc(72px + (100% - 86px)*${(lPct/100).toFixed(3)});width:calc((100% - 86px)*${(wPct/100).toFixed(3)} - 4px);background:${col.bg};border-left:3px solid ${col.border}" onclick="mcShowEventDetail('job',${j.id},'${dateStr}')">
       <div class="mc-tl-t">${j.name}</div>
-      <div class="mc-tl-s">${_mcFmtTime(j.shootTime)}${creator?' · '+creator.split(' ')[0]:''}${j.address?' · '+j.address:''}</div>
+      <div class="mc-tl-s">${_mcFmtTime(j.shootTime)}${j._siteLabel?' ('+j._siteLabel+')':''}${creator?' · '+creator.split(' ')[0]:''}${j.address?' · '+j.address:''}</div>
     </div>`;
   });
 
