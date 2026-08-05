@@ -208,7 +208,14 @@ function calGetDayEvents(dateStr){
     if(!names.size) names.add(primary);
     if(filterCreator&&!names.has(filterCreator)) return;
     const creator=names.has(filterCreator)&&filterCreator?filterCreator:primary;
-    evts.push({_src:'shoot',_creator:creator,_time:j.shootTime||j.preferredTime||null,_endTime:j.shootEndTime||null,name:j.name,_job:j,_col:getCreatorColor(creator)});
+    const _jt=j.shootTime||j.preferredTime||null;
+    let _jend=j.shootEndTime||null;
+    if(!_jend&&_jt&&j.duration){
+      const [_jh,_jm]=_jt.split(':').map(Number);
+      const _jem=_jh*60+_jm+Math.round((parseFloat(j.duration)||2)*60);
+      _jend=String(Math.floor(_jem/60)%24).padStart(2,'0')+':'+String(_jem%60).padStart(2,'0');
+    }
+    evts.push({_src:'shoot',_creator:creator,_time:_jt,_endTime:_jend,name:j.name,_job:j,_col:getCreatorColor(creator)});
   });
   // GCal events
   getGcalLinks().forEach(link=>{
@@ -424,7 +431,7 @@ function renderCalWeekView(dateStr){
       const isToday=ds===todayStr;
       const hEvts=dayEvts[i].filter(e=>e._time&&parseInt(e._time.split(':')[0],10)===h);
       const isNowHour=isToday&&h===nowHour;
-      hoursHtml+=`<div ondblclick="calQuickAdd('${ds}',${h},event)" style="min-height:52px;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
+      hoursHtml+=`<div ondblclick="calQuickAdd('${ds}',${h},event)" style="min-height:52px;min-width:0;${h>0?'border-top:1px solid var(--border);':''}${i<6?'border-right:1px solid var(--border);':''}background:${h%2===0?'var(--navy-card)':'var(--navy-mid)'};padding:2px 3px;position:relative;cursor:default">`;
       if(isNowHour){const pct=(nowMin/60)*100;hoursHtml+=`<div style="position:absolute;left:0;right:0;top:${pct}%;height:2px;background:var(--blue-bright);z-index:2"></div>`;}
       hEvts.forEach((e,ei)=>{hoursHtml+=calWeekEventChip(e,ei);});
       hoursHtml+='</div>';
