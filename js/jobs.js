@@ -2635,6 +2635,7 @@ async function pushJobToGcal(job,videographerName){
     showDhToast('Synced to Google Calendar',job.name+(job.shootTime?' · '+job.shootTime:''),'✅','var(--green)',3000);
   }catch(e){
     console.warn('[pushJobToGcal]',e.message);
+    showDhToast('Google sync failed',e.message||'Unknown error — try again from Edit → Save','⚠','var(--orange)',6000);
   }
 }
 
@@ -2671,5 +2672,8 @@ async function syncEditedJobToGcal(job){
     } else {
       pushJobToGcal(job,vName);
     }
-  }catch(e){ console.warn('[syncEditedJobToGcal]',e.message); }
+  }catch(e){
+    console.warn('[syncEditedJobToGcal]',e.message);
+    showDhToast('Google sync failed',e.message||'Unknown error','⚠','var(--orange)',6000);
+  }
 }

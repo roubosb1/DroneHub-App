@@ -24,6 +24,22 @@ const USP_FED = {
   },
 };
 
+// 2025 federal package — for validating prior-year paystubs (verified to the
+// cent against a Dec 2025 ADP stub: $65k single biweekly → $227.46 federal).
+const USP_FED_2025 = {
+  year: 2025,
+  ssRate: 0.062,        ssWageBase: 176100,
+  medRate: 0.0145,      medAddlRate: 0.009,     medAddlThreshold: 200000,
+  futaRate: 0.006,      futaBase: 7000,
+  stdDed: { single: 15000, married: 30000, hoh: 22500 },
+  brackets: {
+    single: [[11925,.10],[48475,.12],[103350,.22],[197300,.24],[250525,.32],[626350,.35],[Infinity,.37]],
+    married:[[23850,.10],[96950,.12],[206700,.22],[394600,.24],[501050,.32],[751600,.35],[Infinity,.37]],
+    hoh:    [[17000,.10],[64850,.12],[103350,.22],[197300,.24],[250500,.32],[626350,.35],[Infinity,.37]],
+  },
+};
+const USP_FED_YEARS = { 2026: USP_FED, 2025: USP_FED_2025 };
+
 const USP_FREQ = { weekly:52, biweekly:26, semimonthly:24, monthly:12, annual:1 };
 
 // ── State modules ────────────────────────────────────────────────────────────
@@ -69,7 +85,7 @@ const USP_STATES = [
   {code:'AL',name:'Alabama',type:'brackets',yr:2026,stdDed:3000,exemptAmt:1500,brackets:[[500,.02],[3000,.04],[Infinity,.05]],sui:{base:8000,agency:'AL DOL'},guide:{reg:'My Alabama Taxes + AL DOL eGov',wth:'A-6 monthly / A-1 quarterly + A-3 annual',ui:'Quarterly UC-CR-4',notes:'Some AL cities levy occupational taxes on wages.'}},
   {code:'AR',name:'Arkansas',type:'brackets',yr:2026,stdDed:2470,brackets:[[4600,.02],[Infinity,.039]],sui:{base:7000,agency:'ADWS'},guide:{reg:'ATAP + ADWS',wth:'AR941M monthly + AR3MAR annual',ui:'Quarterly DWS-ARK-209B',notes:'Top rate is 3.9% (2026).'}},
   {code:'CA',name:'California',type:'brackets',yr:2026,stdDed:5540,brackets:[[11079,.01],[26264,.02],[41452,.04],[57542,.06],[72724,.08],[371479,.093],[445771,.103],[742953,.113],[1000000,.123],[Infinity,.133]],extras:[{label:'CA SDI',rate:0.013,cap:Infinity}],sui:{base:7000,agency:'CA EDD'},guide:{reg:'EDD e-Services for Business (single account for WH + UI + SDI)',wth:'DE 88 deposits (schedule follows your federal schedule) + DE 9/DE 9C quarterly',ui:'Included in DE 9 quarterly filing',notes:'SDI is 1.3% for 2026 with no wage cap. Top bracket includes the 1% mental-health surtax over $1M. California also levies 0.1% Employment Training Tax (employer).'}},
-  {code:'CT',name:'Connecticut',type:'brackets',yr:2026,stdDed:0,exemptAmt:15000,brackets:[[10000,.02],[50000,.045],[100000,.055],[200000,.06],[250000,.065],[500000,.069],[Infinity,.0699]],extras:[{label:'CT Paid Leave',rate:0.005,cap:184500}],sui:{base:27000,agency:'CT DOL'},guide:{reg:'myconneCT + CT DOL ReEmployCT',wth:'CT-WH deposits + CT-941 quarterly + CT-W3 annual',ui:'Quarterly return via ReEmployCT',notes:'Personal exemption phases out with income; use DRS withholding rules (Form CT-W4 codes). Paid Leave stays 0.5% up to the SS wage cap.'}},
+  {code:'CT',name:'Connecticut',type:'brackets',yr:2026,stdDed:0,exemptAmt:15000,exemptPhaseOut:{start:30000,per:1000,step:1000},lowBracketPhaseOut:{start:56500,per:5000,shift:1000,bracket:10000,fromRate:.02,toRate:.045},brackets:[[10000,.02],[50000,.045],[100000,.055],[200000,.06],[250000,.065],[500000,.069],[Infinity,.0699]],extras:[{label:'CT Paid Leave',rate:0.005,cap:184500}],sui:{base:27000,agency:'CT DOL'},guide:{reg:'myconneCT + CT DOL ReEmployCT',wth:'CT-WH deposits + CT-941 quarterly + CT-W3 annual',ui:'Quarterly return via ReEmployCT',notes:'Personal exemption phases out with income; use DRS withholding rules (Form CT-W4 codes). Paid Leave stays 0.5% up to the SS wage cap.'}},
   {code:'DE',name:'Delaware',type:'brackets',yr:2026,stdDed:3250,brackets:[[2000,0],[5000,.022],[10000,.039],[20000,.048],[25000,.052],[60000,.0555],[Infinity,.066]],sui:{base:14500,agency:'DE DOL'},extras:[{label:'DE Paid Leave (employee share)',rate:0.004,cap:184500}],guide:{reg:'One Stop (revenue + UI together)',wth:'W-1 monthly or quarterly + W-3 annual',ui:'Quarterly UC-8',notes:'Delaware Paid Leave contributions began 2025 (employers may pass up to half of the 0.8% premium to employees).'}},
   {code:'DC',name:'District of Columbia',type:'brackets',yr:2026,stdDed:16100,brackets:[[10000,.04],[40000,.06],[60000,.065],[250000,.085],[500000,.0925],[1000000,.0975],[Infinity,.1075]],sui:{base:9000,agency:'DC DOES'},guide:{reg:'MyTax.DC + DOES ESSP',wth:'FR-900Q quarterly (or monthly by size) + FR-900A annual',ui:'Quarterly UC-30',notes:'DC Paid Family Leave is employer-paid (0.26% of wages) — no employee deduction.'}},
   {code:'HI',name:'Hawaii',type:'brackets',yr:2026,stdDed:4400,brackets:[[9600,.014],[14400,.032],[19200,.055],[24000,.064],[36000,.068],[48000,.072],[125000,.076],[175000,.079],[225000,.0825],[275000,.09],[325000,.10],[Infinity,.11]],extras:[{label:'HI TDI (typical employee share)',rate:0.005,cap:70000}],sui:{base:64500,agency:'HI DLIR'},guide:{reg:'Hawaii Tax Online + DLIR',wth:'HW-14 quarterly + HW-30 annual',ui:'Quarterly UC-B6',notes:'Hawaii brackets keep widening through 2031 under Act 46; TDI can be fully employer-covered.'}},
@@ -229,12 +245,13 @@ function uspCalc(input){
   const annual=gross*periods;
   const status=input.status||'single';
   const st=USP_STATES.find(s=>s.code===input.state);
+  const FED=USP_FED_YEARS[Number(input.taxYear)]||USP_FED;
 
   // ── Federal income tax (Pub 15-T percentage method, annualized) ──
   let adjAnnual=annual+(Number(input.otherIncome)||0)-(Number(input.otherDeductions)||0);
-  const stdDed=USP_FED.stdDed[status]||USP_FED.stdDed.single;
+  const stdDed=FED.stdDed[status]||FED.stdDed.single;
   // Step 2 checkbox: use the "higher withholding" schedule = half brackets/deduction
-  let fedTaxable, fedBrackets=USP_FED.brackets[status]||USP_FED.brackets.single;
+  let fedTaxable, fedBrackets=FED.brackets[status]||FED.brackets.single;
   if(input.step2){
     fedTaxable=Math.max(adjAnnual-stdDed/2,0);
     fedBrackets=fedBrackets.map(([u,r],i,arr)=>[u===Infinity?Infinity:u/2,r]);
@@ -247,20 +264,33 @@ function uspCalc(input){
 
   // ── FICA ──
   const ytd=Number(input.ytdGross)||0;
-  const ssTaxableThis=Math.max(Math.min(ytd+gross,USP_FED.ssWageBase)-Math.min(ytd,USP_FED.ssWageBase),0);
-  const ss=ssTaxableThis*USP_FED.ssRate;
-  let medicare=gross*USP_FED.medRate;
-  if(ytd+gross>USP_FED.medAddlThreshold){
-    const addlTaxable=Math.max(Math.min(ytd+gross,Infinity)-Math.max(ytd,USP_FED.medAddlThreshold),0);
-    medicare+=Math.min(addlTaxable,gross)*USP_FED.medAddlRate;
+  const ssTaxableThis=Math.max(Math.min(ytd+gross,FED.ssWageBase)-Math.min(ytd,FED.ssWageBase),0);
+  const ss=ssTaxableThis*FED.ssRate;
+  let medicare=gross*FED.medRate;
+  if(ytd+gross>FED.medAddlThreshold){
+    const addlTaxable=Math.max(Math.min(ytd+gross,Infinity)-Math.max(ytd,FED.medAddlThreshold),0);
+    medicare+=Math.min(addlTaxable,gross)*FED.medAddlRate;
   }
 
   // ── State income tax ──
   let stateWH=0, stateLines=[], _stTaxable=0, _stAnnualTax=0;
   if(st){
     if(st.type==='flat'||st.type==='brackets'){
-      _stTaxable=Math.max(annual-(st.stdDed||0)-(st.exemptAmt||0)-(st.exemptFirst||0),0);
+      let _exempt=st.exemptAmt||0;
+      // Some states (CT) phase the exemption out as income rises
+      if(st.exemptPhaseOut&&annual>st.exemptPhaseOut.start){
+        const steps=Math.ceil((annual-st.exemptPhaseOut.start)/st.exemptPhaseOut.per);
+        _exempt=Math.max(_exempt-steps*st.exemptPhaseOut.step,0);
+      }
+      _stTaxable=Math.max(annual-(st.stdDed||0)-_exempt-(st.exemptFirst||0),0);
       _stAnnualTax=st.type==='flat'?_stTaxable*st.rate:_uspBracketTax(_stTaxable,st.brackets);
+      // CT-style low-bracket phase-out: part of the bottom bracket gets retaxed
+      // at the next rate as income rises
+      if(st.lowBracketPhaseOut&&annual>st.lowBracketPhaseOut.start){
+        const po=st.lowBracketPhaseOut;
+        const shifted=Math.min(Math.ceil((annual-po.start)/po.per)*po.shift,po.bracket);
+        _stAnnualTax+=shifted*(po.toRate-po.fromRate);
+      }
       stateWH=_stAnnualTax/periods;
     }
     const _loc=_uspLocalCalc(st,input.local,{annual,periods,status,stTaxable:_stTaxable,stAnnualTax:_stAnnualTax,customRate:Number(input.customRate)||0});
@@ -313,6 +343,11 @@ function uspOpenCalc(){
     </div>
     <div class="mc-page-body" style="padding-top:2px">
       <div class="mca-card" style="margin:0 0 12px">
+        <div class="mca-row"><span class="mca-lbl">Tax year</span>
+          <select id="usp-year" class="mca-dt" onchange="uspRun()">
+            <option value="2026" selected>2026 (current)</option>
+            <option value="2025">2025 (prior-year stubs)</option>
+          </select></div>
         <div class="mca-row"><span class="mca-lbl">State</span>
           <select id="usp-state" class="mca-dt" style="min-width:150px" onchange="uspRun()">
             ${USP_STATES.map(s=>`<option value="${s.code}"${s.code==='CA'?' selected':''}>${s.name}</option>`).join('')}
@@ -388,6 +423,7 @@ function uspRun(){
   const box=document.getElementById('usp-result'); if(!box) return;
   _uspSyncLocalRow();
   const r=uspCalc({
+    taxYear:document.getElementById('usp-year')?.value||2026,
     state:document.getElementById('usp-state').value,
     local:document.getElementById('usp-local')?.value,
     customRate:(parseFloat(document.getElementById('usp-custom-rate')?.value)||0)/100,
@@ -404,7 +440,7 @@ function uspRun(){
   const line=(l,v,c)=>`<div style="display:flex;justify-content:space-between;padding:7px 14px;font-size:13px"><span style="color:var(--muted)">${l}</span><span style="color:${c||'var(--offwhite)'};font-weight:600">${v}</span></div>`;
   box.innerHTML=`
     <div class="mca-card" style="margin:0 0 12px;padding:6px 0">
-      ${line('Federal income tax','− '+_uspF(r.fedWH))}
+      ${line('Federal income tax ('+(document.getElementById('usp-year')?.value||2026)+')','− '+_uspF(r.fedWH))}
       ${line('Social Security (6.2%)','− '+_uspF(r.ss))}
       ${line('Medicare','− '+_uspF(r.medicare))}
       ${r.state&&r.state.type!=='none'?line(r.state.name+' income tax ('+r.state.yr+')','− '+_uspF(r.stateWH)):line((r.state?.name||'State')+' income tax','$0.00 — no state income tax','var(--green)')}
