@@ -1955,18 +1955,19 @@ function renderUSServicePanel(market){
   if(!p) return;
 
   // Update pkg button active state
-  ['listing','social','agent','day','exterior'].forEach(k=>{
+  ['listing','social','agent','day','exterior','custom'].forEach(k=>{
     const btn = document.getElementById('us-pkg-'+k);
     if(btn){ btn.classList.toggle('us-pkg-active', usQuoteState.pkgType===k); }
   });
 
   // Show the correct sub-panel
-  ['listing','social','agent','day','exterior'].forEach(k=>{
+  ['listing','social','agent','day','exterior','custom'].forEach(k=>{
     const el = document.getElementById('us-panel-'+k);
     if(el) el.style.display = usQuoteState.pkgType===k ? '' : 'none';
   });
   // Render location list whenever the day panel is visible
   if(usQuoteState.pkgType==='day') renderUSDayLocations();
+  if(usQuoteState.pkgType==='custom') renderUSCustomLines();
 
   // Update listing tier prices
   if(p.listing){
@@ -2018,6 +2019,7 @@ function renderUSServicePanel(market){
 
 function selectUSPkg(pkgType){
   usQuoteState.pkgType = pkgType;
+  if(pkgType==='custom'&&!usQuoteState.customLines) usQuoteState.customLines=[{desc:'',amt:''}];
   usQuoteState.listingTier = null;
   usQuoteState.socialTier = null;
   usQuoteState.dayType = null;
@@ -2154,6 +2156,9 @@ function getUSGrand(){
     case 'exterior':
       base = p.exteriorOnly || 750;
       break;
+    case 'custom':
+      base = (usQuoteState.customLines||[]).reduce((t,l)=>t+(parseFloat(l.amt)||0),0);
+      break;
     case 'day':
       if(!usQuoteState.dayType) return 0;
       base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
@@ -2235,6 +2240,11 @@ function renderUSQuote(market, grand){
       break;
     case 'exterior':
       lines.push({ label:'Exterior Only Package', amount: p?.exteriorOnly||750 });
+      break;
+    case 'custom':
+      (usQuoteState.customLines||[]).forEach(l=>{
+        if((parseFloat(l.amt)||0)>0||l.desc) lines.push({ label:l.desc||'Custom item', amount: parseFloat(l.amt)||0 });
+      });
       break;
     case 'day':{
       const base = usQuoteState.dayType==='half' ? US_SOCIAL_DAY.halfDay : US_SOCIAL_DAY.fullDay;
@@ -2536,4 +2546,32 @@ function declineRequestChanges(jobId){
     savePortalMessage(j.clientId,'team','About your request for '+j.name+" — we can't accommodate those changes as-is, so we've kept the original details for now. Message us here and we'll find something that works for both of us.");
   if(typeof showDhToast==='function') showDhToast('Changes declined','Original details restored; the client has been notified.','','var(--orange)',3500);
   renderJobs();
+}
+
+
+// ── US Custom Quote: free-form line items ────────────────────────────────────
+function renderUSCustomLines(){
+  const box=document.getElementById('us-custom-lines');
+  if(!box) return;
+  const lines=usQuoteState.customLines||[];
+  box.innerHTML=lines.map((l,i)=>`
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" placeholder="Description (e.g. Twilight aerials + 2 reels)" value="${(l.desc||'').replace(/"/g,'&quot;')}"
+        oninput="usQuoteState.customLines[${i}].desc=this.value"
+        style="flex:1;padding:8px 11px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);font-family:var(--font)">
+      <input type="number" placeholder="$" value="${l.amt||''}" inputmode="decimal"
+        oninput="usQuoteState.customLines[${i}].amt=this.value;calcUS()"
+        style="width:110px;padding:8px 11px;border:1px solid var(--border-bright);border-radius:10px;font-size:13px;background:var(--navy-lift);color:var(--white);text-align:right;font-family:var(--font)">
+      <button onclick="usCustomRemoveLine(${i})" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px">✕</button>
+    </div>`).join('');
+}
+function usCustomAddLine(){
+  (usQuoteState.customLines=usQuoteState.customLines||[]).push({desc:'',amt:''});
+  renderUSCustomLines();
+}
+function usCustomRemoveLine(i){
+  usQuoteState.customLines.splice(i,1);
+  if(!usQuoteState.customLines.length) usQuoteState.customLines.push({desc:'',amt:''});
+  renderUSCustomLines();
+  calcUS();
 }

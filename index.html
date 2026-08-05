@@ -867,6 +867,14 @@
         <button id="us-pkg-agent" onclick="selectUSPkg('agent')" class="us-pkg-btn">Agent Promo</button>
         <button id="us-pkg-day" onclick="selectUSPkg('day')" class="us-pkg-btn">Social Day Rate</button>
         <button id="us-pkg-exterior" onclick="selectUSPkg('exterior')" class="us-pkg-btn">Exterior Only</button>
+        <button id="us-pkg-custom" onclick="selectUSPkg('custom')" class="us-pkg-btn">Custom Quote</button>
+      </div>
+
+      <!-- CUSTOM QUOTE sub-panel -->
+      <div id="us-panel-custom" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Build a one-off quote line by line — anything that doesn't fit the packages.</div>
+        <div id="us-custom-lines" style="display:grid;gap:8px;margin-bottom:10px"></div>
+        <button onclick="usCustomAddLine()" style="padding:6px 14px;border-radius:10px;border:1px dashed var(--border-bright);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-weight:600">+ Add line item</button>
       </div>
 
       <!-- LISTING VIDEO sub-panel -->
@@ -4470,7 +4478,7 @@
 <script src="js/finance.js?v=15"></script>
 <script src="js/calendar.js?v=70"></script>
 <script src="js/team.js?v=52"></script>
-<script src="js/jobs.js?v=11"></script>
+<script src="js/jobs.js?v=12"></script>
 <script src="js/clients.js?v=86"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>
