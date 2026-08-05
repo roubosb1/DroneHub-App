@@ -174,7 +174,7 @@ function addSocialNotification(postId,text,type){
   refreshNotificationBadge();
   // Show a toast alert for the new notification
   const icons={approval:_icon('check',16),revision:_icon('edit',16),message:_icon('chat',16),date_change:_icon('calendar',16),video_approved:_icon('video',16),video_changes:_icon('refresh',16),booking:_icon('mail',16),tax_update:_icon('dollar',16)};
-  const titles={approval:'Client Approved',revision:'Revision Requested',message:'New Message',date_change:'Date Changed',video_approved:'Video Approved',video_changes:'Changes Requested',booking:'New Booking Request',tax_update:'Payroll Tax Update',mention:'Tagged in Community'};
+  const titles={approval:'Client Approved',revision:'Revision Requested',message:'New Message',date_change:'Date Changed',video_approved:'Video Approved',video_changes:'Changes Requested',booking:'New Booking Request',booking_change:'Request Updated',tax_update:'Payroll Tax Update',mention:'Tagged in Community'};
   const colors={approval:'#22D97A',revision:'#FB923C',video_approved:'#22D97A',video_changes:'#F5C842',booking:'var(--amber)',message:'var(--blue-bright)',date_change:'var(--blue-bright)',tax_update:'#F5C842'};
   showDhToast(titles[type]||'Notification', text, icons[type]||'🔔', colors[type]||'var(--blue-bright)');
 }
@@ -1164,7 +1164,7 @@ function renderNotificationPanel(){
   }).join('');
   const notifRows=notifs.map(n=>{
     const cfg=typeConfig[n.type]||defaultType;
-    const navAction=n.type==='meet_invite'?(n.meetUrl?"window.open('"+n.meetUrl+"','_blank')":"showPane('louchat')"):n.type==='mention'?"showPane('community')":n.type==='tax_update'?"showPane('finance')":n.type==='booking'?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)":(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')":n.type==='timeoff_request'||n.type==='approval'&&n.text?.includes('time off')?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
+    const navAction=n.type==='meet_invite'?(n.meetUrl?"window.open('"+n.meetUrl+"','_blank')":"showPane('louchat')"):n.type==='mention'?"showPane('community')":n.type==='tax_update'?"showPane('finance')":(n.type==='booking'||n.type==='booking_change')?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)":(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')":n.type==='timeoff_request'||n.type==='approval'&&n.text?.includes('time off')?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}":"showPane('social');setTimeout(()=>{setSocialSubTab('approvals');},200)";
     return `<div onclick="document.getElementById('notif-panel').style.display='none';${navAction}" style="padding:12px 16px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--navy-lift)'" onmouseleave="this.style.background='transparent'">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div style="width:32px;height:32px;border-radius:10px;background:${cfg.bg};border:1px solid ${cfg.accent};display:flex;align-items:center;justify-content:center;flex-shrink:0">${cfg.icon}</div>
@@ -1236,6 +1236,7 @@ function _notifPageItems(){
     timeoff_request:{label:'Time off',color:'#A78BFA',bg:'rgba(167,139,250,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>'},
     rsvp_accept:{label:'Invite accepted',color:'#22D97A',bg:'rgba(34,217,122,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D97A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 15 2 2 4-4"/></svg>'},
     rsvp_decline:{label:'Invite declined',color:'#E85D5D',bg:'rgba(232,93,93,.08)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E85D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg>'},
+    booking_change:{label:'Request updated',color:'var(--amber)',bg:'rgba(245,166,35,.1)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>'},
     mention:{label:'Community',color:'#5B8DEF',bg:'rgba(91,141,239,.1)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B8DEF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>'},
   };
   const def={label:'Update',color:'var(--muted)',bg:'rgba(255,255,255,.04)',icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'};
@@ -1243,7 +1244,7 @@ function _notifPageItems(){
     const c=cfg[n.type]||def;
     const nav=n.type==='meet_invite'?(n.meetUrl?"window.open('"+n.meetUrl+"','_blank')":"showPane('louchat')")
       :n.type==='tax_update'?"showPane('finance')"
-      :n.type==='booking'?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)"
+      :(n.type==='booking'||n.type==='booking_change')?"showPane('sales');setTimeout(()=>{setSalesView('jobs');},200)"
       :(n.type==='rsvp_accept'||n.type==='rsvp_decline')?"showPane('calendar')"
       :n.type==='mention'?"showPane('community')"
       :n.type==='timeoff_request'?"if(window.innerWidth<=768&&typeof mobShowProfile==='function'){mobShowProfile();setTimeout(()=>mobPfSwitchTab('timeoff'),150);}else{dskShowMyProfile();setTimeout(()=>dskPfSwitchTab('timeoff'),150);}"

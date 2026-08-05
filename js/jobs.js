@@ -374,6 +374,15 @@ function renderJobs(){
         ${clientName?`<div style="font-size:11px;color:var(--green);margin-bottom:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${clientName}</div>`:''}
         ${j.shootType?`<div style="font-size:10px;color:var(--blue-bright);margin-bottom:4px">${j.shootType}${j.sqft?' · '+j.sqft.toLocaleString()+' sqft':''}</div>`:''}
         ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,60)}${j.notes.length>60?'…':''}</div>`:''}
+        ${j.changeRequest?.status==='pending'?`<div style="margin:6px 0;padding:8px 10px;border-radius:9px;background:rgba(91,141,239,.1);border:1px solid rgba(91,141,239,.35)">
+          <div style="font-size:10px;font-weight:800;color:var(--blue-bright);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">✎ Updated by client</div>
+          ${j.changeRequest.changes.map(c=>`<div style="font-size:10.5px;color:var(--offwhite);margin-bottom:2px"><b>${({address:'Address',shootType:'Shoot type',date:'Date',preferredTime:'Time',sqft:'Sq ft',notes:'Notes'})[c.field]||c.field}:</b> <span style="color:var(--muted);text-decoration:line-through">${String(c.old||'—').slice(0,28)}</span> → <span style="color:var(--green)">${String(c.neu||'—').slice(0,28)}</span></div>`).join('')}
+          <div style="display:flex;gap:6px;margin-top:7px">
+            <button class="job-action-btn" style="border-color:var(--green);background:rgba(34,217,122,.12);color:var(--green)" onclick="event.stopPropagation();acceptRequestChanges('${j.id}')">✓ Accept</button>
+            <button class="job-action-btn" style="border-color:rgba(232,93,93,.5);color:#E88" onclick="event.stopPropagation();declineRequestChanges('${j.id}')">✕ Decline</button>
+            <button class="job-action-btn" onclick="event.stopPropagation();openRequestChat('${j.id}','team')">Respond</button>
+          </div>
+        </div>`:''}
         <div class="job-card-actions">
           <button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();quoteFromRequest('${j.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Build quote</button>
           <button class="job-action-btn" style="border-color:#5B7FDB;background:rgba(91,141,239,.12);color:#7AABFF" onclick="event.stopPropagation();openRequestChat('${j.id}','team')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages${(j.requestChat&&j.requestChat.length)?' ('+j.requestChat.length+')':''}</button>
@@ -2500,3 +2509,31 @@ function savePortalAccounts(accounts){
   }
 }
 
+
+
+// ── Client change-requests on booking requests: accept / decline ─────────────
+function acceptRequestChanges(jobId){
+  const j=savedJobs.find(x=>String(x.id)===String(jobId));
+  if(!j||j.changeRequest?.status!=='pending') return;
+  j.changeRequest.status='accepted';
+  j.changeRequest.resolvedAt=new Date().toISOString();
+  saveJobsToStorage();
+  if(typeof savePortalMessage==='function'&&j.clientId)
+    savePortalMessage(j.clientId,'team','Good news — we accepted your updated request for '+j.name+' ('+(j.date||'date TBD')+(j.preferredTime?' at '+j.preferredTime:'')+'). Talk soon!');
+  if(typeof showDhToast==='function') showDhToast('Changes accepted','The client has been notified.','','var(--green)',3000);
+  renderJobs();
+}
+function declineRequestChanges(jobId){
+  const j=savedJobs.find(x=>String(x.id)===String(jobId));
+  if(!j||j.changeRequest?.status!=='pending') return;
+  if(!confirm('Decline the changes and restore the original request details? The client will be notified.')) return;
+  j.changeRequest.changes.forEach(c=>{ j[c.field]=c.old; });
+  j.name=(j.address||'')+' — '+(j.shootType||'');
+  j.changeRequest.status='declined';
+  j.changeRequest.resolvedAt=new Date().toISOString();
+  saveJobsToStorage();
+  if(typeof savePortalMessage==='function'&&j.clientId)
+    savePortalMessage(j.clientId,'team','About your request for '+j.name+" — we can't accommodate those changes as-is, so we've kept the original details for now. Message us here and we'll find something that works for both of us.");
+  if(typeof showDhToast==='function') showDhToast('Changes declined','Original details restored; the client has been notified.','','var(--orange)',3500);
+  renderJobs();
+}

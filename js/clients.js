@@ -2420,8 +2420,10 @@ async function cpShowTab(tab){
               ${info?`<div style="font-size:11px;color:var(--blue-bright);margin-bottom:4px">${info}</div>`:''}
               ${j.notes?`<div style="font-size:10px;color:#A8B4D0;font-style:italic;margin-bottom:4px">${j.notes.slice(0,80)}${j.notes.length>80?'…':''}</div>`:''}
               ${j.status==='requested'?`<div class="job-card-amount" style="color:var(--muted);font-size:12px">Pending quote</div>`:`<div class="job-card-amount">${fmtN(j.grand)}</div>`}
+              ${j.status==='requested'&&j.changeRequest?.status==='pending'?`<div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:4px">✎ Changes sent — awaiting DroneHub review</div>`:''}
               ${active?`<div class="job-card-actions">
                 <button onclick="openRequestChat('${j.id}','client')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;border:1px solid rgba(91,141,239,.4);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message${(j.requestChat&&j.requestChat.length)?' ('+j.requestChat.length+')':''}</button>
+                ${j.status==='requested'?`<button onclick="cpEditRequest('${j.id}')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:14px;border:1px solid rgba(245,166,35,.4);background:rgba(245,166,35,.1);color:var(--amber);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg> Edit request</button>`:''}
               </div>`:''}
             </div>`;
           }).join(''):'<div style="font-size:11px;color:var(--muted);padding:8px 4px">None</div>'}
@@ -3191,6 +3193,70 @@ function cpApproveDraft(){
   vdClientDecision('approved');
   cpCloseDraftReview();
   cpShowTab('production');
+}
+
+// ── Client edits a pending shoot request → admins review the changes ─────────
+function cpEditRequest(jobId){
+  const j=savedJobs.find(x=>String(x.id)===String(jobId));
+  if(!j||j.status!=='requested') return;
+  document.getElementById('cp-editreq-modal')?.remove();
+  const types=['Reel Package','Photo+Video','Aerial Photo','Aerial Video','Twilight Shoot','Exterior Only','Additional Reels'];
+  const m=document.createElement('div');
+  m.id='cp-editreq-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9600;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  const f=(lbl,inner)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${lbl}</label>${inner}</div>`;
+  const inp='style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border-bright);border-radius:10px;font-size:13.5px;background:var(--navy-lift);color:var(--white);font-family:var(--font)"';
+  m.innerHTML=`<div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:16px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:800;color:var(--white)">Edit shoot request</div>
+    <div style="padding:16px 20px">
+      ${f('Property address',`<input id="cper-address" type="text" value="${(j.address||'').replace(/"/g,'&quot;')}" ${inp}>`)}
+      ${f('Shoot type',`<select id="cper-type" ${inp}>${types.map(t=>`<option value="${t}"${j.shootType===t?' selected':''}>${t}</option>`).join('')}</select>`)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${f('Preferred date',`<input id="cper-date" type="date" value="${j.date||''}" ${inp}>`)}
+        ${f('Preferred time',`<input id="cper-time" type="time" value="${j.preferredTime||''}" ${inp}>`)}
+      </div>
+      ${f('Approx. square footage',`<input id="cper-sqft" type="number" value="${j.sqft||''}" ${inp}>`)}
+      ${f('Notes',`<textarea id="cper-notes" rows="3" ${inp.replace('style="','style="resize:none;')}>${(j.notes||'')}</textarea>`)}
+      <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:14px">Your changes go to the DroneHub team for review — they can accept them or message you to find what works for both sides.</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="cpSaveRequestEdit('${j.id}')" style="flex:1;padding:11px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--blue),#3B6FD4);color:#fff;font-size:13px;font-weight:800;cursor:pointer">Send changes</button>
+        <button onclick="document.getElementById('cp-editreq-modal').remove()" style="padding:11px 16px;border-radius:11px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+}
+const CP_REQ_FIELDS={address:'Address',shootType:'Shoot type',date:'Date',preferredTime:'Time',sqft:'Sq ft',notes:'Notes'};
+function cpSaveRequestEdit(jobId){
+  const j=savedJobs.find(x=>String(x.id)===String(jobId));
+  if(!j||j.status!=='requested') return;
+  const vals={
+    address:(document.getElementById('cper-address')?.value||'').trim(),
+    shootType:document.getElementById('cper-type')?.value||j.shootType,
+    date:document.getElementById('cper-date')?.value||j.date,
+    preferredTime:document.getElementById('cper-time')?.value||'',
+    sqft:parseInt(document.getElementById('cper-sqft')?.value)||0,
+    notes:(document.getElementById('cper-notes')?.value||'').trim(),
+  };
+  if(!vals.address){alert('Please enter the property address.');return;}
+  if(!vals.date){alert('Please pick a date.');return;}
+  const changes=[];
+  Object.keys(CP_REQ_FIELDS).forEach(k=>{
+    const oldV=k==='sqft'?(j[k]||0):(j[k]||'');
+    if(String(oldV)!==String(vals[k])) changes.push({field:k,old:oldV,neu:vals[k]});
+  });
+  if(!changes.length){document.getElementById('cp-editreq-modal')?.remove();return;}
+  Object.assign(j,vals);
+  j.name=vals.address+' — '+vals.shootType;
+  j.changeRequest={at:new Date().toISOString(),by:'client',changes,status:'pending'};
+  saveJobsToStorage();
+  const cName=(clients.find(c=>c.id===j.clientId)?.name||'Client').split(' ')[0];
+  if(typeof addSocialNotification==='function')
+    addSocialNotification(j.id,cName+' updated a shoot request: '+j.name+' — review the changes','booking_change');
+  document.getElementById('cp-editreq-modal')?.remove();
+  if(typeof showDhToast==='function') showDhToast('Changes sent','The DroneHub team will review and get back to you.','','var(--green)',3500);
+  cpShowTab('projects');
 }
 
 // ── FEATURE 2: Book a Shoot ────────────────────────────────────────────────
