@@ -399,7 +399,10 @@ function renderCalWeekView(dateStr){
   if(label){
     const s=weekDays[0],e=weekDays[6];
     const sameMonth=s.getMonth()===e.getMonth();
-    label.textContent=sameMonth?MONTHS[s.getMonth()]+' '+s.getDate()+'–'+e.getDate()+', '+s.getFullYear():MONTHS[s.getMonth()]+' '+s.getDate()+' – '+MONTHS[e.getMonth()]+' '+e.getDate()+', '+e.getFullYear();
+    const txt=sameMonth?MONTHS[s.getMonth()]+' '+s.getDate()+'–'+e.getDate()+', '+s.getFullYear():MONTHS[s.getMonth()]+' '+s.getDate()+' – '+MONTHS[e.getMonth()]+' '+e.getDate()+', '+e.getFullYear();
+    let tzAbbr='';
+    try{ tzAbbr=(new Intl.DateTimeFormat('en-US',{timeZoneName:'short'}).formatToParts(new Date()).find(x=>x.type==='timeZoneName')||{}).value||''; }catch(err){}
+    label.innerHTML=txt+(tzAbbr?' <span style="font-size:11px;font-weight:600;color:var(--muted)">· times in '+tzAbbr+'</span>':'');
   }
   renderCalFilterBar();
   renderCalLegend();
