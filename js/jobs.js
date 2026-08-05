@@ -1481,6 +1481,12 @@ function saveEditJob(){
   job.date=newDate;
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
   job.duration=document.getElementById('ej-duration').value||job.duration;
+  // Recompute the end time so calendars show the right block
+  if(job.shootTime){
+    const [_h,_m]=job.shootTime.split(':').map(Number);
+    const _end=_h*60+_m+Math.round((parseFloat(job.duration)||2)*60);
+    job.shootEndTime=String(Math.floor(_end/60)%24).padStart(2,'0')+':'+String(_end%60).padStart(2,'0');
+  }
   job.notes=document.getElementById('ej-notes').value;
   job.driveLink=(document.getElementById('ej-drive-link').value||'').trim()||null;
   job.customAdj=adjSigned;
@@ -1491,6 +1497,8 @@ function saveEditJob(){
   renderJobs();
   renderClients();
   renderCalendar();
+  // Keep Google Calendar in step: update the linked event, or create one now
+  syncEditedJobToGcal(job);
 
   const status=document.getElementById('ej-save-status');
   status.textContent=`✓ Updated — new total $${total.toLocaleString()}`;
@@ -2630,4 +2638,30 @@ function populateJobVideographerSel(){
   const members=getAdminTeamMembers();
   sel.innerHTML='<option value="">— Videographer (optional) —</option>'+members.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
   if(cur) sel.value=cur;
+}
+
+
+// After editing a job, update its Google event (or create it if none exists)
+async function syncEditedJobToGcal(job){
+  try{
+    if(typeof gcalApiCall!=='function'||typeof _fbToken!=='function'||!_fbToken()) return;
+    const ts=typeof getTrackerStage==='function'?getTrackerStage(job.id):{};
+    const vName=job.videographer||ts.videographer||'';
+    if(job.gcalEventId){
+      const members=getAdminTeamMembers();
+      const session=gateGetSession();
+      const target=members.find(m=>(m.name||'').toLowerCase()===vName.toLowerCase())
+        ||members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase());
+      if(!target) return;
+      await gcalApiCall('update',target.id,{
+        gcalEventId:job.gcalEventId,
+        title:job.name,date:job.date,endDate:job.date,
+        startTime:job.shootTime||'',endTime:job.shootEndTime||job.shootTime||'',
+        description:'Shoot — '+(job.address||'')+(job.clientName?' · Client: '+job.clientName:''),
+      });
+      showDhToast('Google Calendar updated',job.name,'✅','var(--green)',2500);
+    } else {
+      pushJobToGcal(job,vName);
+    }
+  }catch(e){ console.warn('[syncEditedJobToGcal]',e.message); }
 }
