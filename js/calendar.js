@@ -208,7 +208,7 @@ function calGetDayEvents(dateStr){
     if(!names.size) names.add(primary);
     if(filterCreator&&!names.has(filterCreator)) return;
     const creator=names.has(filterCreator)&&filterCreator?filterCreator:primary;
-    evts.push({_src:'shoot',_creator:creator,_time:j.shootTime||null,_endTime:j.shootEndTime||null,name:j.name,_job:j,_col:getCreatorColor(creator)});
+    evts.push({_src:'shoot',_creator:creator,_time:j.shootTime||j.preferredTime||null,_endTime:j.shootEndTime||null,name:j.name,_job:j,_col:getCreatorColor(creator)});
   });
   // GCal events
   getGcalLinks().forEach(link=>{
@@ -2329,6 +2329,7 @@ function _mcRenderDayEvents(dateStr){
   const body=document.getElementById('mob-cal-dv-events');
   if(!body) return;
   const dayJobs=savedJobs.filter(j=>j.date===dateStr&&_mcJobMatch(j))
+    .map(j=>(!j.shootTime&&j.preferredTime)?Object.assign(Object.create(Object.getPrototypeOf(j)),j,{shootTime:j.preferredTime}):j)
     .sort((a,b)=>(a.shootTime||'').localeCompare(b.shootTime||''));
   const dayEvts=_calVisibleEvents().filter(ev=>dateStr>=ev.date&&dateStr<=(ev.endDate||ev.date)&&(!ev.memberName||_mcMatchesFilter(ev.memberName))&&(_calTypeFilters===null||_calTypeFilters.has(ev.type)));
 
