@@ -193,6 +193,12 @@ function setCalView(view,dateStr){
 }
 
 // ── Gather all events for a given date string ─────────────────────────────────
+// Google events that were created FROM our jobs — suppress the echo copy
+function _calJobGcalIds(){
+  const ids=new Set();
+  (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{ if(j.gcalEventId) ids.add(String(j.gcalEventId)); });
+  return ids;
+}
 function calGetDayEvents(dateStr){
   const filterCreator=document.getElementById('cal-filter-contractor')?.value||'';
   const evts=[];
@@ -232,8 +238,10 @@ function calGetDayEvents(dateStr){
   // GCal events
   getGcalLinks().forEach(link=>{
     if(link.enabled===false) return;
+    const _ownIds=_calJobGcalIds();
     (link.events||[]).forEach(ev=>{
       if(ev.date!==dateStr) return;
+      if(ev.uid&&_ownIds.has(String(ev.uid))) return; // job already on the board
       if(filterCreator&&link.creatorName!==filterCreator) return;
       evts.push({_src:'gcal',_creator:link.creatorName,_time:ev.time||null,_endTime:ev.endTime||null,name:ev.title||'GCal event',_col:getCreatorColor(link.creatorName)});
     });
@@ -1749,6 +1757,7 @@ function renderCalendar(){
     getGcalLinks().forEach(link=>{
       if(link.enabled===false) return; // toggled off
       (link.events||[]).forEach(ev=>{
+        if(ev.uid&&_calJobGcalIds().has(String(ev.uid))) return;
         if(!ev.date) return;
         if(filterCreator&&link.creatorName!==filterCreator) return;
         if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
@@ -1923,6 +1932,7 @@ function _mcBuildJobsByDate(){
       if(link.enabled===false) return;
       if(window.innerWidth<=768&&!_mcMatchesFilter(link.creatorName)) return;
       (link.events||[]).forEach(ev=>{
+        if(ev.uid&&_calJobGcalIds().has(String(ev.uid))) return;
         if(!ev.date) return;
         if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
         jobsByDate[ev.date].push({_gcal:true,name:ev.title||'GCal event',_creator:link.creatorName,date:ev.date,shootTime:ev.time||'',_evtType:'shoot'});
