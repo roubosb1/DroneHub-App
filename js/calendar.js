@@ -408,7 +408,7 @@ function renderCalWeekView(dateStr){
   if(hasAllDay){
     allDayHtml=`<div style="display:grid;grid-template-columns:52px repeat(7,1fr);position:sticky;top:44px;z-index:9;background:var(--navy-mid);border-bottom:1px solid var(--border)">`;
     allDayHtml+=`<div style="padding:6px;font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;border-right:1px solid var(--border)">All day</div>`;
-    allDayHtml+=weekDays.map((dd,i)=>`<div style="padding:4px;min-height:32px;${i<6?'border-right:1px solid var(--border);':''}">
+    allDayHtml+=weekDays.map((dd,i)=>`<div style="padding:4px;min-height:32px;min-width:0;overflow:hidden;${i<6?'border-right:1px solid var(--border);':''}">
       ${dayEvts[i].filter(e=>!e._time).map(e=>calWeekEventChip(e)).join('')}
     </div>`).join('');
     allDayHtml+='</div>';

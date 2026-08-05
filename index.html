@@ -1030,6 +1030,12 @@
         <input type="number" id="job-duration-input" min="0.5" max="12" step="0.5" value="2" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
       </div>
       <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Videographer</label>
+        <select id="job-videographer-input" onfocus="populateJobVideographerSel()" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+          <option value="">— Videographer (optional) —</option>
+        </select>
+      </div>
+      <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Currency</label>
         <!-- Auto-set by market; kept for saveJob() to read -->
         <select id="job-currency-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;pointer-events:none;opacity:0.6">
@@ -4476,9 +4482,9 @@
 <script src="js/tracker.js?v=55"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=15"></script>
-<script src="js/calendar.js?v=70"></script>
+<script src="js/calendar.js?v=71"></script>
 <script src="js/team.js?v=52"></script>
-<script src="js/jobs.js?v=12"></script>
+<script src="js/jobs.js?v=13"></script>
 <script src="js/clients.js?v=86"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>
@@ -5539,6 +5545,7 @@ function showPane(id,ev){
   if(id==='payroll'){showPane('finance');setTimeout(function(){setFinanceSubTab('payroll');},50);return;}
   if(id==='finance' && !document.getElementById('fin-sub-tab-overview')) {} // sub-tabs not yet rendered, skip
   if(id==='model'){renderEditorSelectors();}
+  if(id==='quote'&&typeof populateJobVideographerSel==='function'){populateJobVideographerSel();}
   if(id==='jobs'){showPane('sales');setSalesView('jobs');return;}
   if(id==='clients'){showPane('sales');setSalesView('clients');return;}
   if(id==='team'){

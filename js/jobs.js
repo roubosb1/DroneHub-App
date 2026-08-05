@@ -87,10 +87,20 @@ function saveJob(){
     payoutSnapshot=buildPayoutSnapshot(lines,ds);
   }
 
+  const _shootTime=document.getElementById('job-time-input')?.value||'';
+  const _durationH=parseFloat(document.getElementById('job-duration-input')?.value)||2;
+  let _shootEnd='';
+  if(_shootTime){
+    const [hh,mm]=_shootTime.split(':').map(Number);
+    const endMin=hh*60+mm+Math.round(_durationH*60);
+    _shootEnd=String(Math.floor(endMin/60)%24).padStart(2,'0')+':'+String(endMin%60).padStart(2,'0');
+  }
   const job={
     id:Date.now(),
     name,date,
-    shootTime:document.getElementById('job-time-input')?.value||'',
+    shootTime:_shootTime,
+    shootEndTime:_shootEnd,
+    videographer:document.getElementById('job-videographer-input')?.value||'',
     duration:document.getElementById('job-duration-input')?.value||'2',
     currency:document.getElementById('job-currency-input')?.value||'cad',
     market,
@@ -153,7 +163,7 @@ function saveJob(){
   // ── AUTO-POPULATE TRACKER STAGE ──────────────────────────────────────────
   // Find the videographer (shooter) from payouts
   const shooterEntry=Object.values(payoutSnapshot).find(p=>p.entries?.some(e=>e.role?.includes('shoot')));
-  const videographerName=shooterEntry?.name||'';
+  const videographerName=job.videographer||shooterEntry?.name||'';
   // Editor is not set at quote time — assigned later in the Project Tracker.
   // Editing fee defaults to the shooter on their paystub; jobDetailReassign
   // will move it when an editor is actually assigned.
@@ -178,6 +188,8 @@ function saveJob(){
     populateCalNameDropdown();
     renderCalendar();
   }
+  // ── PUSH SHOOT TO GOOGLE CALENDAR (videographer's, else the logged-in member's) ──
+  pushJobToGcal(job,videographerName);
 
   // ── SEND QUOTE EMAIL TO CLIENT ────────────────────────────────────────────
   if(initialJobStatus==='quoted'&&job.clientId){
@@ -1707,7 +1719,12 @@ function quoteFromRequest(jobId){
       input.scrollIntoView({behavior:'smooth',block:'center'});
       input.focus();
     }
-    _aiQuoteSetStatus('Request loaded — click "Fill quote form" to build it out.');
+    // Carry the request's date/time/name straight into the form — these were
+    // getting lost and jobs saved on the wrong day with no time
+    const dEl=document.getElementById('job-date-input'); if(dEl&&j.date) dEl.value=j.date;
+    const tEl=document.getElementById('job-time-input'); if(tEl&&j.preferredTime) tEl.value=j.preferredTime;
+    const nEl=document.getElementById('job-name-input'); if(nEl&&!nEl.value.trim()) nEl.value=j.name||j.address||'';
+    _aiQuoteSetStatus('Request loaded — date & time carried over. Click "Fill quote form" to build it out.');
   },300);
 }
 
@@ -2574,4 +2591,43 @@ function usCustomRemoveLine(i){
   if(!usQuoteState.customLines.length) usQuoteState.customLines.push({desc:'',amt:''});
   renderUSCustomLines();
   calcUS();
+}
+
+
+// ── Sync a saved shoot to Google Calendar ────────────────────────────────────
+async function pushJobToGcal(job,videographerName){
+  try{
+    if(typeof gcalApiCall!=='function'||typeof _fbToken!=='function'||!_fbToken()) return;
+    const members=getAdminTeamMembers();
+    const byName=n=>members.find(m=>(m.name||'').toLowerCase()===(n||'').toLowerCase());
+    const session=gateGetSession();
+    const me=members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase());
+    // Prefer the assigned videographer's calendar; fall back to whoever saved the job
+    let target=byName(videographerName)||me;
+    if(target&&!(tpProfileLoad(target.id)?.googleCalConnected)&&me&&tpProfileLoad(me.id)?.googleCalConnected) target=me;
+    if(!target||!(tpProfileLoad(target.id)?.googleCalConnected)) return;
+    const res=await gcalApiCall('create',target.id,{
+      title:job.name,
+      date:job.date,endDate:job.date,
+      startTime:job.shootTime||'',endTime:job.shootEndTime||job.shootTime||'',
+      description:'Shoot — '+(job.address||'')+(job.clientName?' · Client: '+job.clientName:'')+(job.notes?'\n'+job.notes:''),
+    });
+    if(res?.gcalEventId){
+      const idx=savedJobs.findIndex(x=>String(x.id)===String(job.id));
+      if(idx>-1){savedJobs[idx].gcalEventId=res.gcalEventId;saveJobsToStorage();}
+    }
+    showDhToast('Synced to Google Calendar',job.name+(job.shootTime?' · '+job.shootTime:''),'✅','var(--green)',3000);
+  }catch(e){
+    console.warn('[pushJobToGcal]',e.message);
+  }
+}
+
+// Populate the quote form's videographer dropdown from the team roster
+function populateJobVideographerSel(){
+  const sel=document.getElementById('job-videographer-input');
+  if(!sel) return;
+  const cur=sel.value;
+  const members=getAdminTeamMembers();
+  sel.innerHTML='<option value="">— Videographer (optional) —</option>'+members.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+  if(cur) sel.value=cur;
 }
