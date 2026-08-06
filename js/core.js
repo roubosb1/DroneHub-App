@@ -510,3 +510,29 @@ function renderAppHeader(){
   }
 }
 
+
+// ── Styled confirm dialog (replaces native confirm) ──────────────────────────
+// Usage: if(await dhConfirm('Delete job?','This cannot be undone.')) {...}
+function dhConfirm(title,message,opts){
+  opts=opts||{};
+  return new Promise(res=>{
+    document.getElementById('dh-confirm-overlay')?.remove();
+    const ov=document.createElement('div');
+    ov.id='dh-confirm-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);z-index:99998;display:flex;align-items:center;justify-content:center;padding:24px';
+    const done=v=>{ov.style.opacity='0';setTimeout(()=>ov.remove(),120);res(v);};
+    ov.onclick=e=>{if(e.target===ov)done(false);};
+    ov.innerHTML=`<div style="background:var(--navy-card);border:1px solid var(--border-bright);border-radius:18px;max-width:400px;width:100%;padding:24px 24px 20px;box-shadow:0 20px 60px rgba(0,0,0,.55);transform:scale(.96);transition:transform .15s ease" role="dialog" aria-modal="true">
+      <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:8px">${title}</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:22px">${message}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button id="dhc-no" style="padding:9px 18px;border-radius:11px;border:1px solid var(--border);background:var(--navy-lift);color:var(--offwhite);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button id="dhc-yes" style="padding:9px 22px;border-radius:11px;border:none;background:${opts.danger===false?'linear-gradient(135deg,var(--blue),#3B6FD4)':'linear-gradient(135deg,#E85D5D,#C0392B)'};color:#fff;font-size:13px;font-weight:800;cursor:pointer">${opts.confirmLabel||'Delete'}</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(()=>{ov.style.transition='opacity .12s';ov.firstElementChild.style.transform='scale(1)';});
+    ov.querySelector('#dhc-no').onclick=()=>done(false);
+    ov.querySelector('#dhc-yes').onclick=()=>done(true);
+    document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){done(false);document.removeEventListener('keydown',esc);}});
+  });
+}

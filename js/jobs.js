@@ -1513,10 +1513,13 @@ function saveEditJob(){
   setTimeout(()=>closeEditJob(),1800);
 }
 
-function deleteJob(id){
+async function deleteJob(id){
   const job=savedJobs.find(j=>String(j.id)===String(id));
   if(!job) return;
-  if(!confirm('Delete "'+(job.name||'this job')+'"? This cannot be undone.')) return;
+  const kids=savedJobs.filter(j=>String(j.parentJobId||'')===String(id)).length;
+  const msg='“'+(job.name||'this job')+'” will be permanently removed'+(kids?' along with its '+kids+' property project'+(kids>1?'s':''):'')+'.';
+  const ok=typeof dhConfirm==='function'?await dhConfirm('Delete this job?',msg):confirm(msg);
+  if(!ok) return;
   // remove the job AND any property sub-projects hanging off it
   const removed=savedJobs.filter(j=>String(j.id)===String(id)||String(j.parentJobId||'')===String(id));
   savedJobs=savedJobs.filter(j=>String(j.id)!==String(id)&&String(j.parentJobId||'')!==String(id));
