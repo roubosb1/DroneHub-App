@@ -305,6 +305,16 @@ function updateJobStatus(id,newStatus){
   saveJobsToStorage();
   renderJobs();
   renderPayroll();
+  // Confirmed shoots go straight onto Google Calendar — no manual sync needed
+  if(newStatus==='confirmed'&&job.date&&typeof syncEditedJobToGcal==='function'){
+    if(job.shootTime&&!job.shootEndTime){
+      const [h,m]=job.shootTime.split(':').map(Number);
+      const em=h*60+m+Math.round((parseFloat(job.duration)||2)*60);
+      job.shootEndTime=String(Math.floor(em/60)%24).padStart(2,'0')+':'+String(em%60).padStart(2,'0');
+      saveJobsToStorage();
+    }
+    syncEditedJobToGcal(job);
+  }
 }
 
 let _jobsStatFilter = '';
