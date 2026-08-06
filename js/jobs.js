@@ -2688,6 +2688,13 @@ function ejShowSyncLog(){
 async function pushJobToGcal(job,videographerName){
   try{
     if(typeof gcalApiCall!=='function'||typeof _fbToken!=='function'||!_fbToken()) return;
+    // already linked to a Google event → update it instead of creating a twin
+    if(job.gcalEventId) return syncEditedJobToGcal(job);
+    // serialize: never let two syncs race a duplicate create
+    window._gcalBusy=window._gcalBusy||{};
+    if(window._gcalBusy[job.id]) return;
+    window._gcalBusy[job.id]=true;
+    setTimeout(()=>{delete window._gcalBusy[job.id];},15000);
     // 1) ground truth: a member with a WORKING Google link
     let target=gcalConnectedTarget(videographerName);
     // 2) fall back to roster + profile flag
@@ -2715,6 +2722,7 @@ async function pushJobToGcal(job,videographerName){
       const idx=savedJobs.findIndex(x=>String(x.id)===String(job.id));
       if(idx>-1){savedJobs[idx].gcalEventId=res.gcalEventId;saveJobsToStorage();}
     }
+    delete (window._gcalBusy||{})[job.id];
     gcalLog({ok:true,result:'Created event on '+target.name+"'s Google Calendar",job:job.name,target:target.name});
     showDhToast('Synced to Google Calendar',job.name+(job.shootTime?' · '+job.shootTime:''),'✅','var(--green)',3000);
   }catch(e){

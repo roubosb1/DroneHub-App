@@ -193,11 +193,22 @@ function setCalView(view,dateStr){
 }
 
 // ── Gather all events for a given date string ─────────────────────────────────
-// Google events that were created FROM our jobs — suppress the echo copy
+// Google events that were created FROM our jobs — suppress the echo copy.
+// Matches by stored event id, or by exact job-title + nearby date (catches
+// orphans left behind when a job was later re-dated or double-synced).
 function _calJobGcalIds(){
   const ids=new Set();
   (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{ if(j.gcalEventId) ids.add(String(j.gcalEventId)); });
   return ids;
+}
+function _calIsJobEcho(ev,ownIds){
+  if(ev.uid&&(ownIds||_calJobGcalIds()).has(String(ev.uid))) return true;
+  if(!ev.title) return false;
+  return (typeof savedJobs!=='undefined'?savedJobs:[]).some(j=>{
+    if(j.subJob||!j.name||j.name!==ev.title) return false;
+    if(!j.date||!ev.date) return true;
+    return Math.abs((new Date(j.date+'T12:00:00')-new Date(ev.date+'T12:00:00'))/86400000)<=1;
+  });
 }
 function calGetDayEvents(dateStr){
   const filterCreator=document.getElementById('cal-filter-contractor')?.value||'';
@@ -242,7 +253,7 @@ function calGetDayEvents(dateStr){
     const _ownIds=_calJobGcalIds();
     (link.events||[]).forEach(ev=>{
       if(ev.date!==dateStr) return;
-      if(ev.uid&&_ownIds.has(String(ev.uid))) return; // job already on the board
+      if(_calIsJobEcho(ev,_ownIds)) return; // job already on the board
       if(filterCreator&&link.creatorName!==filterCreator) return;
       evts.push({_src:'gcal',_creator:link.creatorName,_time:ev.time||null,_endTime:ev.endTime||null,name:ev.title||'GCal event',_col:getCreatorColor(link.creatorName)});
     });
@@ -1760,7 +1771,7 @@ function renderCalendar(){
     getGcalLinks().forEach(link=>{
       if(link.enabled===false) return; // toggled off
       (link.events||[]).forEach(ev=>{
-        if(ev.uid&&_calJobGcalIds().has(String(ev.uid))) return;
+        if(_calIsJobEcho(ev)) return;
         if(!ev.date) return;
         if(filterCreator&&link.creatorName!==filterCreator) return;
         if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
@@ -1936,7 +1947,7 @@ function _mcBuildJobsByDate(){
       if(link.enabled===false) return;
       if(window.innerWidth<=768&&!_mcMatchesFilter(link.creatorName)) return;
       (link.events||[]).forEach(ev=>{
-        if(ev.uid&&_calJobGcalIds().has(String(ev.uid))) return;
+        if(_calIsJobEcho(ev)) return;
         if(!ev.date) return;
         if(!jobsByDate[ev.date]) jobsByDate[ev.date]=[];
         jobsByDate[ev.date].push({_gcal:true,name:ev.title||'GCal event',_creator:link.creatorName,date:ev.date,shootTime:ev.time||'',_evtType:'shoot'});
