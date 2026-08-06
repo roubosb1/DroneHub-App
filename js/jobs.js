@@ -1514,11 +1514,16 @@ function saveEditJob(){
 }
 
 function deleteJob(id){
-  savedJobs=savedJobs.filter(j=>j.id!==id);
+  const job=savedJobs.find(j=>String(j.id)===String(id));
+  if(!job) return;
+  if(!confirm('Delete "'+(job.name||'this job')+'"? This cannot be undone.')) return;
+  // remove the job AND any property sub-projects hanging off it
+  const removed=savedJobs.filter(j=>String(j.id)===String(id)||String(j.parentJobId||'')===String(id));
+  savedJobs=savedJobs.filter(j=>String(j.id)!==String(id)&&String(j.parentJobId||'')!==String(id));
   saveJobsToStorage();
-  // Delete the individual sub-collection doc for this job
-  if(_fbToken()) fbSubDelete('jobs',String(id)).catch(e=>console.error('[deleteJob] sub-delete failed:',e.message));
+  if(_fbToken()) removed.forEach(r=>fbSubDelete('jobs',String(r.id)).catch(e=>console.error('[deleteJob] sub-delete failed:',e.message)));
   refreshPayrollPeriods(); renderPayroll(); renderJobs();
+  if(typeof showDhToast==='function') showDhToast('Job deleted',job.name||'','','var(--muted)',2500);
 }
 function clearJobsByStatus(status){
   const count=savedJobs.filter(j=>(j.status||'quoted')===status).length;
