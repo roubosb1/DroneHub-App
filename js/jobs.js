@@ -184,9 +184,14 @@ function saveJob(){
     draftCount:0,extraDraftCharge:0,
   });
 
-  // Extra listing properties each become their own tracker project
-  // (re-save storage after — the earlier save ran before children existed)
-  if((job.usData?.extraProps||[]).length){ usSyncExtraPropProjects(job); saveJobsToStorage(); }
+  // Extra listing properties each become their own tracker project + calendar
+  // event (re-save storage after — the earlier save ran before children existed)
+  if((job.usData?.extraProps||[]).length){
+    usSyncExtraPropProjects(job);
+    saveJobsToStorage();
+    savedJobs.filter(c=>c.subJob&&String(c.parentJobId)===String(job.id)&&c.ownSchedule)
+      .forEach(c=>pushJobToGcal(c,videographerName));
+  }
 
   // ── UPDATE CALENDAR ───────────────────────────────────────────────────────
   if(document.getElementById('pane-calendar')?.classList.contains('active')){
@@ -1504,7 +1509,12 @@ function saveEditJob(){
   job.propertyLines=(window._ejPlines||[]).filter(l=>l.address||((parseFloat(l.rate)||0)*(parseInt(l.qty)||0))>0);
   total+=ejPlinesSum();
   ejSyncPlineProjects(job);
-  if(isUSJob) usSyncExtraPropProjects(job);
+  if(isUSJob){
+    usSyncExtraPropProjects(job);
+    // keep each property's own calendar event in step with the edit
+    savedJobs.filter(c=>c.subJob&&String(c.parentJobId)===String(job.id)&&c.ownSchedule)
+      .forEach(c=>pushJobToGcal(c,job.videographer||''));
+  }
   job.grand=total;
   job.date=newDate;
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
@@ -2164,19 +2174,26 @@ function renderUSListingProps(){
       <div style="display:flex;gap:6px;margin-bottom:10px">
         ${['under4k','over4k','over8k'].map(t=>`<button onclick="setUSListingPropTier(${i},'${t}')" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid ${prop.tier===t?'var(--blue)':'var(--border)'};background:${prop.tier===t?'rgba(91,141,239,.18)':'var(--navy-card)'};color:${prop.tier===t?'var(--blue-bright)':'var(--offwhite)'};font-size:11px;font-weight:700;cursor:pointer">${tierLabels[t]}<div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:2px">$${(p.listing[t]||0).toLocaleString()}</div></button>`).join('')}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <div style="font-size:11px;color:var(--muted);font-weight:600">Reels:</div>
         <button onclick="changeUSListingPropReels(${i},-1)" style="${btnStyle}">−</button>
         <span style="font-size:18px;font-weight:900;color:var(--blue-bright);min-width:22px;text-align:center">${reels}</span>
         <button onclick="changeUSListingPropReels(${i},1)" style="${btnStyle}">+</button>
         <span style="font-size:11px;color:var(--muted)">1 included · extra $${(p.reelAddon||400).toLocaleString()} each</span>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input type="date" value="${prop.date||''}" onchange="usQuoteState.extraProps[${i}].date=this.value" style="flex:1;min-width:0;padding:7px 10px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-card);color:var(--white);font-size:12px;box-sizing:border-box;outline:none;color-scheme:dark">
+        <input type="time" value="${prop.time||''}" onchange="usQuoteState.extraProps[${i}].time=this.value" style="flex:1;min-width:0;padding:7px 10px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-card);color:var(--white);font-size:12px;box-sizing:border-box;outline:none;color-scheme:dark">
+      </div>
+      <input type="text" value="${(prop.notes||'').replace(/"/g,'&quot;')}" oninput="usQuoteState.extraProps[${i}].notes=this.value" placeholder="Notes — gate code, meet agent, etc." style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-card);color:var(--white);font-size:12px;box-sizing:border-box;outline:none">
     </div>`;
   }).join('');
 }
 function addUSListingProp(){
   if(!usQuoteState.extraProps) usQuoteState.extraProps = [];
-  usQuoteState.extraProps.push({id:Date.now()+'_'+Math.floor(Math.random()*1e6), address:'', tier:null, reelCount:1});
+  // Date pre-fills from the main job so untouched properties ride along with it
+  usQuoteState.extraProps.push({id:Date.now()+'_'+Math.floor(Math.random()*1e6), address:'', tier:null, reelCount:1,
+    date:document.getElementById('job-date-input')?.value||'', time:'', notes:''});
   renderUSListingProps();
   calcUS();
 }
@@ -2955,18 +2972,35 @@ function usSyncExtraPropProjects(job){
     const childId=String(job.id)+'_x_'+x.id;
     keepIds.add(childId);
     let child=savedJobs.find(j=>String(j.id)===childId);
+    // Each property carries its own schedule: own date (defaults to the main
+    // job's), own time, own notes — so it lands on the calendar individually.
+    const _cDate=x.date||job.date;
+    const _cTime=x.time||'';
+    let _cEnd='';
+    if(_cTime){
+      const [_h,_m]=_cTime.split(':').map(Number);
+      const _e=_h*60+_m+Math.round((parseFloat(job.duration)||2)*60);
+      _cEnd=String(Math.floor(_e/60)%24).padStart(2,'0')+':'+String(_e%60).padStart(2,'0');
+    }
     if(!child){
-      child={id:childId,subJob:true,parentJobId:job.id,name:x.address,date:job.date,
+      child={id:childId,subJob:true,ownSchedule:true,parentJobId:job.id,name:x.address,date:_cDate,
+        shootTime:_cTime,shootEndTime:_cEnd,duration:job.duration||'2',
+        videographer:job.videographer||'',
         status:'confirmed',clientId:job.clientId||null,clientName:job.clientName||'',
-        grand:0,services:{},payouts:{},address:x.address,notes:'Part of: '+job.name};
+        grand:0,services:{},payouts:{},address:x.address,
+        notes:(x.notes?x.notes+' · ':'')+'Part of: '+job.name};
       savedJobs.push(child);
-      const _notShotYet=job.date&&job.date>new Date().toISOString().slice(0,10);
+      const _notShotYet=_cDate&&_cDate>new Date().toISOString().slice(0,10);
       setTrackerStage(childId,{stage:_notShotYet?'footage_pending':'ready',editStatus:_notShotYet?'footage_pending':'ready',claimedBy:'',
-        videographer:job.videographer||'',filesReceived:false,notes:'Listing video + reels ×'+(x.reelCount||1)+' — part of '+job.name,
+        videographer:job.videographer||'',filesReceived:false,
+        notes:'Listing video + reels ×'+(x.reelCount||1)+(x.notes?' · '+x.notes:'')+' — part of '+job.name,
         projectId:x.address,approxFilmHours:'',approxEditHours:'',completionDate:'',
         filemailLink:'',frameioLink:'',downloadLink:'',draftCount:0,extraDraftCharge:0});
     } else {
-      child.name=x.address; child.address=x.address; child.date=job.date;
+      child.name=x.address; child.address=x.address; child.ownSchedule=true;
+      child.date=_cDate; child.shootTime=_cTime; child.shootEndTime=_cEnd;
+      child.duration=job.duration||'2'; child.videographer=job.videographer||'';
+      child.notes=(x.notes?x.notes+' · ':'')+'Part of: '+job.name;
     }
   });
   for(let i=savedJobs.length-1;i>=0;i--){

@@ -205,7 +205,7 @@ function _calIsJobEcho(ev,ownIds){
   if(ev.uid&&(ownIds||_calJobGcalIds()).has(String(ev.uid))) return true;
   if(!ev.title) return false;
   return (typeof savedJobs!=='undefined'?savedJobs:[]).some(j=>{
-    if(j.subJob||!j.name||j.name!==ev.title) return false;
+    if((j.subJob&&!j.ownSchedule)||!j.name||j.name!==ev.title) return false;
     if(!j.date||!ev.date) return true;
     return Math.abs((new Date(j.date+'T12:00:00')-new Date(ev.date+'T12:00:00'))/86400000)<=1;
   });
@@ -215,7 +215,7 @@ function calGetDayEvents(dateStr){
   const evts=[];
   // Jobs / shoots
   savedJobs.forEach(j=>{
-    if(j.subJob) return;
+    if(j.subJob&&!j.ownSchedule) return;
     // timed shoots can land on a neighboring viewer-day after tz shift
     const _dayDiff=Math.abs((new Date(j.date+'T12:00:00')-new Date(dateStr+'T12:00:00'))/86400000);
     if(_dayDiff>1) return;
@@ -371,7 +371,7 @@ function renderCalLegend(){
   const filterCreator=document.getElementById('cal-filter-contractor')?.value||'';
   const allNames=new Set();
   savedJobs.forEach(j=>{
-      if(j.subJob) return;
+      if(j.subJob&&!j.ownSchedule) return;
     Object.values(j.payouts||{}).forEach(p=>{
       if(p.name&&!p.name.includes('unassigned')&&!p.name.includes('no ')) allNames.add(p.name);
     });
@@ -1671,7 +1671,7 @@ async function gcalCleanOrphans(){
       if(!link.oauthMemberId) continue;
       for(const ev of (link.events||[]).slice()){
         if(!ev.uid||own.has(String(ev.uid))) continue;
-        const isOurs=savedJobs.some(j=>!j.subJob&&j.name&&j.name===ev.title);
+        const isOurs=savedJobs.some(j=>(!j.subJob||j.ownSchedule)&&j.name&&j.name===ev.title);
         if(!isOurs) continue;
         try{
           await gcalApiCall('delete',link.oauthMemberId,{gcalEventId:ev.uid,calendarId:link.oauthCalendarId||'primary'});
@@ -1784,7 +1784,7 @@ function renderCalendar(){
   const jobsByDate={};
   if(showShoots){
     savedJobs.forEach(j=>{
-      if(j.subJob) return;
+      if(j.subJob&&!j.ownSchedule) return;
       if(!j.date) return;
       const assignedNames=new Set();
       Object.values(j.payouts||{}).forEach(p=>{
@@ -1885,7 +1885,7 @@ function renderCalendar(){
 }
 function showCalDay(dateStr,e){
   if(e) e.stopPropagation();
-  const dayJobs=savedJobs.filter(j=>j.date===dateStr&&!j.subJob);
+  const dayJobs=savedJobs.filter(j=>j.date===dateStr&&(!j.subJob||j.ownSchedule));
   const dayCustomEvts=_calVisibleEvents().filter(ev=>{
     const s=ev.date, end=ev.endDate||ev.date;
     return dateStr>=s&&dateStr<=end;
@@ -1970,7 +1970,7 @@ function _mcBuildJobsByDate(){
   const showShoots=_calTypeFilters===null||_calTypeFilters.has('shoots');
   if(showShoots){
     savedJobs.forEach(j=>{
-      if(j.subJob) return;
+      if(j.subJob&&!j.ownSchedule) return;
       if(!j.date) return;
       if(window.innerWidth<=768&&!_mcJobMatch(j)) return;
       const primary=getJobCreator(j)||'Unknown';
@@ -2217,7 +2217,7 @@ function _mcRenderUpcoming(){
   const todayStr=new Date().toISOString().slice(0,10);
   const items=[];
   savedJobs.forEach(j=>{
-      if(j.subJob) return;
+      if(j.subJob&&!j.ownSchedule) return;
     if(!j.date||j.date<todayStr) return;
     if(!(j.status==='confirmed'||j.status==='completed'||j.status==='booked')) return;
     const creator=typeof getJobCreator==='function'?getJobCreator(j):'';
@@ -2364,7 +2364,7 @@ function _mcRibbonEventDates(startDs,days){
   const end=new Date(startDs+'T12:00:00');end.setDate(end.getDate()+days);
   const endDs=end.toISOString().slice(0,10);
   (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{
-    if(!j.subJob&&j.date&&j.date>=startDs&&j.date<=endDs&&_mcJobMatch(j)) set.add(j.date);
+    if((!j.subJob||j.ownSchedule)&&j.date&&j.date>=startDs&&j.date<=endDs&&_mcJobMatch(j)) set.add(j.date);
   });
   _calVisibleEvents().forEach(ev=>{
     if(_calTypeFilters!==null&&!_calTypeFilters.has(ev.type)) return;
@@ -2429,7 +2429,7 @@ function _mcRenderDayEvents(dateStr){
   const body=document.getElementById('mob-cal-dv-events');
   if(!body) return;
   const dayJobs=savedJobs
-    .filter(j=>!j.subJob&&Math.abs((new Date(j.date+'T12:00:00')-new Date(dateStr+'T12:00:00'))/86400000)<=1&&_mcJobMatch(j))
+    .filter(j=>(!j.subJob||j.ownSchedule)&&Math.abs((new Date(j.date+'T12:00:00')-new Date(dateStr+'T12:00:00'))/86400000)<=1&&_mcJobMatch(j))
     .map(j=>{
       const jt=j.shootTime||j.preferredTime||'';
       if(!jt) return j.date===dateStr?j:null;
