@@ -2798,7 +2798,9 @@ function ejSyncPlineProjects(job){
         status:'confirmed',clientId:job.clientId||null,clientName:job.clientName||'',
         grand:0,services:{},payouts:{},address:l.address,notes:'Part of: '+job.name};
       savedJobs.push(child);
-      setTrackerStage(childId,{stage:'ready',editStatus:'ready',claimedBy:'',
+      // Future shoot → footage doesn't exist yet; past/today → ready to edit
+      const _notShotYet=job.date&&job.date>new Date().toISOString().slice(0,10);
+      setTrackerStage(childId,{stage:_notShotYet?'footage_pending':'ready',editStatus:_notShotYet?'footage_pending':'ready',claimedBy:'',
         videographer:job.videographer||ts.videographer||'',filesReceived:false,notes:'Reels ×'+(l.qty||1)+' — part of '+job.name,
         projectId:l.address,approxFilmHours:'',approxEditHours:'',completionDate:'',
         filemailLink:'',frameioLink:'',downloadLink:'',draftCount:0,extraDraftCharge:0});
