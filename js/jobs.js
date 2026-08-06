@@ -2655,24 +2655,53 @@ function jobTimezone(job){
   return 'America/Toronto';
 }
 
+// Ground-truth Google target: the gcal links list only contains members whose
+// OAuth tokens actually work — use it instead of trusting profile flags.
+function gcalConnectedTarget(vName){
+  try{
+    const links=(typeof getGcalLinks==='function'?getGcalLinks():[]).filter(l=>l.oauthMemberId&&l.enabled!==false);
+    if(!links.length) return null;
+    const norm=x=>(x||'').toLowerCase().trim();
+    const session=gateGetSession();
+    let l=links.find(x=>norm(x.creatorName)===norm(vName))
+       ||links.find(x=>norm(x.creatorName)===norm(session?.name))
+       ||links[0];
+    return {id:l.oauthMemberId,name:l.creatorName};
+  }catch(e){ return null; }
+}
+function gcalLog(entry){
+  try{
+    const log=JSON.parse(localStorage.getItem('dronehub_gcal_log')||'[]');
+    log.unshift(Object.assign({at:new Date().toLocaleString()},entry));
+    if(log.length>20) log.length=20;
+    localStorage.setItem('dronehub_gcal_log',JSON.stringify(log));
+  }catch(e){}
+}
+function ejShowSyncLog(){
+  let log=[];
+  try{log=JSON.parse(localStorage.getItem('dronehub_gcal_log')||'[]');}catch(e){}
+  const body=log.length?log.map(e=>`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:11.5px;line-height:1.5"><b style="color:${e.ok?'var(--green)':'#E85D5D'}">${e.ok?'✓':'✕'} ${e.result}</b><br><span style="color:var(--muted)">${e.at} · ${e.job||''} → ${e.target||'?'}</span></div>`).join(''):'<div style="color:var(--muted);font-size:12px">No sync attempts yet.</div>';
+  if(typeof dhConfirm==='function') dhConfirm('Google sync log',body,{confirmLabel:'Close',danger:false});
+}
+
 // ── Sync a saved shoot to Google Calendar ────────────────────────────────────
 async function pushJobToGcal(job,videographerName){
   try{
     if(typeof gcalApiCall!=='function'||typeof _fbToken!=='function'||!_fbToken()) return;
-    const members=getAdminTeamMembers();
-    const byName=n=>members.find(m=>(m.name||'').toLowerCase()===(n||'').toLowerCase());
-    const session=gateGetSession();
-    const me=members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase())
-      ||members.find(m=>(m.name||'').toLowerCase()===(session?.name||'').toLowerCase());
-    // Prefer the assigned videographer's calendar; fall back to whoever saved the job
-    let target=byName(videographerName)||me;
-    if(target&&!(tpProfileLoad(target.id)?.googleCalConnected)&&me&&tpProfileLoad(me.id)?.googleCalConnected) target=me;
+    // 1) ground truth: a member with a WORKING Google link
+    let target=gcalConnectedTarget(videographerName);
+    // 2) fall back to roster + profile flag
     if(!target){
-      showDhToast('Google sync skipped','Could not match a team member for this shoot — check the videographer name.','⚠','var(--orange)',5000);
-      return;
+      const members=getAdminTeamMembers();
+      const session=gateGetSession();
+      const m=members.find(x=>(x.name||'').toLowerCase()===(videographerName||'').toLowerCase())
+        ||members.find(x=>(x.email||'').toLowerCase()===(session?.email||'').toLowerCase())
+        ||members.find(x=>(x.name||'').toLowerCase()===(session?.name||'').toLowerCase());
+      if(m&&tpProfileLoad(m.id)?.googleCalConnected) target={id:m.id,name:m.name};
     }
-    if(!(tpProfileLoad(target.id)?.googleCalConnected)){
-      showDhToast('Google sync skipped',target.name+"'s Google Calendar isn't connected — connect it from their profile.",'⚠','var(--orange)',5000);
+    if(!target){
+      gcalLog({ok:false,result:'Skipped — no connected Google account found',job:job.name,target:videographerName||'(none)'});
+      showDhToast('Google sync skipped','No connected Google Calendar found — connect one from a profile, or check the sync log.','⚠','var(--orange)',6000);
       return;
     }
     const res=await gcalApiCall('create',target.id,{
@@ -2686,9 +2715,11 @@ async function pushJobToGcal(job,videographerName){
       const idx=savedJobs.findIndex(x=>String(x.id)===String(job.id));
       if(idx>-1){savedJobs[idx].gcalEventId=res.gcalEventId;saveJobsToStorage();}
     }
+    gcalLog({ok:true,result:'Created event on '+target.name+"'s Google Calendar",job:job.name,target:target.name});
     showDhToast('Synced to Google Calendar',job.name+(job.shootTime?' · '+job.shootTime:''),'✅','var(--green)',3000);
   }catch(e){
     console.warn('[pushJobToGcal]',e.message);
+    gcalLog({ok:false,result:'Error: '+(e.message||'unknown'),job:job.name,target:videographerName||''});
     showDhToast('Google sync failed',e.message||'Unknown error — try again from Edit → Save','⚠','var(--orange)',6000);
   }
 }
@@ -2711,11 +2742,15 @@ async function syncEditedJobToGcal(job){
     const ts=typeof getTrackerStage==='function'?getTrackerStage(job.id):{};
     const vName=job.videographer||ts.videographer||'';
     if(job.gcalEventId){
-      const members=getAdminTeamMembers();
-      const session=gateGetSession();
-      const target=members.find(m=>(m.name||'').toLowerCase()===vName.toLowerCase())
-        ||members.find(m=>(m.email||'').toLowerCase()===(session?.email||'').toLowerCase());
-      if(!target) return;
+      let target=gcalConnectedTarget(vName);
+      if(!target){
+        const members=getAdminTeamMembers();
+        const session=gateGetSession();
+        const m=members.find(x=>(x.name||'').toLowerCase()===vName.toLowerCase())
+          ||members.find(x=>(x.email||'').toLowerCase()===(session?.email||'').toLowerCase());
+        if(m) target={id:m.id,name:m.name};
+      }
+      if(!target){ gcalLog({ok:false,result:'Update skipped — no target',job:job.name,target:vName}); return; }
       await gcalApiCall('update',target.id,{
         gcalEventId:job.gcalEventId,
         title:job.name,date:job.date,endDate:job.date,
@@ -2723,6 +2758,7 @@ async function syncEditedJobToGcal(job){
         timeZone:jobTimezone(job),
         description:'Shoot — '+(job.address||'')+(job.clientName?' · Client: '+job.clientName:''),
       });
+      gcalLog({ok:true,result:'Updated event on '+target.name+"'s Google Calendar",job:job.name,target:target.name});
       showDhToast('Google Calendar updated',job.name,'✅','var(--green)',2500);
     } else {
       pushJobToGcal(job,vName);
