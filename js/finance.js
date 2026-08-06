@@ -4015,6 +4015,12 @@ function openInvoice(jobId){
   });
   } // end Canada jobs
 
+  // Per-property reel charges (day-rate multi-property shoots) — both markets
+  (job.propertyLines||[]).forEach(pl=>{
+    const amt=(parseFloat(pl.rate)||0)*(parseInt(pl.qty)||0);
+    if(pl.address&&amt>0) lines.push({desc:'Reels — '+pl.address,qty:parseInt(pl.qty)||0,unit:parseFloat(pl.rate)||0,total:amt});
+  });
+
   const subtotal=lines.reduce((s,l)=>s+l.total,0);
   const jobCurrency=(job.currency||'cad').toUpperCase();
   const isUsdInvoice=jobCurrency==='USD';

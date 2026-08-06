@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/@daily-co/daily-js"></script>
 <script>emailjs.init('Ch7hmj99uF1tLKhMj');</script>
-<link rel="stylesheet" href="css/styles.css?v=146">
+<link rel="stylesheet" href="css/styles.css?v=147">
 <!-- Load XLSX (SheetJS) early so Excel imports work immediately -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -4324,12 +4324,12 @@
 
 <!-- EDIT JOB MODAL -->
 <div id="edit-job-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto" onclick="if(event.target===this)closeEditJob()">
-  <div style="background:#1C2333;max-width:640px;margin:30px auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,.6);border:1px solid #3A4890" onclick="event.stopPropagation()">
+  <div style="background:#1C2333;max-width:1100px;margin:30px auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,.6);border:1px solid #3A4890" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:rgba(245,166,35,.1);border-bottom:0.5px solid #E8C87A">
       <span style="font-size:13px;font-weight:600;color:#F5A623"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit job / adjust quote</span>
       <button onclick="closeEditJob()" style="padding:6px 14px;border-radius:14px;border:1px solid #2E3A55;background:#242D42;color:#A8B4D0;font-size:12px;cursor:pointer">Cancel</button>
     </div>
-    <div style="padding:20px 24px">
+    <div style="padding:20px 24px" id="ej-body">
 
       <!-- Job info -->
       <div style="margin-bottom:14px;padding:10px 14px;background:#1C2333;border-radius:8px;border:0.5px solid #e0ddd5">
@@ -4449,8 +4449,19 @@
         <div style="font-size:10px;color:#7A8AAA;margin-top:3px">Paste the shareable Drive folder link for this property's deliverables</div>
       </div>
 
+      <!-- Property line items (day-rate multi-property reels) -->
+      <div id="ej-plines-section" style="margin-bottom:16px;padding:12px 14px;background:#242D42;border-radius:10px;border:0.5px solid #3A4890">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:#7AABFF;text-transform:uppercase;letter-spacing:.05em">Property line items — per-reel charges</div>
+          <div style="font-size:12px;color:#22D97A;font-weight:700" id="ej-plines-sum"></div>
+        </div>
+        <div style="font-size:10.5px;color:#7A8AAA;margin-bottom:8px">Each property becomes its own project in the tracker and its own invoice line. Add these any time — even the day of the shoot.</div>
+        <div id="ej-plines-rows" style="display:grid;gap:6px"></div>
+        <button onclick="ejAddPline()" style="margin-top:8px;padding:6px 14px;border-radius:9px;border:1px dashed #5B7FDB;background:transparent;color:#7AABFF;font-size:12px;font-weight:600;cursor:pointer">+ Add property</button>
+      </div>
+
       <!-- New total preview -->
-      <div style="padding:12px 16px;background:rgba(34,217,122,.1);border-radius:8px;border:0.5px solid #1D9E75;margin-bottom:16px">
+      <div id="ej-total-card" style="padding:12px 16px;background:rgba(34,217,122,.1);border-radius:8px;border:0.5px solid #1D9E75;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <div style="font-size:12px;color:#22D97A;font-weight:500">Updated quote total</div>
           <div style="font-size:20px;font-weight:700;color:#22D97A" id="ej-new-total">$0.00</div>
@@ -4482,11 +4493,11 @@
 <script src="js/louchat.js?v=83"></script>
 <script src="js/tracker.js?v=55"></script>
 <script src="js/admin.js"></script>
-<script src="js/finance.js?v=15"></script>
-<script src="js/calendar.js?v=78"></script>
+<script src="js/finance.js?v=16"></script>
+<script src="js/calendar.js?v=80"></script>
 <script src="js/team.js?v=52"></script>
-<script src="js/jobs.js?v=18"></script>
-<script src="js/clients.js?v=86"></script>
+<script src="js/jobs.js?v=19"></script>
+<script src="js/clients.js?v=87"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>
 <script src="js/filemail.js"></script>

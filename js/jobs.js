@@ -353,7 +353,7 @@ function renderJobs(){
     periodSel.innerHTML='<option value="">All periods</option>'+periods.map(p=>`<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
   }
 
-  let filtered=filterPeriod?savedJobs.filter(j=>j.period===filterPeriod):savedJobs;
+  let filtered=(filterPeriod?savedJobs.filter(j=>j.period===filterPeriod):savedJobs).filter(j=>!j.subJob);
   if(_jobsStatFilter==='confirmed') filtered=filtered.filter(j=>j.status==='confirmed');
   else if(_jobsStatFilter==='completed'){ const _7d=new Date();_7d.setDate(_7d.getDate()-7); filtered=filtered.filter(j=>j.status==='completed'&&new Date(j.completedAt||j.date||0)>=_7d); }
   else if(_jobsStatFilter==='unpaid') filtered=filtered.filter(j=>j.status==='completed'&&!j.markedPaid);
@@ -1069,6 +1069,9 @@ let _ejUsState={};   // tracks current US pricing selections in edit modal
 
 function openEditJob(jobId){
   window._editJobId=jobId;
+  const _plJob=savedJobs.find(x=>String(x.id)===String(jobId));
+  window._ejPlines=JSON.parse(JSON.stringify(_plJob?.propertyLines||[]));
+  setTimeout(ejRenderPlines,50);
   const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
   editingJobId=jobId;
@@ -1478,6 +1481,10 @@ function saveEditJob(){
   // Update job in place
   const newDate=document.getElementById('ej-date').value||job.date;
   const period=getBiweeklyPeriod(newDate);
+  // property line items ride on top of the package total
+  job.propertyLines=(window._ejPlines||[]).filter(l=>l.address||((parseFloat(l.rate)||0)*(parseInt(l.qty)||0))>0);
+  total+=ejPlinesSum();
+  ejSyncPlineProjects(job);
   job.grand=total;
   job.date=newDate;
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
@@ -2736,4 +2743,72 @@ async function ejSyncToGoogle(){
   }
   saveJobsToStorage();
   await syncEditedJobToGcal(target);
+}
+
+
+// ── Property line items on a job: per-reel charges per address ───────────────
+// Each line becomes an invoice row AND its own project in the tracker.
+function ejRenderPlines(job){
+  const rows=document.getElementById('ej-plines-rows');
+  if(!rows) return;
+  const lines=window._ejPlines||[];
+  rows.innerHTML=lines.map((l,i)=>`
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="text" placeholder="Property address" value="${(l.address||'').replace(/"/g,'&quot;')}"
+        oninput="_ejPlines[${i}].address=this.value"
+        style="flex:1;padding:7px 10px;border:0.5px solid #3A4890;border-radius:8px;font-size:12px;background:#1C2333;color:#E8ECF8">
+      <span style="font-size:11px;color:#7A8AAA">$/reel</span>
+      <input type="number" value="${l.rate??100}" inputmode="decimal"
+        oninput="_ejPlines[${i}].rate=this.value;ejPlinesRecalc()"
+        style="width:70px;padding:7px 8px;border:0.5px solid #3A4890;border-radius:8px;font-size:12px;background:#1C2333;color:#E8ECF8;text-align:right">
+      <span style="font-size:11px;color:#7A8AAA">×</span>
+      <input type="number" value="${l.qty??1}" min="0" inputmode="numeric"
+        oninput="_ejPlines[${i}].qty=this.value;ejPlinesRecalc()"
+        style="width:56px;padding:7px 8px;border:0.5px solid #3A4890;border-radius:8px;font-size:12px;background:#1C2333;color:#E8ECF8;text-align:right">
+      <span style="width:70px;text-align:right;font-size:12px;color:#22D97A;font-weight:700">$${(((parseFloat(l.rate)||0)*(parseInt(l.qty)||0))).toLocaleString()}</span>
+      <button onclick="_ejPlines.splice(${i},1);ejRenderPlines();ejPlinesRecalc()" style="border:none;background:none;color:#7A8AAA;cursor:pointer;font-size:13px">✕</button>
+    </div>`).join('')||'<div style="font-size:11px;color:#7A8AAA;padding:4px 0">No properties yet — add the first one.</div>';
+  ejPlinesRecalc(true);
+}
+function ejAddPline(){
+  (window._ejPlines=window._ejPlines||[]).push({id:'pl_'+Date.now(),address:'',rate:100,qty:1});
+  ejRenderPlines();
+}
+function ejPlinesSum(){
+  return (window._ejPlines||[]).reduce((t,l)=>t+((parseFloat(l.rate)||0)*(parseInt(l.qty)||0)),0);
+}
+function ejPlinesRecalc(skipRows){
+  const sum=ejPlinesSum();
+  const el=document.getElementById('ej-plines-sum');
+  if(el) el.textContent=sum>0?'+$'+sum.toLocaleString():'';
+  if(!skipRows) ejRenderPlines._t=setTimeout(()=>{const rows=document.getElementById('ej-plines-rows');if(rows){/* refresh amounts only via full rerender on blur */}},0);
+}
+// After save: mirror each property line into the project tracker as its own job
+function ejSyncPlineProjects(job){
+  const lines=job.propertyLines||[];
+  const keepIds=new Set();
+  lines.forEach(l=>{
+    if(!l.address) return;
+    const childId=String(job.id)+'_p_'+l.id;
+    keepIds.add(childId);
+    let child=savedJobs.find(x=>String(x.id)===childId);
+    const ts=typeof getTrackerStage==='function'?getTrackerStage(job.id):{};
+    if(!child){
+      child={id:childId,subJob:true,parentJobId:job.id,name:l.address,date:job.date,
+        status:'confirmed',clientId:job.clientId||null,clientName:job.clientName||'',
+        grand:0,services:{},payouts:{},address:l.address,notes:'Part of: '+job.name};
+      savedJobs.push(child);
+      setTrackerStage(childId,{stage:'ready',editStatus:'ready',claimedBy:'',
+        videographer:job.videographer||ts.videographer||'',filesReceived:false,notes:'Reels ×'+(l.qty||1)+' — part of '+job.name,
+        projectId:l.address,approxFilmHours:'',approxEditHours:'',completionDate:'',
+        filemailLink:'',frameioLink:'',downloadLink:'',draftCount:0,extraDraftCharge:0});
+    } else {
+      child.name=l.address; child.address=l.address; child.date=job.date;
+    }
+  });
+  // remove children whose line was deleted
+  for(let i=savedJobs.length-1;i>=0;i--){
+    const j=savedJobs[i];
+    if(j.subJob&&String(j.parentJobId)===String(job.id)&&!keepIds.has(String(j.id))) savedJobs.splice(i,1);
+  }
 }

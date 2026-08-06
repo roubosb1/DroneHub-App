@@ -2349,3 +2349,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   -webkit-tap-highlight-color:transparent;
 }
 .fr-cover-btns button:active{transform:scale(.95);}
+
+/* Edit-job modal: two-column layout on wide screens — no vertical scrolling */
+@media (min-width:1000px){
+  #ej-body{column-count:2;column-gap:30px;}
+  #ej-body>div{break-inside:avoid;}
+  #ej-plines-section,#ej-total-card,#ej-body>div:last-child{column-span:all;}
+}

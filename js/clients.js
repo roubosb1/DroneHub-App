@@ -542,7 +542,7 @@ function renderClients(){
 
   // Build enriched records
   const enriched=clients.map(c=>{
-    const cJobs=savedJobs.filter(j=>j.clientId===c.id);
+    const cJobs=savedJobs.filter(j=>j.clientId===c.id&&!j.subJob);
     const hasActiveJob=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress')||c.status==='active';
     // "Recently active" = real job activity or unread messages (not just imported status)
     const isRecentlyActive=cJobs.some(j=>j.status==='confirmed'||j.status==='in-progress'||j.status==='completed')||(_lcUnread['lc_client_'+c.id]||0)>0;
@@ -931,7 +931,7 @@ async function renderClientPortal(id, activeTab){
     if(_rmv){try{showDhToast('Tracker cleaned up',_rmv+' duplicate imported project'+(_rmv===1?'':'s')+' removed','check','var(--green)',3500);}catch(e){}}
   }
 
-  const cJobs=savedJobs.filter(j=>j.clientId===id).sort((a,b)=>b.date.localeCompare(a.date));
+  const cJobs=savedJobs.filter(j=>j.clientId===id&&!j.subJob).sort((a,b)=>b.date.localeCompare(a.date));
   const completed=cJobs.filter(j=>j.status==='completed');
   const outstanding=cJobs.filter(j=>j.status==='confirmed'||j.status==='quoted');
   const revenue=completed.reduce((s,j)=>s+j.grand,0);
@@ -2250,7 +2250,7 @@ async function cpShowTab(tab){
   };
   if(!c.id) return;
   const fmtN=n=>'$'+Number(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const cJobs=savedJobs.filter(j=>j.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const cJobs=savedJobs.filter(j=>j.clientId===c.id&&!j.subJob).sort((a,b)=>b.date.localeCompare(a.date));
   const completed=cJobs.filter(j=>j.status==='completed');
   const revenue=completed.reduce((s,j)=>s+j.grand,0);
   const outstanding=cJobs.filter(j=>j.status==='confirmed'||j.status==='quoted');
@@ -3647,7 +3647,7 @@ function cpCloseBookModal(){
 
 function cpCountPendingActions(){
   if(!cpActiveClientId) return 0;
-  const cJobs=savedJobs.filter(j=>j.clientId===cpActiveClientId);
+  const cJobs=savedJobs.filter(j=>j.clientId===cpActiveClientId&&!j.subJob);
   const allDrafts=videoDraftsLoad();
   let count=0;
   cJobs.forEach(j=>{
@@ -3672,7 +3672,7 @@ function cpCountPendingActions(){
 function cpGetNotifItems(){
   const items=[];
   if(!cpActiveClientId) return items;
-  const cJobs=savedJobs.filter(j=>j.clientId===cpActiveClientId);
+  const cJobs=savedJobs.filter(j=>j.clientId===cpActiveClientId&&!j.subJob);
   const esc=t=>String(t||'').replace(/</g,'&lt;');
   // Videos waiting on the client's review
   const allDrafts=videoDraftsLoad();
