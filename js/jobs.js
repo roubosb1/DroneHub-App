@@ -75,6 +75,7 @@ function saveJob(){
       listingReelCount:usQuoteState.listingReelCount||0,
       reelsTBD:usQuoteState.reelsTBD,
       dayLocations:(usQuoteState.dayLocations||[]).map(l=>({...l})),
+      extraProps:(usQuoteState.extraProps||[]).filter(x=>x.tier||x.address).map(x=>({...x})),
       addons:{...usQuoteState.addons},
       offSeason:usQuoteState.offSeason,
     };
@@ -182,6 +183,10 @@ function saveJob(){
     filemailLink:'',frameioLink:'',downloadLink:'',
     draftCount:0,extraDraftCharge:0,
   });
+
+  // Extra listing properties each become their own tracker project
+  // (re-save storage after — the earlier save ran before children existed)
+  if((job.usData?.extraProps||[]).length){ usSyncExtraPropProjects(job); saveJobsToStorage(); }
 
   // ── UPDATE CALENDAR ───────────────────────────────────────────────────────
   if(document.getElementById('pane-calendar')?.classList.contains('active')){
@@ -1146,6 +1151,7 @@ function _ejInitUSEdit(job){
     listingReelCount:ud.listingReelCount||(ud.pkgType==='listing'?1:0),
     reelsTBD:ud.reelsTBD||false,
     dayLocations:ud.dayLocations||[],
+    extraProps:ud.extraProps||[],
     offSeason:ud.offSeason||false,
     addons:{sunrise:!!(ud.addons?.sunrise),photoHDR:!!(ud.addons?.photoHDR),photoFlash:!!(ud.addons?.photoFlash)},
   };
@@ -1267,6 +1273,8 @@ function recalcEditUS(){
       parts.push(`Listing (${tl[_ejUsState.listingTier]}) $${base.toLocaleString()}`);
       {const _xr=Math.max(0,(_ejUsState.listingReelCount||1)-1);
       if(_xr>0){const rr=p.reelAddon||400;const rt=_xr*rr;base+=rt;parts.push(`Extra reels ×${_xr} +$${rt.toLocaleString()}`);}}
+      {const _xp=(_ejUsState.extraProps||[]).filter(x=>x.tier);
+      if(_xp.length){const xt=_xp.reduce((s,x)=>s+usListingPropPrice(p,x),0);base+=xt;parts.push(`+${_xp.length} more propert${_xp.length===1?'y':'ies'} +$${xt.toLocaleString()}`);}}
       break;
     case 'social':
       if(!_ejUsState.socialTier) return noSel('← Select social package tier');
@@ -1411,6 +1419,7 @@ function saveEditJob(){
         if(!_ejUsState.listingTier){alert('Please select a property size tier.');return;}
         total=p.listing[_ejUsState.listingTier]||0;
         total+=Math.max(0,(_ejUsState.listingReelCount||1)-1)*(p.reelAddon||400);
+        (_ejUsState.extraProps||[]).forEach(x=>{ total+=usListingPropPrice(p,x); });
         break;
       case 'social':
         if(!_ejUsState.socialTier){alert('Please select a social package tier.');return;}
@@ -1495,6 +1504,7 @@ function saveEditJob(){
   job.propertyLines=(window._ejPlines||[]).filter(l=>l.address||((parseFloat(l.rate)||0)*(parseInt(l.qty)||0))>0);
   total+=ejPlinesSum();
   ejSyncPlineProjects(job);
+  if(isUSJob) usSyncExtraPropProjects(job);
   job.grand=total;
   job.date=newDate;
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
@@ -1996,7 +2006,7 @@ function onMarketChange(market){
     renderUSServicePanel(market);
     calcUS();
   } else {
-    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, listingReelCount:0, reelsTBD:false, dayLocations:[], addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
+    usQuoteState = { market:null, pkgType:null, listingTier:null, socialTier:null, dayType:null, reelCount:0, listingReelCount:0, reelsTBD:false, dayLocations:[], extraProps:[], addons:{sunrise:false,photoHDR:false,photoFlash:false}, offSeason:false };
     calc();
   }
 }
@@ -2065,6 +2075,7 @@ function renderUSServicePanel(market){
     if(!usQuoteState.listingReelCount) usQuoteState.listingReelCount=1;
     const rc = document.getElementById('us-listing-reel-count');
     if(rc) rc.textContent = usQuoteState.listingReelCount;
+    renderUSListingProps();
   }
 }
 
@@ -2074,6 +2085,7 @@ function selectUSPkg(pkgType){
   usQuoteState.listingTier = null;
   usQuoteState.socialTier = null;
   usQuoteState.dayType = null;
+  usQuoteState.extraProps = [];
   usQuoteState.listingReelCount = pkgType==='listing'?1:0; // listing includes 1 reel
   const market = document.getElementById('job-market-input')?.value || usQuoteState.market;
   renderUSServicePanel(market);
@@ -2114,6 +2126,78 @@ function changeUSListingReels(delta){
   usQuoteState.listingReelCount = Math.max(1, (usQuoteState.listingReelCount||1)+delta);
   const el = document.getElementById('us-listing-reel-count');
   if(el) el.textContent = usQuoteState.listingReelCount;
+  calcUS();
+}
+
+// ── Multi-property line items on a Listing Video quote ────────────────────────
+// Each extra property is a full listing package (own address + size tier,
+// 1 reel included, extras at the market reelAddon rate) on the SAME invoice.
+function usListingPropPrice(p, prop){
+  if(!prop.tier) return 0;
+  return (p.listing[prop.tier]||0) + Math.max(0,(prop.reelCount||1)-1)*(p.reelAddon||400);
+}
+function renderUSListingProps(){
+  const container = document.getElementById('us-listing-props');
+  if(!container) return;
+  if(!usQuoteState.extraProps) usQuoteState.extraProps = [];
+  const props = usQuoteState.extraProps;
+  const market = usQuoteState.market || document.getElementById('job-market-input')?.value;
+  const p = US_MARKET_PRICING[market] || US_MARKET_PRICING['other_us'];
+  if(!props.length){
+    container.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0;font-style:italic">Quoting more than one listing? Add each property below — one invoice, one line per property.</div>';
+    return;
+  }
+  const tierLabels = { under4k:'Under 4k', over4k:'4k–8k', over8k:'8k+' };
+  const btnStyle = 'width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0';
+  container.innerHTML = props.map((prop, i) => {
+    const reels = prop.reelCount || 1;
+    const sub = usListingPropPrice(p, prop);
+    return `<div style="background:var(--navy-lift);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">Property ${i+2}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${sub>0?`<span style="font-size:12px;color:var(--green);font-weight:800">+$${sub.toLocaleString()}</span>`:''}
+          <button onclick="removeUSListingProp(${i})" title="Remove this property" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(240,82,82,.4);background:rgba(240,82,82,.08);color:#FF7070;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0">✕</button>
+        </div>
+      </div>
+      <input type="text" value="${(prop.address||'').replace(/"/g,'&quot;')}" oninput="usQuoteState.extraProps[${i}].address=this.value" placeholder="Property address…" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border-bright);background:var(--navy-card);color:var(--white);font-size:12px;box-sizing:border-box;margin-bottom:10px;outline:none">
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        ${['under4k','over4k','over8k'].map(t=>`<button onclick="setUSListingPropTier(${i},'${t}')" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid ${prop.tier===t?'var(--blue)':'var(--border)'};background:${prop.tier===t?'rgba(91,141,239,.18)':'var(--navy-card)'};color:${prop.tier===t?'var(--blue-bright)':'var(--offwhite)'};font-size:11px;font-weight:700;cursor:pointer">${tierLabels[t]}<div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:2px">$${(p.listing[t]||0).toLocaleString()}</div></button>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-size:11px;color:var(--muted);font-weight:600">Reels:</div>
+        <button onclick="changeUSListingPropReels(${i},-1)" style="${btnStyle}">−</button>
+        <span style="font-size:18px;font-weight:900;color:var(--blue-bright);min-width:22px;text-align:center">${reels}</span>
+        <button onclick="changeUSListingPropReels(${i},1)" style="${btnStyle}">+</button>
+        <span style="font-size:11px;color:var(--muted)">1 included · extra $${(p.reelAddon||400).toLocaleString()} each</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function addUSListingProp(){
+  if(!usQuoteState.extraProps) usQuoteState.extraProps = [];
+  usQuoteState.extraProps.push({id:Date.now()+'_'+Math.floor(Math.random()*1e6), address:'', tier:null, reelCount:1});
+  renderUSListingProps();
+  calcUS();
+}
+function removeUSListingProp(idx){
+  if(!usQuoteState.extraProps) return;
+  usQuoteState.extraProps.splice(idx,1);
+  renderUSListingProps();
+  calcUS();
+}
+function setUSListingPropTier(idx, tier){
+  const prop = usQuoteState.extraProps?.[idx];
+  if(!prop) return;
+  prop.tier = tier;
+  renderUSListingProps();
+  calcUS();
+}
+function changeUSListingPropReels(idx, delta){
+  const prop = usQuoteState.extraProps?.[idx];
+  if(!prop) return;
+  prop.reelCount = Math.max(1, (prop.reelCount||1)+delta);
+  renderUSListingProps();
   calcUS();
 }
 
@@ -2193,6 +2277,7 @@ function getUSGrand(){
       if(!usQuoteState.listingTier) return 0;
       base = p.listing[usQuoteState.listingTier] || 0;
       base += Math.max(0,(usQuoteState.listingReelCount||1)-1) * (p.reelAddon||400); // first reel included
+      (usQuoteState.extraProps||[]).forEach(x=>{ base += usListingPropPrice(p,x); });
       break;
     case 'social':
       if(!usQuoteState.socialTier) return 0;
@@ -2269,12 +2354,25 @@ function renderUSQuote(market, grand){
   switch(usQuoteState.pkgType){
     case 'listing':{
       const tierLabels = { under4k:'Under 4,000 sqft', over4k:'4,000–8,000 sqft', over8k:'Over 8,000 sqft' };
-      lines.push({ label:'Listing Video — '+tierLabels[usQuoteState.listingTier||'under4k']+' (includes 1 social reel)', amount: p?.listing[usQuoteState.listingTier]||0 });
+      const _multi=(usQuoteState.extraProps||[]).length>0;
+      const _mainAddr=_multi&&(typeof propAddrText!=='undefined')&&propAddrText?` — ${propAddrText}`:'';
+      lines.push({ label:'Listing Video — '+tierLabels[usQuoteState.listingTier||'under4k']+_mainAddr+' (includes 1 social reel)', amount: p?.listing[usQuoteState.listingTier]||0 });
       const _extraReels=Math.max(0,(usQuoteState.listingReelCount||1)-1);
       if(_extraReels>0){
         const rr=p?.reelAddon||400;
         lines.push({ label:`Additional social reels (${_extraReels} × $${rr.toLocaleString()})`, amount: _extraReels*rr });
       }
+      // Additional property line items — each its own listing package
+      (usQuoteState.extraProps||[]).forEach((x,i)=>{
+        const name=x.address?x.address.trim():`Property ${i+2}`;
+        if(!x.tier){ lines.push({ label:`${name}`, amount:0, note:'select a size tier', color:'var(--muted)' }); return; }
+        lines.push({ label:`Listing Video — ${tierLabels[x.tier]} — ${name} (includes 1 social reel)`, amount: p?.listing[x.tier]||0 });
+        const _xr=Math.max(0,(x.reelCount||1)-1);
+        if(_xr>0){
+          const rr=p?.reelAddon||400;
+          lines.push({ label:`Additional social reels — ${name} (${_xr} × $${rr.toLocaleString()})`, amount: _xr*rr });
+        }
+      });
       break;
     }
     case 'social':{
@@ -2846,6 +2944,37 @@ function ejPlinesRecalc(skipRows){
   if(!skipRows) ejRenderPlines._t=setTimeout(()=>{const rows=document.getElementById('ej-plines-rows');if(rows){/* refresh amounts only via full rerender on blur */}},0);
 }
 // After save: mirror each property line into the project tracker as its own job
+// Extra properties on a multi-listing US quote — each becomes its own tracker
+// project (same subJob pattern as day-rate property lines: hidden from the
+// pipeline/portal/calendar, visible to editors in the tracker).
+function usSyncExtraPropProjects(job){
+  const props=(job.usData?.extraProps)||[];
+  const keepIds=new Set();
+  props.forEach(x=>{
+    if(!x.address) return;
+    const childId=String(job.id)+'_x_'+x.id;
+    keepIds.add(childId);
+    let child=savedJobs.find(j=>String(j.id)===childId);
+    if(!child){
+      child={id:childId,subJob:true,parentJobId:job.id,name:x.address,date:job.date,
+        status:'confirmed',clientId:job.clientId||null,clientName:job.clientName||'',
+        grand:0,services:{},payouts:{},address:x.address,notes:'Part of: '+job.name};
+      savedJobs.push(child);
+      const _notShotYet=job.date&&job.date>new Date().toISOString().slice(0,10);
+      setTrackerStage(childId,{stage:_notShotYet?'footage_pending':'ready',editStatus:_notShotYet?'footage_pending':'ready',claimedBy:'',
+        videographer:job.videographer||'',filesReceived:false,notes:'Listing video + reels ×'+(x.reelCount||1)+' — part of '+job.name,
+        projectId:x.address,approxFilmHours:'',approxEditHours:'',completionDate:'',
+        filemailLink:'',frameioLink:'',downloadLink:'',draftCount:0,extraDraftCharge:0});
+    } else {
+      child.name=x.address; child.address=x.address; child.date=job.date;
+    }
+  });
+  for(let i=savedJobs.length-1;i>=0;i--){
+    const j=savedJobs[i];
+    if(j.subJob&&String(j.parentJobId)===String(job.id)&&String(j.id).includes('_x_')&&!keepIds.has(String(j.id))) savedJobs.splice(i,1);
+  }
+}
+
 function ejSyncPlineProjects(job){
   const lines=job.propertyLines||[];
   const keepIds=new Set();
@@ -2870,9 +2999,10 @@ function ejSyncPlineProjects(job){
       child.name=l.address; child.address=l.address; child.date=job.date;
     }
   });
-  // remove children whose line was deleted
+  // remove children whose line was deleted (only _p_ children — _x_ listing
+  // properties are managed by usSyncExtraPropProjects)
   for(let i=savedJobs.length-1;i>=0;i--){
     const j=savedJobs[i];
-    if(j.subJob&&String(j.parentJobId)===String(job.id)&&!keepIds.has(String(j.id))) savedJobs.splice(i,1);
+    if(j.subJob&&String(j.parentJobId)===String(job.id)&&String(j.id).includes('_p_')&&!keepIds.has(String(j.id))) savedJobs.splice(i,1);
   }
 }

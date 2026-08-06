@@ -3919,10 +3919,20 @@ function openInvoice(jobId){
     const tierLabels={under4k:'Under 4,000 sqft',over4k:'4,000–8,000 sqft',over8k:'Over 8,000 sqft'};
     const socialLabels={r1:'1 Reel',r2:'2 Reels',r3:'3 Reels',r5:'5 Reels',fullDay:'Full Day Social'};
     if(ud.pkgType==='listing'&&ud.listingTier){
+      const _xProps=(ud.extraProps||[]).filter(x=>x.tier);
+      const _mainAddr=_xProps.length&&job.address&&job.address!=='(no address)'?` — ${job.address}`:'';
       const basePrice=p.listing[ud.listingTier]||job.grand;
-      lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier} (includes 1 social reel)`,qty:1,unit:basePrice,total:basePrice});
+      lines.push({desc:`Real Estate Listing Package — ${tierLabels[ud.listingTier]||ud.listingTier}${_mainAddr} (includes 1 social reel)`,qty:1,unit:basePrice,total:basePrice});
       {const _xr=Math.max(0,(ud.listingReelCount||1)-1);
-      if(_xr>0){const rr=p.reelAddon||400;lines.push({desc:'Add-on: Additional Social Reels',qty:_xr,unit:rr,total:_xr*rr});}}
+      if(_xr>0){const rr=p.reelAddon||400;lines.push({desc:'Add-on: Additional Social Reels'+(_mainAddr?` —${_mainAddr.slice(2)}`:''),qty:_xr,unit:rr,total:_xr*rr});}}
+      // Additional properties on the same quote — one full listing line each
+      _xProps.forEach((x,i)=>{
+        const addr=(x.address||`Additional property ${i+1}`).trim();
+        const bp=p.listing[x.tier]||0;
+        lines.push({desc:`Real Estate Listing Package — ${tierLabels[x.tier]||x.tier} — ${addr} (includes 1 social reel)`,qty:1,unit:bp,total:bp});
+        const xr=Math.max(0,(x.reelCount||1)-1);
+        if(xr>0){const rr=p.reelAddon||400;lines.push({desc:`Add-on: Additional Social Reels — ${addr}`,qty:xr,unit:rr,total:xr*rr});}
+      });
       if(ud.addons?.sunrise&&p.addons?.sunrise) lines.push({desc:'Add-on: Sunrise/Sunset Shoot',qty:1,unit:p.addons.sunrise,total:p.addons.sunrise});
       if(ud.addons?.photoHDR&&p.addons?.photoHDR) lines.push({desc:'Add-on: Photo HDR Processing',qty:1,unit:p.addons.photoHDR,total:p.addons.photoHDR});
       if(ud.addons?.photoFlash&&p.addons?.photoFlash) lines.push({desc:'Add-on: Flash Photography',qty:1,unit:p.addons.photoFlash,total:p.addons.photoFlash});
