@@ -3904,6 +3904,24 @@ function openInvoice(jobId){
     saveJobsToStorage();
   }
   const issueDate=new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'});
+  // Multi-property jobs (quote cart) — run the normal line builder once per
+  // property and tag each line with that property's address.
+  let lines=[];
+  if(job.propertyQuotes&&job.propertyQuotes.length){
+    job.propertyQuotes.forEach(pq=>{
+      const pseudo={...job,sqft:pq.sqft||0,services:pq.svc||{},hours:pq.qty||{},
+        usData:pq.usData||null,driveCost:pq.driveCost||0,grand:pq.amount||0,
+        currency:pq.usData?'usd':(pq.svc?'cad':job.currency),
+        customDesc:pq.customDesc||'',customPrice:pq.customPrice||0,
+        extraServices:pq.extraServices||[],propertyLines:[]};
+      _invLinesForJob(pseudo).forEach(l=>lines.push({...l,desc:l.desc+(pq.address?' — '+pq.address:'')}));
+    });
+  } else {
+    lines=_invLinesForJob(job);
+  }
+
+  // Line builder for ONE job/property (hoisted — used above)
+  function _invLinesForJob(job){
   const svcs=job.services||{};
   const hrs=job.hours||{};
   const sqft=job.sqft||0;
@@ -4024,6 +4042,8 @@ function openInvoice(jobId){
     if(xs.clientPrice>0) lines.push({desc:xs.name,qty:1,unit:xs.clientPrice,total:xs.clientPrice});
   });
   } // end Canada jobs
+  return lines;
+  } // end _invLinesForJob
 
   // Per-property reel charges (day-rate multi-property shoots) — both markets
   (job.propertyLines||[]).forEach(pl=>{

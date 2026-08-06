@@ -47,7 +47,396 @@ function renderEditorSelectors(){
   container.innerHTML=html;
 }
 
+/* ── QUOTE CART — build one property at a time, save them all as one job ─────
+   Full quoting feature (Canada services incl. twilights, or any US package)
+   configures ONE property; "+ Add property to quote" snapshots it into the
+   cart and resets the form for the next one. Each property keeps its own
+   address, date, time and notes. Save = one job, one invoice, each property
+   scheduled individually and tracked as its own project. */
+let quoteCart=[];
+let _qcEditingId=null;
+
+function qcServicesLabel(isUS){
+  if(isUS){
+    const pk={listing:'Listing Video',social:'Social Reels',agent:'Agent Promo',day:'Social Day Rate',exterior:'Exterior Only',custom:'Custom Quote'}[usQuoteState.pkgType]||'Package';
+    const tier={under4k:'under 4k sqft',over4k:'4k–8k sqft',over8k:'8k+ sqft'}[usQuoteState.listingTier];
+    const bits=[pk]; if(tier) bits.push(tier);
+    if(usQuoteState.pkgType==='listing'&&(usQuoteState.listingReelCount||1)>0) bits.push((usQuoteState.listingReelCount||1)+' reel'+((usQuoteState.listingReelCount||1)>1?'s':''));
+    const ad=[]; if(usQuoteState.addons.sunrise) ad.push('Sunrise/Sunset'); if(usQuoteState.addons.photoHDR) ad.push('HDR'); if(usQuoteState.addons.photoFlash) ad.push('Flash');
+    return bits.concat(ad).join(' · ');
+  }
+  const names={video:'Video',photo:'Photo',tvideo:'Twilight video',tphoto:'Twilight photo',reel:'Reels',extphoto:'Ext. photo',extvideo:'Ext. video',floorplan:'Floor plan',randomvideo:'Hourly video',randomphoto:'Hourly photo',rush:'Rush',custom:'Custom'};
+  const on=Object.keys(svc).filter(k=>svc[k]).map(k=>names[k]||k);
+  return on.join(' · ')||'—';
+}
+
+function qcSnapshotCurrent(){
+  const market=document.getElementById('job-market-input')?.value||'canada';
+  const isUS=market!=='canada';
+  const entry={
+    id:_qcEditingId||('p'+Date.now()+'_'+Math.floor(Math.random()*1e6)),
+    market,
+    address:(document.getElementById('qAddrInput')?.value||'').trim()||propAddrText||'',
+    date:document.getElementById('job-date-input')?.value||'',
+    time:document.getElementById('job-time-input')?.value||'',
+    durationH:document.getElementById('job-duration-input')?.value||'2',
+    notes:(document.getElementById('prop-notes-input')?.value||'').trim(),
+  };
+  if(isUS){
+    const amount=getUSGrand();
+    if(!amount) return null;
+    entry.amount=amount;
+    entry.driveCost=0;
+    entry.usData={market,pkgType:usQuoteState.pkgType,listingTier:usQuoteState.listingTier,
+      socialTier:usQuoteState.socialTier,dayType:usQuoteState.dayType,
+      reelCount:usQuoteState.reelCount,listingReelCount:usQuoteState.listingReelCount||0,
+      reelsTBD:usQuoteState.reelsTBD,dayLocations:(usQuoteState.dayLocations||[]).map(l=>({...l})),
+      customLines:(usQuoteState.customLines||[]).map(l=>({...l})),
+      addons:{...usQuoteState.addons},offSeason:usQuoteState.offSeason};
+  } else {
+    const sqft=parseInt(document.getElementById('sqft').value);
+    const r=buildQuote(sqft,svc,qty);
+    if(!r.grand) return null;
+    const ds=buildDriveSummary();
+    entry.amount=r.grand;
+    entry.driveCost=r.driveCost;
+    entry.sqft=sqft; entry.svc={...svc}; entry.qty={...qty}; entry.editors={...editors};
+    entry.payouts=buildPayoutSnapshot(r.lines,ds);
+    entry.customDesc=svc.custom?(document.getElementById('custom-svc-desc')?.value||'Custom service').trim():'';
+    entry.customPrice=svc.custom?parseFloat(document.getElementById('custom-svc-price')?.value)||0:0;
+    entry.customPayout=svc.custom?parseFloat(document.getElementById('custom-svc-payout')?.value||window._customPayout||0)||0:0;
+    entry.extraServices=getExtraServiceLines().map(xs=>({name:xs.name||xs.label,clientPrice:xs.clientPrice,contractorPayout:xs.contractorPayout,payoutType:xs.payoutType}));
+  }
+  entry.label=qcServicesLabel(isUS);
+  return entry;
+}
+
+// Has the user actually configured a property beyond the untouched defaults?
+function qcFormDirty(){
+  if((document.getElementById('qAddrInput')?.value||'').trim()||propAddrText) return true;
+  if(document.getElementById('job-time-input')?.value) return true;
+  if((document.getElementById('prop-notes-input')?.value||'').trim()) return true;
+  const market=document.getElementById('job-market-input')?.value||'canada';
+  if(market!=='canada') return !!getUSGrand();
+  return Object.keys(svc).some(k=>!!svc[k]!==(k==='video')); // default = video only
+}
+
+function addPropertyToQuote(){
+  const st=document.getElementById('qc-add-status');
+  const e=qcSnapshotCurrent();
+  if(!e){
+    if(st){st.textContent='This property\'s quote is still $0 — pick services or a package first.';setTimeout(()=>{st.textContent='';},4000);}
+    return;
+  }
+  if(_qcEditingId){
+    const i=quoteCart.findIndex(x=>x.id===_qcEditingId);
+    if(i>-1) quoteCart[i]=e; else quoteCart.push(e);
+    _qcEditingId=null;
+  } else quoteCart.push(e);
+  qcResetForm();
+  renderQuoteCart();
+  if(st){st.style.color='var(--green)';st.textContent='✓ Added — build the next property, or save the job when you\'re done.';
+    setTimeout(()=>{st.textContent='';st.style.color='var(--amber)';},4500);}
+}
+
+// Reset the per-property part of the form (job details stay untouched)
+function qcResetForm(){
+  propAddrText=''; propLat=null; propLng=null;
+  const ai=document.getElementById('qAddrInput'); if(ai) ai.value='';
+  const as=document.getElementById('qAddrStatus'); if(as) as.innerHTML='';
+  const ar=document.getElementById('qAddrResult'); if(ar) ar.style.display='none';
+  const al=document.getElementById('appliedLocation'); if(al) al.style.display='none';
+  const t=document.getElementById('job-time-input'); if(t) t.value='';   // date stays: same-day batches
+  const n=document.getElementById('prop-notes-input'); if(n) n.value='';
+  // Canada services back to defaults (video on, everything else off)
+  Object.keys(svc).forEach(k=>svc[k]=(k==='video'));
+  Object.keys(qty).forEach(k=>qty[k]=1);
+  document.querySelectorAll('[id^="tog-"]').forEach(b=>{
+    const k=b.id.slice(4); if(!(k in svc)) return;
+    b.classList.toggle('on',svc[k]);
+    if(k==='video'||k==='photo') b.textContent=svc[k]?'On':'Off';
+    else b.textContent=svc[k]?'Remove':'Add';
+  });
+  ['reel-qty-ctrl','randomvideo-qty-ctrl','randomphoto-qty-ctrl'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.display='none';});
+  try{updateTwilightUI(svc,'');}catch(e){}
+  const cd=document.getElementById('custom-svc-desc'); if(cd) cd.value='';
+  const cp=document.getElementById('custom-svc-price'); if(cp) cp.value='';
+  const cpo=document.getElementById('custom-svc-payout'); if(cpo) cpo.value='';
+  window._customPayout='';
+  try{ if(typeof extraSvcState==='object') Object.keys(extraSvcState).forEach(k=>extraSvcState[k]=false); if(typeof renderExtraServices==='function') renderExtraServices(); }catch(e){}
+  editors.video='dronehub'; editors.photo='dronehub';
+  editors.extvideo=''; editors.extphoto=''; editors.randomvideo=''; editors.randomphoto=''; editors.rush=''; editors.custom='';
+  // US package state (market + package type kept — tiers/addons cleared)
+  const mk=document.getElementById('job-market-input')?.value||'canada';
+  if(mk!=='canada'){
+    const keepPkg=usQuoteState.pkgType||'listing';
+    usQuoteState={market:usQuoteState.market,pkgType:keepPkg,listingTier:null,socialTier:null,dayType:null,
+      reelCount:0,listingReelCount:keepPkg==='listing'?1:0,reelsTBD:false,dayLocations:[],extraProps:[],
+      customLines:keepPkg==='custom'?[{desc:'',amt:''}]:[],
+      addons:{sunrise:false,photoHDR:false,photoFlash:false},offSeason:false};
+    ['us-addon-sunrise','us-addon-photoHDR','us-addon-photoFlash','us-offseason-check'].forEach(id=>{const el=document.getElementById(id); if(el) el.checked=false;});
+    renderUSServicePanel(mk); calcUS();
+  } else {
+    try{renderEditorSelectors();}catch(e){}
+    calc();
+  }
+}
+
+function _qcFmtTime(t){ const[h,m]=String(t).split(':').map(Number); const ap=h>=12?'PM':'AM'; return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap; }
+
+function renderQuoteCart(){
+  const card=document.getElementById('quote-cart-card');
+  const body=document.getElementById('quote-cart-body');
+  const btn=document.getElementById('qc-add-btn');
+  if(btn) btn.textContent=_qcEditingId?'✓ Update property on quote':'+ Add property to quote';
+  if(!card||!body) return;
+  if(!quoteCart.length){ card.style.display='none'; body.innerHTML=''; return; }
+  card.style.display='';
+  const cur=(document.getElementById('job-currency-input')?.value||'cad').toUpperCase();
+  const total=quoteCart.reduce((s,e)=>s+(e.amount||0),0);
+  body.innerHTML=quoteCart.map((e,i)=>`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);${e.id===_qcEditingId?'opacity:.45':''}">
+      <div style="min-width:0;flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--white)">${i+1}. ${e.address||'(no address)'}</div>
+        <div style="font-size:12px;color:var(--blue-bright);margin-top:2px">${e.label||''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${e.date||'no date'}${e.time?' · '+_qcFmtTime(e.time):''}${e.notes?' · '+e.notes:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span style="font-size:14px;font-weight:900;color:var(--white)">$${(e.amount||0).toLocaleString()}</span>
+        <button onclick="qcEdit('${e.id}')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer">Edit</button>
+        <button onclick="qcDelete('${e.id}')" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(240,82,82,.4);background:rgba(240,82,82,.08);color:#FF7070;font-size:11px;font-weight:700;cursor:pointer">Delete</button>
+      </div>
+    </div>`).join('')+
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 2px">
+      <span style="font-size:13px;font-weight:800;color:var(--white)">Total — ${quoteCart.length} propert${quoteCart.length===1?'y':'ies'}</span>
+      <span style="font-size:18px;font-weight:900;color:var(--blue-bright)">$${total.toLocaleString()} <span style="font-size:11px;color:var(--muted);font-weight:600">${cur}</span></span>
+    </div>
+    <div class="note" style="margin-top:6px">Double-check the properties above, then hit Save job — one invoice, each property scheduled at its own date & time and tracked as its own project.</div>`;
+}
+
+function qcEdit(id){
+  const e=quoteCart.find(x=>x.id===id); if(!e) return;
+  _qcEditingId=id;
+  const mk=document.getElementById('job-market-input');
+  if(mk&&mk.value!==e.market){ mk.value=e.market; onMarketChange(e.market); }
+  const d=document.getElementById('job-date-input'); if(d) d.value=e.date||'';
+  const t=document.getElementById('job-time-input'); if(t) t.value=e.time||'';
+  const du=document.getElementById('job-duration-input'); if(du) du.value=e.durationH||'2';
+  const n=document.getElementById('prop-notes-input'); if(n) n.value=e.notes||'';
+  propAddrText=e.address||'';
+  const ai=document.getElementById('qAddrInput'); if(ai) ai.value=e.address||'';
+  if(e.market==='canada'){
+    Object.keys(svc).forEach(k=>svc[k]=!!(e.svc&&e.svc[k]));
+    Object.assign(qty,e.qty||{});
+    Object.assign(editors,e.editors||{});
+    const sq=document.getElementById('sqft');
+    if(sq&&e.sqft){ sq.value=e.sqft; const sv=document.getElementById('sqftVal'); if(sv) sv.textContent=Number(e.sqft).toLocaleString()+' sqft'; }
+    document.querySelectorAll('[id^="tog-"]').forEach(b=>{
+      const k=b.id.slice(4); if(!(k in svc)) return;
+      b.classList.toggle('on',svc[k]);
+      if(k==='video'||k==='photo') b.textContent=svc[k]?'On':'Off';
+      else b.textContent=svc[k]?'Remove':'Add';
+    });
+    ['reel','randomvideo','randomphoto'].forEach(k=>{const el=document.getElementById(k+'-qty-ctrl'); if(el) el.style.display=svc[k]?'flex':'none';});
+    const cd=document.getElementById('custom-svc-desc'); if(cd) cd.value=e.customDesc||'';
+    const cp=document.getElementById('custom-svc-price'); if(cp) cp.value=e.customPrice||'';
+    try{updateTwilightUI(svc,'');}catch(_){}
+    try{renderEditorSelectors();}catch(_){}
+    calc();
+  } else {
+    const ud=e.usData||{};
+    usQuoteState={market:ud.market||e.market,pkgType:ud.pkgType,listingTier:ud.listingTier,socialTier:ud.socialTier,
+      dayType:ud.dayType,reelCount:ud.reelCount||0,listingReelCount:ud.listingReelCount||0,reelsTBD:!!ud.reelsTBD,
+      dayLocations:(ud.dayLocations||[]).map(l=>({...l})),extraProps:[],
+      customLines:(ud.customLines||[]).map(l=>({...l})),
+      addons:{sunrise:!!ud.addons?.sunrise,photoHDR:!!ud.addons?.photoHDR,photoFlash:!!ud.addons?.photoFlash},
+      offSeason:!!ud.offSeason};
+    ['sunrise','photoHDR','photoFlash'].forEach(k=>{const el=document.getElementById('us-addon-'+k); if(el) el.checked=!!usQuoteState.addons[k];});
+    const os=document.getElementById('us-offseason-check'); if(os) os.checked=!!usQuoteState.offSeason;
+    renderUSServicePanel(e.market);
+    calcUS();
+  }
+  renderQuoteCart();
+  document.getElementById('qc-add-btn')?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function qcDelete(id){
+  quoteCart=quoteCart.filter(x=>x.id!==id);
+  if(_qcEditingId===id) _qcEditingId=null;
+  renderQuoteCart();
+}
+
+// Children for properties 2..N — own schedule, own calendar event, own tracker project
+function syncCartChildJobs(job){
+  const props=(job.propertyQuotes||[]).slice(1);
+  const keepIds=new Set();
+  props.forEach(x=>{
+    const childId=String(job.id)+'_c_'+x.id;
+    keepIds.add(childId);
+    let child=savedJobs.find(j=>String(j.id)===childId);
+    const _cDate=x.date||job.date, _cTime=x.time||'';
+    let _cEnd='';
+    if(_cTime){
+      const[_h,_m]=_cTime.split(':').map(Number);
+      const _e=_h*60+_m+Math.round((parseFloat(x.durationH)||2)*60);
+      _cEnd=String(Math.floor(_e/60)%24).padStart(2,'0')+':'+String(_e%60).padStart(2,'0');
+    }
+    const nm=x.address||(job.name+' — property');
+    const childNotes=[x.notes,x.label,'Part of: '+job.name].filter(Boolean).join(' · ');
+    if(!child){
+      child={id:childId,subJob:true,ownSchedule:true,parentJobId:job.id,name:nm,date:_cDate,
+        shootTime:_cTime,shootEndTime:_cEnd,duration:x.durationH||'2',videographer:job.videographer||'',
+        status:'confirmed',clientId:job.clientId||null,clientName:job.clientName||'',
+        grand:0,services:{},payouts:{},address:x.address||'',notes:childNotes};
+      savedJobs.push(child);
+      const _notShotYet=_cDate&&_cDate>new Date().toISOString().slice(0,10);
+      setTrackerStage(childId,{stage:_notShotYet?'footage_pending':'ready',editStatus:_notShotYet?'footage_pending':'ready',claimedBy:'',
+        videographer:job.videographer||'',filesReceived:false,
+        notes:[x.label,x.notes].filter(Boolean).join(' · ')+' — part of '+job.name,
+        projectId:x.address||nm,approxFilmHours:x.durationH||'',approxEditHours:'',completionDate:'',
+        filemailLink:'',frameioLink:'',downloadLink:'',draftCount:0,extraDraftCharge:0});
+    } else {
+      child.name=nm; child.address=x.address||''; child.ownSchedule=true;
+      child.date=_cDate; child.shootTime=_cTime; child.shootEndTime=_cEnd;
+      child.duration=x.durationH||'2'; child.videographer=job.videographer||''; child.notes=childNotes;
+    }
+  });
+  for(let i=savedJobs.length-1;i>=0;i--){
+    const j=savedJobs[i];
+    if(j.subJob&&String(j.parentJobId)===String(job.id)&&String(j.id).includes('_c_')&&!keepIds.has(String(j.id))) savedJobs.splice(i,1);
+  }
+}
+
+// One job from the whole cart: summed total, merged payouts, per-property schedule
+function saveCartJob(){
+  const name=document.getElementById('job-name-input').value.trim();
+  const statusEl=document.getElementById('save-job-status');
+  if(!name){statusEl.textContent='Please enter a job name.';return;}
+  if(!quoteCart.length){statusEl.textContent='Add at least one property to the quote.';return;}
+  const first=quoteCart[0];
+  if(!first.date){statusEl.textContent='The first property needs a shoot date — Edit it in the list below.';return;}
+  const market=first.market||'canada';
+  const isUS=market!=='canada';
+  const period=getBiweeklyPeriod(first.date);
+  const grand=quoteCart.reduce((s,e)=>s+(e.amount||0),0);
+  const driveCost=quoteCart.reduce((s,e)=>s+(e.driveCost||0),0);
+  const payouts={};
+  quoteCart.forEach(e=>{
+    Object.entries(e.payouts||{}).forEach(([k,v])=>{
+      if(!payouts[k]) payouts[k]=JSON.parse(JSON.stringify(v));
+      else payouts[k].entries=[...(payouts[k].entries||[]),...(v.entries||[])];
+    });
+  });
+  let _shootEnd='';
+  if(first.time){
+    const[hh,mm]=first.time.split(':').map(Number);
+    const em=hh*60+mm+Math.round((parseFloat(first.durationH)||2)*60);
+    _shootEnd=String(Math.floor(em/60)%24).padStart(2,'0')+':'+String(em%60).padStart(2,'0');
+  }
+  const generalNotes=document.getElementById('job-notes-input')?.value.trim()||'';
+  const job={
+    id:Date.now(), name, date:first.date,
+    shootTime:first.time||'', shootEndTime:_shootEnd,
+    videographer:document.getElementById('job-videographer-input')?.value||'',
+    duration:first.durationH||'2',
+    currency:document.getElementById('job-currency-input')?.value||(isUS?'usd':'cad'),
+    market,
+    notes:[first.notes,generalNotes].filter(Boolean).join(' · '),
+    grand, driveCost, status:initialJobStatus,
+    clientId:selectedClientId||null,
+    clientName:selectedClientId?(clients.find(c=>c.id===selectedClientId)?.name||''):'',
+    period:period.label,periodStart:period.start,periodEnd:period.end,
+    sqft:first.sqft||0,
+    services:first.svc?{...first.svc}:{},
+    hours:first.qty?{...first.qty}:{},
+    payouts,
+    editors:first.editors?{...first.editors}:{},
+    address:first.address||'(no address)',
+    customDesc:first.customDesc||'', customPrice:first.customPrice||0, customPayout:first.customPayout||0,
+    extraServices:quoteCart.flatMap(e=>e.extraServices||[]),
+    commissionPct:parseInt(document.getElementById('commission-pct-sel')?.value||0),
+    commissionSalesperson:document.getElementById('commission-salesperson-sel')?.value||'Mackenzie Woodhouse',
+    commissionAmt:0,
+    ...(isUS?{usData:{...(first.usData||{})}}:{}),
+    propertyQuotes:quoteCart.map(e=>({id:e.id,market:e.market,address:e.address,date:e.date,time:e.time,
+      durationH:e.durationH,notes:e.notes,amount:e.amount,label:e.label,sqft:e.sqft||0,
+      svc:e.svc||null,qty:e.qty||null,usData:e.usData||null,driveCost:e.driveCost||0,
+      customDesc:e.customDesc||'',customPrice:e.customPrice||0,extraServices:e.extraServices||[]})),
+  };
+  job.commissionAmt=job.commissionPct>0?Math.ceil(job.grand*job.commissionPct/100):0;
+  const dealId=(document.getElementById('job-deal-id-input')?.value||'').trim().toUpperCase();
+  if(dealId){ job.dealId=dealId; linkDealToJob(dealId,job.id,job.grand); }
+  // Absorb a client booking request if this quote came from one
+  if(window._quoteFromRequestId){
+    const reqIdx=savedJobs.findIndex(x=>String(x.id)===String(window._quoteFromRequestId));
+    const _reqCand=reqIdx>=0?savedJobs[reqIdx]:null;
+    const _reqMatches=_reqCand&&(
+      (job.clientId&&job.clientId===_reqCand.clientId)||
+      (_reqCand.address&&(job.address||job.name||'').toLowerCase().includes(_reqCand.address.slice(0,10).toLowerCase()))
+    );
+    if(reqIdx>=0&&_reqMatches){
+      const req=savedJobs[reqIdx];
+      if(!job.clientId&&req.clientId){
+        job.clientId=req.clientId;
+        job.clientName=(clients.find(c=>c.id===req.clientId)?.name)||req.clientName||'';
+      }
+      if(!job.shootTime&&req.preferredTime) job.shootTime=req.preferredTime;
+      if(req.requestChat&&req.requestChat.length) job.requestChat=req.requestChat;
+      savedJobs.splice(reqIdx,1);
+    }
+    window._quoteFromRequestId=null;
+  }
+  savedJobs.push(job);
+  const videographerName=job.videographer||'';
+  setTrackerStage(job.id,{stage:'ready',editStatus:'ready',claimedBy:'',videographer:videographerName,
+    filesReceived:false,notes:[first.label,first.notes].filter(Boolean).join(' · '),
+    projectId:getProjectId(job),approxFilmHours:job.duration||'',approxEditHours:'',completionDate:'',
+    filemailLink:'',frameioLink:'',downloadLink:'',draftCount:0,extraDraftCharge:0});
+  syncCartChildJobs(job);
+  saveJobsToStorage();
+  if(document.getElementById('pane-calendar')?.classList.contains('active')){ populateCalNameDropdown(); renderCalendar(); }
+  pushJobToGcal(job,videographerName);
+  savedJobs.filter(c=>c.subJob&&String(c.parentJobId)===String(job.id)&&c.ownSchedule)
+    .forEach(c=>pushJobToGcal(c,videographerName));
+  // Quote email to client (same template as single-property saves)
+  if(initialJobStatus==='quoted'&&job.clientId){
+    const client=clients.find(c=>c.id===job.clientId);
+    if(client?.email&&typeof emailjs!=='undefined'){
+      const hst=isUS?0:parseFloat((grand*0.13).toFixed(2));
+      emailjs.send('service_f0gwd3p','template_fjf8aas',{
+        to_email:client.email,to_name:client.name||client.email,
+        company_name:(bizSettings||{}).name||'DroneHub Media Company',
+        invoice_number:'QUOTE-'+job.id.toString().slice(-6),
+        invoice_total:'$'+(grand+hst).toFixed(2)+(isUS?'':' (incl. HST)'),
+        job_name:job.name,job_date:job.date,payment_link:'',
+      },'Ch7hmj99uF1tLKhMj').then(()=>{
+        const el=document.getElementById('save-job-status');
+        if(el) el.textContent+=' · Quote emailed to '+client.email;
+      }).catch(e=>console.warn('Quote email failed:',e));
+    }
+  }
+  statusEl.textContent=`✓ Saved "${name}" — ${quoteCart.length} propert${quoteCart.length===1?'y':'ies'} · $${grand.toLocaleString()} — ${period.label}`;
+  setTimeout(()=>{const el=document.getElementById('save-job-status'); if(el) el.textContent='';},6000);
+  quoteCart=[]; _qcEditingId=null;
+  renderQuoteCart(); qcResetForm();
+  const nameEl=document.getElementById('job-name-input'); if(nameEl) nameEl.value='';
+  const gn=document.getElementById('job-notes-input'); if(gn) gn.value='';
+  const dealIdEl=document.getElementById('job-deal-id-input'); if(dealIdEl) dealIdEl.value='';
+  const dealPreviewEl=document.getElementById('job-deal-preview'); if(dealPreviewEl) dealPreviewEl.textContent='';
+  refreshPayrollPeriods(); renderJobs(); renderTracker();
+}
+
 function saveJob(){
+  // Cart flow: anything added via "+ Add property" saves as ONE multi-property job.
+  // A half-built property still on the form is auto-added so it isn't lost.
+  if(quoteCart.length){
+    if(!_qcEditingId&&qcFormDirty()){
+      const pending=qcSnapshotCurrent();
+      if(pending) quoteCart.push(pending);
+    }
+    _qcEditingId=null;
+    return saveCartJob();
+  }
   const name=document.getElementById('job-name-input').value.trim();
   const date=document.getElementById('job-date-input').value;
   if(!name||!date){document.getElementById('save-job-status').textContent='Please enter a job name and date.';return;}
@@ -105,7 +494,7 @@ function saveJob(){
     duration:document.getElementById('job-duration-input')?.value||'2',
     currency:document.getElementById('job-currency-input')?.value||'cad',
     market,
-    notes:document.getElementById('job-notes-input')?.value.trim()||'',
+    notes:[(document.getElementById('prop-notes-input')?.value||'').trim(),(document.getElementById('job-notes-input')?.value||'').trim()].filter(Boolean).join(' · '),
     grand,driveCost,
     status:initialJobStatus,
     clientId:selectedClientId||null,
@@ -1509,12 +1898,11 @@ function saveEditJob(){
   job.propertyLines=(window._ejPlines||[]).filter(l=>l.address||((parseFloat(l.rate)||0)*(parseInt(l.qty)||0))>0);
   total+=ejPlinesSum();
   ejSyncPlineProjects(job);
-  if(isUSJob){
-    usSyncExtraPropProjects(job);
-    // keep each property's own calendar event in step with the edit
-    savedJobs.filter(c=>c.subJob&&String(c.parentJobId)===String(job.id)&&c.ownSchedule)
-      .forEach(c=>pushJobToGcal(c,job.videographer||''));
-  }
+  if(isUSJob) usSyncExtraPropProjects(job);
+  if(job.propertyQuotes&&job.propertyQuotes.length) syncCartChildJobs(job);
+  // keep each property's own calendar event in step with the edit
+  savedJobs.filter(c=>c.subJob&&String(c.parentJobId)===String(job.id)&&c.ownSchedule)
+    .forEach(c=>pushJobToGcal(c,job.videographer||''));
   job.grand=total;
   job.date=newDate;
   job.shootTime=document.getElementById('ej-time').value||job.shootTime;
@@ -2085,7 +2473,6 @@ function renderUSServicePanel(market){
     if(!usQuoteState.listingReelCount) usQuoteState.listingReelCount=1;
     const rc = document.getElementById('us-listing-reel-count');
     if(rc) rc.textContent = usQuoteState.listingReelCount;
-    renderUSListingProps();
   }
 }
 

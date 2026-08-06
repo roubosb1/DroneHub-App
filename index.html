@@ -903,15 +903,6 @@
             <button onclick="changeUSListingReels(1)" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--navy-card);color:var(--white);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
           </div>
         </div>
-        <!-- Multi-property line items — several listings on one quote/invoice -->
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;margin-top:4px">
-          More properties on this quote <span style="color:var(--blue-bright);font-weight:600;font-size:10px;text-transform:none;letter-spacing:0">· each gets its own listing video + reel</span>
-        </div>
-        <div id="us-listing-props" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
-        <button onclick="addUSListingProp()" style="width:100%;padding:9px;border-radius:10px;border:1px dashed rgba(91,141,239,.4);background:rgba(91,141,239,.05);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add another property
-        </button>
       </div>
 
       <!-- SOCIAL REELS sub-panel -->
@@ -994,6 +985,28 @@
 
     </div><!-- end us-services-panel -->
 
+    <!-- Per-property schedule — every property carries its own date, time & notes -->
+    <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+      <div class="svc-group-label" style="margin-top:0">When — this property</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Shoot date</label>
+          <input type="date" id="job-date-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;color-scheme:dark">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Shoot time</label>
+          <input type="time" id="job-time-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;color-scheme:dark">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Hrs</label>
+          <input type="number" id="job-duration-input" min="0.5" max="12" step="0.5" value="2" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+        </div>
+      </div>
+      <input type="text" id="prop-notes-input" placeholder="Notes for this property — gate code, meet agent…" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8;margin-bottom:10px">
+      <button onclick="addPropertyToQuote()" id="qc-add-btn" style="width:100%;padding:11px;border-radius:10px;border:1px dashed rgba(91,141,239,.5);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:13px;font-weight:800;cursor:pointer">+ Add property to quote</button>
+      <div id="qc-add-status" style="font-size:12px;color:var(--amber);margin-top:6px"></div>
+    </div>
+
     </div><!-- end services card -->
 
     <!-- Job details bubble -->
@@ -1025,19 +1038,8 @@
         <div id="market-dropdown-panel" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;background:#242D42;border:1px solid #3a4360;border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:4px"></div>
       </div>
     </div>
-    <div class="job-form-date-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-      <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Shoot date</label>
-        <input type="date" id="job-date-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Shoot time</label>
-        <input type="time" id="job-time-input" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Duration (hrs)</label>
-        <input type="number" id="job-duration-input" min="0.5" max="12" step="0.5" value="2" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
-      </div>
+    <!-- Shoot date/time/duration now live per-property under the Services card -->
+    <div class="job-form-date-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Videographer</label>
         <select id="job-videographer-input" onfocus="populateJobVideographerSel()" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
@@ -1054,8 +1056,8 @@
       </div>
     </div>
     <div class="row" style="margin-bottom:8px">
-      <label style="min-width:120px">Notes</label>
-      <input type="text" id="job-notes-input" placeholder="Gate code, parking, special instructions…" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
+      <label style="min-width:120px">General notes</label>
+      <input type="text" id="job-notes-input" placeholder="Anything that applies to the whole job…" style="flex:1;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
     </div>
     <div style="background:rgba(91,141,239,.08);border:1px solid var(--blue);border-radius:10px;padding:10px 14px;margin-bottom:10px">
       <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Link to Sales Deal (optional)</div>
@@ -1132,7 +1134,7 @@
     </div>
   </div>
   <div class="card" style="margin-top:12px">
-    <div class="section-label" style="margin-bottom:10px">Live quote</div>
+    <div class="section-label" style="margin-bottom:10px">Live quote — property you're building now</div>
 
     <!-- Canada quote (default) -->
     <div id="canada-quote-panel">
@@ -1147,6 +1149,13 @@
       <div id="us-line-breakdown" style="font-size:13px"></div>
     </div>
 
+  </div>
+
+  <!-- Property cart — everything added with "+ Add property to quote" lands here
+       for a final double-check before the job is saved -->
+  <div class="card" id="quote-cart-card" style="margin-top:12px;display:none">
+    <div class="section-label" style="margin-bottom:4px">Properties on this quote</div>
+    <div id="quote-cart-body"></div>
   </div>
 
 </div><!-- END pane-quote -->
@@ -4503,10 +4512,10 @@
 <script src="js/louchat.js?v=83"></script>
 <script src="js/tracker.js?v=55"></script>
 <script src="js/admin.js"></script>
-<script src="js/finance.js?v=17"></script>
+<script src="js/finance.js?v=18"></script>
 <script src="js/calendar.js?v=83"></script>
 <script src="js/team.js?v=52"></script>
-<script src="js/jobs.js?v=27"></script>
+<script src="js/jobs.js?v=28"></script>
 <script src="js/clients.js?v=87"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>
