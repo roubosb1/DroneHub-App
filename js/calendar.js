@@ -1654,6 +1654,41 @@ async function syncGcalLinks(showFeedback){
   renderCalLinkedList();
   if(anyUpdated) renderCalendar();
   if(showFeedback) alert('Calendar synced! '+links.reduce((n,l)=>n+(l.events?.length||0),0)+' events loaded.');
+  gcalCleanOrphans().catch(()=>{});
+}
+
+// ── Janitor: delete leftover Google events the app created for jobs that were
+// later re-dated or double-synced. An orphan = a Google event whose title
+// exactly matches one of our jobs but whose id is NOT the job's linked event.
+async function gcalCleanOrphans(){
+  try{
+    if(typeof _fbToken!=='function'||!_fbToken()) return;
+    if(typeof savedJobs==='undefined') return;
+    const own=_calJobGcalIds();
+    const links=getGcalLinks();
+    let removed=0;
+    for(const link of links){
+      if(!link.oauthMemberId) continue;
+      for(const ev of (link.events||[]).slice()){
+        if(!ev.uid||own.has(String(ev.uid))) continue;
+        const isOurs=savedJobs.some(j=>!j.subJob&&j.name&&j.name===ev.title);
+        if(!isOurs) continue;
+        try{
+          await gcalApiCall('delete',link.oauthMemberId,{gcalEventId:ev.uid,calendarId:link.oauthCalendarId||'primary'});
+          link.events=link.events.filter(x=>x.uid!==ev.uid);
+          removed++;
+          if(typeof gcalLog==='function') gcalLog({ok:true,result:'Removed leftover Google event ('+(ev.date||'')+')',job:ev.title,target:link.creatorName});
+        }catch(e){
+          if(typeof gcalLog==='function') gcalLog({ok:false,result:'Orphan cleanup failed: '+(e.message||''),job:ev.title,target:link.creatorName});
+        }
+      }
+    }
+    if(removed){
+      saveGcalLinks(links);
+      if(typeof renderCalendar==='function') renderCalendar();
+      showDhToast('Google Calendar cleaned',removed+' leftover event'+(removed>1?'s':'')+' removed — your phone will update shortly','🧹','var(--green)',4000);
+    }
+  }catch(e){ console.warn('[gcalCleanOrphans]',e.message); }
 }
 
 function renderCalLinkedList(){
