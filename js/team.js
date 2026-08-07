@@ -1587,28 +1587,32 @@ function renderTracker(){
     else emptyMsg.textContent='No completed projects';
   }
 
-  // Sort: rush jobs first, then tab-specific
-  // Upcoming:    soonest shoot date first
+  // Sort — the queue runs oldest shoot date first:
+  // Upcoming:    earliest shoot date at the top (not most-recently-added)
   // In Progress: client who finished reviewing first gets priority (clientDecisionAt asc),
   //              so editors work on the job whose client has been waiting longest
   // Completed:   most recently completed first
+  // Rush orders only jump to the very top once their shoot day has arrived
+  // (filmed) — before that they hold their date position so other projects
+  // keep moving ahead of them.
+  const _trkToday=new Date().toISOString().slice(0,10);
+  const _rushActive=(j)=>{const ts=_getStage(j.id);return (ts.rush&&(!j.date||j.date<=_trkToday))?1:0;};
   jobs.sort((a,b)=>{
     const tsA=_getStage(a.id);
     const tsB=_getStage(b.id);
-    // Rush jobs always first
-    if(tsA.rush&&!tsB.rush) return -1;
-    if(!tsA.rush&&tsB.rush) return 1;
     if(_trackerTab==='completed'){
       return (b.date||'').localeCompare(a.date||'');
     }
+    const rDiff=_rushActive(b)-_rushActive(a);
+    if(rDiff) return rDiff;
     if(_trackerTab==='active'){
       // Jobs where the client finished reviewing earliest come first
       const decA=tsA.clientDecisionAt||tsA.updatedAt||a.date||'';
       const decB=tsB.clientDecisionAt||tsB.updatedAt||b.date||'';
       return decA.localeCompare(decB);
     }
-    // Upcoming: most recently added / newest shoot date first
-    return (b.date||'').localeCompare(a.date||'');
+    // Upcoming: earliest shoot date first (undated jobs sink to the bottom)
+    return (a.date||'9999').localeCompare(b.date||'9999');
   });
 
   // Apply saved manual order for upcoming tab
@@ -1622,6 +1626,8 @@ function renderTracker(){
         const pb=_posMap[String(b.id)]??_manualOrder.length;
         return pa-pb;
       });
+      // Filmed rush orders outrank even a manual arrangement
+      jobs.sort((a,b)=>_rushActive(b)-_rushActive(a));
     }
   }
 

@@ -356,12 +356,15 @@ function mobTrkRenderCards(){
   else if(_mobTrkTab==='active') jobs=jobs.filter(j=>_inprogressSt.includes(_getStage(j.id).editStatus||''));
   else jobs=jobs.filter(j=>_completedSt.includes(_getStage(j.id).editStatus||''));
 
-  // Sort
+  // Sort — queue runs earliest shoot date first; rush orders only jump the
+  // queue once their shoot day has arrived (filmed). Done tab: newest first.
+  const _trkToday=new Date().toISOString().slice(0,10);
+  const _rushActive=(j)=>{const ts=_getStage(j.id);return (ts.rush&&(!j.date||j.date<=_trkToday))?1:0;};
   jobs.sort((a,b)=>{
-    const tsA=_getStage(a.id), tsB=_getStage(b.id);
-    if(tsA.rush&&!tsB.rush) return -1;
-    if(!tsA.rush&&tsB.rush) return 1;
-    return (b.date||'').localeCompare(a.date||'');
+    if(_mobTrkTab==='completed') return (b.date||'').localeCompare(a.date||'');
+    const rDiff=_rushActive(b)-_rushActive(a);
+    if(rDiff) return rDiff;
+    return (a.date||'9999').localeCompare(b.date||'9999');
   });
 
   if(!jobs.length){
