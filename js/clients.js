@@ -1004,6 +1004,7 @@ async function renderClientPortal(id, activeTab){
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
           ${c.email?`<a href="mailto:${c.email}" style="padding:6px 14px;border-radius:14px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:600;text-decoration:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Email client</a>`:''}
           <button onclick="editClientInfo('${c.id}')" style="padding:6px 14px;border-radius:14px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit info</button>
+          <button onclick="toggleClientPayGate('${c.id}')" title="When on, this client's finished files stay locked until each project's invoice is paid" style="padding:6px 14px;border-radius:14px;border:1px solid ${c.payGate?'var(--amber)':'var(--border-bright)'};background:${c.payGate?'var(--amber-bg)':'var(--navy-lift)'};color:${c.payGate?'var(--amber)':'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer">${c.payGate?'🔒 Paywall: ON':'🔓 Paywall: off'}</button>
           <button onclick="deleteClient('${c.id}')" style="padding:6px 14px;border-radius:14px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;margin-left:auto">Delete client</button>
         </div>
       </div>
@@ -1535,6 +1536,16 @@ function loadClientJobInQuote(clientId){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('pane-quote')?.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Quick per-client paywall flip from the client profile header
+function toggleClientPayGate(clientId){
+  const c=clients.find(cl=>cl.id===clientId);
+  if(!c) return;
+  c.payGate=!c.payGate;
+  saveClientsToStorage();
+  try{showDhToast(c.payGate?'Paywall ON for '+c.name:'Paywall off for '+c.name,c.payGate?'Their finished files stay locked until each invoice is paid.':'They can download finished files any time.',c.payGate?'🔒':'🔓',c.payGate?'var(--amber)':'var(--green)',4000);}catch(e){}
+  renderClientPortal(clientId,'overview');
 }
 
 function editClientInfo(clientId){
@@ -2174,6 +2185,28 @@ function cpSaveProjectNote(jobId){
   try{ showDhToast('Notes sent to your editor','They\'ll see it on the project right away.','✓','var(--green)',3000); }catch(e){}
 }
 
+// Toggle the inline "notes for editors" row under an upcoming project
+function cpToggleNotesRow(jobId){
+  const r=document.getElementById('cp-notesrow-'+jobId);
+  if(r) r.style.display=r.style.display==='none'?'':'none';
+}
+
+// Files button: paywalled clients must clear the invoice first
+async function cpFilesClick(jobId){
+  const j=savedJobs.find(x=>String(x.id)===String(jobId));
+  if(!j) return;
+  const c=clients.find(cl=>cl.id===cpActiveClientId);
+  if(c?.payGate&&getInvoiceStatus(j)!=='paid'){
+    const go=await dhConfirm('Invoice payment needed','Your files for "'+(j.name||j.address||'this project')+'" are ready! They unlock as soon as the invoice is paid — it only takes a minute with card.',{confirmLabel:'View invoice & pay'});
+    if(go) cpViewInvoice(String(j.id));
+    return;
+  }
+  const ts=getTrackerStage(jobId);
+  const link=ts.downloadLink||ts.filemailLink||j.driveLink||'';
+  if(link) window.open(link,'_blank','noopener');
+  else try{showDhToast('Almost there','Your files are still being prepared — we\'ll let you know the moment they\'re ready.','','var(--blue-bright)',4000);}catch(e){}
+}
+
 function cpSaveClientProfile(){
   const c=clients.find(cl=>cl.id===cpActiveClientId);
   if(!c){try{showDhToast('Profile not found','Ask DroneHub to link your account','⚠','var(--orange)',4000);}catch(e){}return;}
@@ -2341,67 +2374,64 @@ async function cpShowTab(tab){
       in_progress:{label:'Currently editing',color:'var(--blue-bright)',bg:'rgba(91,141,239,.12)'},
       review:{label:'In final review',color:'#A78BFA',bg:'rgba(139,92,246,.12)'},
     };
-    // ── My Videos: mini project tracker (Upcoming / Completed, like ops) ────
+    // ── My Videos: tracker-style table (Upcoming / Completed, like ops) ─────
     const _isDone=j=>{const ts=getTrackerStage(j.id);return j.status==='completed'||ts.editStatus==='finals_sent';};
-    const _upJobs=trackerJobs.filter(j=>!_isDone(j));
+    const _upJobs=trackerJobs.filter(j=>!_isDone(j)).sort((a,b)=>((a.date||'9999')+'T'+(a.shootTime||'99:99')).localeCompare((b.date||'9999')+'T'+(b.shootTime||'99:99')));
     const _doneJobs2=trackerJobs.filter(_isDone).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     const _pTab=window._cpProdTab||(_upJobs.length?'upcoming':'completed');
     const _pTabBtn=(k,l,n)=>`<button onclick="window._cpProdTab='${k}';cpShowTab('production')" style="padding:8px 18px;border-radius:20px;border:1px solid ${_pTab===k?'var(--blue)':'var(--border)'};background:${_pTab===k?'rgba(91,141,239,.15)':'transparent'};color:${_pTab===k?'var(--blue-bright)':'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">${l}${n?` <span style="background:${_pTab===k?'var(--blue)':'var(--border-bright)'};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px">${n}</span>`:''}</button>`;
-    // Coarse pipeline for the client's progress bar
-    const _stageIdx=st=>({footage_pending:1,ready:2,in_progress:2,draft1_progress:2,draft2_progress:2,draft3_progress:2,draft2_ready:2,draft3_ready:2,draft_plus_ready:2,draft_plus_progress:2,draft1:3,draft2:3,draft3:3,draft_plus:3,review:3,finals_sent:4})[st]??2;
-    const _stageBar=st=>{const steps=['Booked','Filming','Editing','Your review','Finals'];const cur=_stageIdx(st);
-      return `<div style="display:flex;align-items:center;gap:0;margin:10px 0 4px">${steps.map((s,i)=>`
-        ${i?`<div style="flex:1;height:2px;background:${i<=cur?'var(--blue)':'var(--border)'}"></div>`:''}
-        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
-          <span style="width:9px;height:9px;border-radius:50%;background:${i<=cur?(i===cur?'var(--blue-bright)':'var(--blue)'):'var(--border)'};${i===cur?'box-shadow:0 0 0 3px rgba(91,141,239,.25)':''}"></span>
-          <span style="font-size:9px;font-weight:700;color:${i<=cur?'var(--offwhite)':'var(--muted)'};white-space:nowrap">${s}</span>
-        </div>`).join('')}</div>`;};
-    const _payLocked=j=>!!c.payGate&&getInvoiceStatus(j)!=='paid';
-    const _prodCard=(j,done)=>{
+    // Tracker-style table rows — Project ID / address / date / status + client
+    // actions: Review (draft waiting), Notes (upcoming), Invoice, Files (done)
+    const _btn=(label,onclick,color,bg,border,extra)=>`<button onclick="${onclick}" style="padding:5px 12px;border-radius:8px;border:1px solid ${border};background:${bg};color:${color};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font);${extra||''}">${label}</button>`;
+    const _rowsFor=(list,done)=>list.map((j,i)=>{
       const ts=getTrackerStage(j.id);
       const ss=STATUS_STYLES2[ts.editStatus||'ready']||STATUS_STYLES2.ready;
-      const locked=done&&_payLocked(j);
-      const reviewBtn=(()=>{const DRAFT_STATUSES=['draft1','draft2','draft3','draft_plus','finals_sent'];if(DRAFT_STATUSES.includes(ts.editStatus||'')){const vd=videoDraftsLoad().find(d=>d.jobId===j.id);if(vd){const lastDraft=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;if(lastDraft&&(lastDraft.status==='awaiting_review'||lastDraft.status==='changes_requested'||vd.status==='awaiting_review'||vd.status==='changes_requested')){return `<button onclick="cpOpenDraftReview('${j.id}')" style="padding:7px 16px;border-radius:10px;border:1px solid #7C3AED;background:rgba(124,58,237,.15);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer;animation:pulse 2s infinite">▶ Review draft & request edits</button>`;}}};return '';})();
-      return `<div class="card" style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
-          <div style="min-width:0;flex:1">
-            <div style="font-size:14px;font-weight:700;color:var(--white)">${j.name}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date}${j.address&&j.address!=='(no address)'?' · '+j.address:''}</div>
-          </div>
-          <span style="padding:5px 12px;border-radius:8px;background:${ss.bg};font-size:11px;font-weight:700;color:${ss.color};flex-shrink:0">${ss.label}</span>
-        </div>
-        ${done?'':_stageBar(ts.editStatus||'ready')}
-        ${!done&&ts.completionDate?`<div style="font-size:11px;color:var(--muted);margin-top:6px">Estimated completion: ${ts.completionDate}</div>`:''}
-        ${done?`
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          ${locked
-            ?`<button onclick="window._cpProdTab='completed';cpShowTab('invoices')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">🔒 Pay invoice to unlock downloads</button>`
-            :(ts.downloadLink||ts.filemailLink||j.driveLink?`<a href="${ts.downloadLink||ts.filemailLink||j.driveLink}" target="_blank" rel="noopener" style="padding:8px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;text-decoration:none">↓ Download files</a>`:`<span style="padding:8px 16px;border-radius:10px;border:1px solid var(--border);color:var(--muted);font-size:12px">Files being prepared…</span>`)}
-          <button onclick="cpViewInvoice('${j.id}')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">View invoice</button>
-          ${locked?'':''}
-        </div>
-        ${locked?`<div style="font-size:11px;color:var(--muted);margin-top:8px">Your finals are ready — they unlock automatically as soon as the invoice for this project is paid.</div>`:''}`
-        :`
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          ${reviewBtn}
-          ${ts.frameioLink?`<a href="${ts.frameioLink}" target="_blank" style="padding:7px 16px;border-radius:10px;border:1px solid var(--purple);background:var(--purple-bg);color:#A78BFA;font-size:12px;font-weight:700;text-decoration:none">Review on Frame.io</a>`:''}
-        </div>
-        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+      const pid=done?(ts.projectId&&String(ts.projectId).startsWith('DH')?ts.projectId:(typeof getProjectId==='function'?getProjectId(j):'')):('Up Next '+(i+1));
+      const reviewBtn=(()=>{if(done)return'';const DRAFT_STATUSES=['draft1','draft2','draft3','draft_plus'];if(DRAFT_STATUSES.includes(ts.editStatus||'')){const vd=videoDraftsLoad().find(d=>d.jobId===j.id);if(vd){const lastDraft=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;if(lastDraft&&(lastDraft.status==='awaiting_review'||lastDraft.status==='changes_requested'||vd.status==='awaiting_review'||vd.status==='changes_requested')){return _btn('▶ Review',`cpOpenDraftReview('${j.id}')`,'#A78BFA','rgba(124,58,237,.15)','#7C3AED','animation:pulse 2s infinite');}}}return'';})();
+      const notesBtn=done?'':_btn('✎ Notes',`cpToggleNotesRow('${j.id}')`,'var(--blue-bright)','rgba(91,141,239,.1)','var(--blue)');
+      const invBtn=_btn('Invoice',`cpViewInvoice('${j.id}')`,'var(--offwhite)','var(--navy-lift)','var(--border-bright)');
+      const filesBtn=done?_btn('↓ Files',`cpFilesClick('${j.id}')`,'var(--green)','var(--green-bg)','var(--green)'):'';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:12px 12px 12px 16px;font-size:11px;font-weight:800;color:${done?'var(--green)':'var(--amber)'};white-space:nowrap;font-family:${done?'monospace':'var(--font)'}">${pid}</td>
+        <td style="padding:12px;min-width:180px">
+          <div style="font-size:13px;font-weight:700;color:var(--white)">${j.address&&j.address!=='(no address)'?j.address:j.name}</div>
+          ${j.address&&j.address!=='(no address)'&&j.name!==j.address?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${j.name}</div>`:''}
+        </td>
+        <td style="padding:12px;font-size:12px;color:var(--offwhite);white-space:nowrap">${j.date||''}</td>
+        <td style="padding:12px"><span style="padding:4px 12px;border-radius:8px;background:${ss.bg};font-size:11px;font-weight:700;color:${ss.color};white-space:nowrap">${ss.label}</span>
+          ${!done&&ts.completionDate?`<div style="font-size:10px;color:var(--muted);margin-top:4px">Est. ${ts.completionDate}</div>`:''}
+        </td>
+        <td style="padding:12px 16px 12px 12px;text-align:right"><div style="display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${reviewBtn}${notesBtn}${invBtn}${filesBtn}</div></td>
+      </tr>
+      ${done?'':`<tr id="cp-notesrow-${j.id}" style="display:none;border-bottom:1px solid var(--border);background:var(--navy-mid)">
+        <td colspan="5" style="padding:10px 16px">
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Notes for our editors — music, style, must-have shots…</div>
           <div style="display:flex;gap:8px;align-items:flex-start">
             <textarea id="cp-pnote-${j.id}" rows="2" placeholder="e.g. Use upbeat music, lead with the pool shot, logo at the end…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:10px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;font-family:var(--font)">${(ts.clientNotes||'').replace(/</g,'&lt;')}</textarea>
             <button onclick="cpSaveProjectNote('${j.id}')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">Send</button>
           </div>
-        </div>`}
-      </div>`;
-    };
+        </td>
+      </tr>`}`;
+    }).join('');
+    const _list=_pTab==='upcoming'?_upJobs:_doneJobs2;
+    const _emptyMsg=_pTab==='upcoming'?'Nothing in production right now — book a shoot to get started!':'Completed projects will appear here.';
     html=`<div>
       <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
         ${_pTabBtn('upcoming','Upcoming',_upJobs.length)}${_pTabBtn('completed','Completed',_doneJobs2.length)}
       </div>
-      ${_pTab==='upcoming'
-        ?(_upJobs.length?_upJobs.map(j=>_prodCard(j,false)).join(''):'<div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:34px">Nothing in production right now — book a shoot to get started!</div>')
-        :(_doneJobs2.length?_doneJobs2.map(j=>_prodCard(j,true)).join(''):'<div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:34px">Completed projects will appear here.</div>')}
+      <div class="card" style="padding:0;overflow:hidden">
+        ${_list.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:680px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:10px 12px 10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">${_pTab==='upcoming'?'Queue':'Project ID'}</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Address / Project</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Shoot date</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Status</th>
+            <th style="padding:10px 16px 10px 12px;text-align:right;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Actions</th>
+          </tr></thead>
+          <tbody>${_rowsFor(_list,_pTab==='completed')}</tbody>
+        </table></div>`
+        :`<div style="text-align:center;color:var(--muted);font-size:13px;padding:34px">${_emptyMsg}</div>`}
+      </div>
     </div>`;
   }
   else if(tab==='spending'){
