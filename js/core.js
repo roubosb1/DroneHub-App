@@ -536,3 +536,21 @@ function dhConfirm(title,message,opts){
     document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){done(false);document.removeEventListener('keydown',esc);}});
   });
 }
+
+// ── Auto-fit metric values ────────────────────────────────────────────────────
+// Long dollar amounts (e.g. $6,200.00) shrink to fit their stat card instead
+// of clipping at the edge. Runs after any render + on resize.
+let _mvalFitT=null;
+function _fitMvals(){
+  document.querySelectorAll('.metric .mval').forEach(v=>{
+    if(!v.dataset.fitBase) v.dataset.fitBase=getComputedStyle(v).fontSize;
+    v.style.fontSize=v.dataset.fitBase;
+    let fs=parseFloat(v.dataset.fitBase),guard=0;
+    while(v.scrollWidth>v.clientWidth+0.5&&fs>11&&guard++<14){fs-=1;v.style.fontSize=fs+'px';}
+  });
+}
+function _queueMvalFit(){clearTimeout(_mvalFitT);_mvalFitT=setTimeout(_fitMvals,120);}
+try{
+  new MutationObserver(_queueMvalFit).observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('resize',_queueMvalFit);
+}catch(e){}
