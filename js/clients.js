@@ -2662,7 +2662,7 @@ async function cpShowTab(tab){
     const years=Object.keys(byYear).sort().reverse();
     // Collapsible sections
     const _open=window._cpInvOpen||(window._cpInvOpen={overdue:true,owed:true,paid:false});
-    const _section=(key,color,label,list,renderer,subtotal)=>list.length?`
+    const _section=(key,color,label,list,renderer,subtotal,force)=>(list.length||force)?`
       <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
         <button onclick="cpToggleInvSection('${key}')" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">
           <span style="font-size:11px;font-weight:700;color:${color};letter-spacing:.08em;text-transform:uppercase">${label} (${list.length})</span>
@@ -2671,7 +2671,7 @@ async function cpShowTab(tab){
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${_open[key]?180:0}deg);transition:transform .15s"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </button>
-        ${_open[key]?`<div style="padding:0 14px 14px">${list.map(renderer).join('')}</div>`:''}
+        ${_open[key]?`<div style="padding:0 14px 14px">${list.length?list.map(renderer).join(''):`<div style="padding:14px 4px;font-size:12px;color:var(--muted)">Nothing here yet.</div>`}</div>`:''}
       </div>`:'';
     // Analytics
     const thisYr=String(new Date().getFullYear());
@@ -2741,7 +2741,13 @@ async function cpShowTab(tab){
         </div>
         ${_section('overdue','var(--red)','Overdue',overdueL,_unpaidCard,overdueTotal)}
         ${_section('owed','var(--amber)','Owed',owedL,_unpaidCard,owedTotal)}
-        ${_section('paid','var(--green)','Paid',paid,_paidCard,paidTotal)}
+        ${(()=>{
+          // Include $0 imported historical projects — they're paid, just not billed here
+          const legacyPaid=cJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&!(j.grand>0))
+            .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+          const paidList=[...paid.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')),...legacyPaid];
+          return _section('paid','var(--green)','Paid invoices',paidList,_paidCard,paidTotal,true);
+        })()}
         ${!inv.length?`<div class="card" style="text-align:center;padding:40px">
           <div style="font-size:13px;color:var(--muted)">No invoices yet — they'll appear here once your first project is invoiced.</div>
         </div>`:''}
