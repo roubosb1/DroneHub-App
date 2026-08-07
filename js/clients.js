@@ -2873,21 +2873,85 @@ async function cpShowTab(tab){
     const acct=getPortalAccounts().find(a=>a.clientId===cpActiveClientId)||{};
     const pfName=c.name||acct.name||'Client';
     const pfEmail=c.email||acct.email||'';
-    html=`
-      <div class="card" style="margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:6px">
-          <div style="position:relative">
-            ${typeof getAvatarHtml==='function'?getAvatarHtml(pfName,pfEmail,84,26):''}
+    const _pfMail=(pfEmail||'').toLowerCase();
+    const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    // Creator-style profile: shared with the community profile (same cover,
+    // same follow graph) — clients get the exact same hero as team members.
+    const _prof=(typeof forumProfilesLoad==='function')?(forumProfilesLoad()[_pfMail]||{}):{};
+    const _cover=_prof.cover||'';
+    const _follows=(typeof forumFollowsLoad==='function')?forumFollowsLoad():{};
+    const _followers=Object.values(_follows).filter(a=>Array.isArray(a)&&a.includes(_pfMail)).length;
+    const _following=(_follows[_pfMail]||[]).length;
+    const _myPosts=(typeof forumLoad==='function')?forumLoad().filter(p=>!p.deleted&&(p.authorEmail||'').toLowerCase()===_pfMail):[];
+    const _upvotes=_myPosts.reduce((s,p)=>s+((p.upvotes||[]).length),0);
+    const _pfTab=window._cpPfTab||'portfolio';
+    const _doneJobs=(typeof savedJobs!=='undefined'?savedJobs:[]).filter(j=>j.clientId===cpActiveClientId&&!j.subJob&&(j.status==='completed'||(typeof getTrackerStage==='function'&&getTrackerStage(j.id).editStatus==='finals_sent')));
+    const _statBox=(n,l)=>`<div style="text-align:center;min-width:64px"><div style="font-size:19px;font-weight:900;color:var(--white)">${n}</div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">${l}</div></div>`;
+    const _pfTabBtn=(k,l)=>`<button onclick="window._cpPfTab='${k}';cpShowTab('profile')" style="padding:9px 18px;border:none;background:none;color:${_pfTab===k?'var(--white)':'var(--muted)'};font-size:13px;font-weight:${_pfTab===k?'800':'600'};cursor:pointer;border-bottom:2px solid ${_pfTab===k?'var(--blue-bright)':'transparent'};font-family:var(--font)">${l}</button>`;
+    let _pfBody='';
+    if(_pfTab==='portfolio'){
+      _pfBody=_doneJobs.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">${_doneJobs.map(j=>{
+        const ts=typeof getTrackerStage==='function'?getTrackerStage(j.id):{};
+        const link=ts.downloadLink||ts.frameioLink||ts.filemailLink||j.driveLink||'';
+        return `<div class="card" style="margin:0;padding:0;overflow:hidden">
+          <div style="height:110px;background:linear-gradient(135deg,rgba(91,141,239,.35),rgba(167,139,250,.25));display:flex;align-items:center;justify-content:center">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           </div>
-          <div style="flex:1;min-width:200px">
-            <div style="font-size:20px;font-weight:800;color:var(--white)">${pfName}</div>
-            ${c.company?`<div style="font-size:13px;color:var(--muted);margin-top:2px">${c.company}</div>`:''}
-            <label style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 14px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              Change photo
-              <input type="file" accept="image/*" onchange="cpProfilePhotoSelected(this)" style="display:none">
-            </label>
+          <div style="padding:12px 14px">
+            <div style="font-size:13px;font-weight:800;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.name||j.address||'Project')}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date||''}</div>
+            ${link?`<a href="${link}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:6px 14px;border-radius:9px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none">▶ Watch</a>`:''}
           </div>
+        </div>`;}).join('')}</div>`
+      :`<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px">Your delivered videos and photos will appear here once your first project is completed.</div>`;
+    } else if(_pfTab==='posts'){
+      _pfBody=_myPosts.length?_myPosts.map(p=>`
+        <div onclick="cpShowTab('community')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer">
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.title||'')}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${(p.createdAt||'').slice(0,10)}</div>
+          </div>
+          <div style="flex-shrink:0;font-size:11px;color:var(--muted)">▲ ${(p.upvotes||[]).length} · 💬 ${(p.comments||[]).length}</div>
+        </div>`).join('')
+      :`<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px">You haven't posted in the community yet — share your listings in <strong style="color:var(--offwhite)">Show Your Work</strong>!</div>`;
+    }
+    if(_pfTab!=='settings'){
+      html=`
+      <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
+        <div style="position:relative;height:190px;background:${_cover?`url('${_cover}') center/cover no-repeat`:'linear-gradient(135deg,#1a2440,#2a3860 55%,#1f2c4d)'}">
+          <div style="position:absolute;right:12px;top:12px;display:flex;gap:6px">
+            <button onclick="forumPickCover('${_pfMail}',()=>cpShowTab('profile'))" style="padding:6px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.35);background:rgba(10,14,26,.55);color:#fff;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px)">${_cover?'Change cover':'Add cover photo'}</button>
+            ${_cover?`<button onclick="(function(){const m=forumProfilesLoad();if(m['${_pfMail}'])delete m['${_pfMail}'].cover;forumProfilesSave(m);cpShowTab('profile');})()" style="padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:rgba(10,14,26,.55);color:rgba(255,255,255,.75);font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px)">✕</button>`:''}
+          </div>
+        </div>
+        <div style="padding:0 22px 6px">
+          <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:-38px">
+            <div style="position:relative;border:4px solid var(--navy-card);border-radius:50%;flex-shrink:0;background:var(--navy-card)">
+              ${typeof getAvatarHtml==='function'?getAvatarHtml(pfName,pfEmail,88,28):''}
+              <label style="position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--navy-card)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <input type="file" accept="image/*" onchange="cpProfilePhotoSelected(this)" style="display:none">
+              </label>
+            </div>
+            <div style="flex:1;min-width:180px;padding-bottom:6px">
+              <div style="font-size:21px;font-weight:900;color:var(--white)">${esc(pfName)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:1px">${esc(c.company||'Client')}${pfEmail?' · '+esc(pfEmail):''}</div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:center;padding-bottom:8px;flex-wrap:wrap">
+              ${_statBox(_doneJobs.length,'Projects')}${_statBox(_myPosts.length,'Posts')}${_statBox(_upvotes,'Upvotes')}${_statBox(_followers,'Followers')}${_statBox(_following,'Following')}
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;margin-top:12px;border-top:1px solid var(--border);padding-top:2px;overflow-x:auto">
+            ${_pfTabBtn('portfolio','Portfolio')}${_pfTabBtn('posts','My Posts')}${_pfTabBtn('settings','Settings')}
+          </div>
+        </div>
+      </div>
+      <div class="card">${_pfBody}</div>`;
+    } else {
+      html=`
+      <div class="card" style="margin-bottom:14px;padding:12px 18px">
+        <div style="display:flex;gap:4px;align-items:center">
+          <button onclick="window._cpPfTab='portfolio';cpShowTab('profile')" style="padding:6px 12px;border:none;background:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">← Back to profile</button>
         </div>
       </div>
       <div class="card">
@@ -2940,6 +3004,7 @@ async function cpShowTab(tab){
           <button onclick="cpChangePassword()" id="cp-pw-btn" style="padding:10px 24px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Update password</button>
         </div>
       </div>`;
+    }
   }
   else if(tab==='booking'){
     html=`<div>
