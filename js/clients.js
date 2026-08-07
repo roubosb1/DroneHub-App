@@ -2126,7 +2126,6 @@ const CP_NAV=[
   {tab:'production',label:'My Videos',   icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'},
   {tab:'projects',  label:'All Jobs',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'},
   {tab:'invoices',  label:'Invoices',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'},
-  {tab:'spending',  label:'Spending',    icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'},
   {tab:'files',     label:'Files',       icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'},
   {tab:'messages',  label:'LouChat',     icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'},
   {tab:'social',    label:'Social',      icon:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>'},
@@ -2183,6 +2182,53 @@ function cpSaveProjectNote(jobId){
   const c=clients.find(cl=>cl.id===cpActiveClientId);
   try{ addSocialNotification(jobId,(c?.name||'A client')+' added editing notes on "'+(j?.name||'a project')+'" — check the tracker','client_note'); }catch(e){}
   try{ showDhToast('Notes sent to your editor','They\'ll see it on the project right away.','✓','var(--green)',3000); }catch(e){}
+}
+
+// Printable year-end statement — a client's paid invoices for one year, with
+// HST broken out, ready to print / save as PDF for their tax records
+function cpOpenYearStatement(year){
+  const c=clients.find(cl=>cl.id===cpActiveClientId);
+  if(!c) return;
+  const jobs=savedJobs.filter(j=>j.clientId===c.id&&!j.subJob&&j.grand>0&&getInvoiceStatus(j)==='paid'&&(j.date||'').startsWith(String(year)))
+    .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!jobs.length){try{showDhToast('Nothing to export','No paid invoices in '+year+' yet.','','var(--orange)',3000);}catch(e){} return;}
+  const biz=(typeof bizSettings!=='undefined'&&bizSettings)||{};
+  const rows=jobs.map(j=>{
+    const cad=(j.currency||'cad').toLowerCase()==='cad';
+    const hst=cad?j.grand*0.13:0;
+    return {name:j.name,date:j.date,inv:j.invNum||'',cur:cad?'CAD':'USD',amt:j.grand,hst,total:j.grand+hst};
+  });
+  const cadR=rows.filter(r=>r.cur==='CAD'), usdR=rows.filter(r=>r.cur==='USD');
+  const fmt=n=>'$'+n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const w=window.open('','_blank');
+  if(!w){try{showDhToast('Popup blocked','Allow popups for this site to download your statement.','⚠','var(--orange)',4000);}catch(e){} return;}
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(biz.name||'DroneHub Media')} — ${year} Annual Statement</title>
+  <style>body{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;color:#14181f;margin:44px auto;max-width:820px;padding:0 20px}
+  h1{font-size:24px;margin:0}.sub{color:#5a6472;font-size:13px;margin-top:4px}
+  .who{margin-top:22px;font-size:13px;line-height:1.6}
+  table{width:100%;border-collapse:collapse;margin-top:20px}
+  th,td{padding:8px 10px;border-bottom:1px solid #e2e5ea;font-size:12.5px;text-align:left}
+  th{background:#f4f6f9;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#5a6472}
+  td.num,th.num{text-align:right}
+  .tot{margin-top:16px;font-size:14px;font-weight:700}
+  .fine{margin-top:24px;font-size:10.5px;color:#8a93a0;line-height:1.6}
+  .no-print{margin:26px 0}
+  .no-print button{padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;border-radius:8px;border:1px solid #2b57c9;background:#3565e0;color:#fff}
+  @media print{.no-print{display:none}body{margin:10mm auto}}</style></head><body>
+  <h1>${esc(biz.name||'DroneHub Media Company')}</h1>
+  <div class="sub">${year} Annual Client Statement — summary of payments for your tax records</div>
+  <div class="who"><b>${esc(c.name||'')}</b>${c.company?' · '+esc(c.company):''}<br>${esc(c.address||'')}${c.address?'<br>':''}${esc(c.email||'')}</div>
+  <table><thead><tr><th>Date</th><th>Project</th><th>Invoice</th><th>Currency</th><th class="num">Amount</th><th class="num">HST (13%)</th><th class="num">Total paid</th></tr></thead>
+  <tbody>${rows.map(r=>`<tr><td>${r.date}</td><td>${esc(r.name)}</td><td>${esc(r.inv)||'—'}</td><td>${r.cur}</td><td class="num">${fmt(r.amt)}</td><td class="num">${r.hst?fmt(r.hst):'—'}</td><td class="num">${fmt(r.total)}</td></tr>`).join('')}</tbody></table>
+  <div class="tot">
+    ${cadR.length?`Total paid (CAD): ${fmt(cadR.reduce((s,r)=>s+r.total,0))} &nbsp;·&nbsp; HST included: ${fmt(cadR.reduce((s,r)=>s+r.hst,0))}<br>`:''}
+    ${usdR.length?`Total paid (USD): ${fmt(usdR.reduce((s,r)=>s+r.total,0))}`:''}
+  </div>
+  <div class="fine">Issued ${new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})} · This statement summarizes payments received by ${esc(biz.name||'DroneHub Media Company')} for services rendered during ${year}. Amounts reflect invoices marked paid; refer to individual invoices for full detail. This document is provided for record-keeping and is not a tax form.</div>
+  <div class="no-print"><button onclick="window.print()">Print / Save as PDF</button></div>
+  </body></html>`);
+  w.document.close();
 }
 
 // Toggle the inline "notes for editors" row under an upcoming project
@@ -2541,66 +2587,109 @@ async function cpShowTab(tab){
     ${!cJobs.length?'<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No projects yet.</div>':''}`;
   }
   else if(tab==='invoices'){
-    // $0 imported historical jobs aren't real invoices — keep them out entirely
+    // ── Financial hub: invoices + spending merged ─────────────────────────────
+    // $0 imported historical jobs aren't real invoices — excluded everywhere
     const inv=cJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&j.grand>0);
     const paid=inv.filter(j=>getInvoiceStatus(j)==='paid');
-    const unpaid=inv.filter(j=>getInvoiceStatus(j)!=='paid');
-    html=`<div>
-      ${unpaid.length?`<div style="font-size:11px;font-weight:700;color:var(--blue-bright);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Outstanding (${unpaid.length})</div>
-      ${unpaid.map(j=>{
-        const st=getInvoiceStatus(j);
-        const {owed,interest,daysOverdue}=calcCurrentOwed(j);
-        const refDate=j.invoicedAt?new Date(j.invoicedAt):new Date(j.date||Date.now());
-        const dueDate=new Date(refDate); dueDate.setDate(dueDate.getDate()+30);
-        const amtDue=st==='overdue'?owed:j.grand;
-        const stBadge=st==='overdue'
-          ?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--red-bg);color:var(--red)">OVERDUE ${daysOverdue}d</span>`
-          :`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-bg);color:var(--amber)">OUTSTANDING</span>`;
-        return `<div class="card" style="margin-bottom:12px;border:1px solid ${st==='overdue'?'rgba(240,82,82,.3)':'rgba(245,166,35,.2)'}">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:3px">${j.name}</div>
-              <div style="font-size:11px;color:var(--muted)">${j.address||''}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:3px">Shoot: ${j.date} · Due: ${dueDate.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}</div>
-              ${j.invNum?`<div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;letter-spacing:.04em">INV# ${j.invNum}</div>`:''}
-              ${st==='overdue'&&interest>0?`<div style="font-size:11px;color:var(--red);margin-top:5px;font-weight:600">⚠ ${fmtN(interest)} in late interest charges</div>`:''}
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="margin-bottom:6px">${stBadge}</div>
-              <div style="font-size:18px;font-weight:800;color:${st==='overdue'?'var(--red)':'var(--amber)'}">${fmtN(amtDue)}</div>
-            </div>
+    const overdueL=inv.filter(j=>getInvoiceStatus(j)==='overdue');
+    const owedL=inv.filter(j=>getInvoiceStatus(j)==='outstanding');
+    const _wHst=j=>((j.currency||'cad').toLowerCase()==='cad')?j.grand*1.13:j.grand;
+    const paidTotal=paid.reduce((s,j)=>s+_wHst(j),0);
+    const owedTotal=owedL.reduce((s,j)=>s+j.grand,0);
+    const overdueTotal=overdueL.reduce((s,j)=>s+calcCurrentOwed(j).owed,0);
+    const _unpaidCard=j=>{
+      const st=getInvoiceStatus(j);
+      const {owed,interest,daysOverdue}=calcCurrentOwed(j);
+      const refDate=j.invoicedAt?new Date(j.invoicedAt):new Date(j.date||Date.now());
+      const dueDate=new Date(refDate); dueDate.setDate(dueDate.getDate()+30);
+      const amtDue=st==='overdue'?owed:j.grand;
+      const stBadge=st==='overdue'
+        ?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--red-bg);color:var(--red)">OVERDUE ${daysOverdue}d</span>`
+        :`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-bg);color:var(--amber)">OUTSTANDING</span>`;
+      return `<div class="card" style="margin-bottom:12px;border:1px solid ${st==='overdue'?'rgba(240,82,82,.3)':'rgba(245,166,35,.2)'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:3px">${j.name}</div>
+            <div style="font-size:11px;color:var(--muted)">${j.address||''}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Shoot: ${j.date} · Due: ${dueDate.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}</div>
+            ${j.invNum?`<div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;letter-spacing:.04em">INV# ${j.invNum}</div>`:''}
+            ${st==='overdue'&&interest>0?`<div style="font-size:11px;color:var(--red);margin-top:5px;font-weight:600">⚠ ${fmtN(interest)} in late interest charges</div>`:''}
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button onclick="cpViewInvoice('${j.id}')" style="flex:1;min-width:120px;padding:9px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> View Invoice
-            </button>
-            <button onclick="openStripeCheckout(${amtDue},'${j.invNum||''}','${c.email||''}','${j.currency||'cad'}',${j.id})" style="flex:1;min-width:120px;padding:9px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now — ${fmtN(amtDue)}
-            </button>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="margin-bottom:6px">${stBadge}</div>
+            <div style="font-size:18px;font-weight:800;color:${st==='overdue'?'var(--red)':'var(--amber)'}">${fmtN(amtDue)}</div>
           </div>
-        </div>`;
-      }).join('')}`:''}
-      ${paid.length?`<div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;margin-top:${unpaid.length?'20':'0'}px">Paid (${paid.length})</div>
-      ${paid.map(j=>{
-        const refDate=j.invoicedAt?new Date(j.invoicedAt):new Date(j.date||Date.now());
-        return `<div class="card" style="margin-bottom:10px;opacity:.85">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date}${j.invNum?' · INV# '+j.invNum:''}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(j.grand)}</div>
-              <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green)">PAID</span>
-            </div>
-          </div>
-          <button onclick="cpViewInvoice('${j.id}')" style="margin-top:10px;padding:7px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">
-            View receipt
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="cpViewInvoice('${j.id}')" style="flex:1;min-width:120px;padding:9px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> View Invoice
           </button>
-        </div>`;
-      }).join('')}`:''}
-      ${!inv.length?`<div class="card" style="text-align:center;padding:40px">
+          <button onclick="openStripeCheckout(${amtDue},'${j.invNum||''}','${c.email||''}','${j.currency||'cad'}',${j.id})" style="flex:1;min-width:120px;padding:9px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pay now — ${fmtN(amtDue)}
+          </button>
+        </div>
+      </div>`;
+    };
+    const _paidCard=j=>`<div class="card" style="margin-bottom:10px;opacity:.85">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date}${j.invNum?' · INV# '+j.invNum:''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(j.grand)}</div>
+            <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green)">PAID</span>
+          </div>
+        </div>
+        <button onclick="cpViewInvoice('${j.id}')" style="margin-top:10px;padding:7px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">
+          View receipt
+        </button>
+      </div>`;
+    // Yearly breakdown for tax records (paid invoices only)
+    const byYear={};
+    paid.forEach(j=>{
+      const yr=j.date?.slice(0,4)||'—';
+      if(!byYear[yr]) byYear[yr]={jobs:[],total:0,hst:0};
+      byYear[yr].jobs.push(j);
+      byYear[yr].total+=_wHst(j);
+      if((j.currency||'cad').toLowerCase()==='cad') byYear[yr].hst+=j.grand*0.13;
+    });
+    const years=Object.keys(byYear).sort().reverse();
+    const _secHdr=(color,label)=>`<div style="font-size:11px;font-weight:700;color:${color};letter-spacing:.08em;text-transform:uppercase;margin:18px 0 12px">${label}</div>`;
+    html=`<div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:6px">
+        <div class="metric"><div class="mlabel">Total spent (paid)</div><div class="mval" style="color:var(--green)">${paidTotal?fmtN(paidTotal):'—'}</div><div class="msub">${paid.length} invoice${paid.length===1?'':'s'}</div></div>
+        <div class="metric"><div class="mlabel">Owed</div><div class="mval" style="color:var(--amber)">${owedTotal?fmtN(owedTotal):'—'}</div><div class="msub">${owedL.length} outstanding</div></div>
+        <div class="metric"><div class="mlabel">Overdue</div><div class="mval" style="color:var(--red)">${overdueTotal?fmtN(overdueTotal):'—'}</div><div class="msub">${overdueL.length} overdue${overdueTotal?' · incl. interest':''}</div></div>
+      </div>
+      ${overdueL.length?_secHdr('var(--red)','Overdue ('+overdueL.length+')')+overdueL.map(_unpaidCard).join(''):''}
+      ${owedL.length?_secHdr('var(--amber)','Owed ('+owedL.length+')')+owedL.map(_unpaidCard).join(''):''}
+      ${paid.length?_secHdr('var(--muted)','Paid ('+paid.length+')')+paid.map(_paidCard).join(''):''}
+      ${!inv.length?`<div class="card" style="text-align:center;padding:40px;margin-top:14px">
         <div style="font-size:13px;color:var(--muted)">No invoices yet — they'll appear here once your first project is invoiced.</div>
+      </div>`:''}
+      ${years.length?`<div class="card" style="margin-top:18px">
+        <div class="section-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px">${_icon('dollar',14)} Yearly spending breakdown</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">For your tax records — totals include HST where charged. Download a year-end statement any time; refer to individual invoices for exact amounts.</div>
+        ${years.map(yr=>{
+          const y=byYear[yr];
+          return `<div style="border-top:1px solid var(--border);padding:12px 0">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+              <div style="font-size:15px;font-weight:800;color:var(--white)">${yr}</div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div style="text-align:right">
+                  <div style="font-size:14px;font-weight:800;color:var(--green)">${fmtN(y.total)}</div>
+                  ${y.hst?`<div style="font-size:10px;color:var(--muted)">incl. HST ${fmtN(y.hst)}</div>`:''}
+                </div>
+                <button onclick="cpOpenYearStatement(${yr})" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">⬇ Year-end statement</button>
+              </div>
+            </div>
+            ${y.jobs.map(j=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04)">
+              <div><span style="color:var(--offwhite)">${j.name}</span><span style="color:var(--muted);font-size:10px;margin-left:8px">${j.date}</span></div>
+              <span style="color:var(--offwhite)">${fmtN(_wHst(j))}</span>
+            </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>`:''}
     </div>`;
   }
