@@ -211,7 +211,8 @@ input::placeholder{color:var(--muted);}
 .metric{background:var(--navy-lift);border:1px solid var(--border);border-radius:14px;padding:14px 16px;transition:border-color .15s,box-shadow .15s;}
 .metric:hover{border-color:var(--border-bright);box-shadow:0 4px 20px rgba(0,0,0,.2);}
 .metric .mlabel{font-size:11px;color:var(--offwhite);margin-bottom:4px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.05em;}
-.metric .mval{font-size:26px;font-weight:800;color:var(--white);letter-spacing:-.5px;}
+.metric{min-width:0;}
+.metric .mval{font-size:clamp(16px,1.5vw + 8px,24px);font-weight:800;color:var(--white);letter-spacing:-.5px;white-space:nowrap;overflow:hidden;max-width:100%;}
 .metric .msub{font-size:11px;color:var(--offwhite);margin-top:2px;opacity:.6;font-weight:500;}
 .breakdown{border-top:1px solid var(--border);padding-top:12px;margin-top:12px}
 .brow{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:var(--offwhite);opacity:.85}
