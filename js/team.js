@@ -445,8 +445,8 @@ function copyTeamInviteLink(){
   }
 }
 
-function regenerateInviteCode(){
-  if(!confirm('Regenerate invite code? The old code will stop working immediately.')) return;
+async function regenerateInviteCode(){
+  if(!await dhConfirm('Regenerate invite code?','The old code will stop working immediately.',{confirmLabel:'Regenerate'})) return;
   const orgs=JSON.parse(localStorage.getItem('dronehub_orgs')||'[]');
   const newCode='DH-'+Math.random().toString(36).slice(2,8).toUpperCase();
   if(orgs.length) orgs[0].inviteCode=newCode;
@@ -708,9 +708,10 @@ function resendTeamInvite(id){
   .catch(err=>alert('Failed to send: '+(err?.text||err?.message||'error')));
 }
 
-function removeTeamMember(id){
+async function removeTeamMember(id){
   const m=getAdminTeamMembers().find(tm=>tm.id===id);
-  if(!m||!confirm('Remove '+m.name+' from the team? They will lose portal access.')) return;
+  if(!m) return;
+  if(!await dhConfirm('Remove '+m.name+'?','They will be removed from the team and lose portal access.',{confirmLabel:'Remove',danger:true})) return;
   // Remove from all lists
   saveAdminTeamMembers(getAdminTeamMembers().filter(tm=>tm.id!==id));
   saveTeamMembers(getTeamMembers().filter(tm=>tm.email!==m.email));
@@ -754,8 +755,8 @@ function saveStandaloneProjects(arr){
       });
   }
 }
-function clearAllStandaloneProjects(){
-  if(!confirm('Delete ALL imported standalone projects? This cannot be undone.\n\nProjects linked to your quote builder will not be affected.')) return;
+async function clearAllStandaloneProjects(){
+  if(!await dhConfirm('Delete ALL imported projects?','Every imported standalone project will be permanently removed. Projects linked to your quote builder are not affected. This can\'t be undone.',{confirmLabel:'Delete all',danger:true})) return;
   localStorage.removeItem('dronehub_standalone_projects');
   // Also clear their tracker stage entries
   const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
@@ -1445,8 +1446,8 @@ function processPhotoImportCsv(){
   showDhToast('Photo Import', `Imported ${added} project${added===1?'':'s'} ✓`, '📸', '#E879F9', 2500);
 }
 
-function clearAllPhotoStandaloneProjects(){
-  if(!confirm('Delete ALL imported photo standalone projects? This cannot be undone.')) return;
+async function clearAllPhotoStandaloneProjects(){
+  if(!await dhConfirm('Delete ALL imported photo projects?','Every imported photo standalone project will be permanently removed. This can\'t be undone.',{confirmLabel:'Delete all',danger:true})) return;
   localStorage.removeItem('dronehub_photo_standalone');
   const stages = JSON.parse(localStorage.getItem('dronehub_photo_tracker')||'{}');
   Object.keys(stages).forEach(k=>{ if(k.startsWith('photo_standalone_')) delete stages[k]; });
@@ -2005,10 +2006,10 @@ function saveTrackerNotes(){
 // Standalone projects are fully removed (project record + tracker stage).
 // Regular quote-builder jobs ask whether to remove from tracker only or also
 // delete the billing record.
-function deleteTrackerEntry(jobId, isStandalone){
+async function deleteTrackerEntry(jobId, isStandalone){
   jobId=String(jobId);
   if(isStandalone){
-    if(!confirm('Delete this project? It will be permanently removed from the tracker.')) return;
+    if(!await dhConfirm('Delete this project?','It will be permanently removed from the tracker. This can\'t be undone.',{confirmLabel:'Delete project',danger:true})) return;
     // Remove from standalone_projects array
     const projs=getStandaloneProjects().filter(p=>String(p.id)!==jobId);
     saveStandaloneProjects(projs);
@@ -2022,13 +2023,10 @@ function deleteTrackerEntry(jobId, isStandalone){
     renderTracker();
     showDhToast('Deleted','Project removed from tracker.','✓','var(--red)',3000);
   } else {
-    // Regular job — offer two choices
-    const choice=confirm(
-      'Remove "'+jobId+'" from the tracker?\n\n' +
-      'OK = Remove from tracker only (keeps billing/invoice record)\n' +
-      'Cancel = Do nothing'
-    );
-    if(!choice) return;
+    // Regular job — removing from tracker keeps the billing/invoice record
+    const _job=typeof savedJobs!=='undefined'?savedJobs.find(j=>String(j.id)===jobId):null;
+    const _nm=_job?.name||_job?.address||'this project';
+    if(!await dhConfirm('Remove from tracker?','"'+_nm+'" will be removed from the tracker. The job and its billing/invoice record are kept.',{confirmLabel:'Remove from tracker',danger:true})) return;
     // Clear just the tracker stage — job stays in savedJobs for billing
     const stages=JSON.parse(localStorage.getItem('dronehub_tracker')||'{}');
     delete stages[jobId];
