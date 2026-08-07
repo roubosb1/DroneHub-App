@@ -523,10 +523,12 @@ function cdProjectsSectionHtml(clientId, isClientView) {
             </div>
           </div>
           <div style="padding:0 16px 14px;margin-top:auto">
-            <button onclick="cdToggleBrowse('${clientId}','${key}')" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px">
+            ${(c?.payGate&&job&&typeof getInvoiceStatus==='function'&&getInvoiceStatus(job)!=='paid')
+              ?`<button onclick="cpShowTab('invoices')" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">🔒 Pay invoice to unlock files</button>`
+              :`<button onclick="cdToggleBrowse('${clientId}','${key}')" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               Browse Files
-            </button>
+            </button>`}
           </div>
           <div id="cd-browse-${key}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;background:var(--navy-mid)"></div>
         </div>`;

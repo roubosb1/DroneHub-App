@@ -1860,6 +1860,7 @@ function renderTracker(){
           style="width:100%;font-size:11px;color:${_hasNotes?txtMuted:'rgba(255,255,255,.28)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px;padding:2px 4px;border-radius:4px;transition:background .15s"
           onmouseover="this.style.background='rgba(91,141,239,.12)'"
           onmouseout="this.style.background='transparent'">${_hasNotes?_notesDisplay:'<span style="font-size:10px">Add notes…</span>'}</div>
+        ${ts.clientNotes?`<div title="${String(ts.clientNotes).replace(/"/g,'&quot;')}" style="font-size:10px;color:#A78BFA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 4px">💬 Client: ${String(ts.clientNotes).replace(/</g,'&lt;')}</div>`:''}
       </td>
       <td style="padding:4px 4px 4px 6px;overflow:hidden">
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">

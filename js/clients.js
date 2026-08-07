@@ -1550,6 +1550,13 @@ function editClientInfo(clientId){
   modal.innerHTML=`<div style="background:var(--navy-card);border-radius:14px;padding:24px;max-width:460px;width:90%;border:1px solid var(--border-bright)">
     <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:16px">Edit client info</div>
     ${val('name','Full name')}${val('company','Company / brokerage')}${val('email','email@example.com')}${val('phone','905-555-0100')}${val('address','123 Main St, City, ON')}
+    <label style="display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:11px 13px;background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.3);border-radius:10px;cursor:pointer">
+      <input type="checkbox" id="edit-client-paygate" ${c.payGate?'checked':''} style="accent-color:var(--amber);margin-top:2px">
+      <span>
+        <span style="display:block;font-size:12px;font-weight:700;color:var(--amber)">Require payment before downloads</span>
+        <span style="display:block;font-size:11px;color:var(--muted);margin-top:2px">Finished files stay locked in their portal until the project's invoice is marked paid. Leave off for trusted clients.</span>
+      </span>
+    </label>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button onclick="saveClientEdit('${clientId}',this.closest('[style*=fixed]'))" style="padding:7px 20px;border-radius:16px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer">Save ✓</button>
       <button onclick="this.closest('[style*=fixed]').remove()" style="padding:7px 14px;border-radius:16px;border:1px solid var(--border);background:var(--navy-lift);color:var(--muted);font-size:12px;cursor:pointer">Cancel</button>
@@ -1565,6 +1572,8 @@ function saveClientEdit(clientId, modal){
     const el=document.getElementById('edit-client-'+f);
     if(el) c[f]=el.value.trim();
   });
+  const pg=document.getElementById('edit-client-paygate');
+  if(pg) c.payGate=pg.checked;
   saveClientsToStorage();
   syncClientToSalesCRM(c); // push changes to CRM Contacts → Existing Clients
   modal.remove();
@@ -2151,6 +2160,20 @@ function cpProfilePhotoSelected(input){
   reader.readAsDataURL(file);
 }
 
+// Client note on a production project — lands on the tracker (visible to the
+// editors) and pings the ops team
+function cpSaveProjectNote(jobId){
+  const el=document.getElementById('cp-pnote-'+jobId);
+  if(!el) return;
+  const val=el.value.trim();
+  const ts=getTrackerStage(jobId);
+  setTrackerStage(jobId,{...ts,clientNotes:val,clientNotesAt:new Date().toISOString()});
+  const j=savedJobs.find(x=>String(x.id)===String(jobId));
+  const c=clients.find(cl=>cl.id===cpActiveClientId);
+  try{ addSocialNotification(jobId,(c?.name||'A client')+' added editing notes on "'+(j?.name||'a project')+'" — check the tracker','client_note'); }catch(e){}
+  try{ showDhToast('Notes sent to your editor','They\'ll see it on the project right away.','✓','var(--green)',3000); }catch(e){}
+}
+
 function cpSaveClientProfile(){
   const c=clients.find(cl=>cl.id===cpActiveClientId);
   if(!c){try{showDhToast('Profile not found','Ask DroneHub to link your account','⚠','var(--orange)',4000);}catch(e){}return;}
@@ -2318,26 +2341,67 @@ async function cpShowTab(tab){
       in_progress:{label:'Currently editing',color:'var(--blue-bright)',bg:'rgba(91,141,239,.12)'},
       review:{label:'In final review',color:'#A78BFA',bg:'rgba(139,92,246,.12)'},
     };
-    html=`<div class="card">
-      <div class="section-label" style="margin-bottom:12px;display:flex;align-items:center;gap:6px">${_icon('clipboard',14)} Your video & photo progress</div>
-      ${trackerJobs.length?trackerJobs.map(j=>{
-        const ts=getTrackerStage(j.id);
-        const ss=STATUS_STYLES2[ts.editStatus||'ready']||STATUS_STYLES2.ready;
-        return `<div style="padding:14px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px">${j.name}</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${j.date}${j.address?' · '+j.address:''}</div>
-          <div style="padding:8px 14px;border-radius:8px;background:${ss.bg};display:inline-block;margin-bottom:8px">
-            <span style="font-size:12px;font-weight:700;color:${ss.color}">${ss.label}</span>
+    // ── My Videos: mini project tracker (Upcoming / Completed, like ops) ────
+    const _isDone=j=>{const ts=getTrackerStage(j.id);return j.status==='completed'||ts.editStatus==='finals_sent';};
+    const _upJobs=trackerJobs.filter(j=>!_isDone(j));
+    const _doneJobs2=trackerJobs.filter(_isDone).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const _pTab=window._cpProdTab||(_upJobs.length?'upcoming':'completed');
+    const _pTabBtn=(k,l,n)=>`<button onclick="window._cpProdTab='${k}';cpShowTab('production')" style="padding:8px 18px;border-radius:20px;border:1px solid ${_pTab===k?'var(--blue)':'var(--border)'};background:${_pTab===k?'rgba(91,141,239,.15)':'transparent'};color:${_pTab===k?'var(--blue-bright)':'var(--muted)'};font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">${l}${n?` <span style="background:${_pTab===k?'var(--blue)':'var(--border-bright)'};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px">${n}</span>`:''}</button>`;
+    // Coarse pipeline for the client's progress bar
+    const _stageIdx=st=>({footage_pending:1,ready:2,in_progress:2,draft1_progress:2,draft2_progress:2,draft3_progress:2,draft2_ready:2,draft3_ready:2,draft_plus_ready:2,draft_plus_progress:2,draft1:3,draft2:3,draft3:3,draft_plus:3,review:3,finals_sent:4})[st]??2;
+    const _stageBar=st=>{const steps=['Booked','Filming','Editing','Your review','Finals'];const cur=_stageIdx(st);
+      return `<div style="display:flex;align-items:center;gap:0;margin:10px 0 4px">${steps.map((s,i)=>`
+        ${i?`<div style="flex:1;height:2px;background:${i<=cur?'var(--blue)':'var(--border)'}"></div>`:''}
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="width:9px;height:9px;border-radius:50%;background:${i<=cur?(i===cur?'var(--blue-bright)':'var(--blue)'):'var(--border)'};${i===cur?'box-shadow:0 0 0 3px rgba(91,141,239,.25)':''}"></span>
+          <span style="font-size:9px;font-weight:700;color:${i<=cur?'var(--offwhite)':'var(--muted)'};white-space:nowrap">${s}</span>
+        </div>`).join('')}</div>`;};
+    const _payLocked=j=>!!c.payGate&&getInvoiceStatus(j)!=='paid';
+    const _prodCard=(j,done)=>{
+      const ts=getTrackerStage(j.id);
+      const ss=STATUS_STYLES2[ts.editStatus||'ready']||STATUS_STYLES2.ready;
+      const locked=done&&_payLocked(j);
+      const reviewBtn=(()=>{const DRAFT_STATUSES=['draft1','draft2','draft3','draft_plus','finals_sent'];if(DRAFT_STATUSES.includes(ts.editStatus||'')){const vd=videoDraftsLoad().find(d=>d.jobId===j.id);if(vd){const lastDraft=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;if(lastDraft&&(lastDraft.status==='awaiting_review'||lastDraft.status==='changes_requested'||vd.status==='awaiting_review'||vd.status==='changes_requested')){return `<button onclick="cpOpenDraftReview('${j.id}')" style="padding:7px 16px;border-radius:10px;border:1px solid #7C3AED;background:rgba(124,58,237,.15);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer;animation:pulse 2s infinite">▶ Review draft & request edits</button>`;}}};return '';})();
+      return `<div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+          <div style="min-width:0;flex:1">
+            <div style="font-size:14px;font-weight:700;color:var(--white)">${j.name}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${j.date}${j.address&&j.address!=='(no address)'?' · '+j.address:''}</div>
           </div>
-          ${ts.completionDate?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Estimated completion: ${ts.completionDate}</div>`:''}
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${(()=>{const DRAFT_STATUSES=['draft1','draft2','draft3','draft_plus','finals_sent'];if(DRAFT_STATUSES.includes(ts.editStatus||'')){const vd=videoDraftsLoad().find(d=>d.jobId===j.id);if(vd){const lastDraft=vd.drafts&&vd.drafts.length?vd.drafts[vd.drafts.length-1]:null;if(lastDraft&&(lastDraft.status==='awaiting_review'||lastDraft.status==='changes_requested'||vd.status==='awaiting_review'||vd.status==='changes_requested')){return `<button onclick="cpOpenDraftReview('${j.id}')" style="padding:6px 14px;border-radius:10px;border:1px solid #7C3AED;background:rgba(124,58,237,.15);color:#A78BFA;font-size:12px;font-weight:700;cursor:pointer;animation:pulse 2s infinite">▶ Review Draft</button>`;}}};return '';})()}
-            ${ts.frameioLink?`<a href="${ts.frameioLink}" target="_blank" style="padding:6px 14px;border-radius:10px;border:1px solid var(--purple);background:var(--purple-bg);color:#A78BFA;font-size:12px;font-weight:700;text-decoration:none">Review & give feedback on Frame.io</a>`:''}
-            ${ts.downloadLink?`<a href="${ts.downloadLink}" target="_blank" style="padding:6px 14px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;text-decoration:none">↓ Download your finals</a>`:''}
+          <span style="padding:5px 12px;border-radius:8px;background:${ss.bg};font-size:11px;font-weight:700;color:${ss.color};flex-shrink:0">${ss.label}</span>
+        </div>
+        ${done?'':_stageBar(ts.editStatus||'ready')}
+        ${!done&&ts.completionDate?`<div style="font-size:11px;color:var(--muted);margin-top:6px">Estimated completion: ${ts.completionDate}</div>`:''}
+        ${done?`
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          ${locked
+            ?`<button onclick="window._cpProdTab='completed';cpShowTab('invoices')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer">🔒 Pay invoice to unlock downloads</button>`
+            :(ts.downloadLink||ts.filemailLink||j.driveLink?`<a href="${ts.downloadLink||ts.filemailLink||j.driveLink}" target="_blank" rel="noopener" style="padding:8px 16px;border-radius:10px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:12px;font-weight:700;text-decoration:none">↓ Download files</a>`:`<span style="padding:8px 16px;border-radius:10px;border:1px solid var(--border);color:var(--muted);font-size:12px">Files being prepared…</span>`)}
+          <button onclick="cpViewInvoice('${j.id}')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">View invoice</button>
+          ${locked?'':''}
+        </div>
+        ${locked?`<div style="font-size:11px;color:var(--muted);margin-top:8px">Your finals are ready — they unlock automatically as soon as the invoice for this project is paid.</div>`:''}`
+        :`
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${reviewBtn}
+          ${ts.frameioLink?`<a href="${ts.frameioLink}" target="_blank" style="padding:7px 16px;border-radius:10px;border:1px solid var(--purple);background:var(--purple-bg);color:#A78BFA;font-size:12px;font-weight:700;text-decoration:none">Review on Frame.io</a>`:''}
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Notes for our editors — music, style, must-have shots…</div>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <textarea id="cp-pnote-${j.id}" rows="2" placeholder="e.g. Use upbeat music, lead with the pool shot, logo at the end…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:10px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;font-family:var(--font)">${(ts.clientNotes||'').replace(/</g,'&lt;')}</textarea>
+            <button onclick="cpSaveProjectNote('${j.id}')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">Send</button>
           </div>
-        </div>`;
-      }).join('')
-      :'<div style="color:var(--muted);font-size:12px;padding:12px 0">No projects in production yet.</div>'}
+        </div>`}
+      </div>`;
+    };
+    html=`<div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+        ${_pTabBtn('upcoming','Upcoming',_upJobs.length)}${_pTabBtn('completed','Completed',_doneJobs2.length)}
+      </div>
+      ${_pTab==='upcoming'
+        ?(_upJobs.length?_upJobs.map(j=>_prodCard(j,false)).join(''):'<div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:34px">Nothing in production right now — book a shoot to get started!</div>')
+        :(_doneJobs2.length?_doneJobs2.map(j=>_prodCard(j,true)).join(''):'<div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:34px">Completed projects will appear here.</div>')}
     </div>`;
   }
   else if(tab==='spending'){
@@ -2524,10 +2588,12 @@ async function cpShowTab(tab){
               <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.address||j.name}</div>
               <div style="font-size:11px;color:var(--muted)">${j.date}${jobTagsCP(j)?' · '+jobTagsCP(j):''}</div>
             </div>
-            <a href="${j.driveLink}" target="_blank" rel="noopener"
+            ${(c.payGate&&getInvoiceStatus(j)!=='paid')
+              ?`<button onclick="cpShowTab('invoices')" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🔒 Pay to unlock</button>`
+              :`<a href="${j.driveLink}" target="_blank" rel="noopener"
               style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#0066da,#00ac47);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">
               Open Files ↗
-            </a>
+            </a>`}
           </div>`).join('')}
         </div>
         <div id="cp-drive-no-results" style="display:none;text-align:center;padding:16px;color:var(--muted);font-size:12px">No properties match your search</div>
