@@ -198,7 +198,10 @@ function setCalView(view,dateStr){
 // orphans left behind when a job was later re-dated or double-synced).
 function _calJobGcalIds(){
   const ids=new Set();
-  (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{ if(j.gcalEventId) ids.add(String(j.gcalEventId)); });
+  (typeof savedJobs!=='undefined'?savedJobs:[]).forEach(j=>{
+    if(j.gcalEventId) ids.add(String(j.gcalEventId));
+    if(j.gcalOwnerEventId) ids.add(String(j.gcalOwnerEventId)); // copy on the owner's calendar
+  });
   return ids;
 }
 function _calIsJobEcho(ev,ownIds){

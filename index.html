@@ -1040,12 +1040,8 @@
     </div>
     <!-- Shoot date/time/duration now live per-property under the Services card -->
     <div class="job-form-date-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div>
-        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Videographer</label>
-        <select id="job-videographer-input" onfocus="populateJobVideographerSel()" style="width:100%;box-sizing:border-box;padding:6px 10px;border:0.5px solid #ccc;border-radius:8px;font-size:13px;background:#242D42;color:#E8ECF8">
-          <option value="">— Videographer (optional) —</option>
-        </select>
-      </div>
+      <!-- Videographer comes from the "Assign contractors" card at the top of the
+           quote — it feeds payouts, the tracker, and Google Calendar targeting -->
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Currency</label>
         <!-- Auto-set by market; kept for saveJob() to read -->
@@ -4516,9 +4512,9 @@
 <script src="js/tracker.js?v=57"></script>
 <script src="js/admin.js"></script>
 <script src="js/finance.js?v=18"></script>
-<script src="js/calendar.js?v=83"></script>
+<script src="js/calendar.js?v=84"></script>
 <script src="js/team.js?v=55"></script>
-<script src="js/jobs.js?v=29"></script>
+<script src="js/jobs.js?v=30"></script>
 <script src="js/clients.js?v=87"></script>
 <script src="js/client-drive.js?v=15"></script>
 <script src="js/reel-rumble.js"></script>

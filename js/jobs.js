@@ -337,7 +337,7 @@ function saveCartJob(){
   const job={
     id:Date.now(), name, date:first.date,
     shootTime:first.time||'', shootEndTime:_shootEnd,
-    videographer:document.getElementById('job-videographer-input')?.value||'',
+    videographer:_selVideographerName(),
     duration:first.durationH||'2',
     currency:document.getElementById('job-currency-input')?.value||(isUS?'usd':'cad'),
     market,
@@ -490,7 +490,7 @@ function saveJob(){
     name,date,
     shootTime:_shootTime,
     shootEndTime:_shootEnd,
-    videographer:document.getElementById('job-videographer-input')?.value||'',
+    videographer:_selVideographerName(),
     duration:document.getElementById('job-duration-input')?.value||'2',
     currency:document.getElementById('job-currency-input')?.value||'cad',
     market,
@@ -3261,6 +3261,26 @@ async function pushJobToGcal(job,videographerName){
     delete (window._gcalBusy||{})[job.id];
     gcalLog({ok:true,result:'Created event on '+target.name+"'s Google Calendar",job:job.name,target:target.name});
     showDhToast('Synced to Google Calendar',job.name+(job.shootTime?' · '+job.shootTime:''),'✅','var(--green)',3000);
+    // Also drop a copy on the saver's own calendar when the shoot went to
+    // someone else's — the owner sees every booking on their own Google/phone
+    try{
+      const _sess=gateGetSession();
+      const _own=gcalConnectedTarget(_sess?.name||'');
+      if(_own&&String(_own.id)!==String(target.id)&&!job.gcalOwnerEventId){
+        const res2=await gcalApiCall('create',_own.id,{
+          title:job.name,
+          date:job.date,endDate:job.date,
+          startTime:job.shootTime||'',endTime:job.shootEndTime||job.shootTime||'',
+          timeZone:jobTimezone(job),
+          description:'Shoot — '+(job.address||'')+(job.clientName?' · Client: '+job.clientName:'')+(videographerName?'\nVideographer: '+videographerName:''),
+        });
+        if(res2?.gcalEventId){
+          const idx2=savedJobs.findIndex(x=>String(x.id)===String(job.id));
+          if(idx2>-1){savedJobs[idx2].gcalOwnerEventId=res2.gcalEventId;saveJobsToStorage();}
+          gcalLog({ok:true,result:'Copy created on '+_own.name+"'s calendar (owner)",job:job.name,target:_own.name});
+        }
+      }
+    }catch(e){ gcalLog({ok:false,result:'Owner-copy failed: '+(e.message||''),job:job.name,target:'owner'}); }
   }catch(e){
     console.warn('[pushJobToGcal]',e.message);
     gcalLog({ok:false,result:'Error: '+(e.message||'unknown'),job:job.name,target:videographerName||''});
@@ -3268,15 +3288,17 @@ async function pushJobToGcal(job,videographerName){
   }
 }
 
-// Populate the quote form's videographer dropdown from the team roster
-function populateJobVideographerSel(){
-  const sel=document.getElementById('job-videographer-input');
-  if(!sel) return;
-  const cur=sel.value;
-  const members=getAdminTeamMembers();
-  sel.innerHTML='<option value="">— Videographer (optional) —</option>'+members.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
-  if(cur) sel.value=cur;
+// Videographer for a new job comes from the "Assign contractors" card at the
+// top of the quote pane (single source of truth — feeds payouts, tracker,
+// and Google Calendar targeting).
+function _selVideographerName(){
+  const key=document.getElementById('sel-videographer')?.value||'';
+  if(key&&typeof CONTRACTORS!=='undefined'&&CONTRACTORS[key]) return CONTRACTORS[key].name||'';
+  return '';
 }
+
+// Legacy no-op — the Job details videographer dropdown was removed
+function populateJobVideographerSel(){}
 
 
 // After editing a job, update its Google event (or create it if none exists)
@@ -3304,6 +3326,23 @@ async function syncEditedJobToGcal(job){
       });
       gcalLog({ok:true,result:'Updated event on '+target.name+"'s Google Calendar",job:job.name,target:target.name});
       showDhToast('Google Calendar updated',job.name,'✅','var(--green)',2500);
+      // keep the owner's copy in step too
+      if(job.gcalOwnerEventId){
+        try{
+          const _sess=gateGetSession();
+          const _own=gcalConnectedTarget(_sess?.name||'');
+          if(_own&&String(_own.id)!==String(target.id)){
+            await gcalApiCall('update',_own.id,{
+              gcalEventId:job.gcalOwnerEventId,
+              title:job.name,date:job.date,endDate:job.date,
+              startTime:job.shootTime||'',endTime:job.shootEndTime||job.shootTime||'',
+              timeZone:jobTimezone(job),
+              description:'Shoot — '+(job.address||'')+(job.clientName?' · Client: '+job.clientName:''),
+            });
+            gcalLog({ok:true,result:'Owner copy updated on '+_own.name+"'s calendar",job:job.name,target:_own.name});
+          }
+        }catch(e){ gcalLog({ok:false,result:'Owner-copy update failed: '+(e.message||''),job:job.name,target:'owner'}); }
+      }
     } else {
       pushJobToGcal(job,vName);
     }
