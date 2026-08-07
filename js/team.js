@@ -1597,11 +1597,14 @@ function renderTracker(){
   // keep moving ahead of them.
   const _trkToday=new Date().toISOString().slice(0,10);
   const _rushActive=(j)=>{const ts=_getStage(j.id);return (ts.rush&&(!j.date||j.date<=_trkToday))?1:0;};
+  // Queue key = shoot date + time, so several same-day shoots keep their
+  // filming order (untimed shoots fall after the timed ones that day)
+  const _shootKey=(j)=>(j.date||'9999-99-99')+'T'+(j.shootTime||j.preferredTime||'99:99');
   jobs.sort((a,b)=>{
     const tsA=_getStage(a.id);
     const tsB=_getStage(b.id);
     if(_trackerTab==='completed'){
-      return (b.date||'').localeCompare(a.date||'');
+      return _shootKey(b).localeCompare(_shootKey(a));
     }
     const rDiff=_rushActive(b)-_rushActive(a);
     if(rDiff) return rDiff;
@@ -1611,8 +1614,8 @@ function renderTracker(){
       const decB=tsB.clientDecisionAt||tsB.updatedAt||b.date||'';
       return decA.localeCompare(decB);
     }
-    // Upcoming: earliest shoot date first (undated jobs sink to the bottom)
-    return (a.date||'9999').localeCompare(b.date||'9999');
+    // Upcoming: earliest shoot date & time first (undated jobs sink to the bottom)
+    return _shootKey(a).localeCompare(_shootKey(b));
   });
 
   // Apply saved manual order for upcoming tab

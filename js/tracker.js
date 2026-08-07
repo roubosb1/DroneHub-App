@@ -360,11 +360,13 @@ function mobTrkRenderCards(){
   // queue once their shoot day has arrived (filmed). Done tab: newest first.
   const _trkToday=new Date().toISOString().slice(0,10);
   const _rushActive=(j)=>{const ts=_getStage(j.id);return (ts.rush&&(!j.date||j.date<=_trkToday))?1:0;};
+  // Queue key = shoot date + time so several same-day shoots keep filming order
+  const _shootKey=(j)=>(j.date||'9999-99-99')+'T'+(j.shootTime||j.preferredTime||'99:99');
   jobs.sort((a,b)=>{
-    if(_mobTrkTab==='completed') return (b.date||'').localeCompare(a.date||'');
+    if(_mobTrkTab==='completed') return _shootKey(b).localeCompare(_shootKey(a));
     const rDiff=_rushActive(b)-_rushActive(a);
     if(rDiff) return rDiff;
-    return (a.date||'9999').localeCompare(b.date||'9999');
+    return _shootKey(a).localeCompare(_shootKey(b));
   });
 
   if(!jobs.length){
