@@ -911,6 +911,7 @@ function openJobDetail(jobId){
       <div>
         <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:3px">${j.name}</div>
         <div style="font-size:11px;color:var(--muted)">${j.date}${j.shootTime?' at '+j.shootTime:''} · ${j.address||''}</div>
+        ${j.address&&j.address!=='(no address)'?`<a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.address)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:4px 12px;border-radius:14px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;text-decoration:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Directions from my location</a>`:''}
         ${j.clientName?`<div style="font-size:11px;color:var(--green);margin-top:2px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${j.clientName}</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
