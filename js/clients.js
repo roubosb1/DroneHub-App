@@ -2235,6 +2235,7 @@ async function cpShowTab(tab){
   if(_cpContentEl){
     if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
     else if(tab==='files'||tab==='projects'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
+    else if(tab==='profile'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0 0 60px';_cpContentEl.style.margin='0';}
     else if(tab==='booking'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
     else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
   }
@@ -2917,8 +2918,8 @@ async function cpShowTab(tab){
     }
     if(_pfTab!=='settings'){
       html=`
-      <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
-        <div style="position:relative;height:190px;background:${_cover?`url('${_cover}') center/cover no-repeat`:'linear-gradient(135deg,#1a2440,#2a3860 55%,#1f2c4d)'}">
+      <div class="card" style="margin:0 0 14px;padding:0;overflow:hidden;border-radius:0;border-left:none;border-right:none;border-top:none">
+        <div style="position:relative;height:220px;background:${_cover?`url('${_cover}') center/cover no-repeat`:'linear-gradient(135deg,#1a2440,#2a3860 55%,#1f2c4d)'}">
           <div style="position:absolute;right:12px;top:12px;display:flex;gap:6px">
             <button onclick="forumPickCover('${_pfMail}',()=>cpShowTab('profile'))" style="padding:6px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.35);background:rgba(10,14,26,.55);color:#fff;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px)">${_cover?'Change cover':'Add cover photo'}</button>
             ${_cover?`<button onclick="(function(){const m=forumProfilesLoad();if(m['${_pfMail}'])delete m['${_pfMail}'].cover;forumProfilesSave(m);cpShowTab('profile');})()" style="padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:rgba(10,14,26,.55);color:rgba(255,255,255,.75);font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px)">✕</button>`:''}
@@ -2946,9 +2947,10 @@ async function cpShowTab(tab){
           </div>
         </div>
       </div>
-      <div class="card">${_pfBody}</div>`;
+      <div style="padding:0 28px"><div class="card">${_pfBody}</div></div>`;
     } else {
       html=`
+      <div style="max-width:900px;margin:0 auto;padding:24px 20px 0">
       <div class="card" style="margin-bottom:14px;padding:12px 18px">
         <div style="display:flex;gap:4px;align-items:center">
           <button onclick="window._cpPfTab='portfolio';cpShowTab('profile')" style="padding:6px 12px;border:none;background:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">← Back to profile</button>
@@ -3003,6 +3005,7 @@ async function cpShowTab(tab){
         <div style="display:flex;justify-content:flex-end">
           <button onclick="cpChangePassword()" id="cp-pw-btn" style="padding:10px 24px;border-radius:12px;border:1px solid var(--blue);background:rgba(91,141,239,.12);color:var(--blue-bright);font-size:13px;font-weight:700;cursor:pointer">Update password</button>
         </div>
+      </div>
       </div>`;
     }
   }
