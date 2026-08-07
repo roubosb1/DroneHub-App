@@ -2292,6 +2292,7 @@ async function cpShowTab(tab){
     if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
     else if(tab==='files'||tab==='projects'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
     else if(tab==='profile'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0 0 60px';_cpContentEl.style.margin='0';}
+    else if(tab==='production'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
     else if(tab==='booking'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
     else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
   }
@@ -2391,20 +2392,30 @@ async function cpShowTab(tab){
       const notesBtn=done?'':_btn('✎ Notes',`cpToggleNotesRow('${j.id}')`,'var(--blue-bright)','rgba(91,141,239,.1)','var(--blue)');
       const invBtn=_btn('Invoice',`cpViewInvoice('${j.id}')`,'var(--offwhite)','var(--navy-lift)','var(--border-bright)');
       const filesBtn=done?_btn('↓ Files',`cpFilesClick('${j.id}')`,'var(--green)','var(--green-bg)','var(--green)'):'';
+      const vg=(j.videographer||ts.videographer||'').trim();
+      const vgPill=vg
+        ?`<span style="padding:4px 12px;border-radius:14px;background:rgba(91,141,239,.18);color:var(--blue-bright);font-size:11px;font-weight:700;white-space:nowrap">${vg}</span>`
+        :`<span style="padding:4px 12px;border-radius:14px;background:rgba(45,212,191,.15);color:#2DD4BF;font-size:11px;font-weight:800;white-space:nowrap">TBD</span>`;
+      const noteTxt=(ts.clientNotes||'').trim();
+      const notesCell=done
+        ?`<span style="font-size:11px;color:var(--muted)">${noteTxt?noteTxt.replace(/</g,'&lt;'):'—'}</span>`
+        :`<div onclick="cpToggleNotesRow('${j.id}')" title="${noteTxt?noteTxt.replace(/"/g,'&quot;'):'Click to add notes for our editors'}" style="font-size:11px;color:${noteTxt?'var(--offwhite)':'rgba(255,255,255,.35)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;padding:2px 4px;border-radius:4px" onmouseover="this.style.background='rgba(91,141,239,.12)'" onmouseout="this.style.background='transparent'">${noteTxt?noteTxt.replace(/</g,'&lt;'):'Add notes…'}</div>`;
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:12px 12px 12px 16px;font-size:11px;font-weight:800;color:${done?'var(--green)':'var(--amber)'};white-space:nowrap;font-family:${done?'monospace':'var(--font)'}">${pid}</td>
         <td style="padding:12px;min-width:180px">
           <div style="font-size:13px;font-weight:700;color:var(--white)">${j.address&&j.address!=='(no address)'?j.address:j.name}</div>
           ${j.address&&j.address!=='(no address)'&&j.name!==j.address?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${j.name}</div>`:''}
         </td>
-        <td style="padding:12px;font-size:12px;color:var(--offwhite);white-space:nowrap">${j.date||''}</td>
+        <td style="padding:12px;font-size:12px;color:var(--offwhite);white-space:nowrap">${j.date||''}${j.shootTime&&!done?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${j.shootTime}</div>`:''}</td>
+        <td style="padding:12px;text-align:center">${vgPill}</td>
         <td style="padding:12px"><span style="padding:4px 12px;border-radius:8px;background:${ss.bg};font-size:11px;font-weight:700;color:${ss.color};white-space:nowrap">${ss.label}</span>
           ${!done&&ts.completionDate?`<div style="font-size:10px;color:var(--muted);margin-top:4px">Est. ${ts.completionDate}</div>`:''}
         </td>
+        <td style="padding:12px">${notesCell}</td>
         <td style="padding:12px 16px 12px 12px;text-align:right"><div style="display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${reviewBtn}${notesBtn}${invBtn}${filesBtn}</div></td>
       </tr>
       ${done?'':`<tr id="cp-notesrow-${j.id}" style="display:none;border-bottom:1px solid var(--border);background:var(--navy-mid)">
-        <td colspan="5" style="padding:10px 16px">
+        <td colspan="7" style="padding:10px 16px">
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Notes for our editors — music, style, must-have shots…</div>
           <div style="display:flex;gap:8px;align-items:flex-start">
             <textarea id="cp-pnote-${j.id}" rows="2" placeholder="e.g. Use upbeat music, lead with the pool shot, logo at the end…" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-bright);border-radius:10px;font-size:12px;background:var(--navy-lift);color:var(--white);resize:vertical;font-family:var(--font)">${(ts.clientNotes||'').replace(/</g,'&lt;')}</textarea>
@@ -2420,12 +2431,14 @@ async function cpShowTab(tab){
         ${_pTabBtn('upcoming','Upcoming',_upJobs.length)}${_pTabBtn('completed','Completed',_doneJobs2.length)}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
-        ${_list.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:680px">
+        ${_list.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:900px">
           <thead><tr style="border-bottom:1px solid var(--border)">
             <th style="padding:10px 12px 10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">${_pTab==='upcoming'?'Queue':'Project ID'}</th>
             <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Address / Project</th>
             <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Shoot date</th>
+            <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Videographer</th>
             <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Status</th>
+            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Notes</th>
             <th style="padding:10px 16px 10px 12px;text-align:right;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em">Actions</th>
           </tr></thead>
           <tbody>${_rowsFor(_list,_pTab==='completed')}</tbody>
