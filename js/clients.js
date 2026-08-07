@@ -2541,7 +2541,8 @@ async function cpShowTab(tab){
     ${!cJobs.length?'<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No projects yet.</div>':''}`;
   }
   else if(tab==='invoices'){
-    const inv=cJobs.filter(j=>j.status==='confirmed'||j.status==='completed');
+    // $0 imported historical jobs aren't real invoices — keep them out entirely
+    const inv=cJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&j.grand>0);
     const paid=inv.filter(j=>getInvoiceStatus(j)==='paid');
     const unpaid=inv.filter(j=>getInvoiceStatus(j)!=='paid');
     html=`<div>
@@ -4605,6 +4606,8 @@ function setInvoiceFilter(f){
 function getInvoiceStatus(job){
   // A job has been invoiced if it is confirmed or completed
   if(job.status==='quoted') return null;
+  // $0 jobs (imported historical projects) have nothing owing — always paid
+  if(!(job.grand>0)) return 'paid';
   if(job.status==='completed'&&job.markedPaid) return 'paid';
   // Calculate due date: use job.invoicedAt if set, otherwise job.date + estimate
   const refDate=job.invoicedAt?new Date(job.invoicedAt):new Date(job.date||Date.now());
