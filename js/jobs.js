@@ -1481,6 +1481,19 @@ function openEditJob(jobId){
   const _plJob=savedJobs.find(x=>String(x.id)===String(jobId));
   window._ejPlines=JSON.parse(JSON.stringify(_plJob?.propertyLines||[]));
   setTimeout(ejRenderPlines,50);
+  // Additional properties (quote-cart jobs, or legacy listing extraProps) —
+  // edited as a working copy, written back on Save
+  if(_plJob?.propertyQuotes&&_plJob.propertyQuotes.length>1){
+    window._ejXPropsKind='pq';
+    window._ejXPropsCopy=JSON.parse(JSON.stringify(_plJob.propertyQuotes.slice(1)));
+  } else if(_plJob?.usData?.extraProps&&_plJob.usData.extraProps.length){
+    window._ejXPropsKind='xp';
+    window._ejXPropsCopy=JSON.parse(JSON.stringify(_plJob.usData.extraProps));
+  } else {
+    window._ejXPropsKind=null;
+    window._ejXPropsCopy=[];
+  }
+  setTimeout(ejRenderXProps,50);
   const job=savedJobs.find(j=>String(j.id)===String(jobId));
   if(!job){alert('Job not found.');return;}
   editingJobId=jobId;
@@ -1667,8 +1680,6 @@ function recalcEditUS(){
       parts.push(`Listing (${tl[_ejUsState.listingTier]}) $${base.toLocaleString()}`);
       {const _xr=Math.max(0,(_ejUsState.listingReelCount||1)-1);
       if(_xr>0){const rr=p.reelAddon||400;const rt=_xr*rr;base+=rt;parts.push(`Extra reels ×${_xr} +$${rt.toLocaleString()}`);}}
-      {const _xp=(_ejUsState.extraProps||[]).filter(x=>x.tier);
-      if(_xp.length){const xt=_xp.reduce((s,x)=>s+usListingPropPrice(p,x),0);base+=xt;parts.push(`+${_xp.length} more propert${_xp.length===1?'y':'ies'} +$${xt.toLocaleString()}`);}}
       break;
     case 'social':
       if(!_ejUsState.socialTier) return noSel('← Select social package tier');
@@ -1706,6 +1717,10 @@ function recalcEditUS(){
   if(_ejUsState.addons.sunrise)   {const a=p.addons.sunrise;   base+=a;parts.push(`Sunrise/Sunset +$${a.toLocaleString()}`);}
   if(_ejUsState.addons.photoHDR)  {const a=p.addons.photoHDR;  base+=a;parts.push(`Photo HDR +$${a.toLocaleString()}`);}
   if(_ejUsState.addons.photoFlash){const a=p.addons.photoFlash;base+=a;parts.push(`Flash Photo +$${a.toLocaleString()}`);}
+
+  // Additional properties on this job (quote-cart / legacy multi-listing)
+  {const _xl=window._ejXPropsKind?(window._ejXPropsCopy||[]):[];
+  if(_xl.length){const xt=_xl.reduce((s,x)=>s+_ejXPropAmount(x),0);base+=xt;parts.push(`+${_xl.length} more propert${_xl.length===1?'y':'ies'} +$${xt.toLocaleString()}`);}}
 
   // Custom adj
   const adjAmt=parseFloat(document.getElementById('ej-adj-amount')?.value)||0;
@@ -1782,6 +1797,10 @@ function recalcEdit(){
   total+=job.driveCost||0;
   if(job.driveCost>0) parts.push(`Drive ${fmt(job.driveCost)}`);
 
+  // Additional properties on this job (quote-cart multi-property saves)
+  {const _xl=window._ejXPropsKind?(window._ejXPropsCopy||[]):[];
+  if(_xl.length){const xt=_xl.reduce((s,x)=>s+(x.amount||0),0);total+=xt;parts.push(`+${_xl.length} more propert${_xl.length===1?'y':'ies'} ${fmt(xt)}`);}}
+
   const orig=job.grand||0;
   const delta=total-orig;
   document.getElementById('ej-new-total').textContent=fmt(total);
@@ -1813,7 +1832,6 @@ function saveEditJob(){
         if(!_ejUsState.listingTier){alert('Please select a property size tier.');return;}
         total=p.listing[_ejUsState.listingTier]||0;
         total+=Math.max(0,(_ejUsState.listingReelCount||1)-1)*(p.reelAddon||400);
-        (_ejUsState.extraProps||[]).forEach(x=>{ total+=usListingPropPrice(p,x); });
         break;
       case 'social':
         if(!_ejUsState.socialTier){alert('Please select a social package tier.');return;}
@@ -1897,6 +1915,17 @@ function saveEditJob(){
   // property line items ride on top of the package total
   job.propertyLines=(window._ejPlines||[]).filter(l=>l.address||((parseFloat(l.rate)||0)*(parseInt(l.qty)||0))>0);
   total+=ejPlinesSum();
+  // Write edited additional-property schedules back onto the job, and count
+  // their value in the new total (main package above only covers property 1)
+  if(window._ejXPropsKind==='pq'&&job.propertyQuotes&&job.propertyQuotes.length){
+    job.propertyQuotes=[job.propertyQuotes[0],...(window._ejXPropsCopy||[])];
+  } else if(window._ejXPropsKind==='xp'&&job.usData){
+    job.usData.extraProps=window._ejXPropsCopy||[];
+  }
+  if(window._ejXPropsKind){
+    const _xpp=US_MARKET_PRICING[(typeof _ejUsState!=='undefined'&&_ejUsState&&_ejUsState.market)||'other_us']||US_MARKET_PRICING['other_us'];
+    total+=(window._ejXPropsCopy||[]).reduce((s,x)=>s+(x.amount!=null?x.amount:usListingPropPrice(_xpp,x)),0);
+  }
   ejSyncPlineProjects(job);
   if(isUSJob) usSyncExtraPropProjects(job);
   if(job.propertyQuotes&&job.propertyQuotes.length) syncCartChildJobs(job);
@@ -1912,6 +1941,11 @@ function saveEditJob(){
     const [_h,_m]=job.shootTime.split(':').map(Number);
     const _end=_h*60+_m+Math.round((parseFloat(job.duration)||2)*60);
     job.shootEndTime=String(Math.floor(_end/60)%24).padStart(2,'0')+':'+String(_end%60).padStart(2,'0');
+  }
+  // Property 1's stored schedule rides along with the main Shoot Details
+  if(job.propertyQuotes&&job.propertyQuotes.length){
+    const _p0=job.propertyQuotes[0];
+    _p0.date=job.date; _p0.time=job.shootTime||''; _p0.durationH=job.duration;
   }
   job.notes=document.getElementById('ej-notes').value;
   job.driveLink=(document.getElementById('ej-drive-link').value||'').trim()||null;
@@ -3312,6 +3346,43 @@ async function ejSyncToGoogle(){
 
 // ── Property line items on a job: per-reel charges per address ───────────────
 // Each line becomes an invoice row AND its own project in the tracker.
+// Additional properties on a multi-property job — schedule + notes editor.
+// Property 1 is the main job (Shoot Details fields above); rows here are
+// properties 2..N. Changes land on Save, which re-syncs their tracker
+// projects and calendar/Google events.
+function _ejXPropAmount(x){
+  if(x.amount!=null) return x.amount;
+  const mkt=(typeof _ejUsState!=='undefined'&&_ejUsState&&_ejUsState.market)||'other_us';
+  const p=US_MARKET_PRICING[mkt]||US_MARKET_PRICING['other_us'];
+  return usListingPropPrice(p,x);
+}
+function ejRenderXProps(){
+  const sec=document.getElementById('ej-props-section');
+  if(!sec) return;
+  const list=window._ejXPropsCopy||[];
+  if(!window._ejXPropsKind||!list.length){ sec.style.display='none'; sec.innerHTML=''; return; }
+  sec.style.display='';
+  const inp='width:100%;box-sizing:border-box;padding:6px 8px;border:0.5px solid #3A4460;border-radius:7px;font-size:12px;background:#1C2333;color:#E8ECF8;outline:none;color-scheme:dark';
+  sec.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:#7AABFF;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Properties on this job</div>
+    <div style="font-size:10.5px;color:#7A8AAA;margin-bottom:10px">Property 1 is the main job — its date &amp; time are the Shoot Details above. Each property below has its own schedule; saving updates its calendar event and tracker project.</div>
+    <div style="display:grid;gap:8px">
+      ${list.map((x,i)=>`
+      <div style="background:#1C2333;border:0.5px solid #3A4460;border-radius:9px;padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:10.5px;font-weight:700;color:#7A8AAA;text-transform:uppercase;letter-spacing:.06em">Property ${i+2}${x.label?' · <span style="color:#7AABFF;text-transform:none;letter-spacing:0">'+x.label+'</span>':''}</div>
+          <div style="font-size:12px;font-weight:800;color:#22D97A">$${_ejXPropAmount(x).toLocaleString()}</div>
+        </div>
+        <input type="text" value="${(x.address||'').replace(/"/g,'&quot;')}" oninput="_ejXPropsCopy[${i}].address=this.value" placeholder="Property address…" style="${inp};margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input type="date" value="${x.date||''}" onchange="_ejXPropsCopy[${i}].date=this.value" style="${inp}">
+          <input type="time" value="${x.time||''}" onchange="_ejXPropsCopy[${i}].time=this.value" style="${inp}">
+        </div>
+        <input type="text" value="${(x.notes||'').replace(/"/g,'&quot;')}" oninput="_ejXPropsCopy[${i}].notes=this.value" placeholder="Notes for this property…" style="${inp}">
+      </div>`).join('')}
+    </div>`;
+}
+
 function ejRenderPlines(job){
   const rows=document.getElementById('ej-plines-rows');
   if(!rows) return;
