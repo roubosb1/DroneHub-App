@@ -2184,6 +2184,13 @@ function cpSaveProjectNote(jobId){
   try{ showDhToast('Notes sent to your editor','They\'ll see it on the project right away.','✓','var(--green)',3000); }catch(e){}
 }
 
+// Collapse/expand the Overdue / Owed / Paid sections on the financial hub
+function cpToggleInvSection(key){
+  window._cpInvOpen=window._cpInvOpen||{overdue:true,owed:true,paid:false};
+  window._cpInvOpen[key]=!window._cpInvOpen[key];
+  cpShowTab('invoices');
+}
+
 // Printable year-end statement — a client's paid invoices for one year, with
 // HST broken out, ready to print / save as PDF for their tax records
 function cpOpenYearStatement(year){
@@ -2338,7 +2345,7 @@ async function cpShowTab(tab){
     if(tab==='messages'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0';_cpContentEl.style.margin='0';}
     else if(tab==='files'||tab==='projects'){_cpContentEl.style.maxWidth='1440px';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0 auto';}
     else if(tab==='profile'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='0 0 60px';_cpContentEl.style.margin='0';}
-    else if(tab==='production'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
+    else if(tab==='production'||tab==='invoices'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
     else if(tab==='booking'){_cpContentEl.style.maxWidth='none';_cpContentEl.style.padding='24px 28px 60px';_cpContentEl.style.margin='0';}
     else{_cpContentEl.style.maxWidth='900px';_cpContentEl.style.padding='24px 20px 60px';_cpContentEl.style.margin='0 auto';}
   }
@@ -2587,7 +2594,7 @@ async function cpShowTab(tab){
     ${!cJobs.length?'<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No projects yet.</div>':''}`;
   }
   else if(tab==='invoices'){
-    // ── Financial hub: invoices + spending merged ─────────────────────────────
+    // ── Financial hub: invoices + spending + analytics ────────────────────────
     // $0 imported historical jobs aren't real invoices — excluded everywhere
     const inv=cJobs.filter(j=>(j.status==='confirmed'||j.status==='completed')&&j.grand>0);
     const paid=inv.filter(j=>getInvoiceStatus(j)==='paid');
@@ -2606,7 +2613,7 @@ async function cpShowTab(tab){
       const stBadge=st==='overdue'
         ?`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--red-bg);color:var(--red)">OVERDUE ${daysOverdue}d</span>`
         :`<span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--amber-bg);color:var(--amber)">OUTSTANDING</span>`;
-      return `<div class="card" style="margin-bottom:12px;border:1px solid ${st==='overdue'?'rgba(240,82,82,.3)':'rgba(245,166,35,.2)'}">
+      return `<div style="margin-top:12px;padding:14px 16px;border-radius:12px;background:var(--navy-lift);border:1px solid ${st==='overdue'?'rgba(240,82,82,.3)':'rgba(245,166,35,.2)'}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px">
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:3px">${j.name}</div>
@@ -2621,7 +2628,7 @@ async function cpShowTab(tab){
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button onclick="cpViewInvoice('${j.id}')" style="flex:1;min-width:120px;padding:9px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-lift);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">
+          <button onclick="cpViewInvoice('${j.id}')" style="flex:1;min-width:120px;padding:9px;border-radius:10px;border:1px solid var(--border-bright);background:var(--navy-card);color:var(--offwhite);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> View Invoice
           </button>
           <button onclick="openStripeCheckout(${amtDue},'${j.invNum||''}','${c.email||''}','${j.currency||'cad'}',${j.id})" style="flex:1;min-width:120px;padding:9px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">
@@ -2630,7 +2637,7 @@ async function cpShowTab(tab){
         </div>
       </div>`;
     };
-    const _paidCard=j=>`<div class="card" style="margin-bottom:10px;opacity:.85">
+    const _paidCard=j=>`<div style="margin-top:10px;padding:12px 16px;border-radius:12px;background:var(--navy-lift);border:1px solid var(--border);opacity:.9">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--white)">${j.name}</div>
@@ -2639,13 +2646,11 @@ async function cpShowTab(tab){
           <div style="display:flex;align-items:center;gap:10px">
             <div style="font-size:14px;font-weight:700;color:var(--green)">${fmtN(j.grand)}</div>
             <span style="padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green)">PAID</span>
+            <button onclick="cpViewInvoice('${j.id}')" style="padding:6px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">Receipt</button>
           </div>
         </div>
-        <button onclick="cpViewInvoice('${j.id}')" style="margin-top:10px;padding:7px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">
-          View receipt
-        </button>
       </div>`;
-    // Yearly breakdown for tax records (paid invoices only)
+    // Yearly breakdown (paid invoices only)
     const byYear={};
     paid.forEach(j=>{
       const yr=j.date?.slice(0,4)||'—';
@@ -2655,42 +2660,132 @@ async function cpShowTab(tab){
       if((j.currency||'cad').toLowerCase()==='cad') byYear[yr].hst+=j.grand*0.13;
     });
     const years=Object.keys(byYear).sort().reverse();
-    const _secHdr=(color,label)=>`<div style="font-size:11px;font-weight:700;color:${color};letter-spacing:.08em;text-transform:uppercase;margin:18px 0 12px">${label}</div>`;
-    html=`<div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:6px">
-        <div class="metric"><div class="mlabel">Total spent (paid)</div><div class="mval" style="color:var(--green)">${paidTotal?fmtN(paidTotal):'—'}</div><div class="msub">${paid.length} invoice${paid.length===1?'':'s'}</div></div>
-        <div class="metric"><div class="mlabel">Owed</div><div class="mval" style="color:var(--amber)">${owedTotal?fmtN(owedTotal):'—'}</div><div class="msub">${owedL.length} outstanding</div></div>
-        <div class="metric"><div class="mlabel">Overdue</div><div class="mval" style="color:var(--red)">${overdueTotal?fmtN(overdueTotal):'—'}</div><div class="msub">${overdueL.length} overdue${overdueTotal?' · incl. interest':''}</div></div>
+    // Collapsible sections
+    const _open=window._cpInvOpen||(window._cpInvOpen={overdue:true,owed:true,paid:false});
+    const _section=(key,color,label,list,renderer,subtotal)=>list.length?`
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+        <button onclick="cpToggleInvSection('${key}')" style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:transparent;border:none;cursor:pointer;font-family:var(--font)">
+          <span style="font-size:11px;font-weight:700;color:${color};letter-spacing:.08em;text-transform:uppercase">${label} (${list.length})</span>
+          <span style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:13px;font-weight:800;color:${color}">${fmtN(subtotal)}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${_open[key]?180:0}deg);transition:transform .15s"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
+        ${_open[key]?`<div style="padding:0 14px 14px">${list.map(renderer).join('')}</div>`:''}
+      </div>`:'';
+    // Analytics
+    const thisYr=String(new Date().getFullYear());
+    const avgInv=paid.length?paidTotal/paid.length:0;
+    const largest=paid.reduce((m,j)=>Math.max(m,_wHst(j)),0);
+    const projThisYr=inv.filter(j=>(j.date||'').startsWith(thisYr)).length;
+    const spendThisYr=byYear[thisYr]?.total||0;
+    const yrMax=Math.max(...years.map(y=>byYear[y].total),1);
+    const yearBars=years.slice(0,6).map(yr=>`
+      <div style="margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--offwhite);font-weight:700">${yr}</span><span style="color:var(--muted)">${fmtN(byYear[yr].total)}</span></div>
+        <div style="height:7px;border-radius:4px;background:var(--navy-lift);overflow:hidden"><div style="height:100%;width:${Math.max(4,Math.round(byYear[yr].total/yrMax*100))}%;border-radius:4px;background:linear-gradient(90deg,var(--blue),#7AABFF)"></div></div>
+      </div>`).join('');
+    const mTotals=Array(12).fill(0);
+    paid.filter(j=>(j.date||'').startsWith(thisYr)).forEach(j=>{const m=parseInt((j.date||'').slice(5,7),10);if(m)mTotals[m-1]+=_wHst(j);});
+    const mMax=Math.max(...mTotals,1);
+    const monthBars=`<div style="display:flex;align-items:flex-end;gap:3px;height:56px">${mTotals.map((v,i)=>`<div title="${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i]}: ${fmtN(v)}" style="flex:1;border-radius:3px 3px 0 0;background:${v?'linear-gradient(180deg,#7AABFF,var(--blue))':'var(--navy-lift)'};height:${v?Math.max(8,Math.round(v/mMax*100)):4}%"></div>`).join('')}</div>
+      <div style="display:flex;gap:3px;margin-top:3px">${['J','F','M','A','M','J','J','A','S','O','N','D'].map(l=>`<div style="flex:1;text-align:center;font-size:8px;color:var(--muted)">${l}</div>`).join('')}</div>`;
+    const _rlStat=(l,v,color)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:11px;color:var(--muted)">${l}</span><span style="font-size:13px;font-weight:800;color:${color||'var(--white)'}">${v}</span></div>`;
+    // Next payment due
+    const _dueOf=j=>{const r=j.invoicedAt?new Date(j.invoicedAt):new Date(j.date||Date.now());const d=new Date(r);d.setDate(d.getDate()+30);return d;};
+    const unpaidAll=[...overdueL,...owedL].sort((a,b)=>_dueOf(a)-_dueOf(b));
+    const nextDue=unpaidAll[0];
+    let nextDueHtml='';
+    if(nextDue){
+      const d=_dueOf(nextDue);
+      const days=Math.ceil((d-new Date())/(864e5));
+      const late=days<0;
+      nextDueHtml=`<div class="card" style="margin-bottom:14px;border:1px solid ${late?'rgba(240,82,82,.35)':'rgba(245,166,35,.3)'}">
+        <div class="section-label" style="margin-bottom:8px">Next payment</div>
+        <div style="font-size:13px;font-weight:700;color:var(--white)">${nextDue.name}</div>
+        <div style="font-size:12px;color:${late?'var(--red)':'var(--amber)'};font-weight:700;margin-top:4px">${late?Math.abs(days)+' day'+(Math.abs(days)===1?'':'s')+' overdue':'due in '+days+' day'+(days===1?'':'s')} · ${fmtN(late?calcCurrentOwed(nextDue).owed:nextDue.grand)}</div>
+        <button onclick="openStripeCheckout(${late?calcCurrentOwed(nextDue).owed:nextDue.grand},'${nextDue.invNum||''}','${c.email||''}','${nextDue.currency||'cad'}',${nextDue.id})" style="margin-top:10px;width:100%;padding:9px;border-radius:10px;background:linear-gradient(135deg,#635BFF,#4B44D8);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">Pay now</button>
+      </div>`;
+    } else if(inv.length){
+      nextDueHtml=`<div class="card" style="margin-bottom:14px;border:1px solid rgba(34,217,122,.3)">
+        <div class="section-label" style="margin-bottom:6px">Next payment</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">All caught up 🎉</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">No outstanding invoices.</div>
+      </div>`;
+    }
+    html=`<div class="cp-fin-grid">
+      <div><!-- LEFT: analytics -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="section-label" style="margin-bottom:8px">Your numbers</div>
+          ${_rlStat('Spend this year',spendThisYr?fmtN(spendThisYr):'—','var(--green)')}
+          ${_rlStat('Projects this year',projThisYr||'—')}
+          ${_rlStat('Average invoice',avgInv?fmtN(avgInv):'—')}
+          ${_rlStat('Largest invoice',largest?fmtN(largest):'—')}
+          ${_rlStat('Lifetime projects',paid.length+overdueL.length+owedL.length)}
+          ${_rlStat('Lifetime spend',paidTotal?fmtN(paidTotal):'—','var(--green)')}
+        </div>
+        ${years.length?`<div class="card" style="margin-bottom:14px">
+          <div class="section-label" style="margin-bottom:10px">Spending by year</div>
+          ${yearBars}
+        </div>`:''}
+        ${mTotals.some(v=>v)?`<div class="card" style="margin-bottom:14px">
+          <div class="section-label" style="margin-bottom:10px">${thisYr} by month</div>
+          ${monthBars}
+        </div>`:''}
       </div>
-      ${overdueL.length?_secHdr('var(--red)','Overdue ('+overdueL.length+')')+overdueL.map(_unpaidCard).join(''):''}
-      ${owedL.length?_secHdr('var(--amber)','Owed ('+owedL.length+')')+owedL.map(_unpaidCard).join(''):''}
-      ${paid.length?_secHdr('var(--muted)','Paid ('+paid.length+')')+paid.map(_paidCard).join(''):''}
-      ${!inv.length?`<div class="card" style="text-align:center;padding:40px;margin-top:14px">
-        <div style="font-size:13px;color:var(--muted)">No invoices yet — they'll appear here once your first project is invoiced.</div>
-      </div>`:''}
-      ${years.length?`<div class="card" style="margin-top:18px">
-        <div class="section-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px">${_icon('dollar',14)} Yearly spending breakdown</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">For your tax records — totals include HST where charged. Download a year-end statement any time; refer to individual invoices for exact amounts.</div>
-        ${years.map(yr=>{
-          const y=byYear[yr];
-          return `<div style="border-top:1px solid var(--border);padding:12px 0">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-              <div style="font-size:15px;font-weight:800;color:var(--white)">${yr}</div>
-              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                <div style="text-align:right">
-                  <div style="font-size:14px;font-weight:800;color:var(--green)">${fmtN(y.total)}</div>
-                  ${y.hst?`<div style="font-size:10px;color:var(--muted)">incl. HST ${fmtN(y.hst)}</div>`:''}
+      <div><!-- CENTER: summary + invoice sections -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+          <div class="metric"><div class="mlabel">Total spent (paid)</div><div class="mval" style="color:var(--green)">${paidTotal?fmtN(paidTotal):'—'}</div><div class="msub">${paid.length} invoice${paid.length===1?'':'s'}</div></div>
+          <div class="metric"><div class="mlabel">Owed</div><div class="mval" style="color:var(--amber)">${owedTotal?fmtN(owedTotal):'—'}</div><div class="msub">${owedL.length} outstanding</div></div>
+          <div class="metric"><div class="mlabel">Overdue</div><div class="mval" style="color:var(--red)">${overdueTotal?fmtN(overdueTotal):'—'}</div><div class="msub">${overdueL.length} overdue${overdueTotal?' · incl. interest':''}</div></div>
+        </div>
+        ${_section('overdue','var(--red)','Overdue',overdueL,_unpaidCard,overdueTotal)}
+        ${_section('owed','var(--amber)','Owed',owedL,_unpaidCard,owedTotal)}
+        ${_section('paid','var(--green)','Paid',paid,_paidCard,paidTotal)}
+        ${!inv.length?`<div class="card" style="text-align:center;padding:40px">
+          <div style="font-size:13px;color:var(--muted)">No invoices yet — they'll appear here once your first project is invoiced.</div>
+        </div>`:''}
+        ${years.length?`<div class="card" style="margin-top:4px">
+          <div class="section-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px">${_icon('dollar',14)} Yearly spending breakdown</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">For your tax records — totals include HST where charged. Download a year-end statement any time.</div>
+          ${years.map(yr=>{
+            const y=byYear[yr];
+            return `<div style="border-top:1px solid var(--border);padding:12px 0">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+                <div style="font-size:15px;font-weight:800;color:var(--white)">${yr}</div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <div style="text-align:right">
+                    <div style="font-size:14px;font-weight:800;color:var(--green)">${fmtN(y.total)}</div>
+                    ${y.hst?`<div style="font-size:10px;color:var(--muted)">incl. HST ${fmtN(y.hst)}</div>`:''}
+                  </div>
+                  <button onclick="cpOpenYearStatement(${yr})" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">⬇ Year-end statement</button>
                 </div>
-                <button onclick="cpOpenYearStatement(${yr})" style="padding:7px 16px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.1);color:var(--blue-bright);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)">⬇ Year-end statement</button>
               </div>
-            </div>
-            ${y.jobs.map(j=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04)">
-              <div><span style="color:var(--offwhite)">${j.name}</span><span style="color:var(--muted);font-size:10px;margin-left:8px">${j.date}</span></div>
-              <span style="color:var(--offwhite)">${fmtN(_wHst(j))}</span>
-            </div>`).join('')}
-          </div>`;
-        }).join('')}
-      </div>`:''}
+              ${y.jobs.map(j=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04)">
+                <div><span style="color:var(--offwhite)">${j.name}</span><span style="color:var(--muted);font-size:10px;margin-left:8px">${j.date}</span></div>
+                <span style="color:var(--offwhite)">${fmtN(_wHst(j))}</span>
+              </div>`).join('')}
+            </div>`;
+          }).join('')}
+        </div>`:''}
+      </div>
+      <div><!-- RIGHT: due next, statements, help -->
+        ${nextDueHtml}
+        ${years.length?`<div class="card" style="margin-bottom:14px">
+          <div class="section-label" style="margin-bottom:8px">Year-end statements</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Printable summary of everything you paid in a year — perfect for your accountant.</div>
+          ${years.map(yr=>`<button onclick="cpOpenYearStatement(${yr})" style="width:100%;margin-bottom:6px;padding:9px;border-radius:10px;border:1px solid var(--blue);background:rgba(91,141,239,.08);color:var(--blue-bright);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">⬇ ${yr} statement</button>`).join('')}
+        </div>`:''}
+        <div class="card" style="margin-bottom:14px">
+          <div class="section-label" style="margin-bottom:8px">How payments work</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7">Invoices are due <b style="color:var(--offwhite)">30 days</b> from issue. Cards are processed securely by Stripe — you'll get a receipt by email. Late invoices accrue interest monthly.</div>
+        </div>
+        <div class="card">
+          <div class="section-label" style="margin-bottom:8px">Question about a bill?</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">We're happy to walk through any invoice with you.</div>
+          <button onclick="cpShowTab('messages')" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">Message us in LouChat</button>
+        </div>
+      </div>
     </div>`;
   }
   else if(tab==='files'){

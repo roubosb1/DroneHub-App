@@ -2357,3 +2357,10 @@ body.lc-vc-mode #lc-channel-title{text-align:right;}
   #ej-body>div{break-inside:avoid;}
   #ej-plines-section,#ej-total-card,#ej-body>div:last-child{column-span:all;}
 }
+
+/* Client portal financial hub — analytics rails beside the invoice list */
+.cp-fin-grid{display:grid;grid-template-columns:250px minmax(0,1fr) 270px;gap:16px;align-items:start;}
+@media(max-width:1150px){.cp-fin-grid{grid-template-columns:minmax(0,1fr) 270px;}
+  .cp-fin-grid>div:first-child{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}}
+@media(max-width:760px){.cp-fin-grid{grid-template-columns:1fr;}
+  .cp-fin-grid>div:first-child{grid-template-columns:1fr;}}
